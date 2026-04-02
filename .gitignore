@@ -1,0 +1,7 @@
+node_modules/
+dist/
+db/*.db
+.sisyphus/
+*.log
+.DS_Store
+.env
