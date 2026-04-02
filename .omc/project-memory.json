@@ -208,6 +208,18 @@
       "type": "file"
     },
     {
+      "path": "client/src/views/settings.js",
+      "accessCount": 5,
+      "lastAccessed": 1775147221756,
+      "type": "file"
+    },
+    {
+      "path": "server/app.js",
+      "accessCount": 2,
+      "lastAccessed": 1775147182116,
+      "type": "file"
+    },
+    {
       "path": "client/src/views/research.js",
       "accessCount": 1,
       "lastAccessed": 1775146986156,
@@ -217,6 +229,24 @@
       "path": "qa.mjs",
       "accessCount": 1,
       "lastAccessed": 1775147061143,
+      "type": "file"
+    },
+    {
+      "path": "server/services/tiktok-api.js",
+      "accessCount": 1,
+      "lastAccessed": 1775147133420,
+      "type": "file"
+    },
+    {
+      "path": "server/services/google-ads-api.js",
+      "accessCount": 1,
+      "lastAccessed": 1775147147063,
+      "type": "file"
+    },
+    {
+      "path": "server/routes/platforms.js",
+      "accessCount": 1,
+      "lastAccessed": 1775147167522,
       "type": "file"
     }
   ],

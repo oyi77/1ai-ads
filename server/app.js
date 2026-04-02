@@ -23,6 +23,9 @@ import { ScalevService } from './services/scalev.js';
 import { createScalevRouter } from './routes/scalev.js';
 import { MetaAdsAPI } from './services/meta-api.js';
 import { createMetaRouter } from './routes/meta.js';
+import { TikTokAdsAPI } from './services/tiktok-api.js';
+import { GoogleAdsAPI } from './services/google-ads-api.js';
+import { createPlatformsRouter } from './routes/platforms.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -84,7 +87,11 @@ export function createApp({ db, llmClient, mcpClient } = {}) {
   const scalevService = new ScalevService(settingsRepo);
   app.use('/api/research', requireAuth, createResearchRouter(new AdResearchService(settingsRepo)));
   app.use('/api/scalev', requireAuth, createScalevRouter(scalevService));
-  app.use('/api/meta', requireAuth, createMetaRouter(new MetaAdsAPI(settingsRepo), campaignsRepo));
+  const metaApi = new MetaAdsAPI(settingsRepo);
+  const tiktokApi = new TikTokAdsAPI(settingsRepo);
+  const googleApi = new GoogleAdsAPI(settingsRepo);
+  app.use('/api/meta', requireAuth, createMetaRouter(metaApi, campaignsRepo));
+  app.use('/api/platforms', requireAuth, createPlatformsRouter({ meta: metaApi, tiktok: tiktokApi, google: googleApi }, campaignsRepo));
 
   // Scalev webhook (public - no auth, called by Scalev servers)
   app.post('/api/webhooks/scalev', express.json(), (req, res) => {
