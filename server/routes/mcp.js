@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-export function createMcpRouter(mcpClient, settingsRepo) {
+export function createMcpRouter(mcpClient, settingsRepo, campaignsRepo) {
   const router = Router();
 
   // Get connection status for all platforms
@@ -109,10 +109,35 @@ export function createMcpRouter(mcpClient, settingsRepo) {
         } catch {}
       }
 
+      // Persist campaigns to local database
+      const campaigns = Array.isArray(campaignsResult.data) ? campaignsResult.data : (campaignsResult.data?.data || []);
+      let synced = 0;
+
+      for (const camp of campaigns) {
+        // Normalize field names across platforms
+        const normalized = {
+          platform,
+          campaign_id: camp.id || camp.campaign_id || `${platform}_${synced}`,
+          name: camp.name || camp.campaign_name || 'Unnamed',
+          status: (camp.status || camp.effective_status || 'unknown').toLowerCase(),
+          budget: parseFloat(camp.daily_budget || camp.budget || 0),
+          spend: parseFloat(camp.spend || camp.cost || 0),
+          revenue: parseFloat(camp.revenue || camp.purchase_value || 0),
+          impressions: parseInt(camp.impressions || 0),
+          clicks: parseInt(camp.clicks || 0),
+          conversions: parseInt(camp.conversions || camp.actions?.length || 0),
+          roas: parseFloat(camp.roas || (camp.spend > 0 ? (camp.revenue || 0) / camp.spend : 0)),
+        };
+
+        campaignsRepo.upsert(normalized);
+        synced++;
+      }
+
       res.json({
         success: true,
         data: {
-          campaigns: campaignsResult.data,
+          synced,
+          campaigns: campaigns.length,
           insights: insightsData,
           synced_at: new Date().toISOString(),
         }

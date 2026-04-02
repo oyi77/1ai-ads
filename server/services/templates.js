@@ -126,6 +126,28 @@ export function renderLandingPage(data) {
       </a>
       ${ctaSecondary ? `<a href="${waLink}" class="btn ml-4" style="background: var(--surface); border: 1px solid var(--primary);">${ctaSecondary}</a>` : ''}
     </section>
+
+    ${data.scalev_embed_url ? `
+    <!-- Scalev Checkout Section -->
+    <section class="p-8">
+      <h2 class="text-xl font-semibold mb-4 text-center">Order Sekarang</h2>
+      <iframe
+        id="scalev-checkout"
+        width="100%"
+        frameborder="0"
+        style="min-height: 500px; border-radius: 12px;"
+        src="${safeUrl(data.scalev_embed_url)}">
+      </iframe>
+      <script>
+        window.addEventListener('message', function(e) {
+          var iframe = document.getElementById('scalev-checkout');
+          if (e.data && e.data.height) {
+            iframe.style.height = e.data.height + 'px';
+          }
+        });
+      </script>
+    </section>
+    ` : ''}
   </div>
 </body>
 </html>`;

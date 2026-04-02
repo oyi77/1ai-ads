@@ -17,6 +17,10 @@ import { createLandingRouter } from './routes/landing.js';
 import { createAnalyticsRouter } from './routes/analytics.js';
 import { createMcpRouter } from './routes/mcp.js';
 import { createSettingsRouter } from './routes/settings.js';
+import { createResearchRouter } from './routes/research.js';
+import { AdResearchService } from './services/ad-research.js';
+import { ScalevService } from './services/scalev.js';
+import { createScalevRouter } from './routes/scalev.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -73,8 +77,17 @@ export function createApp({ db, llmClient, mcpClient } = {}) {
   app.use('/api/ads', requireAuth, createAdsRouter(adsRepo, adGenerator));
   app.use('/api/landing', requireAuth, createLandingRouter(landingRepo, landingGenerator));
   app.use('/api/analytics', requireAuth, createAnalyticsRouter(campaignsRepo));
-  app.use('/api/mcp', requireAuth, createMcpRouter(mcp, settingsRepo));
+  app.use('/api/mcp', requireAuth, createMcpRouter(mcp, settingsRepo, campaignsRepo));
   app.use('/api/settings', requireAuth, createSettingsRouter(settingsRepo));
+  const scalevService = new ScalevService(settingsRepo);
+  app.use('/api/research', requireAuth, createResearchRouter(new AdResearchService(settingsRepo)));
+  app.use('/api/scalev', requireAuth, createScalevRouter(scalevService));
+
+  // Scalev webhook (public - no auth, called by Scalev servers)
+  app.post('/api/webhooks/scalev', express.json(), (req, res) => {
+    console.log('Scalev webhook:', JSON.stringify(req.body).substring(0, 200));
+    res.json({ success: true });
+  });
 
   // Serve static files in production
   if (process.env.NODE_ENV === 'production') {

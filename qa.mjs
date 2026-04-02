@@ -31,7 +31,7 @@ async function run() {
   test('GET /api/ads', await apiTest('/api/ads', d => d.success === true && d.data.length > 0));
   test('GET /api/landing', await apiTest('/api/landing', d => d.success === true));
   test('GET /api/analytics/dashboard', await apiTest('/api/analytics/dashboard', d => d.success && d.data.total_spend > 0));
-  test('GET /api/mcp/status', await apiTest('/api/mcp/status', d => d.success && d.data.omniroute !== undefined));
+  test('GET /api/mcp/status', await apiTest('/api/mcp/status', d => d.success && d.data.meta !== undefined));
 
   // 3. Ads CRUD
   const adCreate = await apiTest('/api/ads', d => d.success && d.data.id, 'POST', { name: 'QA Ad', product: 'Widget', target: 'Devs', keunggulan: 'Fast', content_model: 'P.A.S', hook: 'Slow?', body: 'Try it', cta: 'Go' });

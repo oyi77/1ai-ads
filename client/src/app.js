@@ -8,6 +8,7 @@ import { renderLandingCreate } from './views/landing-create.js';
 import { renderAnalytics } from './views/analytics.js';
 import { renderLogin, renderRegister } from './views/login.js';
 import { renderSettings } from './views/settings.js';
+import { renderResearch } from './views/research.js';
 
 const router = new Router(document.getElementById('app'));
 
@@ -18,6 +19,7 @@ router.on('/landing', renderLandingList);
 router.on('/landing/create', renderLandingCreate);
 router.on('/analytics', renderAnalytics);
 router.on('/settings', renderSettings);
+router.on('/research', renderResearch);
 router.on('/login', renderLogin);
 router.on('/register', renderRegister);
 
