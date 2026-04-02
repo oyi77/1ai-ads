@@ -26,6 +26,9 @@ import { createMetaRouter } from './routes/meta.js';
 import { TikTokAdsAPI } from './services/tiktok-api.js';
 import { GoogleAdsAPI } from './services/google-ads-api.js';
 import { createPlatformsRouter } from './routes/platforms.js';
+import { createCampaignsRouter } from './routes/campaigns.js';
+import { CampaignOrchestrator } from './services/campaign-orchestrator.js';
+import { CreativeStudio } from './services/creative-studio.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -92,6 +95,11 @@ export function createApp({ db, llmClient, mcpClient } = {}) {
   const googleApi = new GoogleAdsAPI(settingsRepo);
   app.use('/api/meta', requireAuth, createMetaRouter(metaApi, campaignsRepo));
   app.use('/api/platforms', requireAuth, createPlatformsRouter({ meta: metaApi, tiktok: tiktokApi, google: googleApi }, campaignsRepo));
+
+  // AI Creative Studio + Campaign Orchestrator
+  const creativeStudio = new CreativeStudio(llmClient);
+  const orchestrator = new CampaignOrchestrator(metaApi, creativeStudio);
+  app.use('/api/campaigns', requireAuth, createCampaignsRouter(orchestrator, metaApi, creativeStudio, campaignsRepo));
 
   // Scalev webhook (public - no auth, called by Scalev servers)
   app.post('/api/webhooks/scalev', express.json(), (req, res) => {

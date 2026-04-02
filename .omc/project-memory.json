@@ -202,15 +202,33 @@
   },
   "hotPaths": [
     {
+      "path": "",
+      "accessCount": 11,
+      "lastAccessed": 1775149596583,
+      "type": "directory"
+    },
+    {
       "path": "client/src/views/dashboard.js",
-      "accessCount": 5,
-      "lastAccessed": 1775147030769,
+      "accessCount": 8,
+      "lastAccessed": 1775149878389,
       "type": "file"
     },
     {
       "path": "client/src/views/settings.js",
-      "accessCount": 5,
-      "lastAccessed": 1775147221756,
+      "accessCount": 7,
+      "lastAccessed": 1775149721377,
+      "type": "file"
+    },
+    {
+      "path": "server/app.js",
+      "accessCount": 7,
+      "lastAccessed": 1775150497118,
+      "type": "file"
+    },
+    {
+      "path": "server/services/meta-api.js",
+      "accessCount": 6,
+      "lastAccessed": 1775150404781,
       "type": "file"
     },
     {
@@ -220,45 +238,171 @@
       "type": "file"
     },
     {
-      "path": "server/app.js",
-      "accessCount": 2,
-      "lastAccessed": 1775147182116,
+      "path": "client/src/app.js",
+      "accessCount": 4,
+      "lastAccessed": 1775150608212,
       "type": "file"
     },
     {
       "path": "client/src/views/research.js",
-      "accessCount": 1,
-      "lastAccessed": 1775146986156,
+      "accessCount": 3,
+      "lastAccessed": 1775149721240,
+      "type": "file"
+    },
+    {
+      "path": "db/schema.sql",
+      "accessCount": 3,
+      "lastAccessed": 1775149857880,
+      "type": "file"
+    },
+    {
+      "path": "server/services/ad-generator.js",
+      "accessCount": 3,
+      "lastAccessed": 1775149863665,
+      "type": "file"
+    },
+    {
+      "path": "client/src/lib/router.js",
+      "accessCount": 3,
+      "lastAccessed": 1775149864580,
+      "type": "file"
+    },
+    {
+      "path": "client/src/lib/api.js",
+      "accessCount": 3,
+      "lastAccessed": 1775149865511,
+      "type": "file"
+    },
+    {
+      "path": "client/src/views/ads-create.js",
+      "accessCount": 3,
+      "lastAccessed": 1775149866041,
+      "type": "file"
+    },
+    {
+      "path": "server/services/llm-client.js",
+      "accessCount": 3,
+      "lastAccessed": 1775149873077,
+      "type": "file"
+    },
+    {
+      "path": "client/index.html",
+      "accessCount": 3,
+      "lastAccessed": 1775150615214,
+      "type": "file"
+    },
+    {
+      "path": "server/routes/platforms.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149617177,
+      "type": "file"
+    },
+    {
+      "path": "server/routes/settings.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149617990,
+      "type": "file"
+    },
+    {
+      "path": "server/services/google-ads-api.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149628456,
+      "type": "file"
+    },
+    {
+      "path": "server/services/tiktok-api.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149628668,
+      "type": "file"
+    },
+    {
+      "path": "server/services/mcp-client.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149703984,
+      "type": "file"
+    },
+    {
+      "path": "server/services/landing-generator.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149707173,
+      "type": "file"
+    },
+    {
+      "path": "server/services/templates.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149707275,
+      "type": "file"
+    },
+    {
+      "path": "server/services/scalev.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149707459,
+      "type": "file"
+    },
+    {
+      "path": "client/src/views/login.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149716147,
+      "type": "file"
+    },
+    {
+      "path": "client/src/views/ads-list.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149716784,
+      "type": "file"
+    },
+    {
+      "path": "client/src/views/landing-create.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149717638,
+      "type": "file"
+    },
+    {
+      "path": "client/src/views/landing-list.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149717804,
+      "type": "file"
+    },
+    {
+      "path": "client/src/views/analytics.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149720547,
+      "type": "file"
+    },
+    {
+      "path": "server/routes/meta.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149858729,
+      "type": "file"
+    },
+    {
+      "path": "server/repositories/campaigns.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149864124,
+      "type": "file"
+    },
+    {
+      "path": "server/routes/ads.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149871641,
+      "type": "file"
+    },
+    {
+      "path": "server/repositories/settings.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149872299,
+      "type": "file"
+    },
+    {
+      "path": "db/index.js",
+      "accessCount": 2,
+      "lastAccessed": 1775149877830,
       "type": "file"
     },
     {
       "path": "qa.mjs",
       "accessCount": 1,
       "lastAccessed": 1775147061143,
-      "type": "file"
-    },
-    {
-      "path": "server/services/tiktok-api.js",
-      "accessCount": 1,
-      "lastAccessed": 1775147133420,
-      "type": "file"
-    },
-    {
-      "path": "server/services/google-ads-api.js",
-      "accessCount": 1,
-      "lastAccessed": 1775147147063,
-      "type": "file"
-    },
-    {
-      "path": "server/routes/platforms.js",
-      "accessCount": 1,
-      "lastAccessed": 1775147167522,
-      "type": "file"
-    },
-    {
-      "path": "server/routes/settings.js",
-      "accessCount": 1,
-      "lastAccessed": 1775148509720,
       "type": "file"
     },
     {
@@ -271,6 +415,90 @@
       "path": "test-results/full-app-Dashboard-sync-button-triggers-real-sync/test-failed-1.png",
       "accessCount": 1,
       "lastAccessed": 1775148984524,
+      "type": "file"
+    },
+    {
+      "path": "server/routes/analytics.js",
+      "accessCount": 1,
+      "lastAccessed": 1775149615395,
+      "type": "file"
+    },
+    {
+      "path": "server/routes/landing.js",
+      "accessCount": 1,
+      "lastAccessed": 1775149615758,
+      "type": "file"
+    },
+    {
+      "path": "server/routes/research.js",
+      "accessCount": 1,
+      "lastAccessed": 1775149616745,
+      "type": "file"
+    },
+    {
+      "path": "server/routes/mcp.js",
+      "accessCount": 1,
+      "lastAccessed": 1775149617724,
+      "type": "file"
+    },
+    {
+      "path": "server/routes/scalev.js",
+      "accessCount": 1,
+      "lastAccessed": 1775149619049,
+      "type": "file"
+    },
+    {
+      "path": "server/services/ai.js",
+      "accessCount": 1,
+      "lastAccessed": 1775149619479,
+      "type": "file"
+    },
+    {
+      "path": "server/services/ad-research.js",
+      "accessCount": 1,
+      "lastAccessed": 1775149620379,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 1,
+      "lastAccessed": 1775149703626,
+      "type": "file"
+    },
+    {
+      "path": "db/seed.js",
+      "accessCount": 1,
+      "lastAccessed": 1775149714636,
+      "type": "file"
+    },
+    {
+      "path": "server/repositories/ads.js",
+      "accessCount": 1,
+      "lastAccessed": 1775149717728,
+      "type": "file"
+    },
+    {
+      "path": "server/repositories/landing.js",
+      "accessCount": 1,
+      "lastAccessed": 1775149718147,
+      "type": "file"
+    },
+    {
+      "path": "server/repositories/users.js",
+      "accessCount": 1,
+      "lastAccessed": 1775149718279,
+      "type": "file"
+    },
+    {
+      "path": "client/src/lib/escape.js",
+      "accessCount": 1,
+      "lastAccessed": 1775149721186,
+      "type": "file"
+    },
+    {
+      "path": "server/lib/validate.js",
+      "accessCount": 1,
+      "lastAccessed": 1775149873055,
       "type": "file"
     }
   ],
