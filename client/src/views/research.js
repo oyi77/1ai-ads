@@ -2,159 +2,232 @@ import { api } from '../lib/api.js';
 import { esc } from '../lib/escape.js';
 
 export async function renderResearch(el) {
+  // Check if Meta is configured
+  let metaConfigured = false;
+  try {
+    const creds = await api.get('/settings/credentials/meta');
+    metaConfigured = creds.data.configured;
+  } catch {}
+
   el.innerHTML = `
     <div class="p-4 sm:p-8">
       <h1 class="text-2xl sm:text-3xl font-bold mb-2">Ads Research</h1>
-      <p class="text-slate-400 text-sm mb-6">Search competitor ads from Meta Ad Library (Facebook & Instagram)</p>
+      <p class="text-slate-400 text-sm mb-6">Research competitor ads and discover winning campaigns</p>
 
-      <!-- Search Controls -->
-      <div class="bg-slate-800 p-4 sm:p-6 rounded-lg mb-6">
-        <div class="flex flex-col gap-4">
-          <!-- Search by keyword -->
-          <div>
-            <label class="block text-sm text-slate-400 mb-1">Search by keyword</label>
-            <div class="flex flex-col sm:flex-row gap-2">
-              <input type="text" id="keyword-search" placeholder="e.g. digital marketing, skincare, kursus" class="flex-1 p-3 bg-slate-900 rounded-lg border border-slate-600 min-h-[44px]">
-              <button id="keyword-btn" class="bg-sky-500 hover:bg-sky-600 px-6 py-3 rounded-lg min-h-[44px] whitespace-nowrap">Search Ads</button>
-            </div>
+      ${!metaConfigured ? `
+        <div class="bg-yellow-900 border border-yellow-700 p-4 rounded-lg mb-6">
+          Meta access token not configured. <a href="#/settings" class="text-sky-400 hover:underline">Go to Settings</a> to add it.
+        </div>
+      ` : ''}
+
+      <!-- Your Ad Accounts -->
+      <section class="mb-8">
+        <h2 class="text-xl font-semibold mb-4">Your Ad Accounts</h2>
+        <div id="accounts-list" class="grid gap-3">
+          <p class="text-slate-400">Loading accounts...</p>
+        </div>
+      </section>
+
+      <!-- Competitor Research -->
+      <section class="mb-8">
+        <h2 class="text-xl font-semibold mb-4">Competitor Ad Spy</h2>
+        <div class="bg-slate-800 p-4 sm:p-6 rounded-lg">
+          <div class="flex flex-col sm:flex-row gap-3 mb-4">
+            <input type="text" id="spy-search" placeholder="Search competitor page name..." class="flex-1 p-3 bg-slate-900 rounded-lg border border-slate-600 min-h-[44px]">
+            <button id="spy-btn" class="bg-purple-500 hover:bg-purple-600 px-6 py-3 rounded-lg min-h-[44px] whitespace-nowrap">Search Pages</button>
           </div>
+          <div id="spy-results"></div>
+        </div>
+      </section>
 
-          <!-- Search by page -->
-          <div>
-            <label class="block text-sm text-slate-400 mb-1">Search by competitor page</label>
-            <div class="flex flex-col sm:flex-row gap-2">
-              <input type="text" id="page-search" placeholder="Facebook page name or URL (e.g. facebook.com/NikeIndonesia)" class="flex-1 p-3 bg-slate-900 rounded-lg border border-slate-600 min-h-[44px]">
-              <button id="page-btn" class="bg-purple-500 hover:bg-purple-600 px-6 py-3 rounded-lg min-h-[44px] whitespace-nowrap">Spy Page</button>
-            </div>
-          </div>
-
-          <!-- Filters -->
-          <div class="flex flex-wrap gap-3">
-            <select id="country-filter" class="p-2 bg-slate-900 rounded-lg border border-slate-600 min-h-[44px]">
+      <!-- Ad Library Search -->
+      <section class="mb-8">
+        <h2 class="text-xl font-semibold mb-4">Ad Library Search</h2>
+        <div class="bg-slate-800 p-4 sm:p-6 rounded-lg">
+          <div class="flex flex-col sm:flex-row gap-3 mb-4">
+            <input type="text" id="adlib-search" placeholder="Search ads by keyword (e.g. skincare, kursus)" class="flex-1 p-3 bg-slate-900 rounded-lg border border-slate-600 min-h-[44px]">
+            <select id="adlib-country" class="p-3 bg-slate-900 rounded-lg border border-slate-600 min-h-[44px]">
               <option value="ID">Indonesia</option>
               <option value="US">United States</option>
               <option value="MY">Malaysia</option>
               <option value="SG">Singapore</option>
-              <option value="ALL">All Countries</option>
             </select>
-            <select id="status-filter" class="p-2 bg-slate-900 rounded-lg border border-slate-600 min-h-[44px]">
-              <option value="ALL">All Status</option>
-              <option value="ACTIVE">Active Only</option>
-              <option value="INACTIVE">Inactive Only</option>
-            </select>
-            <select id="media-filter" class="p-2 bg-slate-900 rounded-lg border border-slate-600 min-h-[44px]">
-              <option value="ALL">All Media</option>
-              <option value="IMAGE">Images</option>
-              <option value="VIDEO">Videos</option>
-            </select>
+            <button id="adlib-btn" class="bg-sky-500 hover:bg-sky-600 px-6 py-3 rounded-lg min-h-[44px] whitespace-nowrap">Search Ads</button>
           </div>
+          <div id="adlib-results"></div>
         </div>
-      </div>
-
-      <!-- Results -->
-      <div id="research-results">
-        <p class="text-slate-500 text-center py-8">Enter a keyword or competitor page to start researching ads.</p>
-      </div>
+      </section>
     </div>
   `;
 
-  const resultsDiv = el.querySelector('#research-results');
-  const getFilters = () => ({
-    country: el.querySelector('#country-filter').value,
-    status: el.querySelector('#status-filter').value,
-    media_type: el.querySelector('#media-filter').value,
+  // Load accounts
+  if (metaConfigured) {
+    loadAccounts(el);
+  }
+
+  // Spy search
+  el.querySelector('#spy-btn')?.addEventListener('click', () => {
+    const q = el.querySelector('#spy-search').value.trim();
+    if (q) searchPages(el.querySelector('#spy-results'), q);
+  });
+  el.querySelector('#spy-search')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') el.querySelector('#spy-btn').click();
   });
 
-  // Keyword search
-  el.querySelector('#keyword-btn').addEventListener('click', async () => {
-    const q = el.querySelector('#keyword-search').value.trim();
-    if (!q) return;
-    await doSearch(resultsDiv, q, null, getFilters());
+  // Ad Library search
+  el.querySelector('#adlib-btn')?.addEventListener('click', () => {
+    const q = el.querySelector('#adlib-search').value.trim();
+    const country = el.querySelector('#adlib-country').value;
+    if (q) searchAdLibrary(el.querySelector('#adlib-results'), q, country);
   });
-
-  el.querySelector('#keyword-search').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') el.querySelector('#keyword-btn').click();
-  });
-
-  // Page search
-  el.querySelector('#page-btn').addEventListener('click', async () => {
-    const q = el.querySelector('#page-search').value.trim();
-    if (!q) return;
-    await doPageSearch(resultsDiv, q, getFilters());
-  });
-
-  el.querySelector('#page-search').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') el.querySelector('#page-btn').click();
+  el.querySelector('#adlib-search')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') el.querySelector('#adlib-btn').click();
   });
 }
 
-async function doSearch(container, query, pageId, filters) {
-  container.innerHTML = '<div class="text-slate-400 text-center py-8">Searching Meta Ad Library...</div>';
-
+async function loadAccounts(el) {
+  const container = el.querySelector('#accounts-list');
   try {
-    const params = new URLSearchParams({ q: query, ...filters });
-    const result = await api.get(`/research/search?${params}`);
-    renderResults(container, result.data, query);
-  } catch (err) {
-    container.innerHTML = `<div class="bg-red-900 border border-red-700 p-4 rounded-lg">${esc(err.message)}</div>`;
-  }
-}
-
-async function doPageSearch(container, pageQuery, filters) {
-  container.innerHTML = '<div class="text-slate-400 text-center py-8">Resolving page...</div>';
-
-  try {
-    // First resolve page name to ID
-    const pageRes = await api.get(`/research/resolve-page?q=${encodeURIComponent(pageQuery)}`);
-    const page = pageRes.data;
-
-    container.innerHTML = `<div class="text-slate-400 text-center py-4">Found: <strong>${esc(page.name)}</strong> (${esc(page.category || 'Page')}) - ${(page.fanCount || 0).toLocaleString()} fans. Loading ads...</div>`;
-
-    // Then search by page ID
-    const params = new URLSearchParams({ country: filters.country, status: filters.status });
-    const result = await api.get(`/research/page/${page.id}?${params}`);
-    renderResults(container, result.data, `Page: ${page.name}`);
-  } catch (err) {
-    container.innerHTML = `<div class="bg-red-900 border border-red-700 p-4 rounded-lg">${esc(err.message)}</div>`;
-  }
-}
-
-function renderResults(container, data, query) {
-  const ads = data.ads || [];
-  if (ads.length === 0) {
-    container.innerHTML = `<div class="text-slate-500 text-center py-8">No ads found for "${esc(query)}"</div>`;
-    return;
-  }
-
-  container.innerHTML = `
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-semibold">${esc(ads.length)} ads found for "${esc(query)}"</h2>
-      ${data.hasMore ? '<span class="text-slate-400 text-sm">Showing first page</span>' : ''}
-    </div>
-    <div class="grid gap-4">
-      ${ads.map(ad => `
-        <div class="bg-slate-800 p-4 rounded-lg">
-          <div class="flex flex-col sm:flex-row sm:items-start gap-4">
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="font-bold">${esc(ad.pageName)}</span>
-                <span class="text-slate-500 text-xs">${esc(ad.platforms?.join(', ') || '')}</span>
-              </div>
-              ${ad.bodies.length > 0 ? `<p class="text-slate-300 text-sm mb-2">${esc(ad.bodies[0].substring(0, 300))}${ad.bodies[0].length > 300 ? '...' : ''}</p>` : ''}
-              ${ad.titles.length > 0 ? `<p class="text-sky-400 text-sm font-medium mb-1">${esc(ad.titles[0])}</p>` : ''}
-              ${ad.descriptions.length > 0 ? `<p class="text-slate-400 text-xs mb-2">${esc(ad.descriptions[0])}</p>` : ''}
-              <div class="flex flex-wrap gap-2 text-xs text-slate-500">
-                <span>Started: ${ad.deliveryStart ? new Date(ad.deliveryStart).toLocaleDateString('id-ID') : 'N/A'}</span>
-                ${ad.deliveryStop ? `<span>Ended: ${new Date(ad.deliveryStop).toLocaleDateString('id-ID')}</span>` : '<span class="text-emerald-400">Active</span>'}
-                ${ad.spend ? `<span>Spend: ${ad.spend.lower_bound || '?'}-${ad.spend.upper_bound || '?'} ${ad.currency || ''}</span>` : ''}
-                ${ad.impressions ? `<span>Impressions: ${ad.impressions.lower_bound || '?'}-${ad.impressions.upper_bound || '?'}</span>` : ''}
-                ${ad.audienceSize ? `<span>Audience: ${(ad.audienceSize.lower_bound || 0).toLocaleString()}-${(ad.audienceSize.upper_bound || 0).toLocaleString()}</span>` : ''}
-              </div>
-            </div>
-            ${ad.snapshotUrl ? `<a href="${esc(ad.snapshotUrl)}" target="_blank" rel="noopener" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-sm text-sky-400 min-h-[44px] flex items-center whitespace-nowrap">View Ad</a>` : ''}
-          </div>
+    const { data: accounts } = await api.get('/meta/accounts');
+    if (accounts.length === 0) {
+      container.innerHTML = '<p class="text-slate-400">No ad accounts found.</p>';
+      return;
+    }
+    container.innerHTML = accounts.map(a => `
+      <div class="bg-slate-800 p-4 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <div class="font-bold">${esc(a.name)}</div>
+          <div class="text-slate-400 text-sm">${esc(a.id)} | ${esc(a.currency)} | ${esc(a.status)}</div>
+          ${a.amountSpent > 0 ? `<div class="text-slate-500 text-xs">Total spent: Rp ${a.amountSpent.toLocaleString()}</div>` : ''}
         </div>
-      `).join('')}
-    </div>
-  `;
+        <div class="flex gap-2">
+          <button data-view-campaigns="${esc(a.id)}" class="bg-sky-500 hover:bg-sky-600 px-3 py-2 rounded-lg text-sm min-h-[44px]">View Campaigns</button>
+          <button data-view-ads="${esc(a.id)}" class="bg-purple-500 hover:bg-purple-600 px-3 py-2 rounded-lg text-sm min-h-[44px]">View Ads</button>
+        </div>
+      </div>
+    `).join('');
+
+    // Campaign view buttons
+    container.querySelectorAll('[data-view-campaigns]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.textContent = 'Loading...';
+        try {
+          const { data: campaigns } = await api.get(`/meta/accounts/${btn.dataset.viewCampaigns}/campaigns`);
+          const parent = btn.closest('.bg-slate-800');
+          let detail = parent.querySelector('.campaign-detail');
+          if (!detail) { detail = document.createElement('div'); detail.className = 'campaign-detail mt-3'; parent.appendChild(detail); }
+          detail.innerHTML = campaigns.length === 0 ? '<p class="text-slate-500 text-sm">No campaigns</p>' :
+            '<div class="space-y-2">' + campaigns.map(c => `
+              <div class="bg-slate-900 p-3 rounded-lg text-sm">
+                <span class="font-medium">${esc(c.name)}</span>
+                <span class="ml-2 text-xs px-1.5 py-0.5 rounded ${c.status === 'active' ? 'bg-emerald-900 text-emerald-300' : 'bg-slate-700 text-slate-400'}">${esc(c.status)}</span>
+                <span class="text-slate-500 ml-2">${esc(c.objective)} | Budget: Rp ${(c.dailyBudget || 0).toLocaleString()}/day</span>
+              </div>
+            `).join('') + '</div>';
+        } catch (err) {
+          alert(err.message);
+        }
+        btn.textContent = 'View Campaigns';
+      });
+    });
+
+    // Ads view buttons
+    container.querySelectorAll('[data-view-ads]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.textContent = 'Loading...';
+        try {
+          const { data: ads } = await api.get(`/meta/accounts/${btn.dataset.viewAds}/ads`);
+          const parent = btn.closest('.bg-slate-800');
+          let detail = parent.querySelector('.ads-detail');
+          if (!detail) { detail = document.createElement('div'); detail.className = 'ads-detail mt-3'; parent.appendChild(detail); }
+          detail.innerHTML = ads.length === 0 ? '<p class="text-slate-500 text-sm">No ads</p>' :
+            '<div class="space-y-2">' + ads.map(ad => `
+              <div class="bg-slate-900 p-3 rounded-lg text-sm">
+                <span class="font-medium">${esc(ad.name)}</span>
+                <span class="ml-2 text-xs px-1.5 py-0.5 rounded ${ad.status === 'active' ? 'bg-emerald-900 text-emerald-300' : 'bg-slate-700 text-slate-400'}">${esc(ad.status)}</span>
+                ${ad.creative?.body ? `<p class="text-slate-400 mt-1">${esc(ad.creative.body.substring(0, 150))}${ad.creative.body.length > 150 ? '...' : ''}</p>` : ''}
+                ${ad.creative?.imageUrl ? `<img src="${esc(ad.creative.imageUrl)}" class="mt-2 rounded max-h-32 object-cover" loading="lazy">` : ''}
+              </div>
+            `).join('') + '</div>';
+        } catch (err) {
+          alert(err.message);
+        }
+        btn.textContent = 'View Ads';
+      });
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="text-red-400">${esc(err.message)}</div>`;
+  }
+}
+
+async function searchPages(container, query) {
+  container.innerHTML = '<p class="text-slate-400">Searching...</p>';
+  try {
+    const { data: pages } = await api.get(`/meta/search-pages?q=${encodeURIComponent(query)}`);
+    if (pages.length === 0) {
+      container.innerHTML = `<p class="text-slate-500">No pages found for "${esc(query)}"</p>`;
+      return;
+    }
+    container.innerHTML = pages.map(p => `
+      <div class="bg-slate-900 p-3 rounded-lg mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <span class="font-medium">${esc(p.name)}</span>
+          <span class="text-slate-500 text-sm ml-2">${esc(p.category || '')} | ${(p.fan_count || 0).toLocaleString()} fans</span>
+        </div>
+        <button data-spy-page="${esc(p.id)}" data-spy-name="${esc(p.name)}" class="bg-red-500 hover:bg-red-600 px-3 py-2 rounded-lg text-sm min-h-[44px]">Spy Ads</button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('[data-spy-page]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.textContent = 'Loading...';
+        try {
+          const { data } = await api.get(`/meta/page-ads/${btn.dataset.spyPage}`);
+          if (data.source === 'ads_archive' && data.ads.length > 0) {
+            container.innerHTML += '<div class="mt-4 space-y-3">' + data.ads.map(ad => `
+              <div class="bg-slate-900 p-3 rounded-lg">
+                <div class="font-medium">${esc(ad.page_name)}</div>
+                ${(ad.ad_creative_bodies || []).map(b => `<p class="text-slate-300 text-sm mt-1">${esc(b.substring(0, 300))}</p>`).join('')}
+                ${ad.ad_snapshot_url ? `<a href="${esc(ad.ad_snapshot_url)}" target="_blank" class="text-sky-400 text-sm hover:underline mt-1 inline-block">View Creative</a>` : ''}
+              </div>
+            `).join('') + '</div>';
+          } else {
+            container.innerHTML += `<div class="mt-3 bg-slate-900 p-3 rounded-lg text-sm">
+              <p class="text-yellow-400">Ad Library API access not available. Page info:</p>
+              <p class="text-slate-300 mt-1">${esc(data.page?.name || btn.dataset.spyName)} - ${esc(data.page?.category || 'Unknown')} | ${(data.page?.fan_count || 0).toLocaleString()} fans</p>
+              ${data.page?.website ? `<p class="text-slate-400 text-xs mt-1">Website: ${esc(data.page.website)}</p>` : ''}
+              <p class="text-slate-500 text-xs mt-2">To access competitor ads, apply for Ad Library API at <a href="https://www.facebook.com/ads/library/api" target="_blank" class="text-sky-400 hover:underline">facebook.com/ads/library/api</a></p>
+            </div>`;
+          }
+        } catch (err) {
+          container.innerHTML += `<div class="mt-2 text-red-400 text-sm">${esc(err.message)}</div>`;
+        }
+        btn.textContent = 'Spy Ads';
+      });
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="text-red-400">${esc(err.message)}</div>`;
+  }
+}
+
+async function searchAdLibrary(container, query, country) {
+  container.innerHTML = '<p class="text-slate-400">Searching Meta Ad Library...</p>';
+  try {
+    const { data } = await api.get(`/research/search?q=${encodeURIComponent(query)}&country=${country}`);
+    const ads = data.ads || [];
+    if (ads.length === 0) {
+      container.innerHTML = `<p class="text-slate-500">No results. The Ad Library API may need separate app approval. <a href="https://www.facebook.com/ads/library/api" target="_blank" class="text-sky-400 hover:underline">Apply here</a></p>`;
+      return;
+    }
+    container.innerHTML = `<p class="text-sm text-slate-400 mb-3">${ads.length} ads found</p>` +
+      ads.map(ad => `
+        <div class="bg-slate-900 p-3 rounded-lg mt-2">
+          <div class="font-medium">${esc(ad.pageName)}</div>
+          ${ad.bodies.length > 0 ? `<p class="text-slate-300 text-sm mt-1">${esc(ad.bodies[0].substring(0, 300))}</p>` : ''}
+          ${ad.snapshotUrl ? `<a href="${esc(ad.snapshotUrl)}" target="_blank" class="text-sky-400 text-sm hover:underline">View Ad</a>` : ''}
+        </div>
+      `).join('');
+  } catch (err) {
+    container.innerHTML = `<div class="text-red-400">${esc(err.message)}</div>`;
+  }
 }

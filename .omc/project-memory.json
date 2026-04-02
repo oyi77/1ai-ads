@@ -1,0 +1,224 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1775146533348,
+  "projectRoot": "/home/openclaw/projects/adforge",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "express",
+        "version": "5.2.1",
+        "category": "backend"
+      },
+      {
+        "name": "vite",
+        "version": "8.0.3",
+        "category": "build"
+      },
+      {
+        "name": "vitest",
+        "version": "4.1.2",
+        "category": "testing"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "npm run build",
+    "testCommand": "npm test",
+    "lintCommand": null,
+    "devCommand": "npm run dev",
+    "scripts": {
+      "dev": "vite",
+      "build": "vite build",
+      "preview": "vite preview",
+      "start": "node server.js",
+      "test": "vitest run",
+      "test:watch": "vitest",
+      "test:unit": "vitest run tests/unit/",
+      "test:integration": "vitest run tests/integration/",
+      "test:smoke": "vitest run tests/smoke/",
+      "test:frontend": "vitest run tests/frontend/",
+      "test:functional": "vitest run tests/functional/",
+      "test:qa": "node qa.mjs",
+      "test:all": "vitest run && node qa.mjs"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "src",
+      "tests"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "client": {
+      "path": "client",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1775146533339,
+      "keyFiles": [
+        "index.html"
+      ]
+    },
+    "db": {
+      "path": "db",
+      "purpose": null,
+      "fileCount": 6,
+      "lastAccessed": 1775146533340,
+      "keyFiles": [
+        "adforge.db",
+        "adforge.db-shm",
+        "adforge.db-wal",
+        "index.js",
+        "schema.sql"
+      ]
+    },
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 1,
+      "lastAccessed": 1775146533343,
+      "keyFiles": [
+        "index.html"
+      ]
+    },
+    "server": {
+      "path": "server",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1775146533344,
+      "keyFiles": [
+        "app.js"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 0,
+      "lastAccessed": 1775146533345,
+      "keyFiles": []
+    },
+    "tests": {
+      "path": "tests",
+      "purpose": "Test files",
+      "fileCount": 1,
+      "lastAccessed": 1775146533346,
+      "keyFiles": [
+        "setup.test.js"
+      ]
+    },
+    "client/src": {
+      "path": "client/src",
+      "purpose": "Source code",
+      "fileCount": 1,
+      "lastAccessed": 1775146533346,
+      "keyFiles": [
+        "app.js"
+      ]
+    },
+    "dist/assets": {
+      "path": "dist/assets",
+      "purpose": "Static assets",
+      "fileCount": 6,
+      "lastAccessed": 1775146533346,
+      "keyFiles": [
+        "index-BBz2FEvH.js",
+        "index-Bwqtyhta.js",
+        "index-BxvijOCC.js"
+      ]
+    },
+    "server/lib": {
+      "path": "server/lib",
+      "purpose": "Library code",
+      "fileCount": 3,
+      "lastAccessed": 1775146533346,
+      "keyFiles": [
+        "auth.js",
+        "escape.js",
+        "validate.js"
+      ]
+    },
+    "server/middleware": {
+      "path": "server/middleware",
+      "purpose": "Middleware",
+      "fileCount": 1,
+      "lastAccessed": 1775146533347,
+      "keyFiles": [
+        "auth.js"
+      ]
+    },
+    "server/routes": {
+      "path": "server/routes",
+      "purpose": "Route handlers",
+      "fileCount": 7,
+      "lastAccessed": 1775146533347,
+      "keyFiles": [
+        "ads.js",
+        "analytics.js",
+        "landing.js"
+      ]
+    },
+    "server/services": {
+      "path": "server/services",
+      "purpose": "Business logic services",
+      "fileCount": 8,
+      "lastAccessed": 1775146533347,
+      "keyFiles": [
+        "ad-generator.js",
+        "ad-research.js",
+        "ai.js"
+      ]
+    },
+    "tests/helpers": {
+      "path": "tests/helpers",
+      "purpose": "Helper functions",
+      "fileCount": 2,
+      "lastAccessed": 1775146533347,
+      "keyFiles": [
+        "db.js",
+        "fixtures.js"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "client/src/views/dashboard.js",
+      "accessCount": 5,
+      "lastAccessed": 1775147030769,
+      "type": "file"
+    },
+    {
+      "path": "client/src/views/research.js",
+      "accessCount": 1,
+      "lastAccessed": 1775146986156,
+      "type": "file"
+    },
+    {
+      "path": "qa.mjs",
+      "accessCount": 1,
+      "lastAccessed": 1775147061143,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

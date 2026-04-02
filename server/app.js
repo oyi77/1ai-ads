@@ -21,6 +21,8 @@ import { createResearchRouter } from './routes/research.js';
 import { AdResearchService } from './services/ad-research.js';
 import { ScalevService } from './services/scalev.js';
 import { createScalevRouter } from './routes/scalev.js';
+import { MetaAdsAPI } from './services/meta-api.js';
+import { createMetaRouter } from './routes/meta.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -82,6 +84,7 @@ export function createApp({ db, llmClient, mcpClient } = {}) {
   const scalevService = new ScalevService(settingsRepo);
   app.use('/api/research', requireAuth, createResearchRouter(new AdResearchService(settingsRepo)));
   app.use('/api/scalev', requireAuth, createScalevRouter(scalevService));
+  app.use('/api/meta', requireAuth, createMetaRouter(new MetaAdsAPI(settingsRepo), campaignsRepo));
 
   // Scalev webhook (public - no auth, called by Scalev servers)
   app.post('/api/webhooks/scalev', express.json(), (req, res) => {

@@ -10,23 +10,12 @@ export async function renderDashboard(el) {
   try {
     const { data: m } = await api.get('/analytics/dashboard');
 
-    // Check OmniRoute status
-    let omnirouteStatus = 'unknown';
-    try {
-      const mcp = await api.get('/mcp/status');
-      omnirouteStatus = mcp.data.omniroute?.connected ? 'connected' : 'disconnected';
-    } catch { omnirouteStatus = 'disconnected'; }
-
     el.innerHTML = `
       <div class="p-4 sm:p-8">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-2">
           <h1 class="text-2xl sm:text-3xl font-bold">Dashboard</h1>
           <div class="flex items-center gap-3 text-sm">
-            <span class="flex items-center gap-1">
-              <span class="w-2 h-2 rounded-full ${omnirouteStatus === 'connected' ? 'bg-emerald-400' : 'bg-red-400'}"></span>
-              OmniRoute: ${esc(omnirouteStatus)}
-            </span>
-            <span class="text-slate-500 border border-slate-700 px-2 py-0.5 rounded text-xs">MCP: Coming Soon</span>
+            <button id="sync-btn" class="bg-sky-500 hover:bg-sky-600 px-3 py-2 rounded-lg text-sm min-h-[44px]">Sync Meta Ads</button>
           </div>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
@@ -63,6 +52,22 @@ export async function renderDashboard(el) {
         </div>
       </div>
     `;
+
+    // Sync button handler
+    el.querySelector('#sync-btn')?.addEventListener('click', async () => {
+      const btn = el.querySelector('#sync-btn');
+      btn.disabled = true;
+      btn.textContent = 'Syncing...';
+      try {
+        const res = await api.post('/meta/sync');
+        btn.textContent = `Synced ${res.data.campaignsSynced} campaigns`;
+        setTimeout(() => renderDashboard(el), 1500);
+      } catch (err) {
+        btn.textContent = err.message.includes('not configured') ? 'Configure in Settings' : 'Sync Failed';
+        setTimeout(() => { btn.textContent = 'Sync Meta Ads'; btn.disabled = false; }, 3000);
+      }
+    });
+
   } catch (e) {
     el.innerHTML = `<div class="p-4 sm:p-8"><h1 class="text-2xl font-bold mb-4">Dashboard</h1><p class="text-red-400">Failed to load metrics</p></div>`;
   }

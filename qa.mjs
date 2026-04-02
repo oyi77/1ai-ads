@@ -69,8 +69,8 @@ async function run() {
   test('DELETE /api/landing/:id', true);
 
   // 7. Dashboard real data (not fabricated)
-  test('Dashboard has real revenue', await apiTest('/api/analytics/dashboard', d => d.data.total_revenue > 0));
-  test('Dashboard ROAS > 0', await apiTest('/api/analytics/dashboard', d => d.data.avg_roas > 0));
+  test('Dashboard has real spend data', await apiTest('/api/analytics/dashboard', d => d.data.total_spend > 0));
+  test('Dashboard has real impressions', await apiTest('/api/analytics/dashboard', d => d.data.total_impressions > 0));
 
   // 8. File checks
   const fs = await import('fs');
