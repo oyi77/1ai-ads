@@ -1,56 +1,89 @@
 import { Router } from 'express';
-import db from '../../db/index.js';
-import { v4 as uuid } from 'uuid';
-import { generateLandingPage } from '../services/ai.js';
+import { validateLandingPage, validateRequired } from '../lib/validate.js';
 import { renderLandingPage } from '../services/templates.js';
 
-const router = Router();
+export function createLandingRouter(landingRepo, landingGenerator) {
+  const router = Router();
 
-router.get('/', (req, res) => {
-  const pages = db.prepare('SELECT * FROM landing_pages ORDER BY created_at DESC').all();
-  res.json({ success: true, data: pages, total: pages.length });
-});
-
-router.get('/:id', (req, res) => {
-  const page = db.prepare('SELECT * FROM landing_pages WHERE id = ?').get(req.params.id);
-  if (!page) return res.status(404).json({ success: false, error: 'Not found' });
-  res.json({ success: true, data: page });
-});
-
-router.post('/', (req, res) => {
-  const id = uuid();
-  const { name, template, theme, product_name, price, pain_points, benefits, cta_primary, cta_secondary, wa_link, checkout_link } = req.body;
-  db.prepare(`
-    INSERT INTO landing_pages (id, name, template, theme, product_name, price, pain_points, benefits, cta_primary, cta_secondary, wa_link, checkout_link)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, name, template || 'dark', theme || 'dark', product_name, price, JSON.stringify(pain_points || []), JSON.stringify(benefits || []), cta_primary, cta_secondary, wa_link, checkout_link);
-  res.json({ success: true, data: { id } });
-});
-
-router.post('/generate', async (req, res) => {
-  const { product_name, price, benefits, cta_primary, theme } = req.body;
-
-  if (!product_name || !price) {
-    return res.status(400).json({
-      success: false,
-      error: 'Missing required fields: product_name, price'
-    });
-  }
-
-  try {
-    const html = await generateLandingPage(product_name, price, benefits, cta_primary, theme);
-    res.json({ success: true, data: { html_output: html } });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-router.post('/render', (req, res) => {
-  const { template, theme, product_name, price, benefits, cta_primary, checkout_link, pain_points, cta_secondary, wa_link } = req.body;
-  const html = renderLandingPage({
-    template, theme: theme || 'dark', product_name, price, benefits, cta_primary, checkout_link, pain_points, cta_secondary, wa_link
+  router.get('/', (req, res) => {
+    const { page = 1, limit = 20 } = req.query;
+    const result = landingRepo.findAll({ page: +page, limit: +limit });
+    res.json({ success: true, ...result });
   });
-  res.json({ success: true, data: { html_output: html } });
-});
 
-export default router;
+  router.get('/:id/export', (req, res) => {
+    const page = landingRepo.findById(req.params.id);
+    if (!page) return res.status(404).json({ success: false, error: 'Not found' });
+
+    const html = page.html_output || renderLandingPage({
+      theme: page.theme,
+      product_name: page.product_name,
+      price: page.price,
+      benefits: page.benefits,
+      pain_points: page.pain_points,
+      cta_primary: page.cta_primary,
+      cta_secondary: page.cta_secondary,
+      wa_link: page.wa_link,
+      checkout_link: page.checkout_link,
+    });
+
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Content-Disposition', `attachment; filename="${page.name || 'landing-page'}.html"`);
+    res.send(html);
+  });
+
+  router.get('/:id', (req, res) => {
+    const page = landingRepo.findById(req.params.id);
+    if (!page) return res.status(404).json({ success: false, error: 'Not found' });
+    res.json({ success: true, data: page });
+  });
+
+  router.post('/', (req, res) => {
+    const v = validateLandingPage(req.body);
+    if (!v.valid) return res.status(400).json({ success: false, error: v.error });
+
+    const id = landingRepo.create(req.body);
+    res.json({ success: true, data: { id } });
+  });
+
+  router.put('/:id', (req, res) => {
+    const updated = landingRepo.update(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ success: false, error: 'Not found' });
+    res.json({ success: true, data: updated });
+  });
+
+  router.delete('/:id', (req, res) => {
+    const removed = landingRepo.remove(req.params.id);
+    if (!removed) return res.status(404).json({ success: false, error: 'Not found' });
+    res.json({ success: true });
+  });
+
+  router.post('/generate', async (req, res) => {
+    const v = validateRequired(req.body, ['product_name', 'price']);
+    if (!v.valid) return res.status(400).json({ success: false, error: v.error });
+
+    try {
+      const { product_name, price, benefits, cta_primary } = req.body;
+      const html = await landingGenerator.generateLandingPage(product_name, price, benefits, cta_primary);
+      res.json({ success: true, data: { html_output: html } });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  router.post('/render', (req, res) => {
+    const { id, theme, product_name, price, benefits, cta_primary, checkout_link, pain_points, cta_secondary, wa_link } = req.body;
+    const html = renderLandingPage({
+      theme: theme || 'dark', product_name, price, benefits, cta_primary, checkout_link, pain_points, cta_secondary, wa_link
+    });
+
+    // If id provided, save the rendered html to the landing page
+    if (id) {
+      landingRepo.update(id, { html_output: html });
+    }
+
+    res.json({ success: true, data: { html_output: html } });
+  });
+
+  return router;
+}

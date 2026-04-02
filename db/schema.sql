@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
   status TEXT,
   budget REAL,
   spend REAL,
+  revenue REAL,
   impressions INTEGER DEFAULT 0,
   clicks INTEGER DEFAULT 0,
   conversions INTEGER DEFAULT 0,
@@ -57,3 +58,22 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_ads_platform ON ads(platform);
+CREATE INDEX IF NOT EXISTS idx_ads_status ON ads(status);
+CREATE INDEX IF NOT EXISTS idx_campaigns_platform ON campaigns(platform);
+
+-- Triggers for updated_at
+CREATE TRIGGER IF NOT EXISTS ads_updated_at AFTER UPDATE ON ads
+BEGIN UPDATE ads SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
+
+CREATE TRIGGER IF NOT EXISTS landing_pages_updated_at AFTER UPDATE ON landing_pages
+BEGIN UPDATE landing_pages SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id; END;

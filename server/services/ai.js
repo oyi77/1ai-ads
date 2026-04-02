@@ -1,7 +1,7 @@
-const OMNIROUTE_URL = process.env.OMNIROUTE_URL || 'http://localhost:20128/v1/chat/completions';
-const MODEL = 'auto/pro-fast';
+// Legacy utility exports - kept for backward compatibility with existing tests.
+// Real implementations live in llm-client.js, ad-generator.js, landing-generator.js
 
-const ANTI_HALLUCINATION_RULES = `
+export const ANTI_HALLUCINATION_RULES = `
 STRICT RULES FOR LANDING PAGE GENERATION:
 1. NO <small> tags as headers
 2. NO border-radius above 12px
@@ -11,7 +11,7 @@ STRICT RULES FOR LANDING PAGE GENERATION:
 6. NO eyebrow labels with uppercase
 7. NO transform animations on hover
 8. NO dramatic shadows (max 0 2px 8px rgba(0,0,0,0.1))
-9. Use ONLY these colors: [insert palette]
+9. Use ONLY these colors: Background #0d1117, Surface #161b22, Primary #58a6ff, Secondary #79c0ff, Accent #f78166, Text #c9d1d9
 10. System fonts only, no custom fonts
 11. Spacing: 4/8/12/16/24/32px scale only
 12. Sections must be complete: Hero, Benefits, How It Works, Social Proof, Offer, CTA
@@ -20,78 +20,21 @@ STRICT RULES FOR LANDING PAGE GENERATION:
 15. No generic headlines - must be product-specific
 `;
 
-const SYSTEM_PROMPT = `Kamu adalah AI Ads Copywriter dari BerkahKarya.
+export function extractLLMContent(data) {
+  if (!data) return null;
+  return data?.choices?.[0]?.message?.content || null;
+}
 
-4 CONTENT MODELS:
-1. P.A.S (Problem-Agitate-Solution)
-2. Efek Gravitasi
-3. Hasil x3
-4. Prospects-to-Prospects
-
-OUTPUT FORMAT:
-Generate 4 iklan (1 per model) dalam format JSON:
-{"format": "single_image", "ads": [{"model": "1", "model_name": "P.A.S", "hook": "...", "body": "...", "cta": "..."}]}`;
-
-export async function generateAds(product, target, keunggulan) {
-  const userPrompt = `Generate 4 iklan untuk: PRODUK: ${product}, TARGET: ${target}, KEUNGGULAN: ${keunggulan}`;
-
+export function parseJsonResponse(raw) {
   try {
-    const response = await fetch(OMNIROUTE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.8,
-        max_tokens: 4000
-      })
-    });
-
-    const data = await response.json();
-    const content = data.choices[0].message.content;
-
-    // Extract JSON
-    const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/```\n([\s\S]*?)\n```/);
-    const parsed = jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(content);
-
-    return parsed;
-  } catch (e) {
-    console.error('AI generation error:', e);
-    throw e;
+    const jsonMatch = raw.match(/```json\n([\s\S]*?)\n```/) || raw.match(/```\n([\s\S]*?)\n```/);
+    return jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(raw);
+  } catch {
+    return { error: 'Failed to parse AI response as JSON', raw_content: raw };
   }
 }
 
-export async function generateLandingPage(product, price, benefits, cta, theme) {
-  const userPrompt = `Generate landing page HTML untuk: PRODUK: ${product}, HARGA: ${price}, BENEFITS: ${benefits}, CTA: ${cta}`;
-
-  try {
-    const response = await fetch(OMNIROUTE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: 'system', content: ANTI_HALLUCINATION_RULES + '\n\nGenerate clean, functional HTML that follows Uncodixfy rules.' },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 8000
-      })
-    });
-
-    const data = await response.json();
-    const content = data.choices[0].message.content;
-
-    // Extract HTML
-    const htmlMatch = content.match(/```html\n([\s\S]*?)\n```/) || content.match(/```\n([\s\S]*?)\n```/);
-    const html = htmlMatch ? htmlMatch[1] : content;
-
-    return html;
-  } catch (e) {
-    console.error('Landing page generation error:', e);
-    throw e;
-  }
+export function parseHtmlResponse(raw) {
+  const htmlMatch = raw.match(/```html\n([\s\S]*?)\n```/) || raw.match(/```\n([\s\S]*?)\n```/);
+  return htmlMatch ? htmlMatch[1] : raw;
 }

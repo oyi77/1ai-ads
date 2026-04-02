@@ -5,15 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AdForge - Ads Management</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Responsive nav */
+    @media (max-width: 767px) {
+      #nav-links { display: none; flex-direction: column; width: 100%; padding: 8px 0; }
+      #nav-links.nav-open { display: flex; }
+    }
+    @media (min-width: 768px) {
+      #nav-links { display: flex !important; }
+      #menu-toggle { display: none !important; }
+    }
+    .hidden-when-unauth { display: none !important; }
+  </style>
 </head>
-<body class="bg-slate-900 text-white">
+<body class="bg-slate-900 text-white min-h-screen">
   <nav class="bg-slate-800 border-b border-slate-700">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-6">
-      <a href="/" class="font-bold text-lg text-sky-400">AdForge</a>
-      <a href="/" class="text-slate-300 hover:text-white">Dashboard</a>
-      <a href="/ads" class="text-slate-300 hover:text-white">Ads</a>
-      <a href="/landing" class="text-slate-300 hover:text-white">Landing</a>
-      <a href="/analytics" class="text-slate-300 hover:text-white">Analytics</a>
+    <div class="max-w-7xl mx-auto px-4 py-3">
+      <div class="flex items-center justify-between">
+        <a href="#/" class="font-bold text-lg text-sky-400">AdForge</a>
+        <button id="menu-toggle" class="md:hidden p-2 text-slate-300 hover:text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+        <div id="nav-links" class="flex items-center gap-4 md:gap-6">
+          <a href="#/" class="text-slate-300 hover:text-white py-1">Dashboard</a>
+          <a href="#/ads" class="text-slate-300 hover:text-white py-1">Ads</a>
+          <a href="#/landing" class="text-slate-300 hover:text-white py-1">Landing</a>
+          <a href="#/analytics" class="text-slate-300 hover:text-white py-1">Analytics</a>
+          <a href="#/settings" class="text-slate-300 hover:text-white py-1">Settings</a>
+          <button id="logout-btn" class="hidden text-slate-400 hover:text-red-400 py-1 text-sm md:ml-4">Logout</button>
+        </div>
+      </div>
     </div>
   </nav>
   <div id="app"></div>

@@ -1,28 +1,22 @@
-import express from 'express';
-import cors from 'cors';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import adsRouter from './server/routes/ads.js';
-import landingRouter from './server/routes/landing.js';
-import analyticsRouter from './server/routes/analytics.js';
-import mcpRouter from './server/routes/mcp.js';
+import { createDatabase } from './db/index.js';
+import { createApp } from './server/app.js';
+import { LLMClient } from './server/services/llm-client.js';
+import { MCPClientManager } from './server/services/mcp-client.js';
+import { seedDemoData } from './db/seed.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const app = express();
-const PORT = process.env.PORT || 3000;
+const db = createDatabase(process.env.DB_PATH || './db/adforge.db');
+seedDemoData(db);
 
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+const llmClient = new LLMClient();
+const mcpClient = new MCPClientManager();
 
-app.use('/api/ads', adsRouter);
-app.use('/api/landing', landingRouter);
-app.use('/api/analytics', analyticsRouter);
-app.use('/api/mcp', mcpRouter);
+const app = createApp({ db, llmClient, mcpClient });
+const PORT = process.env.PORT || 3001;
 
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(join(__dirname, 'dist')));
-}
+const server = app.listen(PORT, () => console.log(`AdForge running on ${PORT}`));
 
-app.listen(PORT, () => console.log(`AdForge running on ${PORT}`));
+// Graceful shutdown
+process.on('SIGTERM', () => { server.close(); db.close(); });
+process.on('SIGINT', () => { server.close(); db.close(); });
 
 export default app;

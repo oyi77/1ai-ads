@@ -1,52 +1,59 @@
 import { Router } from 'express';
-import db from '../../db/index.js';
-import { v4 as uuid } from 'uuid';
-import { generateAds } from '../services/ai.js';
+import { validateAd, validateRequired } from '../lib/validate.js';
 
-const router = Router();
+export function createAdsRouter(adsRepo, adGenerator) {
+  const router = Router();
 
-router.get('/', (req, res) => {
-  const ads = db.prepare('SELECT * FROM ads ORDER BY created_at DESC').all();
-  res.json({ success: true, data: ads, total: ads.length });
-});
+  router.get('/', (req, res) => {
+    const { page = 1, limit = 20, platform, status } = req.query;
+    const result = adsRepo.findAll({ page: +page, limit: +limit, platform, status });
+    res.json({ success: true, ...result });
+  });
 
-router.get('/:id', (req, res) => {
-  const ad = db.prepare('SELECT * FROM ads WHERE id = ?').get(req.params.id);
-  if (!ad) return res.status(404).json({ success: false, error: 'Not found' });
-  res.json({ success: true, data: ad });
-});
+  router.get('/search', (req, res) => {
+    const { q, page = 1, limit = 20 } = req.query;
+    if (!q) return res.json({ success: true, data: [], total: 0 });
+    const result = adsRepo.search(q, { page: +page, limit: +limit });
+    res.json({ success: true, ...result });
+  });
 
-router.post('/', (req, res) => {
-  const id = uuid();
-  const { name, product, target, keunggulan, platform, format, content_model, hook, body, cta, tags } = req.body;
-  db.prepare(`
-    INSERT INTO ads (id, name, product, target, keunggulan, platform, format, content_model, hook, body, cta, tags)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, name, product, target, keunggulan, platform || 'meta', format || 'single_image', content_model, hook, body, cta, JSON.stringify(tags || []));
-  res.json({ success: true, data: { id } });
-});
+  router.get('/:id', (req, res) => {
+    const ad = adsRepo.findById(req.params.id);
+    if (!ad) return res.status(404).json({ success: false, error: 'Not found' });
+    res.json({ success: true, data: ad });
+  });
 
-router.delete('/:id', (req, res) => {
-  db.prepare('DELETE FROM ads WHERE id = ?').run(req.params.id);
-  res.json({ success: true });
-});
+  router.post('/', (req, res) => {
+    const v = validateAd(req.body);
+    if (!v.valid) return res.status(400).json({ success: false, error: v.error });
 
-router.post('/generate', async (req, res) => {
-  const { product, target, keunggulan } = req.body;
+    const id = adsRepo.create(req.body);
+    res.json({ success: true, data: { id } });
+  });
 
-  if (!product || !target || !keunggulan) {
-    return res.status(400).json({
-      success: false,
-      error: 'Missing required fields: product, target, keunggulan'
-    });
-  }
+  router.put('/:id', (req, res) => {
+    const updated = adsRepo.update(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ success: false, error: 'Not found' });
+    res.json({ success: true, data: updated });
+  });
 
-  try {
-    const result = await generateAds(product, target, keunggulan);
-    res.json({ success: true, data: result });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
+  router.delete('/:id', (req, res) => {
+    const removed = adsRepo.remove(req.params.id);
+    if (!removed) return res.status(404).json({ success: false, error: 'Not found' });
+    res.json({ success: true });
+  });
 
-export default router;
+  router.post('/generate', async (req, res) => {
+    const v = validateRequired(req.body, ['product', 'target', 'keunggulan']);
+    if (!v.valid) return res.status(400).json({ success: false, error: v.error });
+
+    try {
+      const result = await adGenerator.generateAds(req.body.product, req.body.target, req.body.keunggulan);
+      res.json({ success: true, data: result });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  return router;
+}
