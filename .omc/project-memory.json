@@ -248,6 +248,12 @@
       "accessCount": 1,
       "lastAccessed": 1775147167522,
       "type": "file"
+    },
+    {
+      "path": "server/routes/settings.js",
+      "accessCount": 1,
+      "lastAccessed": 1775148509720,
+      "type": "file"
     }
   ],
   "userDirectives": []

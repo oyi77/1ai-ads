@@ -45,7 +45,8 @@ export function createSettingsRouter(settingsRepo) {
     // Validate required fields per platform
     const required = {
       meta: ['access_token'],
-      google: ['credentials_path', 'developer_token'],
+      google: ['developer_token'],
+      tiktok: ['access_token'],
       scalev: ['api_token'],
     };
 
