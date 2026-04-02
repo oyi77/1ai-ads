@@ -18,6 +18,7 @@
     "test:all": "vitest run && node qa.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "supertest": "^7.2.2",
     "vite": "^8.0.3",
     "vitest": "^4.1.2"
