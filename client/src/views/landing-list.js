@@ -88,23 +88,38 @@ export async function renderLandingList(el) {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           ${pages.length === 0 ? '<p class="text-slate-400">No landing pages yet.</p>' : ''}
           ${pages.map(p => `
-            <div class="bg-slate-800 p-3 sm:p-4 rounded-lg flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-2">
-              <div class="flex-1">
-                <div class="font-bold">${esc(p.name || 'Untitled')}</div>
-                <div class="text-slate-400 text-sm">${esc(p.template)} | ${esc(p.theme)}</div>
-              </div>
-              <div class="flex gap-2 sm:gap-3 self-end sm:self-start flex-wrap">
-                ${p.is_published ? `<a href="/lp/${esc(p.slug)}" target="_blank" class="text-emerald-400 hover:text-emerald-300 text-sm min-h-[44px] px-3 py-2 flex items-center rounded">Live</a>` : `<button data-preview-lp="${esc(p.id)}" data-slug="${esc(p.slug || '')}" class="text-slate-400 hover:text-slate-300 text-sm min-h-[44px] px-3 py-2 rounded flex items-center gap-1">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                  Preview
-                </button>`}
-                <button data-optimize="${esc(p.id)}" data-name="${esc(p.name || 'page')}" class="text-sky-400 hover:text-sky-300 text-sm min-h-[44px] px-3 py-2 rounded flex items-center gap-1">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                  Optimize
-                </button>
-                <button data-deploy="${esc(p.id)}" data-name="${esc(p.name || 'page')}" class="${p.is_published ? 'text-yellow-400' : 'text-emerald-400'} hover:opacity-80 text-sm min-h-[44px] px-3 py-2 rounded">${p.is_published ? 'Undeploy' : 'Deploy'}</button>
-                <button data-export="${esc(p.id)}" data-name="${esc(p.name || 'landing-page')}" class="text-slate-400 hover:text-slate-300 text-sm min-h-[44px] px-3 py-2 rounded">Export</button>
-                <button data-delete="${esc(p.id)}" class="text-red-400 hover:text-red-300 text-sm min-h-[44px] px-3 py-2 rounded">Delete</button>
+            <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden hover:border-[#444c56] transition-all group">
+              <div class="p-5">
+                <div class="flex items-start justify-between mb-4">
+                  <div class="flex-1 min-w-0">
+                    <h3 class="font-bold text-white text-lg truncate">${esc(p.name || 'Untitled Page')}</h3>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 border border-slate-600">${esc(p.template)}</span>
+                      <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">${esc(p.theme)}</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center">
+                    ${p.is_published ? 
+                      '<span class="flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-full"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> LIVE</span>' : 
+                      '<span class="text-xs font-bold text-slate-500 bg-slate-800 px-2 py-1 rounded-full">DRAFT</span>'}
+                  </div>
+                </div>
+                
+                <div class="flex flex-wrap gap-2 pt-2 border-t border-[#30363d]">
+                  ${p.is_published ? 
+                    `<a href="/lp/${esc(p.slug)}" target="_blank" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 rounded text-center transition-colors">View Live</a>` : 
+                    `<button data-preview-lp="${esc(p.id)}" data-slug="${esc(p.slug || '')}" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 rounded transition-colors">Preview</button>`
+                  }
+                  <button data-optimize="${esc(p.id)}" data-name="${esc(p.name || 'page')}" class="flex-1 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold py-2 rounded transition-colors">Optimize</button>
+                </div>
+                
+                <div class="flex items-center justify-between mt-3">
+                  <div class="flex gap-1">
+                    <button data-deploy="${esc(p.id)}" data-name="${esc(p.name || 'page')}" class="text-[11px] font-medium text-slate-400 hover:text-white px-2 py-1 rounded hover:bg-slate-700 transition-all">${p.is_published ? 'Undeploy' : 'Deploy'}</button>
+                    <button data-export="${esc(p.id)}" data-name="${esc(p.name || 'landing-page')}" class="text-[11px] font-medium text-slate-400 hover:text-white px-2 py-1 rounded hover:bg-slate-700 transition-all">Export</button>
+                  </div>
+                  <button data-delete="${esc(p.id)}" class="text-[11px] font-medium text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-400/10 transition-all">Delete</button>
+                </div>
               </div>
             </div>
           `).join('')}

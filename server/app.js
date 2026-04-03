@@ -43,6 +43,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export function createApp({ db, llmClient, mcpClient } = {}) {
   const app = express();
+  app.set('trust proxy', 1);
 
   app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
   app.use(express.json({ limit: '2mb' }));
