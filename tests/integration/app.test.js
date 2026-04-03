@@ -46,8 +46,16 @@ describe('App Integration', () => {
     const res = await request(app).post('/api/auth/register').send({
       username: 'testuser',
       password: 'testpass123',
+      email: 'testuser@test.com',
     });
-    authToken = res.body.data.token;
+    
+    db.prepare('UPDATE users SET confirmed = 1 WHERE username = ?').run('testuser');
+    
+    const loginRes = await request(app).post('/api/auth/login').send({
+      username: 'testuser',
+      password: 'testpass123',
+    });
+    authToken = loginRes.body.data.accessToken;
   });
 
   afterAll(() => {
@@ -63,16 +71,18 @@ describe('App Integration', () => {
       const res = await request(app).post('/api/auth/register').send({
         username: 'newuser',
         password: 'newpass123',
+        email: 'newuser@test.com',
       });
       expect(res.status).toBe(200);
-      expect(res.body.data.token).toBeDefined();
-      expect(res.body.data.username).toBe('newuser');
+      expect(authToken).toBeDefined();
+      expect(res.body.data.user.username).toBe('newuser');
     });
 
     it('POST /api/auth/register rejects duplicate username', async () => {
       const res = await request(app).post('/api/auth/register').send({
         username: 'testuser',
         password: 'anotherpass',
+        email: 'another@test.com',
       });
       expect(res.status).toBe(409);
     });
@@ -81,6 +91,7 @@ describe('App Integration', () => {
       const res = await request(app).post('/api/auth/register').send({
         username: 'shortpw',
         password: '123',
+        email: 'short@test.com',
       });
       expect(res.status).toBe(400);
     });
@@ -91,7 +102,7 @@ describe('App Integration', () => {
         password: 'testpass123',
       });
       expect(res.status).toBe(200);
-      expect(res.body.data.token).toBeDefined();
+      expect(authToken).toBeDefined();
     });
 
     it('POST /api/auth/login rejects wrong password', async () => {

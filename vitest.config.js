@@ -5,5 +5,10 @@ export default defineConfig({
     globals: true,
     env: { NODE_ENV: 'test' },
     exclude: ['tests/e2e/**', 'node_modules/**'],
+    server: {
+      deps: {
+        externals: ['better-sqlite3'],
+      },
+    },
   },
 });

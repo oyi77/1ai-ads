@@ -56,7 +56,7 @@ describe('Smoke Tests', () => {
 
     const login = await request(app).post('/api/auth/login').send({ username: 'admin', password: 'admin123' });
     expect(login.status).toBe(200);
-    expect(login.body.data.token).toBeDefined();
+    expect(login.body.data.accessToken).toBeDefined();
     db.close();
   });
 
@@ -75,7 +75,7 @@ describe('Smoke Tests', () => {
     const app = createApp({ db, llmClient: mockLLM, mcpClient: mockMCP });
 
     const login = await request(app).post('/api/auth/login').send({ username: 'admin', password: 'admin123' });
-    const token = login.body.data.token;
+    const token = login.body.data.accessToken;
     const auth = (r) => r.set('Authorization', `Bearer ${token}`);
 
     const ads = await auth(request(app).get('/api/ads'));

@@ -12,13 +12,13 @@ describe('UsersRepository', () => {
   });
 
   it('create inserts user and returns id', () => {
-    const id = repo.create({ username: 'testuser', password_hash: 'hash123' });
+    const id = repo.create({ username: 'testuser', email: 'test@test.com', password_hash: 'hash123' });
     expect(id).toBeDefined();
     expect(typeof id).toBe('string');
   });
 
   it('findByUsername returns user', () => {
-    repo.create({ username: 'alice', password_hash: 'hash' });
+    repo.create({ username: 'alice', email: 'alice@test.com', password_hash: 'hash' });
     const user = repo.findByUsername('alice');
     expect(user).not.toBeNull();
     expect(user.username).toBe('alice');
@@ -30,13 +30,13 @@ describe('UsersRepository', () => {
   });
 
   it('findById returns user', () => {
-    const id = repo.create({ username: 'bob', password_hash: 'hash' });
+    const id = repo.create({ username: 'bob', email: 'bob@test.com', password_hash: 'hash' });
     const user = repo.findById(id);
     expect(user.username).toBe('bob');
   });
 
   it('duplicate username throws', () => {
-    repo.create({ username: 'unique', password_hash: 'hash' });
-    expect(() => repo.create({ username: 'unique', password_hash: 'hash2' })).toThrow();
+    repo.create({ username: 'unique', email: 'unique@test.com', password_hash: 'hash' });
+    expect(() => repo.create({ username: 'unique', email: 'unique2@test.com', password_hash: 'hash2' })).toThrow();
   });
 });
