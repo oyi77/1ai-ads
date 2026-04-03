@@ -20,8 +20,9 @@ async function run() {
     body: JSON.stringify({ username: 'admin', password: 'admin123' })
   });
   const loginData = await loginRes.json();
-  test('Login as admin', loginData.success && !!loginData.data.token);
-  TOKEN = loginData.data.token;
+  const token = loginData.data?.accessToken || loginData.data?.token;
+  test('Login as admin', loginData.success && !!token);
+  TOKEN = token;
 
   // 1. Protected routes require auth
   const noAuth = await fetch(`${BASE}/api/ads`);
@@ -39,7 +40,12 @@ async function run() {
 
   let adId;
   { const r = await fetch(`${BASE}/api/ads`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` }, body: JSON.stringify({ name: 'QA Delete Ad', product: 'Widget' }) });
-    adId = (await r.json()).data.id; }
+    const json = await r.json();
+    if (!json.success || !json.data) {
+      console.error('Failed to create ad in QA:', JSON.stringify(json));
+      process.exit(1);
+    }
+    adId = json.data.id; }
 
   test('PUT /api/ads/:id (update)', await apiTest(`/api/ads/${adId}`, d => d.success && d.data.name === 'Updated QA', 'PUT', { name: 'Updated QA' }));
   test('GET /api/ads/search', await apiTest('/api/ads/search?q=QA', d => d.data.length >= 1));
@@ -68,7 +74,17 @@ async function run() {
   await fetch(`${BASE}/api/landing/${lpId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${TOKEN}` } });
   test('DELETE /api/landing/:id', true);
 
-  // 7. Dashboard real data (not fabricated)
+  // 7. Trending & X Ads (New)
+  test('GET /api/trending/internal', await apiTest('/api/trending/internal', d => d.success && Array.isArray(d.data)));
+  test('GET /api/trending/external', await apiTest('/api/trending/external', d => d.success && d.data.length > 0));
+  
+  const xCreds = await apiTest('/api/settings/credentials/x', d => d.success, 'POST', { access_token: 'x_test_token' });
+  test('POST /api/settings/credentials/x', xCreds);
+  
+  const getX = await apiTest('/api/settings/credentials/x', d => d.success && d.data.configured === true);
+  test('GET /api/settings/credentials/x (configured)', getX);
+
+  // 8. Dashboard real data (not fabricated)
   test('Dashboard has real spend data', await apiTest('/api/analytics/dashboard', d => d.data.total_spend > 0));
   test('Dashboard has real impressions', await apiTest('/api/analytics/dashboard', d => d.data.total_impressions > 0));
 

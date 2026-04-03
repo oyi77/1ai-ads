@@ -22,6 +22,7 @@ function parseJsonResponse(raw) {
 export class AdGenerator {
   constructor(llmClient) {
     this.llm = llmClient;
+    this.timeoutMs = 45000;
   }
 
   buildPrompt(product, target, keunggulan) {
@@ -29,7 +30,21 @@ export class AdGenerator {
   }
 
   async generateAds(product, target, keunggulan) {
-    const content = await this.llm.call(SYSTEM_PROMPT, this.buildPrompt(product, target, keunggulan));
-    return parseJsonResponse(content);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const content = await this.llm.call(SYSTEM_PROMPT, this.buildPrompt(product, target, keunggulan), {
+        signal: controller.signal
+      });
+      return parseJsonResponse(content);
+    } catch (err) {
+      if (err.name === 'AbortError' || err.message?.includes('abort')) {
+        return { error: 'AI generation timed out after 45 seconds', timeout: true };
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 }

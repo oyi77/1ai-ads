@@ -10,7 +10,7 @@ export async function renderSettings(el) {
     mcpStatus = statusRes.data;
   } catch {}
 
-  for (const p of ['meta', 'google', 'tiktok', 'scalev']) {
+  for (const p of ['meta', 'google', 'tiktok', 'scalev', 'x']) {
     try {
       const res = await api.get(`/settings/credentials/${p}`);
       credStatus[p] = res.data;
@@ -147,6 +147,37 @@ export async function renderSettings(el) {
           </form>
           <div id="scalev-status" class="mt-3"></div>
         </div>
+
+        <!-- X (Twitter) Ads -->
+        <div class="bg-slate-800 p-4 sm:p-6 rounded-lg mb-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+            <div>
+              <h3 class="font-bold text-lg">X (Twitter) Ads</h3>
+              <p class="text-slate-400 text-sm">Credential storage for X Ads integration</p>
+            </div>
+            <span class="flex items-center gap-2 text-sm">
+              <span class="w-2 h-2 rounded-full ${credStatus.x?.configured ? 'bg-emerald-400' : 'bg-slate-500'}"></span>
+              ${credStatus.x?.configured ? 'Configured' : 'Not configured'}
+            </span>
+          </div>
+          <form id="x-creds-form" class="space-y-3">
+            <div>
+              <label class="block text-sm text-slate-400 mb-1">Access Token <span class="text-red-400">*</span></label>
+              <input type="password" name="access_token" placeholder="${credStatus.x?.fields?.access_token || 'X Ads access token'}" class="w-full p-3 bg-slate-900 rounded-lg border border-slate-600 min-h-[44px]">
+              <p class="text-slate-500 text-xs mt-1">Get from <a href="https://ads.twitter.com/" target="_blank" class="text-sky-400 hover:underline">X Ads Manager</a></p>
+            </div>
+            <div>
+              <label class="block text-sm text-slate-400 mb-1">API Key</label>
+              <input type="text" name="api_key" placeholder="${credStatus.x?.fields?.api_key || 'X Ads API Key'}" class="w-full p-3 bg-slate-900 rounded-lg border border-slate-600 min-h-[44px]">
+            </div>
+            <div>
+              <label class="block text-sm text-slate-400 mb-1">API Secret</label>
+              <input type="password" name="api_secret" placeholder="${credStatus.x?.fields?.api_secret || 'X Ads API Secret'}" class="w-full p-3 bg-slate-900 rounded-lg border border-slate-600 min-h-[44px]">
+            </div>
+            <button type="submit" class="bg-sky-500 hover:bg-sky-600 px-4 py-3 rounded-lg min-h-[44px]">Save Credentials</button>
+          </form>
+          <div id="x-status" class="mt-3"></div>
+        </div>
       </section>
 
       <!-- OmniRoute AI -->
@@ -166,7 +197,7 @@ export async function renderSettings(el) {
   `;
 
   // Handle credential form submissions
-  for (const platform of ['meta', 'google', 'scalev']) {
+  for (const platform of ['meta', 'google', 'scalev', 'x']) {
     const form = el.querySelector(`#${platform}-creds-form`);
     if (!form) continue;
 

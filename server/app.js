@@ -34,6 +34,9 @@ import { AutoOptimizer } from './services/auto-optimizer.js';
 import { createOptimizerRouter } from './routes/optimizer.js';
 import { renderLandingPage } from './services/templates.js';
 import { createAuthRouter } from './routes/auth.js';
+import { createTrendingRouter } from './routes/trending.js';
+import { TrendingService } from './services/trending.js';
+import { createPaymentsRouter } from './routes/payments.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -82,6 +85,13 @@ app.use('/api/auth', createAuthRouter(usersRepo));
   const rulesRepo = new AutomationRulesRepository(db);
   const optimizer = new AutoOptimizer(metaApi, rulesRepo, campaignsRepo);
   app.use('/api/optimizer', requireAuth, createOptimizerRouter(rulesRepo, optimizer));
+
+  // Trending Dashboard
+  const trendingService = new TrendingService(campaignsRepo);
+  app.use('/api/trending', requireAuth, createTrendingRouter(trendingService));
+
+  // Payment Gateway (backlog/stub)
+  app.use('/api/payments', requireAuth, createPaymentsRouter());
 
   // Landing Page Live Deployment (public - no auth, served to end users)
   app.get('/lp/:slug', (req, res) => {

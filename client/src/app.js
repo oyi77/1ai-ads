@@ -11,6 +11,7 @@ import { renderSettings } from './views/settings.js';
 import { renderResearch } from './views/research.js';
 import { renderCampaignWizard } from './views/campaign-wizard.js';
 import { renderOptimizer } from './views/optimizer.js';
+import { renderTrending } from './views/trending.js';
 
 const router = new Router(document.getElementById('app'));
 
@@ -24,6 +25,7 @@ router.on('/settings', renderSettings);
 router.on('/research', renderResearch);
 router.on('/campaign/create', renderCampaignWizard);
 router.on('/optimizer', renderOptimizer);
+router.on('/trending', renderTrending);
 router.on('/login', renderLogin);
 router.on('/register', renderRegister);
 

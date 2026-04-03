@@ -48,6 +48,7 @@ export function createSettingsRouter(settingsRepo) {
       google: ['developer_token'],
       tiktok: ['access_token'],
       scalev: ['api_token'],
+      x: ['access_token'],
     };
 
     const requiredFields = required[platform];

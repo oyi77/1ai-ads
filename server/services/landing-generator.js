@@ -27,6 +27,7 @@ export class LandingGenerator {
   constructor(llmClient) {
     this.llm = llmClient;
     this.systemPrompt = ANTI_HALLUCINATION_RULES;
+    this.timeoutMs = 45000;
   }
 
   buildPrompt(product, price, benefits, cta) {
@@ -34,10 +35,23 @@ export class LandingGenerator {
   }
 
   async generateLandingPage(product, price, benefits, cta) {
-    const content = await this.llm.call(this.systemPrompt, this.buildPrompt(product, price, benefits, cta), {
-      temperature: 0.7,
-      max_tokens: 8000,
-    });
-    return parseHtmlResponse(content);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const content = await this.llm.call(this.systemPrompt, this.buildPrompt(product, price, benefits, cta), {
+        temperature: 0.7,
+        max_tokens: 8000,
+        signal: controller.signal
+      });
+      return parseHtmlResponse(content);
+    } catch (err) {
+      if (err.name === 'AbortError' || err.message?.includes('abort')) {
+        return { error: 'AI generation timed out after 45 seconds', timeout: true };
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 }

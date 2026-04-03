@@ -79,6 +79,7 @@ function parseJsonSafe(raw) {
 export class CreativeStudio {
   constructor(llmClient) {
     this.llm = llmClient;
+    this.timeoutMs = 45000;
   }
 
   async generateAdPackage(product, target, keunggulan, platform = 'meta', format = 'single_image') {
@@ -94,41 +95,88 @@ SPECS: Primary text max ${specs.primaryText || 125} chars, Headline max ${specs.
 
 Generate 4 copy variations (P.A.S, Efek Gravitasi, Hasil x3, Prospects-to-Prospects) + image directions + video script + targeting suggestions.`;
 
-    const content = await this.llm.call(SYSTEM_PROMPT, userPrompt, { temperature: 0.8, max_tokens: 4000 });
-    const result = parseJsonSafe(content);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
 
-    // Ensure structure even if AI returns partial data
-    return {
-      copies: result.copies || [],
-      imageDirections: result.imageDirections || [],
-      videoScript: result.videoScript || null,
-      targetingSuggestions: result.targetingSuggestions || { interests: [], ageRange: { min: 25, max: 55 }, locations: ['Indonesia'] },
-      raw: result.error ? content : undefined,
-    };
+    try {
+      const content = await this.llm.call(SYSTEM_PROMPT, userPrompt, { temperature: 0.8, max_tokens: 4000, signal: controller.signal });
+      const result = parseJsonSafe(content);
+
+      return {
+        copies: result.copies || [],
+        imageDirections: result.imageDirections || [],
+        videoScript: result.videoScript || null,
+        targetingSuggestions: result.targetingSuggestions || { interests: [], ageRange: { min: 25, max: 55 }, locations: ['Indonesia'] },
+        raw: result.error ? content : undefined,
+      };
+    } catch (err) {
+      if (err.name === 'AbortError' || err.message?.includes('abort')) {
+        return { error: 'AI generation timed out after 45 seconds', timeout: true, copies: [], imageDirections: [], targetingSuggestions: { interests: [] } };
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   async generateCopyOnly(product, target, keunggulan, platform = 'meta') {
     const specs = PLATFORM_SPECS[platform] || PLATFORM_SPECS.meta;
     const prompt = `Generate 4 ad copy variations untuk: PRODUK: ${product}, TARGET: ${target}, KEUNGGULAN: ${keunggulan}. Platform: ${platform} (max ${specs.primaryText || 125} chars primary text, max ${specs.headline || 40} chars headline).`;
 
-    const content = await this.llm.call(SYSTEM_PROMPT, prompt, { temperature: 0.8, max_tokens: 2000 });
-    const result = parseJsonSafe(content);
-    return result.copies || [];
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const content = await this.llm.call(SYSTEM_PROMPT, prompt, { temperature: 0.8, max_tokens: 2000, signal: controller.signal });
+      const result = parseJsonSafe(content);
+      return result.copies || [];
+    } catch (err) {
+      if (err.name === 'AbortError' || err.message?.includes('abort')) {
+        return [];
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   async generateVideoScript(product, target, keunggulan) {
     const prompt = `Generate ONLY a video script untuk: PRODUK: ${product}, TARGET: ${target}, KEUNGGULAN: ${keunggulan}. Format: hook (0-3s), problem (3-8s), solution (8-15s), CTA (15-20s). Return JSON with videoScript field only.`;
 
-    const content = await this.llm.call(SYSTEM_PROMPT, prompt, { temperature: 0.7, max_tokens: 1500 });
-    const result = parseJsonSafe(content);
-    return result.videoScript || result;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const content = await this.llm.call(SYSTEM_PROMPT, prompt, { temperature: 0.7, max_tokens: 1500, signal: controller.signal });
+      const result = parseJsonSafe(content);
+      return result.videoScript || result;
+    } catch (err) {
+      if (err.name === 'AbortError' || err.message?.includes('abort')) {
+        return { error: 'AI generation timed out after 45 seconds', timeout: true };
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   async suggestTargeting(product, target, keunggulan) {
     const prompt = `Suggest Meta Ads targeting untuk: PRODUK: ${product}, TARGET: ${target}, KEUNGGULAN: ${keunggulan}. Return JSON with targetingSuggestions field (interests with names, ageRange, locations).`;
 
-    const content = await this.llm.call(SYSTEM_PROMPT, prompt, { temperature: 0.5, max_tokens: 1000 });
-    const result = parseJsonSafe(content);
-    return result.targetingSuggestions || result;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const content = await this.llm.call(SYSTEM_PROMPT, prompt, { temperature: 0.5, max_tokens: 1000, signal: controller.signal });
+      const result = parseJsonSafe(content);
+      return result.targetingSuggestions || result;
+    } catch (err) {
+      if (err.name === 'AbortError' || err.message?.includes('abort')) {
+        return { error: 'AI generation timed out after 45 seconds', timeout: true, interests: [] };
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 }
