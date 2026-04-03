@@ -208,6 +208,12 @@
       "type": "directory"
     },
     {
+      "path": "server/app.js",
+      "accessCount": 10,
+      "lastAccessed": 1775150787488,
+      "type": "file"
+    },
+    {
       "path": "client/src/views/dashboard.js",
       "accessCount": 8,
       "lastAccessed": 1775149878389,
@@ -220,9 +226,9 @@
       "type": "file"
     },
     {
-      "path": "server/app.js",
+      "path": "db/schema.sql",
       "accessCount": 7,
-      "lastAccessed": 1775150497118,
+      "lastAccessed": 1775150954007,
       "type": "file"
     },
     {
@@ -232,27 +238,39 @@
       "type": "file"
     },
     {
+      "path": "client/src/app.js",
+      "accessCount": 6,
+      "lastAccessed": 1775150873900,
+      "type": "file"
+    },
+    {
       "path": "tests/e2e/full-app.spec.js",
       "accessCount": 5,
       "lastAccessed": 1775148995856,
       "type": "file"
     },
     {
-      "path": "client/src/app.js",
+      "path": "client/index.html",
       "accessCount": 4,
-      "lastAccessed": 1775150608212,
+      "lastAccessed": 1775150883868,
+      "type": "file"
+    },
+    {
+      "path": "client/src/views/landing-list.js",
+      "accessCount": 4,
+      "lastAccessed": 1775150903100,
+      "type": "file"
+    },
+    {
+      "path": "db/index.js",
+      "accessCount": 4,
+      "lastAccessed": 1775150933057,
       "type": "file"
     },
     {
       "path": "client/src/views/research.js",
       "accessCount": 3,
       "lastAccessed": 1775149721240,
-      "type": "file"
-    },
-    {
-      "path": "db/schema.sql",
-      "accessCount": 3,
-      "lastAccessed": 1775149857880,
       "type": "file"
     },
     {
@@ -286,9 +304,15 @@
       "type": "file"
     },
     {
-      "path": "client/index.html",
+      "path": "server/routes/landing.js",
       "accessCount": 3,
-      "lastAccessed": 1775150615214,
+      "lastAccessed": 1775150815364,
+      "type": "file"
+    },
+    {
+      "path": "server/repositories/landing.js",
+      "accessCount": 3,
+      "lastAccessed": 1775150829034,
       "type": "file"
     },
     {
@@ -358,12 +382,6 @@
       "type": "file"
     },
     {
-      "path": "client/src/views/landing-list.js",
-      "accessCount": 2,
-      "lastAccessed": 1775149717804,
-      "type": "file"
-    },
-    {
       "path": "client/src/views/analytics.js",
       "accessCount": 2,
       "lastAccessed": 1775149720547,
@@ -394,12 +412,6 @@
       "type": "file"
     },
     {
-      "path": "db/index.js",
-      "accessCount": 2,
-      "lastAccessed": 1775149877830,
-      "type": "file"
-    },
-    {
       "path": "qa.mjs",
       "accessCount": 1,
       "lastAccessed": 1775147061143,
@@ -421,12 +433,6 @@
       "path": "server/routes/analytics.js",
       "accessCount": 1,
       "lastAccessed": 1775149615395,
-      "type": "file"
-    },
-    {
-      "path": "server/routes/landing.js",
-      "accessCount": 1,
-      "lastAccessed": 1775149615758,
       "type": "file"
     },
     {
@@ -475,12 +481,6 @@
       "path": "server/repositories/ads.js",
       "accessCount": 1,
       "lastAccessed": 1775149717728,
-      "type": "file"
-    },
-    {
-      "path": "server/repositories/landing.js",
-      "accessCount": 1,
-      "lastAccessed": 1775149718147,
       "type": "file"
     },
     {

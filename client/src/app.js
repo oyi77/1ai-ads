@@ -12,10 +12,18 @@ import { renderResearch } from './views/research.js';
 import { renderCampaignWizard } from './views/campaign-wizard.js';
 import { renderOptimizer } from './views/optimizer.js';
 import { renderTrending } from './views/trending.js';
+import { renderGlobalAds } from './views/global-ads.js';
+import { renderMarketingLP } from './views/marketing-lp.js';
 
 const router = new Router(document.getElementById('app'));
 
-router.on('/', renderDashboard);
+router.on('/', (el) => {
+  if (api.isAuthenticated()) {
+    renderDashboard(el);
+  } else {
+    renderMarketingLP(el);
+  }
+});
 router.on('/ads', renderAdsList);
 router.on('/ads/create', renderAdsCreate);
 router.on('/landing', renderLandingList);
@@ -26,6 +34,7 @@ router.on('/research', renderResearch);
 router.on('/campaign/create', renderCampaignWizard);
 router.on('/optimizer', renderOptimizer);
 router.on('/trending', renderTrending);
+router.on('/global-ads', renderGlobalAds);
 router.on('/login', renderLogin);
 router.on('/register', renderRegister);
 

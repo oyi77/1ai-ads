@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <title>AdForge - Ads Management</title>
   
   <!-- Google Tag Manager -->
@@ -23,6 +24,7 @@
   <!-- TikTok Pixel -->
   <script>!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"];ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{};ttq._i[e]=[];ttq._i[e]._u=i;ttq._t=ttq._t||{};ttq._t[e]=+new Date;ttq._o=ttq._o||{};ttq._o[e]=n||{};var o=document.createElement("script");o.type="text/javascript";o.async=!0;o.src=i+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};ttq.load('D6IA84RC77UCTB9KG9OG');ttq.page()}(window,document,'ttq');</script>
   
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* Responsive nav */
@@ -49,11 +51,11 @@
         </button>
         <div id="nav-links" class="flex items-center gap-4 md:gap-6">
           <a href="#/" class="text-slate-300 hover:text-white py-1">Dashboard</a>
-          <a href="#/ads" class="text-slate-300 hover:text-white py-1">Ads</a>
+          <a href="#/ads" class="text-slate-300 hover:text-white py-1">My Creative</a>
+          <a href="#/global-ads" class="text-slate-300 hover:text-white py-1">Trending</a>
           <a href="#/landing" class="text-slate-300 hover:text-white py-1">Landing</a>
           <a href="#/analytics" class="text-slate-300 hover:text-white py-1">Analytics</a>
           <a href="#/research" class="text-slate-300 hover:text-white py-1">Research</a>
-          <a href="#/trending" class="text-slate-300 hover:text-white py-1">Trending</a>
           <a href="#/optimizer" class="text-slate-300 hover:text-white py-1">Auto</a>
           <a href="#/campaign/create" class="bg-emerald-500 hover:bg-emerald-600 px-3 py-1.5 rounded-lg text-white text-sm font-medium">+ Campaign</a>
           <a href="#/settings" class="text-slate-300 hover:text-white py-1">Settings</a>

@@ -33,10 +33,37 @@ export function createDatabase(dbPath) {
    }
    // Backfill null emails for existing users
    db.exec("UPDATE users SET email = username || '@adforge.local' WHERE email IS NULL OR email = ''");
-   // Backfill confirmed for admin
-   db.exec("UPDATE users SET confirmed = 1 WHERE username = 'admin' AND confirmed = 0");
+    // Backfill confirmed for admin
+    db.exec("UPDATE users SET confirmed = 1 WHERE username = 'admin' AND confirmed = 0");
 
-   return db;
+    // Refresh Tokens table
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS refresh_tokens (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        token TEXT NOT NULL UNIQUE,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Multi-account support
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS platform_accounts (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        platform TEXT NOT NULL, -- 'meta', 'google', 'tiktok', 'x', 'scalev'
+        account_name TEXT NOT NULL,
+        credentials TEXT NOT NULL, -- JSON string
+        is_active BOOLEAN DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    return db;
  }
 
 // No default export - use createDatabase() factory with DI

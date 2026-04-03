@@ -11,7 +11,7 @@ export async function renderAdsList(el) {
           <input type="text" id="ads-search" placeholder="Search ads..." class="flex-1 p-3 bg-slate-800 rounded-lg border border-slate-700 min-h-[44px]">
           <a href="#/ads/create" class="bg-sky-500 hover:bg-sky-600 px-4 py-3 rounded-lg text-center min-h-[44px] inline-flex items-center justify-center">Create Ad</a>
         </div>
-        <div id="ads-grid" class="grid gap-4">
+        <div id="ads-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           ${renderAdsGrid(ads)}
         </div>
       </div>
@@ -40,13 +40,13 @@ export async function renderAdsList(el) {
 function renderAdsGrid(ads) {
   if (ads.length === 0) return '<p class="text-slate-400">No ads found.</p>';
   return ads.map(ad => `
-    <div class="bg-slate-800 p-4 rounded-lg flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+    <div class="bg-slate-800 p-3 sm:p-4 rounded-lg flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-2">
       <div class="flex-1">
         <div class="font-bold">${esc(ad.name || 'Untitled')}</div>
         <div class="text-slate-400 text-sm">${esc(ad.platform)} | ${esc(ad.content_model || 'N/A')}</div>
         <div class="text-slate-500 text-xs mt-1">${esc(ad.hook || '')}</div>
       </div>
-      <button data-delete="${esc(ad.id)}" class="text-red-400 hover:text-red-300 text-sm min-h-[44px] px-2 self-end sm:self-start">Delete</button>
+      <button data-delete="${esc(ad.id)}" class="text-red-400 hover:text-red-300 text-sm min-h-[44px] px-3 py-2 self-end sm:self-start rounded">Delete</button>
     </div>
   `).join('');
 }

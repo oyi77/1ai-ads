@@ -6,6 +6,7 @@ import { AdsRepository } from './repositories/ads.js';
 import { LandingRepository } from './repositories/landing.js';
 import { CampaignsRepository } from './repositories/campaigns.js';
 import { UsersRepository } from './repositories/users.js';
+import { RefreshTokensRepository } from './repositories/refresh-tokens.js';
 import { SettingsRepository } from './repositories/settings.js';
 import { AdGenerator } from './services/ad-generator.js';
 import { LandingGenerator } from './services/landing-generator.js';
@@ -51,6 +52,7 @@ export function createApp({ db, llmClient, mcpClient } = {}) {
   const landingRepo = new LandingRepository(db);
   const campaignsRepo = new CampaignsRepository(db);
   const usersRepo = new UsersRepository(db);
+  const refreshTokensRepo = new RefreshTokensRepository(db);
   const settingsRepo = new SettingsRepository(db);
 
   // Services
@@ -59,7 +61,7 @@ export function createApp({ db, llmClient, mcpClient } = {}) {
   const mcp = mcpClient || new MCPClientManager();
 
 // --- Auth routes (public) ---
-app.use('/api/auth', createAuthRouter(usersRepo));
+app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
 
   // --- Protected routes ---
   app.use('/api/ads', requireAuth, createAdsRouter(adsRepo, adGenerator));

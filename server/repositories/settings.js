@@ -31,16 +31,74 @@ export class SettingsRepository {
     return result;
   }
 
-  // Platform credential helpers
+  // Platform credential helpers (Updated for multi-account compatibility)
   getCredentials(platform) {
+    const active = this.getActiveAccount(platform);
+    if (active) return active.credentials;
     return this.get(`credentials_${platform}`) || null;
   }
 
   setCredentials(platform, credentials) {
-    this.set(`credentials_${platform}`, credentials);
+    // Try to update active account if it exists
+    const active = this.getActiveAccount(platform);
+    if (active) {
+      this.updateAccount(active.id, { credentials });
+    } else {
+      // Legacy fallback
+      this.set(`credentials_${platform}`, credentials);
+    }
   }
 
   deleteCredentials(platform) {
     this.delete(`credentials_${platform}`);
+  }
+
+  // --- Multi-account support ---
+  getAccounts(platform = null) {
+    if (platform) {
+      const rows = this.db.prepare('SELECT * FROM platform_accounts WHERE platform = ? ORDER BY account_name').all(platform);
+      return rows.map(r => ({ ...r, credentials: JSON.parse(r.credentials) }));
+    }
+    const rows = this.db.prepare('SELECT * FROM platform_accounts ORDER BY platform, account_name').all();
+    return rows.map(r => ({ ...r, credentials: JSON.parse(r.credentials) }));
+  }
+
+  getAccount(id) {
+    const row = this.db.prepare('SELECT * FROM platform_accounts WHERE id = ?').get(id);
+    if (!row) return null;
+    return { ...row, credentials: JSON.parse(row.credentials) };
+  }
+
+  addAccount({ id, user_id, platform, account_name, credentials, is_active = 1 }) {
+    this.db.prepare(`
+      INSERT INTO platform_accounts (id, user_id, platform, account_name, credentials, is_active)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(id, user_id, platform, account_name, JSON.stringify(credentials), is_active ? 1 : 0);
+  }
+
+  updateAccount(id, data) {
+    const fields = [];
+    const values = [];
+    for (const [key, value] of Object.entries(data)) {
+      if (key === 'credentials') {
+        fields.push('credentials = ?');
+        values.push(JSON.stringify(value));
+      } else {
+        fields.push(`${key} = ?`);
+        values.push(value);
+      }
+    }
+    values.push(id);
+    this.db.prepare(`UPDATE platform_accounts SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
+  }
+
+  deleteAccount(id) {
+    this.db.prepare('DELETE FROM platform_accounts WHERE id = ?').run(id);
+  }
+
+  getActiveAccount(platform) {
+    const row = this.db.prepare('SELECT * FROM platform_accounts WHERE platform = ? AND is_active = 1 LIMIT 1').get(platform);
+    if (!row) return null;
+    return { ...row, credentials: JSON.parse(row.credentials) };
   }
 }
