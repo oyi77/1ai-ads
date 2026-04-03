@@ -4,18 +4,18 @@ const platforms = ['Meta', 'TikTok', 'Google', 'X'];
 const industries = ['E-commerce', 'Finance', 'Education', 'Health', 'Travel', 'Gaming'];
 
 const sampleAds = [
-  { id: 1, brand: 'Nike', platform: 'Meta', industry: 'E-commerce', engagement: '12.5%', spend: 'Rp 45M', image: 'https://via.placeholder.com/300x200/1a1f2e/58a6ff?text=Nike+Ad' },
-  { id: 2, brand: 'Gojek', platform: 'TikTok', industry: 'Travel', engagement: '18.2%', spend: 'Rp 89M', image: 'https://via.placeholder.com/300x200/1a1f2e/79c0ff?text=Gojek' },
-  { id: 3, brand: 'Bank BCA', platform: 'Google', industry: 'Finance', engagement: '8.7%', spend: 'Rp 120M', image: 'https://via.placeholder.com/300x200/1a1f2e/3fb950?text=BCA' },
-  { id: 4, brand: 'Tokopedia', platform: 'Meta', industry: 'E-commerce', engagement: '15.3%', spend: 'Rp 200M', image: 'https://via.placeholder.com/300x200/1a1f2e/f78166?text=Tokopedia' },
-  { id: 5, brand: 'Ruangguru', platform: 'TikTok', industry: 'Education', engagement: '22.1%', spend: 'Rp 67M', image: 'https://via.placeholder.com/300x200/1a1f2e/a371f7?text=Ruangguru' },
-  { id: 6, brand: 'Halodoc', platform: 'Google', industry: 'Health', engagement: '11.4%', spend: 'Rp 34M', image: 'https://via.placeholder.com/300x200/1a1f2e/58a6ff?text=Halodoc' },
-  { id: 7, brand: 'Shopee', platform: 'Meta', industry: 'E-commerce', engagement: '19.8%', spend: 'Rp 310M', image: 'https://via.placeholder.com/300x200/1a1f2e/f78166?text=Shopee' },
-  { id: 8, brand: 'Grab', platform: 'X', industry: 'Travel', engagement: '7.2%', spend: 'Rp 78M', image: 'https://via.placeholder.com/300x200/1a1f2e/3fb950?text=Grab' },
-  { id: 9, brand: 'Zenius', platform: 'TikTok', industry: 'Education', engagement: '14.6%', spend: 'Rp 52M', image: 'https://via.placeholder.com/300x200/1a1f2e/a371f7?text=Zenius' },
-  { id: 10, brand: 'OVO', platform: 'Meta', industry: 'Finance', engagement: '9.3%', spend: 'Rp 95M', image: 'https://via.placeholder.com/300x200/1a1f2e/79c0ff?text=OVO' },
-  { id: 11, brand: 'Traveloka', platform: 'Google', industry: 'Travel', engagement: '13.7%', spend: 'Rp 143M', image: 'https://via.placeholder.com/300x200/1a1f2e/58a6ff?text=Traveloka' },
-  { id: 12, brand: 'Lazada', platform: 'Meta', industry: 'E-commerce', engagement: '16.9%', spend: 'Rp 188M', image: 'https://via.placeholder.com/300x200/1a1f2e/f78166?text=Lazada' },
+  { id: 1, brand: 'Nike', platform: 'Meta', industry: 'E-commerce', engagement: '12.5%', spend: 'Rp 45M', image: 'https://placehold.co/300x200/1a1f2e/58a6ff?text=Nike' },
+  { id: 2, brand: 'Gojek', platform: 'TikTok', industry: 'Travel', engagement: '18.2%', spend: 'Rp 89M', image: 'https://placehold.co/300x200/1a1f2e/79c0ff?text=Gojek' },
+  { id: 3, brand: 'Bank BCA', platform: 'Google', industry: 'Finance', engagement: '8.7%', spend: 'Rp 120M', image: 'https://placehold.co/300x200/1a1f2e/3fb950?text=BCA' },
+  { id: 4, brand: 'Tokopedia', platform: 'Meta', industry: 'E-commerce', engagement: '15.3%', spend: 'Rp 200M', image: 'https://placehold.co/300x200/1a1f2e/f78166?text=Tokopedia' },
+  { id: 5, brand: 'Ruangguru', platform: 'TikTok', industry: 'Education', engagement: '22.1%', spend: 'Rp 67M', image: 'https://placehold.co/300x200/1a1f2e/a371f7?text=Ruangguru' },
+  { id: 6, brand: 'Halodoc', platform: 'Google', industry: 'Health', engagement: '11.4%', spend: 'Rp 34M', image: 'https://placehold.co/300x200/1a1f2e/f0883e?text=Halodoc' },
+  { id: 7, brand: 'Shopee', platform: 'Meta', industry: 'E-commerce', engagement: '19.8%', spend: 'Rp 310M', image: 'https://placehold.co/300x200/1a1f2e/f78166?text=Shopee' },
+  { id: 8, brand: 'Grab', platform: 'X', industry: 'Travel', engagement: '7.2%', spend: 'Rp 78M', image: 'https://placehold.co/300x200/1a1f2e/3fb950?text=Grab' },
+  { id: 9, brand: 'Zenius', platform: 'TikTok', industry: 'Education', engagement: '14.6%', spend: 'Rp 52M', image: 'https://placehold.co/300x200/1a1f2e/a371f7?text=Zenius' },
+  { id: 10, brand: 'OVO', platform: 'Meta', industry: 'Finance', engagement: '9.3%', spend: 'Rp 95M', image: 'https://placehold.co/300x200/1a1f2e/79c0ff?text=OVO' },
+  { id: 11, brand: 'Traveloka', platform: 'Google', industry: 'Travel', engagement: '13.7%', spend: 'Rp 143M', image: 'https://placehold.co/300x200/1a1f2e/58a6ff?text=Traveloka' },
+  { id: 12, brand: 'Lazada', platform: 'Meta', industry: 'E-commerce', engagement: '16.9%', spend: 'Rp 188M', image: 'https://placehold.co/300x200/1a1f2e/f0883e?text=Lazada' },
 ];
 
 export async function renderGlobalAds(el) {
