@@ -29,6 +29,11 @@ import { createPlatformsRouter } from './routes/platforms.js';
 import { createCampaignsRouter } from './routes/campaigns.js';
 import { CampaignOrchestrator } from './services/campaign-orchestrator.js';
 import { CreativeStudio } from './services/creative-studio.js';
+import { AutomationRulesRepository } from './repositories/automation-rules.js';
+import { AutoOptimizer } from './services/auto-optimizer.js';
+import { createOptimizerRouter } from './routes/optimizer.js';
+import { renderLandingPage } from './services/templates.js';
+import { createAuthRouter } from './routes/auth.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -50,36 +55,8 @@ export function createApp({ db, llmClient, mcpClient } = {}) {
   const landingGenerator = new LandingGenerator(llmClient);
   const mcp = mcpClient || new MCPClientManager();
 
-  // --- Auth routes (public) ---
-  app.post('/api/auth/register', (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ success: false, error: 'username and password are required' });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, error: 'Password must be at least 6 characters' });
-    }
-    const existing = usersRepo.findByUsername(username);
-    if (existing) {
-      return res.status(409).json({ success: false, error: 'Username already exists' });
-    }
-    const id = usersRepo.create({ username, password_hash: hashPassword(password) });
-    const token = generateToken({ id, username });
-    res.json({ success: true, data: { id, username, token } });
-  });
-
-  app.post('/api/auth/login', (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ success: false, error: 'username and password are required' });
-    }
-    const user = usersRepo.findByUsername(username);
-    if (!user || !verifyPassword(password, user.password_hash)) {
-      return res.status(401).json({ success: false, error: 'Invalid username or password' });
-    }
-    const token = generateToken({ id: user.id, username: user.username });
-    res.json({ success: true, data: { id: user.id, username: user.username, token } });
-  });
+// --- Auth routes (public) ---
+app.use('/api/auth', createAuthRouter(usersRepo));
 
   // --- Protected routes ---
   app.use('/api/ads', requireAuth, createAdsRouter(adsRepo, adGenerator));
@@ -100,6 +77,25 @@ export function createApp({ db, llmClient, mcpClient } = {}) {
   const creativeStudio = new CreativeStudio(llmClient);
   const orchestrator = new CampaignOrchestrator(metaApi, creativeStudio);
   app.use('/api/campaigns', requireAuth, createCampaignsRouter(orchestrator, metaApi, creativeStudio, campaignsRepo));
+
+  // Auto-Optimizer
+  const rulesRepo = new AutomationRulesRepository(db);
+  const optimizer = new AutoOptimizer(metaApi, rulesRepo, campaignsRepo);
+  app.use('/api/optimizer', requireAuth, createOptimizerRouter(rulesRepo, optimizer));
+
+  // Landing Page Live Deployment (public - no auth, served to end users)
+  app.get('/lp/:slug', (req, res) => {
+    const page = db.prepare('SELECT * FROM landing_pages WHERE slug = ? AND is_published = 1').get(req.params.slug);
+    if (!page) return res.status(404).send('Page not found');
+    const html = page.html_output || renderLandingPage({
+      theme: page.theme, product_name: page.product_name, price: page.price,
+      benefits: page.benefits, pain_points: page.pain_points,
+      cta_primary: page.cta_primary, cta_secondary: page.cta_secondary,
+      wa_link: page.wa_link, checkout_link: page.checkout_link,
+    });
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  });
 
   // Scalev webhook (public - no auth, called by Scalev servers)
   app.post('/api/webhooks/scalev', express.json(), (req, res) => {
