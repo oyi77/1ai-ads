@@ -7,7 +7,7 @@ export function renderLogin(el) {
         <h1 class="text-2xl font-bold mb-6 text-center">Login to AdForge</h1>
         <form id="login-form" class="space-y-4">
           <div>
-            <label class="block text-sm text-slate-400 mb-1">Username</label>
+            <label class="block text-sm text-slate-400 mb-1">Username or Email</label>
             <input type="text" name="username" class="w-full p-3 bg-slate-900 rounded-lg border border-slate-600 min-h-[44px]" required autofocus>
           </div>
           <div>
@@ -72,7 +72,7 @@ export function renderRegister(el) {
     </div>
   `;
 
-  el.querySelector('#register-form').addEventListener('submit', async (e) => {
+    el.querySelector('#register-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const errorDiv = el.querySelector('#register-error');
     errorDiv.classList.add('hidden');
@@ -82,7 +82,7 @@ export function renderRegister(el) {
 
     const fd = new FormData(e.target);
     try {
-      await api.register(fd.get('username'), fd.get('password'));
+      await api.register(fd.get('username'), fd.get('password'), fd.get('email'));
       window.location.hash = '#/';
       window.dispatchEvent(new Event('auth-change'));
     } catch (err) {
