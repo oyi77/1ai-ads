@@ -2,15 +2,15 @@ import { v4 as uuid } from 'uuid';
 import { hashPassword } from '../server/lib/auth.js';
 
 export function seedDemoData(db) {
-  // Seed admin user if none exists
-  const existingUser = db.prepare('SELECT id FROM users LIMIT 1').get();
-  if (!existingUser) {
-    const adminId = uuid();
-    db.prepare('INSERT INTO users (id, username, password_hash) VALUES (?, ?, ?)').run(
-      adminId, 'admin', hashPassword('admin123')
-    );
-    console.log('Seeded admin user (admin/admin123)');
-  }
+// Seed admin user if none exists
+   const existingUser = db.prepare('SELECT id FROM users LIMIT 1').get();
+   if (!existingUser) {
+     const adminId = uuid();
+     db.prepare('INSERT INTO users (id, username, email, password_hash, confirmed) VALUES (?, ?, ?, ?, ?)').run(
+       adminId, 'admin', 'admin@adforge.local', hashPassword('admin123'), 1
+     );
+     console.log('Seeded admin user (admin/admin123)');
+   }
 
   // Seed demo campaigns if none exist
   const existingCampaigns = db.prepare('SELECT COUNT(*) as count FROM campaigns').get();

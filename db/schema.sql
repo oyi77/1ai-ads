@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS landing_pages (
   wa_link TEXT,
   checkout_link TEXT,
   html_output TEXT,
+  slug TEXT,
+  is_published BOOLEAN DEFAULT 0,
   status TEXT DEFAULT 'draft',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -60,16 +62,48 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 CREATE TABLE IF NOT EXISTS users (
+   id TEXT PRIMARY KEY,
+   username TEXT UNIQUE NOT NULL,
+   email TEXT UNIQUE NOT NULL,
+   password_hash TEXT NOT NULL,
+   confirmed BOOLEAN DEFAULT 0,
+   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+ );
+
+CREATE TABLE IF NOT EXISTS automation_rules (
   id TEXT PRIMARY KEY,
-  username TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
+  campaign_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  is_active BOOLEAN DEFAULT 1,
+  condition_metric TEXT NOT NULL,
+  condition_operator TEXT NOT NULL,
+  condition_value REAL NOT NULL,
+  action TEXT NOT NULL,
+  action_value REAL,
+  check_interval TEXT DEFAULT 'daily',
+  last_triggered DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS performance_history (
+  id TEXT PRIMARY KEY,
+  campaign_id TEXT NOT NULL,
+  snapshot_date DATE NOT NULL,
+  platform TEXT NOT NULL,
+  impressions INTEGER DEFAULT 0,
+  clicks INTEGER DEFAULT 0,
+  spend REAL DEFAULT 0,
+  conversions INTEGER DEFAULT 0,
+  ctr REAL,
+  cpc REAL
 );
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_ads_platform ON ads(platform);
 CREATE INDEX IF NOT EXISTS idx_ads_status ON ads(status);
 CREATE INDEX IF NOT EXISTS idx_campaigns_platform ON campaigns(platform);
+CREATE INDEX IF NOT EXISTS idx_automation_rules_campaign ON automation_rules(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_perf_history_campaign ON performance_history(campaign_id, snapshot_date);
 
 -- Triggers for updated_at
 CREATE TRIGGER IF NOT EXISTS ads_updated_at AFTER UPDATE ON ads
