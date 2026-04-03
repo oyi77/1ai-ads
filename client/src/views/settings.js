@@ -5,6 +5,7 @@ export async function renderSettings(el) {
   let accounts = [];
   let activeSection = 'accounts';
   let mcpStatus = {};
+  let credStatus = {}; // Add this line
 
   const loadData = async () => {
     try {
@@ -14,6 +15,13 @@ export async function renderSettings(el) {
       ]);
       accounts = accRes.data;
       mcpStatus = statusRes.data;
+      // Build credStatus from accounts response
+      accounts.forEach(acc => {
+        credStatus[acc.platform] = {
+          configured: acc.configured || false,
+          fields: acc.fields || {}
+        };
+      });
     } catch (e) {
       console.error('Failed to load settings data', e);
     }

@@ -15,72 +15,79 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
 
   router.use(authLimiter);
 
-  router.post('/register', async (req, res) => {
-    try {
-      const { username, password, email } = req.body;
-      if (!username || !password || !email) {
-        return res.status(400).json({ success: false, error: 'username, password, and email are required' });
-      }
+   router.post('/register', async (req, res) => {
+     try {
+       const { username, password, email } = req.body;
+       if (!username || !password || !email) {
+         return res.status(400).json({ success: false, error: 'username, password, and email are required' });
+       }
 
-      if (usersRepo.findByUsername(username)) {
-        return res.status(409).json({ success: false, error: 'Username already exists' });
-      }
+       if (password.length < 6) {
+         return res.status(400).json({ success: false, error: 'Password must be at least 6 characters' });
+       }
 
-      const userId = usersRepo.create({
-        username,
-        email,
-        password_hash: hashPassword(password),
-        confirmed: 1
-      });
+       if (usersRepo.findByUsername(username)) {
+         return res.status(409).json({ success: false, error: 'Username already exists' });
+       }
 
-      const accessToken = generateToken({ id: userId, username });
-      const refreshToken = generateRefreshToken({ id: userId, username });
-      
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
-      refreshTokensRepo.create(userId, refreshToken, expiresAt.toISOString());
+       const userId = usersRepo.create({
+         username,
+         email,
+         password_hash: hashPassword(password),
+         confirmed: 1
+       });
 
-      res.json({
-        success: true,
-        data: {
-          user: { id: userId, username, email },
-          accessToken,
-          refreshToken
-        }
-      });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
+       const accessToken = generateToken({ id: userId, username });
+       const refreshToken = generateRefreshToken({ id: userId, username });
+       
+       const expiresAt = new Date();
+       expiresAt.setDate(expiresAt.getDate() + 30);
+       refreshTokensRepo.create(userId, refreshToken, expiresAt.toISOString());
 
-  router.post('/login', async (req, res) => {
-    try {
-      const { username, password } = req.body;
-      const user = usersRepo.findByUsername(username) || usersRepo.findByEmail(username);
+       res.json({
+         success: true,
+         data: {
+           user: { id: userId, username, email },
+           accessToken,
+           refreshToken
+         }
+       });
+     } catch (err) {
+       res.status(500).json({ success: false, error: err.message });
+     }
+   });
 
-      if (!user || !verifyPassword(password, user.password_hash)) {
-        return res.status(401).json({ success: false, error: 'Invalid credentials' });
-      }
+   router.post('/login', async (req, res) => {
+     try {
+       const { username, password } = req.body;
+       const user = usersRepo.findByUsername(username) || usersRepo.findByEmail(username);
 
-      const accessToken = generateToken({ id: user.id, username: user.username });
-      const refreshToken = generateRefreshToken({ id: user.id, username: user.username });
+       if (!user || !verifyPassword(password, user.password_hash)) {
+         return res.status(401).json({ success: false, error: 'Invalid credentials' });
+       }
 
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
-      refreshTokensRepo.create(user.id, refreshToken, expiresAt.toISOString());
+       // Remove any existing refresh tokens for this user to prevent UNIQUE constraint conflicts
+       refreshTokensRepo.deleteByUserId(user.id);
 
-      res.json({
-        success: true,
-        data: {
-          user: { id: user.id, username: user.username, email: user.email },
-          accessToken,
-          refreshToken
-        }
-      });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
+       const accessToken = generateToken({ id: user.id, username: user.username });
+       const refreshToken = generateRefreshToken({ id: user.id, username: user.username });
+
+       const expiresAt = new Date();
+       expiresAt.setDate(expiresAt.getDate() + 30);
+       refreshTokensRepo.create(user.id, refreshToken, expiresAt.toISOString());
+
+       res.json({
+         success: true,
+         data: {
+           user: { id: user.id, username: user.username, email: user.email },
+           accessToken,
+           refreshToken
+         }
+       });
+     } catch (err) {
+       res.status(500).json({ success: false, error: err.message });
+     }
+   });
 
   router.post('/refresh-token', async (req, res) => {
     try {
