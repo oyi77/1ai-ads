@@ -23,15 +23,15 @@ export const api = {
 
   async login(username, password) {
     const res = await request('POST', '/auth/login', { username, password });
-    localStorage.setItem('adforge_token', res.data.token);
-    localStorage.setItem('adforge_user', res.data.username);
+    localStorage.setItem('adforge_token', res.data.accessToken);
+    localStorage.setItem('adforge_user', res.data.user.username);
     return res;
   },
 
-  async register(username, password) {
-    const res = await request('POST', '/auth/register', { username, password });
-    localStorage.setItem('adforge_token', res.data.token);
-    localStorage.setItem('adforge_user', res.data.username);
+  async register(username, password, email) {
+    const res = await request('POST', '/auth/register', { username, password, email });
+    localStorage.setItem('adforge_token', res.data.accessToken);
+    localStorage.setItem('adforge_user', res.data.user.username);
     return res;
   },
 

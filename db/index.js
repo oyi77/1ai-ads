@@ -26,20 +26,15 @@ export function createDatabase(dbPath) {
    }
    const userCols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
    if (!userCols.includes('email')) {
-     // SQLite doesn't allow adding UNIQUE column to existing table with data
-     // Need to handle this case - for now add without UNIQUE constraint
      db.exec('ALTER TABLE users ADD COLUMN email TEXT;');
-     // Create unique index separately if needed
-     try {
-       db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);');
-     } catch (e) {
-       // Index creation might fail if duplicates exist
-       console.warn('Could not create unique email index:', e.message);
-     }
    }
    if (!userCols.includes('confirmed')) {
      db.exec('ALTER TABLE users ADD COLUMN confirmed BOOLEAN DEFAULT 0;');
    }
+   // Backfill null emails for existing users
+   db.exec("UPDATE users SET email = username || '@adforge.local' WHERE email IS NULL OR email = ''");
+   // Backfill confirmed for admin
+   db.exec("UPDATE users SET confirmed = 1 WHERE username = 'admin' AND confirmed = 0");
 
    return db;
  }
