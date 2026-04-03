@@ -16,7 +16,9 @@ export async function renderLandingList(el) {
                 <div class="font-bold">${esc(p.name || 'Untitled')}</div>
                 <div class="text-slate-400 text-sm">${esc(p.template)} | ${esc(p.theme)}</div>
               </div>
-              <div class="flex gap-3 self-end sm:self-start">
+              <div class="flex gap-3 self-end sm:self-start flex-wrap">
+                ${p.is_published ? `<a href="/lp/${esc(p.slug)}" target="_blank" class="text-emerald-400 hover:text-emerald-300 text-sm min-h-[44px] px-2 flex items-center">Live</a>` : ''}
+                <button data-deploy="${esc(p.id)}" data-name="${esc(p.name || 'page')}" class="${p.is_published ? 'text-yellow-400' : 'text-emerald-400'} hover:opacity-80 text-sm min-h-[44px] px-2">${p.is_published ? 'Undeploy' : 'Deploy'}</button>
                 <button data-export="${esc(p.id)}" data-name="${esc(p.name || 'landing-page')}" class="text-sky-400 hover:text-sky-300 text-sm min-h-[44px] px-2">Export</button>
                 <button data-delete="${esc(p.id)}" class="text-red-400 hover:text-red-300 text-sm min-h-[44px] px-2">Delete</button>
               </div>
@@ -45,6 +47,22 @@ export async function renderLandingList(el) {
         } catch (e) {
           alert('Export failed: ' + e.message);
         }
+      });
+    });
+
+    // Deploy/undeploy handlers
+    el.querySelectorAll('[data-deploy]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.deploy;
+        const isPublished = btn.textContent.trim() === 'Undeploy';
+        try {
+          if (isPublished) {
+            await api.post(`/landing/${id}/undeploy`);
+          } else {
+            await api.post(`/landing/${id}/deploy`, { slug: btn.dataset.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') });
+          }
+          renderLandingList(el);
+        } catch (e) { alert(e.message); }
       });
     });
 

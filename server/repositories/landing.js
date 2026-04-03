@@ -41,7 +41,7 @@ export class LandingRepository {
 
     const fields = [];
     const params = [];
-    const updatable = ['name', 'template', 'theme', 'product_name', 'price', 'pain_points', 'benefits', 'cta_primary', 'cta_secondary', 'wa_link', 'checkout_link', 'html_output', 'status'];
+    const updatable = ['name', 'template', 'theme', 'product_name', 'price', 'pain_points', 'benefits', 'cta_primary', 'cta_secondary', 'wa_link', 'checkout_link', 'html_output', 'status', 'slug', 'is_published'];
 
     for (const field of updatable) {
       if (data[field] !== undefined) {

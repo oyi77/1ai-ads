@@ -58,6 +58,26 @@ export function createLandingRouter(landingRepo, landingGenerator) {
     res.json({ success: true });
   });
 
+  // Deploy landing page to live URL
+  router.post('/:id/deploy', (req, res) => {
+    const page = landingRepo.findById(req.params.id);
+    if (!page) return res.status(404).json({ success: false, error: 'Not found' });
+
+    const slug = req.body.slug || page.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const updated = landingRepo.update(req.params.id, { slug, is_published: 1 });
+    if (!updated) return res.status(500).json({ success: false, error: 'Failed to deploy' });
+
+    const liveUrl = `/lp/${slug}`;
+    res.json({ success: true, data: { id: req.params.id, slug, liveUrl, is_published: true } });
+  });
+
+  // Undeploy landing page
+  router.post('/:id/undeploy', (req, res) => {
+    const updated = landingRepo.update(req.params.id, { is_published: 0 });
+    if (!updated) return res.status(404).json({ success: false, error: 'Not found' });
+    res.json({ success: true, data: { id: req.params.id, is_published: false } });
+  });
+
   router.post('/generate', async (req, res) => {
     const v = validateRequired(req.body, ['product_name', 'price']);
     if (!v.valid) return res.status(400).json({ success: false, error: v.error });
