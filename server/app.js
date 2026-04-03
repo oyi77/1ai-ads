@@ -113,10 +113,9 @@ app.use('/api/auth', createAuthRouter(usersRepo));
     res.json({ success: true });
   });
 
-  // Serve static files in production
-  if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(join(__dirname, '../dist')));
-  }
+  // Serve static files (Production or if dist exists)
+  const distPath = join(__dirname, '../dist');
+  app.use(express.static(distPath));
 
   // Global error handler
   // eslint-disable-next-line no-unused-vars
