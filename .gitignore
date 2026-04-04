@@ -8,3 +8,4 @@ db/*.db
 .omc/state/
 db/*.db-shm
 db/*.db-wal
+.server_pid
