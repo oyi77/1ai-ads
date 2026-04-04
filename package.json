@@ -16,7 +16,8 @@
     "test:frontend": "vitest run tests/frontend/",
     "test:functional": "vitest run tests/functional/",
     "test:qa": "node qa.mjs",
-    "test:all": "vitest run && node qa.mjs"
+    "test:all": "vitest run && node qa.mjs",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

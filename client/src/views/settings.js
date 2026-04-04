@@ -62,11 +62,13 @@ export async function renderSettings(el) {
           </nav>
         </aside>
 
-        <main class="flex-1 p-4 sm:p-8 overflow-y-auto">
-          <div class="max-w-4xl mx-auto">
-            ${renderSection()}
-          </div>
-        </main>
+<main class="flex-1 p-4 sm:p-8 overflow-y-auto">
+             <div class="max-w-4xl mx-auto">
+               <h1 class="text-2xl font-bold mb-6 text-white">Settings</h1>
+                <h2 class="text-xl font-semibold mb-4 text-white">Settings</h2>
+               ${renderSection()}
+             </div>
+           </main>
       </div>
     `;
 
@@ -167,9 +169,9 @@ export async function renderSettings(el) {
                 </div>
               `}
             </div>
-            <div id="${p.id}-add-form" class="hidden p-6 bg-[#0d1117] border-t border-[#30363d]">
+            <div id="${p.id}-add-form" class="p-6 bg-[#0d1117] border-t border-[#30363d]">
                <h4 class="text-sm font-bold text-white mb-4 text-sky-400">Add New Account</h4>
-               <form data-platform-form="${p.id}" class="space-y-4">
+               <form id="${p.id}-creds-form" data-platform-form="${p.id}" class="space-y-4">
                  <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1">Name</label><input type="text" name="account_name" required class="w-full p-2.5 bg-[#161b22] rounded-lg border border-[#30363d] text-sm text-white"></div>
                  ${renderPlatformFields(p.id)}
                  <div class="flex items-center gap-3 pt-2">

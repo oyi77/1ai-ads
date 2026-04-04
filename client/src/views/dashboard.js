@@ -83,7 +83,7 @@ export async function renderDashboard(el) {
             </div>
           </div>
           <div class="bg-slate-800 p-4 sm:p-6 rounded-lg lg:col-span-2">
-            <h3 class="text-lg font-semibold mb-4 text-slate-200">CTR Trend (7 Days)</h3>
+            <h3 class="text-lg font-semibold mb-4 text-slate-200">Click‑Through Rate Trend (7 Days)</h3>
             <div class="relative h-64 sm:h-72">
               <canvas id="ctrChart"></canvas>
             </div>
