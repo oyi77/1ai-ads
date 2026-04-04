@@ -38,6 +38,8 @@ import { createAuthRouter } from './routes/auth.js';
 import { createTrendingRouter } from './routes/trending.js';
 import { TrendingService } from './services/trending.js';
 import { createPaymentsRouter } from './routes/payments.js';
+import { LearningService } from './services/learning.js';
+import { createLearningRouter } from './routes/learning.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -100,6 +102,10 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
 
   // Payment Gateway (backlog/stub)
   app.use('/api/payments', requireAuth, createPaymentsRouter());
+
+  // Learning Service (sync insights to bk-hub KB)
+  const learningService = new LearningService(campaignsRepo, adsRepo, landingRepo);
+  app.use('/api/learning', requireAuth, createLearningRouter(learningService));
 
   // Landing Page Live Deployment (public - no auth, served to end users)
   app.get('/lp/:slug', (req, res) => {
