@@ -1,6 +1,9 @@
 import { esc } from '../lib/escape.js';
 
 export async function renderDocs(el) {
+  const mcpUrl = `${window.location.origin}/api/mcp/sse`;
+  const localPath = '/home/openclaw/projects/adforge/mcp.js';
+
   el.innerHTML = `
     <div class="bg-[#0d1117] min-h-screen text-[#c9d1d9] font-sans pb-20">
       <div class="max-w-4xl mx-auto px-4 py-12">
@@ -15,37 +18,55 @@ export async function renderDocs(el) {
             Integrating with OpenClaw
           </h2>
           <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6 mb-6">
-            <p class="mb-4">AdForge is fully compatible with the <strong>Model Context Protocol (MCP)</strong>. This means you can connect it to OpenClaw, Claude Code, or any MCP-enabled agent to manage your ads via natural language.</p>
+            <p class="mb-4">AdForge is fully compatible with the <strong>Model Context Protocol (MCP)</strong>. You can connect it to OpenClaw, Claude Code, or any MCP-enabled agent to manage your ads via natural language.</p>
             
             <h3 class="text-lg font-bold text-white mb-3">Setup Instructions</h3>
             <ol class="space-y-4 text-slate-400 list-decimal list-inside ml-2">
-              <li>Ensure you have the latest version of <strong>OpenClaw</strong> or <strong>Claude Code</strong> installed.</li>
-              <li>Open your MCP configuration file (usually <code>~/.config/Claude/claude_desktop_config.json</code> or your OpenClaw environment settings).</li>
-              <li>Add the AdForge MCP server configuration provided below.</li>
+              <li>Ensure you have <strong>OpenClaw</strong> or <strong>Claude Code</strong> installed.</li>
+              <li>Open your MCP configuration file.</li>
+              <li>Add the AdForge configuration provided below.</li>
             </ol>
           </div>
 
-          <div class="relative group">
-            <div class="absolute -inset-1 bg-gradient-to-r from-sky-500 to-blue-600 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
-            <div class="relative bg-[#0d1117] border border-[#30363d] rounded-xl overflow-hidden">
-              <div class="flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-[#30363d]">
-                <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">MCP Configuration (JSON)</span>
-                <button id="copy-mcp-btn" class="text-xs text-sky-400 hover:text-sky-300 font-bold transition-colors">Copy Code</button>
-              </div>
-              <pre class="p-6 overflow-x-auto text-sm font-mono text-emerald-400"><code>{
+          <div class="space-y-6">
+            <!-- URL Configuration (Recommended for remote) -->
+            <div class="relative group">
+              <div class="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
+              <div class="relative bg-[#0d1117] border border-[#30363d] rounded-xl overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-[#30363d]">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Recommended: URL Config (SSE)</span>
+                  <button data-copy-btn class="text-xs text-sky-400 hover:text-sky-300 font-bold transition-colors">Copy</button>
+                </div>
+                <pre class="p-6 overflow-x-auto text-sm font-mono text-emerald-400"><code>{
   "mcpServers": {
     "adforge": {
-      "command": "node",
-      "args": ["/home/openclaw/projects/adforge/mcp.js"],
-      "env": {
-        "DB_PATH": "/home/openclaw/projects/adforge/db/adforge.db"
-      }
+      "url": "${mcpUrl}"
     }
   }
 }</code></pre>
+              </div>
+            </div>
+
+            <!-- Stdio Configuration (For local development) -->
+            <div class="relative group">
+              <div class="relative bg-[#0d1117] border border-[#30363d] rounded-xl overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
+                <div class="flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-[#30363d]">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Alternative: Local Stdio Config</span>
+                  <button data-copy-btn class="text-xs text-sky-400 hover:text-sky-300 font-bold transition-colors">Copy</button>
+                </div>
+                <pre class="p-6 overflow-x-auto text-sm font-mono text-slate-400"><code>{
+  "mcpServers": {
+    "adforge": {
+      "command": "node",
+      "args": ["${localPath}"],
+      "env": { "DB_PATH": "/home/openclaw/projects/adforge/db/adforge.db" }
+    }
+  }
+}</code></pre>
+              </div>
             </div>
           </div>
-          <p class="mt-4 text-xs text-slate-500 italic text-center">* Note: Ensure the path to <code>mcp.js</code> is correct for your local installation.</p>
+          <p class="mt-4 text-xs text-slate-500 italic text-center">* Use the URL config if you are connecting from a remote machine.</p>
         </section>
 
         <section class="mb-16">
@@ -88,18 +109,19 @@ export async function renderDocs(el) {
     </div>
   `;
 
-  el.querySelector('#copy-mcp-btn')?.addEventListener('click', (e) => {
-    const code = el.querySelector('pre code')?.textContent;
-    if (code) {
-      navigator.clipboard.writeText(code);
-      const btn = e.target;
-      const originalText = btn.textContent;
-      btn.textContent = 'Copied!';
-      btn.classList.add('text-emerald-400');
-      setTimeout(() => {
-        btn.textContent = originalText;
-        btn.classList.remove('text-emerald-400');
-      }, 2000);
-    }
+  el.querySelectorAll('[data-copy-btn]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const code = btn.closest('.relative').querySelector('pre code')?.textContent;
+      if (code) {
+        navigator.clipboard.writeText(code);
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('text-emerald-400');
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.classList.remove('text-emerald-400');
+        }, 2000);
+      }
+    });
   });
 }

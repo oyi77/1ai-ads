@@ -1,0 +1,26 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e4]:
+      - link "AdForge" [ref=e5] [cursor=pointer]:
+        - /url: "#/"
+      - generic [ref=e6]:
+        - link "Dashboard" [ref=e7] [cursor=pointer]:
+          - /url: "#/"
+        - link "My Creative" [ref=e8] [cursor=pointer]:
+          - /url: "#/ads"
+        - link "Trending" [ref=e9] [cursor=pointer]:
+          - /url: "#/global-ads"
+        - link "Landing" [ref=e10] [cursor=pointer]:
+          - /url: "#/landing"
+        - link "Analytics" [ref=e11] [cursor=pointer]:
+          - /url: "#/analytics"
+        - link "Research" [ref=e12] [cursor=pointer]:
+          - /url: "#/research"
+        - link "Auto" [ref=e13] [cursor=pointer]:
+          - /url: "#/optimizer"
+        - link "+ Campaign" [ref=e14] [cursor=pointer]:
+          - /url: "#/campaign/create"
+        - link "Settings" [ref=e15] [cursor=pointer]:
+          - /url: "#/settings"
+        - button "Logout (admin)" [ref=e16] [cursor=pointer]
+  - generic [ref=e202]: Loading...

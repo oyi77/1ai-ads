@@ -6,17 +6,25 @@ export async function renderSettings(el) {
     accounts: [],
     activeSection: 'accounts',
     mcpStatus: {},
-    platformAccounts: {} 
+    platformAccounts: {},
+    aiConfig: { url: '', model: '', apiKey: '' },
+    availableModels: [],
+    testPromptResult: '',
+    isTestingConnection: false,
+    isFetchingModels: false,
+    isTestingPrompt: false
   };
 
   const loadData = async () => {
     try {
-      const [accRes, statusRes] = await Promise.all([
+      const [accRes, statusRes, aiRes] = await Promise.all([
         api.get('/settings/accounts'),
-        api.get('/mcp/status')
+        api.get('/mcp/status'),
+        api.get('/settings/ai')
       ]);
       state.accounts = accRes.data;
       state.mcpStatus = statusRes.data;
+      state.aiConfig = aiRes.data;
       
       state.platformAccounts = {
         meta: [],
@@ -75,6 +83,7 @@ export async function renderSettings(el) {
     });
 
     if (state.activeSection === 'accounts') attachAccountHandlers();
+    if (state.activeSection === 'ai') attachAIHandlers();
   }
 
   function renderSection() {
@@ -97,29 +106,7 @@ export async function renderSettings(el) {
           </div>
         </div>
       `;
-      case 'ai': return `
-        <h2 class="text-2xl font-bold mb-6 text-white">AI Configuration</h2>
-        <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6">
-          <div class="flex items-center gap-3 mb-6">
-            <div class="w-3 h-3 rounded-full ${state.mcpStatus.omniroute?.connected ? 'bg-emerald-400' : 'bg-red-400'}"></div>
-            <span class="text-lg font-bold text-white">OmniRoute AI Gateway</span>
-          </div>
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm text-slate-400 mb-1">API Endpoint</label>
-              <input type="text" value="${esc(state.mcpStatus.omniroute?.url || '')}" disabled class="w-full p-3 bg-[#0d1117] rounded-lg border border-[#30363d] text-slate-500">
-            </div>
-            <div>
-              <label class="block text-sm text-slate-400 mb-1 text-white">Default Model</label>
-              <select class="w-full p-3 bg-[#0d1117] rounded-lg border border-[#30363d] outline-none text-white">
-                <option>auto/pro-reasoning</option>
-                <option>openai/gpt-4o</option>
-                <option>anthropic/claude-3-5-sonnet</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      `;
+      case 'ai': return renderAISection();
       case 'billing': return `
         <h2 class="text-2xl font-bold mb-6 text-white">Subscription & Billing</h2>
         <div class="bg-gradient-to-br from-[#161b22] to-[#0d1117] border border-[#58a6ff]/30 rounded-xl p-8 text-center text-white">
@@ -130,6 +117,78 @@ export async function renderSettings(el) {
       `;
       default: return '';
     }
+  }
+
+  function renderAISection() {
+    const status = state.mcpStatus.omniroute?.connected ? 'bg-emerald-400' : 'bg-red-400';
+    return `
+      <h2 class="text-2xl font-bold mb-6 text-white">AI Configuration</h2>
+      
+      <div class="grid gap-6">
+        <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+              <div class="w-3 h-3 rounded-full ${status}"></div>
+              <span class="text-lg font-bold text-white">AI Provider (OpenAI Compatible)</span>
+            </div>
+            <button id="test-connection-btn" ${state.isTestingConnection ? 'disabled' : ''} class="text-xs bg-[#21262d] hover:bg-[#30363d] text-slate-300 border border-[#30363d] px-3 py-1.5 rounded-md font-medium transition-all">
+              ${state.isTestingConnection ? 'Testing...' : 'Test Connection'}
+            </button>
+          </div>
+          
+          <form id="ai-config-form" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">API Endpoint</label>
+              <input type="text" name="url" value="${esc(state.aiConfig.url)}" placeholder="https://api.openai.com/v1/chat/completions" class="w-full p-3 bg-[#0d1117] rounded-lg border border-[#30363d] focus:border-[#58a6ff] outline-none text-white text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">API Key</label>
+              <input type="password" name="apiKey" value="${esc(state.aiConfig.apiKey)}" placeholder="sk-..." class="w-full p-3 bg-[#0d1117] rounded-lg border border-[#30363d] focus:border-[#58a6ff] outline-none text-white text-sm">
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Default Model</label>
+                <button type="button" id="fetch-models-btn" class="text-[10px] text-sky-400 hover:underline">Fetch Models</button>
+              </div>
+              <div class="relative">
+                <input type="text" name="model" value="${esc(state.aiConfig.model)}" list="model-list" placeholder="gpt-4o" class="w-full p-3 bg-[#0d1117] rounded-lg border border-[#30363d] focus:border-[#58a6ff] outline-none text-white text-sm">
+                <datalist id="model-list">
+                  ${state.availableModels.map(m => `<option value="${esc(m.id)}">${esc(m.id)}</option>`).join('')}
+                </datalist>
+              </div>
+            </div>
+            <div class="pt-2">
+              <button type="submit" class="bg-[#238636] hover:bg-[#2ea043] text-white px-6 py-2 rounded-lg font-bold transition-all text-sm min-h-[44px]">Save Configuration</button>
+            </div>
+          </form>
+          <div id="ai-status" class="mt-4"></div>
+        </div>
+
+        <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6">
+          <h3 class="text-lg font-bold text-white mb-4">Test Prompt</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">System Message</label>
+              <input type="text" id="test-system-prompt" value="You are a creative copywriter." class="w-full p-2.5 bg-[#0d1117] rounded-lg border border-[#30363d] outline-none text-white text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">User Prompt</label>
+              <textarea id="test-user-prompt" rows="3" class="w-full p-2.5 bg-[#0d1117] rounded-lg border border-[#30363d] outline-none text-white text-sm" placeholder="Write a catchy headline for a new ad campaign..."></textarea>
+            </div>
+            <button id="run-test-prompt" ${state.isTestingPrompt ? 'disabled' : ''} class="bg-sky-600 hover:bg-sky-500 text-white px-6 py-2 rounded-lg font-bold transition-all text-sm min-h-[44px]">
+              ${state.isTestingPrompt ? 'Running...' : 'Run Test'}
+            </button>
+            
+            ${state.testPromptResult ? `
+              <div class="mt-4 p-4 bg-[#0d1117] rounded-lg border border-[#30363d]">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Response</label>
+                <div class="text-sm text-slate-300 whitespace-pre-wrap">${esc(state.testPromptResult)}</div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   function renderAccountsSection() {
@@ -333,7 +392,7 @@ export async function renderSettings(el) {
     });
 
     el.querySelectorAll('[data-delete-account]').forEach(btn => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', async (e) => {
         const id = btn.dataset.deleteAccount;
         if (!confirm('Are you sure you want to delete this account?')) return;
         try {
@@ -350,6 +409,85 @@ export async function renderSettings(el) {
       btn.addEventListener('click', () => {
         alert('Edit functionality coming soon! For now, please delete and re-add.');
       });
+    });
+  }
+
+  function attachAIHandlers() {
+    const form = el.querySelector('#ai-config-form');
+    if (!form) return;
+    const statusDiv = el.querySelector('#ai-status');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const data = Object.fromEntries(fd);
+      
+      try {
+        await api.put('/settings/ai', data);
+        statusDiv.innerHTML = '<div class="text-emerald-400 text-sm font-medium">Configuration saved successfully</div>';
+        await loadData();
+        setTimeout(render, 1500);
+      } catch (err) {
+        statusDiv.innerHTML = `<div class="text-red-400 text-sm font-medium">${esc(err.message)}</div>`;
+      }
+    });
+
+    el.querySelector('#test-connection-btn').addEventListener('click', async () => {
+      const fd = new FormData(form);
+      const data = Object.fromEntries(fd);
+      
+      // Update state with current form values before rendering
+      state.aiConfig = { ...state.aiConfig, ...data };
+      state.isTestingConnection = true;
+      render();
+      try {
+        const res = await api.post('/settings/ai/test-connection', data);
+        alert(res.message || 'Connection Success');
+      } catch (err) {
+        alert('Connection Failed: ' + err.message);
+      } finally {
+        state.isTestingConnection = false;
+        render();
+      }
+    });
+
+    el.querySelector('#fetch-models-btn').addEventListener('click', async () => {
+      const fd = new FormData(form);
+      const data = Object.fromEntries(fd);
+      
+      // Update state with current form values before rendering
+      state.aiConfig = { ...state.aiConfig, ...data };
+      state.isFetchingModels = true;
+      render();
+      try {
+        const res = await api.post('/settings/ai/models', data);
+        state.availableModels = res.data;
+        if (state.availableModels.length === 0) alert('No models found or provider does not support /v1/models');
+      } catch (err) {
+        alert('Failed to fetch models: ' + err.message);
+      } finally {
+        state.isFetchingModels = false;
+        render();
+      }
+    });
+
+    el.querySelector('#run-test-prompt').addEventListener('click', async () => {
+      const prompt = el.querySelector('#test-user-prompt').value;
+      const systemPrompt = el.querySelector('#test-system-prompt').value;
+      
+      if (!prompt) return alert('Please enter a prompt');
+      
+      state.isTestingPrompt = true;
+      render();
+      try {
+        const res = await api.post('/settings/ai/test-prompt', { prompt, systemPrompt });
+        state.testPromptResult = res.data;
+      } catch (err) {
+        alert('Test failed: ' + err.message);
+      } finally {
+        state.isTestingPrompt = false;
+        render();
+      }
     });
   }
 

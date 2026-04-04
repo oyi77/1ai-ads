@@ -1,0 +1,65 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e4]:
+      - link "AdForge" [ref=e5] [cursor=pointer]:
+        - /url: "#/"
+      - link "Docs" [ref=e7] [cursor=pointer]:
+        - /url: "#/docs"
+  - generic [ref=e13]:
+    - banner [ref=e14]:
+      - heading "Documentation" [level=1] [ref=e15]
+      - paragraph [ref=e16]: Learn how to automate AdForge using AI agents and OpenClaw.
+    - generic [ref=e17]:
+      - heading "1 Integrating with OpenClaw" [level=2] [ref=e18]:
+        - generic [ref=e19]: "1"
+        - text: Integrating with OpenClaw
+      - generic [ref=e20]:
+        - paragraph [ref=e21]:
+          - text: AdForge is fully compatible with the
+          - strong [ref=e22]: Model Context Protocol (MCP)
+          - text: . This means you can connect it to OpenClaw, Claude Code, or any MCP-enabled agent to manage your ads via natural language.
+        - heading "Setup Instructions" [level=3] [ref=e23]
+        - list [ref=e24]:
+          - listitem [ref=e25]:
+            - text: Ensure you have the latest version of
+            - strong [ref=e26]: OpenClaw
+            - text: or
+            - strong [ref=e27]: Claude Code
+            - text: installed.
+          - listitem [ref=e28]:
+            - text: Open your MCP configuration file (usually
+            - code [ref=e29]: ~/.config/Claude/claude_desktop_config.json
+            - text: or your OpenClaw environment settings).
+          - listitem [ref=e30]: Add the AdForge MCP server configuration provided below.
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - generic [ref=e35]: MCP Configuration (JSON)
+          - button "Copy Code" [ref=e36] [cursor=pointer]
+        - code [ref=e38]: "{ \"mcpServers\": { \"adforge\": { \"command\": \"node\", \"args\": [\"/home/openclaw/projects/adforge/mcp.jslocalhost:3001\"], \"env\": { \"DB_PATH\": \"/home/openclaw/projects/adforge/db/adforge.db\" } } } }"
+      - paragraph [ref=e39]:
+        - text: "* Note: Ensure the path to"
+        - code [ref=e40]: mcp.js
+        - text: is correct for your local installation.
+    - generic [ref=e41]:
+      - heading "2 Available Tools" [level=2] [ref=e42]:
+        - generic [ref=e43]: "2"
+        - text: Available Tools
+      - paragraph [ref=e44]: "Once connected, your AI agent will have access to the following specialized tools:"
+      - generic [ref=e45]:
+        - generic [ref=e46]:
+          - heading "adforge_list_campaigns" [level=4] [ref=e47]
+          - paragraph [ref=e48]: Fetch all active campaigns and their performance data (Spend, Revenue, ROAS) across Meta, Google, and TikTok.
+        - generic [ref=e49]:
+          - heading "adforge_get_analytics" [level=4] [ref=e50]
+          - paragraph [ref=e51]: Deep-dive into a specific campaign's metrics to identify scaling opportunities or budget leaks.
+        - generic [ref=e52]:
+          - heading "adforge_list_landing_pages" [level=4] [ref=e53]
+          - paragraph [ref=e54]: Review all generated landing pages, their status, and their assigned themes/slugs.
+        - generic [ref=e55]:
+          - heading "adforge_list_creatives" [level=4] [ref=e56]
+          - paragraph [ref=e57]: Retrieve all AI-generated ad copy variations and creative assets stored in the platform.
+    - generic [ref=e59]:
+      - heading "Need help?" [level=2] [ref=e60]
+      - paragraph [ref=e61]: If you're having trouble connecting AdForge to your AI agent, check the server logs in PM2 or reach out to our technical support team.
+      - link "Back to Dashboard" [ref=e63] [cursor=pointer]:
+        - /url: "#/"

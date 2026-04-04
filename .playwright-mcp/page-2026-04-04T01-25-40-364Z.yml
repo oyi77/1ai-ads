@@ -1,0 +1,63 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e4]:
+      - link "AdForge" [ref=e5] [cursor=pointer]:
+        - /url: "#/"
+      - generic [ref=e6]:
+        - link "Dashboard" [ref=e7] [cursor=pointer]:
+          - /url: "#/"
+        - link "My Creative" [ref=e8] [cursor=pointer]:
+          - /url: "#/ads"
+        - link "Trending" [ref=e9] [cursor=pointer]:
+          - /url: "#/global-ads"
+        - link "Landing" [ref=e10] [cursor=pointer]:
+          - /url: "#/landing"
+        - link "Analytics" [ref=e11] [cursor=pointer]:
+          - /url: "#/analytics"
+        - link "Research" [ref=e12] [cursor=pointer]:
+          - /url: "#/research"
+        - link "Auto" [ref=e13] [cursor=pointer]:
+          - /url: "#/optimizer"
+        - link "+ Campaign" [ref=e14] [cursor=pointer]:
+          - /url: "#/campaign/create"
+        - link "Settings" [ref=e15] [cursor=pointer]:
+          - /url: "#/settings"
+        - button "Logout (admin)" [ref=e98] [cursor=pointer]
+  - generic [ref=e208]:
+    - complementary [ref=e209]:
+      - navigation [ref=e210]:
+        - button "Connected Accounts" [ref=e211] [cursor=pointer]
+        - button "Security & Privacy" [ref=e212] [cursor=pointer]
+        - button "AI Configuration" [ref=e213] [cursor=pointer]
+        - button "Subscription" [ref=e214] [cursor=pointer]
+    - main [ref=e215]:
+      - generic [ref=e216]:
+        - heading "AI Configuration" [level=2] [ref=e217]
+        - generic [ref=e218]:
+          - generic [ref=e219]:
+            - generic [ref=e220]:
+              - generic [ref=e223]: AI Provider (OpenAI Compatible)
+              - button "Test Connection" [ref=e224] [cursor=pointer]
+            - generic [ref=e225]:
+              - generic [ref=e226]:
+                - generic [ref=e227]: API Endpoint
+                - textbox "https://api.openai.com/v1/chat/completions" [ref=e228]: http://localhost:20128/v1/chat/completions
+              - generic [ref=e229]:
+                - generic [ref=e230]: API Key
+                - textbox "sk-..." [ref=e231]
+              - generic [ref=e232]:
+                - generic [ref=e233]:
+                  - generic [ref=e234]: Default Model
+                  - button "Fetch Models" [ref=e235] [cursor=pointer]
+                - combobox "gpt-4o" [ref=e237]: auto/pro-fast
+              - button "Save Configuration" [ref=e239] [cursor=pointer]
+          - generic [ref=e240]:
+            - heading "Test Prompt" [level=3] [ref=e241]
+            - generic [ref=e242]:
+              - generic [ref=e243]:
+                - generic [ref=e244]: System Message
+                - textbox [ref=e245]: You are a creative copywriter.
+              - generic [ref=e246]:
+                - generic [ref=e247]: User Prompt
+                - textbox "Write a catchy headline for a new ad campaign..." [ref=e248]
+              - button "Run Test" [ref=e249] [cursor=pointer]

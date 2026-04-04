@@ -1,10 +1,30 @@
 import { Router } from 'express';
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { createAdForgeMCPServer } from '../services/mcp-server.js';
 
-export function createMcpRouter(mcpClient, settingsRepo, campaignsRepo) {
+export function createMcpRouter(mcpManager, settingsRepo, campaignsRepo, adsRepo, landingRepo) {
   const router = Router();
+  
+  const mcpServer = createAdForgeMCPServer(campaignsRepo, landingRepo, adsRepo);
+  let sseTransport = null;
 
-  // Get connection status for all platforms
+  router.get('/sse', async (req, res) => {
+    console.log('[MCP] New SSE connection request');
+    sseTransport = new SSEServerTransport("/api/mcp/messages", res);
+    await mcpServer.connect(sseTransport);
+  });
+
+  router.post('/messages', async (req, res) => {
+    console.log('[MCP] Message received');
+    if (sseTransport) {
+      await sseTransport.handlePostMessage(req, res);
+    } else {
+      res.status(400).json({ error: "No active SSE transport" });
+    }
+  });
+
   router.get('/status', (req, res) => {
+
     const status = mcpClient.getStatus();
     res.json({ success: true, data: status });
   });

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
 
-export function createSettingsRouter(settingsRepo) {
+export function createSettingsRouter(settingsRepo, llmClient) {
   const router = Router();
 
   // Get all general settings
@@ -13,6 +13,74 @@ export function createSettingsRouter(settingsRepo) {
       safe[key] = value;
     }
     res.json({ success: true, data: safe });
+  });
+
+  router.get('/ai', (req, res) => {
+    const config = settingsRepo.get('llm_config') || {
+      url: process.env.OMNIROUTE_URL || 'http://localhost:20128/v1',
+      model: process.env.OMNIROUTE_MODEL || 'auto/pro-fast',
+      apiKey: process.env.OMNIROUTE_API_KEY ? '••••••••' : ''
+    };
+    res.json({ success: true, data: config });
+  });
+
+  router.put('/ai', (req, res) => {
+    const { url, model, apiKey } = req.body;
+    const current = settingsRepo.get('llm_config') || {};
+    
+    const newConfig = {
+      url: url || llmClient.url,
+      model: model || llmClient.model,
+      apiKey: (apiKey && apiKey !== '••••••••') ? apiKey : current.apiKey || llmClient.apiKey
+    };
+
+    settingsRepo.set('llm_config', newConfig);
+    llmClient.updateConfig(newConfig);
+    res.json({ success: true });
+  });
+
+  router.post('/ai/test-connection', async (req, res) => {
+    const { url, apiKey } = req.body;
+    
+    try {
+      const testClient = new llmClient.constructor({
+        url: url || llmClient.url,
+        apiKey: (apiKey && apiKey !== '••••••••') ? apiKey : llmClient.apiKey
+      });
+      
+      await testClient.call('You are a connectivity test bot.', 'Respond with "OK" if you receive this.');
+      res.json({ success: true, message: 'Connection successful' });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.post('/ai/models', async (req, res) => {
+    const { url, apiKey } = req.body;
+    
+    try {
+      const testClient = new llmClient.constructor({
+        url: url || llmClient.url,
+        apiKey: (apiKey && apiKey !== '••••••••') ? apiKey : llmClient.apiKey
+      });
+      
+      const models = await testClient.fetchModels();
+      res.json({ success: true, data: models });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.post('/ai/test-prompt', async (req, res) => {
+    const { prompt, systemPrompt } = req.body;
+    if (!prompt) return res.status(400).json({ success: false, error: 'prompt is required' });
+
+    try {
+      const response = await llmClient.call(systemPrompt || 'You are a helpful assistant.', prompt);
+      res.json({ success: true, data: response });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   // --- Multi-account API ---

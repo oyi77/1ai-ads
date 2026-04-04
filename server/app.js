@@ -56,6 +56,11 @@ export function createApp({ db, llmClient, mcpClient } = {}) {
   const refreshTokensRepo = new RefreshTokensRepository(db);
   const settingsRepo = new SettingsRepository(db);
 
+  const llmConfig = settingsRepo.get('llm_config');
+  if (llmConfig) {
+    llmClient.updateConfig(llmConfig);
+  }
+
   // Services
   const adGenerator = new AdGenerator(llmClient);
   const landingGenerator = new LandingGenerator(llmClient);
@@ -68,8 +73,8 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
   app.use('/api/ads', requireAuth, createAdsRouter(adsRepo, adGenerator));
   app.use('/api/landing', requireAuth, createLandingRouter(landingRepo, landingGenerator));
   app.use('/api/analytics', requireAuth, createAnalyticsRouter(campaignsRepo));
-  app.use('/api/mcp', requireAuth, createMcpRouter(mcp, settingsRepo, campaignsRepo));
-  app.use('/api/settings', requireAuth, createSettingsRouter(settingsRepo));
+  app.use('/api/mcp', requireAuth, createMcpRouter(mcp, settingsRepo, campaignsRepo, adsRepo, landingRepo));
+  app.use('/api/settings', requireAuth, createSettingsRouter(settingsRepo, llmClient));
   const scalevService = new ScalevService(settingsRepo);
   app.use('/api/research', requireAuth, createResearchRouter(new AdResearchService(settingsRepo)));
   app.use('/api/scalev', requireAuth, createScalevRouter(scalevService));
