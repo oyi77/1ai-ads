@@ -13,6 +13,9 @@ export class MetaAdsAPI {
   }
 
   _getToken() {
+    if (process.env.FB_SYSTEM_TOKEN) {
+      return process.env.FB_SYSTEM_TOKEN;
+    }
     const creds = this.settingsRepo.getCredentials('meta');
     if (!creds?.access_token) {
       throw new Error('Meta access token not configured. Go to Settings to add it.');
