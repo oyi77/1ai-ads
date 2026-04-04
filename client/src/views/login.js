@@ -15,7 +15,7 @@ export function renderLogin(el) {
             <input type="password" name="password" class="w-full p-3 bg-slate-900 rounded-lg border border-slate-600 min-h-[44px]" required>
           </div>
           <button type="submit" class="w-full bg-sky-500 hover:bg-sky-600 px-4 py-3 rounded-lg font-medium min-h-[44px]">Login</button>
-          <div id="login-error" class="hidden text-red-400 text-sm text-center"></div>
+          <div id="login-error" class="text-red-400 text-sm text-center"></div>
         </form>
         <p class="text-slate-500 text-sm text-center mt-4">
           No account? <a href="#/register" class="text-sky-400 hover:underline">Register</a>
@@ -28,23 +28,26 @@ export function renderLogin(el) {
   el.querySelector('#login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const errorDiv = el.querySelector('#login-error');
-    errorDiv.classList.add('hidden');
+
     const btn = e.target.querySelector('button');
     btn.disabled = true;
     btn.textContent = 'Logging in...';
 
     const fd = new FormData(e.target);
+    let loginSuccess = false;
     try {
       await api.login(fd.get('username'), fd.get('password'));
-      window.location.hash = '#/';
-      window.dispatchEvent(new Event('auth-change'));
+      loginSuccess = true;
     } catch (err) {
       errorDiv.textContent = err.message;
       errorDiv.classList.remove('hidden');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Login';
     }
+    if (loginSuccess) {
+      window.location.hash = '#/';
+      window.dispatchEvent(new Event('auth-change'));
+    }
+    btn.disabled = false;
+    btn.textContent = 'Login';
   });
 }
 
