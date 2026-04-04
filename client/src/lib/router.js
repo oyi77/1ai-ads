@@ -1,6 +1,6 @@
 import { api } from './api.js';
 
-const PUBLIC_ROUTES = new Set(['/login', '/register', '/welcome']);
+const PUBLIC_ROUTES = new Set(['/', '/login', '/register', '/welcome', '/docs']);
 
 export class Router {
   constructor(container) {

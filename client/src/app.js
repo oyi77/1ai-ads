@@ -14,6 +14,7 @@ import { renderOptimizer } from './views/optimizer.js';
 import { renderTrending } from './views/trending.js';
 import { renderGlobalAds } from './views/global-ads.js';
 import { renderMarketingLP } from './views/marketing-lp.js';
+import { renderDocs } from './views/docs.js';
 
 const router = new Router(document.getElementById('app'));
 
@@ -24,6 +25,7 @@ router.on('/', (el) => {
     renderMarketingLP(el);
   }
 });
+router.on('/docs', renderDocs);
 router.on('/ads', renderAdsList);
 router.on('/ads/create', renderAdsCreate);
 router.on('/landing', renderLandingList);
@@ -44,7 +46,27 @@ function updateNav() {
   const logoutBtn = document.getElementById('logout-btn');
   const isAuth = api.isAuthenticated();
 
-  if (navLinks) navLinks.classList.toggle('hidden-when-unauth', !isAuth);
+  if (navLinks) {
+    navLinks.classList.remove('hidden-when-unauth');
+    
+    const authOnlySelectors = [
+      'a[href="#/"]', 
+      'a[href="#/ads"]', 
+      'a[href="#/global-ads"]', 
+      'a[href="#/landing"]', 
+      'a[href="#/analytics"]',
+      'a[href="#/research"]',
+      'a[href="#/optimizer"]',
+      'a[href="#/campaign/create"]',
+      'a[href="#/settings"]'
+    ];
+    
+    authOnlySelectors.forEach(sel => {
+      const el = navLinks.querySelector(sel);
+      if (el) el.classList.toggle('hidden', !isAuth);
+    });
+  }
+
   if (logoutBtn) {
     logoutBtn.classList.toggle('hidden', !isAuth);
     logoutBtn.textContent = isAuth ? `Logout (${localStorage.getItem('adforge_user') || ''})` : '';
