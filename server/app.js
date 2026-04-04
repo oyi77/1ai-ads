@@ -36,6 +36,7 @@ import { createOptimizerRouter } from './routes/optimizer.js';
 import { renderLandingPage } from './services/templates.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createTrendingRouter } from './routes/trending.js';
+import { createCompetitorSpyRouter } from './routes/competitor-spy.js';
 import { TrendingService } from './services/trending.js';
 import { createPaymentsRouter } from './routes/payments.js';
 import { LearningService } from './services/learning.js';
@@ -99,6 +100,9 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
   // Trending Dashboard
   const trendingService = new TrendingService(campaignsRepo);
   app.use('/api/trending', requireAuth, createTrendingRouter(trendingService));
+
+  app.use('/api/competitor-spy', requireAuth, createCompetitorSpyRouter());
+  console.log('Competitor Spy route mounted');
 
   // Payment Gateway (backlog/stub)
   app.use('/api/payments', requireAuth, createPaymentsRouter());
