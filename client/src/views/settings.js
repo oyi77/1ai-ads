@@ -12,27 +12,23 @@ export async function renderSettings(el) {
     testPromptResult: '',
     isTestingConnection: false,
     isFetchingModels: false,
-    isTestingPrompt: false
+    isTestingPrompt: false,
+    isTestingAccount: {} 
   };
 
   const loadData = async () => {
     try {
-      const [accRes, statusRes, aiRes] = await Promise.all([
+      const results = await Promise.allSettled([
         api.get('/settings/accounts'),
         api.get('/mcp/status'),
         api.get('/settings/ai')
       ]);
-      state.accounts = accRes.data;
-      state.mcpStatus = statusRes.data;
-      state.aiConfig = aiRes.data;
+
+      if (results[0].status === 'fulfilled') state.accounts = results[0].value.data;
+      if (results[1].status === 'fulfilled') state.mcpStatus = results[1].value.data;
+      if (results[2].status === 'fulfilled') state.aiConfig = results[2].value.data;
       
-      state.platformAccounts = {
-        meta: [],
-        google: [],
-        tiktok: [],
-        scalev: [],
-        x: []
-      };
+      state.platformAccounts = { meta: [], google: [], tiktok: [], scalev: [], x: [] };
       state.accounts.forEach(acc => {
         if (state.platformAccounts[acc.platform]) {
           state.platformAccounts[acc.platform].push(acc);
@@ -66,7 +62,6 @@ export async function renderSettings(el) {
           </nav>
         </aside>
 
-        <!-- Main Content -->
         <main class="flex-1 p-4 sm:p-8 overflow-y-auto">
           <div class="max-w-4xl mx-auto">
             ${renderSection()}
@@ -89,102 +84,40 @@ export async function renderSettings(el) {
   function renderSection() {
     switch (state.activeSection) {
       case 'accounts': return renderAccountsSection();
-      case 'security': return `
-        <h2 class="text-2xl font-bold mb-6 text-white">Security Settings</h2>
-        <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6">
-          <p class="text-slate-400 mb-4">Update your password and manage session security.</p>
-          <div class="space-y-4 max-w-sm">
-            <div>
-              <label class="block text-sm text-slate-400 mb-1">Current Password</label>
-              <input type="password" class="w-full p-3 bg-[#0d1117] rounded-lg border border-[#30363d] focus:border-[#58a6ff] outline-none text-white">
-            </div>
-            <div>
-              <label class="block text-sm text-slate-400 mb-1">New Password</label>
-              <input type="password" class="w-full p-3 bg-[#0d1117] rounded-lg border border-[#30363d] focus:border-[#58a6ff] outline-none text-white">
-            </div>
-            <button class="bg-[#21262d] text-[#c9d1d9] border border-[#30363d] hover:bg-[#30363d] px-6 py-2 rounded-lg font-bold min-h-[44px]">Update Password</button>
-          </div>
-        </div>
-      `;
+      case 'security': return `<h2 class="text-2xl font-bold mb-6 text-white">Security Settings</h2><div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6"><div class="space-y-4 max-w-sm"><div><label class="block text-sm text-slate-400 mb-1">New Password</label><input type="password" class="w-full p-3 bg-[#0d1117] rounded-lg border border-[#30363d] text-white"></div><button class="bg-[#21262d] text-[#c9d1d9] border border-[#30363d] px-6 py-2 rounded-lg font-bold">Update Password</button></div></div>`;
       case 'ai': return renderAISection();
-      case 'billing': return `
-        <h2 class="text-2xl font-bold mb-6 text-white">Subscription & Billing</h2>
-        <div class="bg-gradient-to-br from-[#161b22] to-[#0d1117] border border-[#58a6ff]/30 rounded-xl p-8 text-center text-white">
-          <h3 class="text-xl font-bold text-white mb-2">You are on the Free Starter Plan</h3>
-          <p class="text-slate-400 mb-6">Upgrade to unlock unlimited multi-account support and advanced AI features.</p>
-          <button class="bg-[#58a6ff] hover:bg-[#79c0ff] text-white px-8 py-3 rounded-lg font-bold transition-all min-h-[44px]">View Plans</button>
-        </div>
-      `;
+      case 'billing': return `<h2 class="text-2xl font-bold mb-6 text-white">Subscription</h2><div class="bg-gradient-to-br from-[#161b22] to-[#0d1117] border border-[#58a6ff]/30 rounded-xl p-8 text-center text-white"><h3 class="text-xl font-bold mb-2">Free Starter Plan</h3><button class="bg-[#58a6ff] px-8 py-3 rounded-lg font-bold">View Plans</button></div>`;
       default: return '';
     }
   }
 
   function renderAISection() {
-    const status = state.mcpStatus.omniroute?.connected ? 'bg-emerald-400' : 'bg-red-400';
     return `
       <h2 class="text-2xl font-bold mb-6 text-white">AI Configuration</h2>
-      
       <div class="grid gap-6">
         <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6">
           <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center gap-3">
-              <div class="w-3 h-3 rounded-full ${status}"></div>
-              <span class="text-lg font-bold text-white">AI Provider (OpenAI Compatible)</span>
-            </div>
-            <button id="test-connection-btn" ${state.isTestingConnection ? 'disabled' : ''} class="text-xs bg-[#21262d] hover:bg-[#30363d] text-slate-300 border border-[#30363d] px-3 py-1.5 rounded-md font-medium transition-all">
-              ${state.isTestingConnection ? 'Testing...' : 'Test Connection'}
-            </button>
+            <span class="text-lg font-bold text-white">AI Provider (OpenAI Compatible)</span>
+            <button id="test-connection-btn" ${state.isTestingConnection ? 'disabled' : ''} class="text-xs bg-[#21262d] text-slate-300 border border-[#30363d] px-3 py-1.5 rounded-md">${state.isTestingConnection ? 'Testing...' : 'Test Connection'}</button>
           </div>
-          
           <form id="ai-config-form" class="space-y-4">
+            <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1">API Endpoint</label><input type="text" name="url" value="${esc(state.aiConfig.url)}" placeholder="http://localhost:20128/v1" class="w-full p-3 bg-[#0d1117] rounded-lg border border-[#30363d] text-white text-sm"></div>
+            <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1">API Key</label><input type="password" name="apiKey" value="${esc(state.aiConfig.apiKey)}" placeholder="sk-..." class="w-full p-3 bg-[#0d1117] rounded-lg border border-[#30363d] text-white text-sm"></div>
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">API Endpoint</label>
-              <input type="text" name="url" value="${esc(state.aiConfig.url)}" placeholder="https://api.openai.com/v1/chat/completions" class="w-full p-3 bg-[#0d1117] rounded-lg border border-[#30363d] focus:border-[#58a6ff] outline-none text-white text-sm">
+              <div class="flex items-center justify-between mb-1"><label class="block text-xs font-bold text-slate-500 uppercase">Default Model</label><button type="button" id="fetch-models-btn" class="text-[10px] text-sky-400 hover:underline">Fetch Models</button></div>
+              <input type="text" name="model" value="${esc(state.aiConfig.model)}" list="model-list" placeholder="gpt-4o" class="w-full p-3 bg-[#0d1117] rounded-lg border border-[#30363d] text-white text-sm">
+              <datalist id="model-list">${state.availableModels.map(m => `<option value="${esc(m.id)}">${esc(m.id)}</option>`).join('')}</datalist>
             </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">API Key</label>
-              <input type="password" name="apiKey" value="${esc(state.aiConfig.apiKey)}" placeholder="sk-..." class="w-full p-3 bg-[#0d1117] rounded-lg border border-[#30363d] focus:border-[#58a6ff] outline-none text-white text-sm">
-            </div>
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Default Model</label>
-                <button type="button" id="fetch-models-btn" class="text-[10px] text-sky-400 hover:underline">Fetch Models</button>
-              </div>
-              <div class="relative">
-                <input type="text" name="model" value="${esc(state.aiConfig.model)}" list="model-list" placeholder="gpt-4o" class="w-full p-3 bg-[#0d1117] rounded-lg border border-[#30363d] focus:border-[#58a6ff] outline-none text-white text-sm">
-                <datalist id="model-list">
-                  ${state.availableModels.map(m => `<option value="${esc(m.id)}">${esc(m.id)}</option>`).join('')}
-                </datalist>
-              </div>
-            </div>
-            <div class="pt-2">
-              <button type="submit" class="bg-[#238636] hover:bg-[#2ea043] text-white px-6 py-2 rounded-lg font-bold transition-all text-sm min-h-[44px]">Save Configuration</button>
-            </div>
+            <button type="submit" class="bg-[#238636] text-white px-6 py-2 rounded-lg font-bold">Save Configuration</button>
           </form>
           <div id="ai-status" class="mt-4"></div>
         </div>
-
         <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6">
           <h3 class="text-lg font-bold text-white mb-4">Test Prompt</h3>
           <div class="space-y-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">System Message</label>
-              <input type="text" id="test-system-prompt" value="You are a creative copywriter." class="w-full p-2.5 bg-[#0d1117] rounded-lg border border-[#30363d] outline-none text-white text-sm">
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">User Prompt</label>
-              <textarea id="test-user-prompt" rows="3" class="w-full p-2.5 bg-[#0d1117] rounded-lg border border-[#30363d] outline-none text-white text-sm" placeholder="Write a catchy headline for a new ad campaign..."></textarea>
-            </div>
-            <button id="run-test-prompt" ${state.isTestingPrompt ? 'disabled' : ''} class="bg-sky-600 hover:bg-sky-500 text-white px-6 py-2 rounded-lg font-bold transition-all text-sm min-h-[44px]">
-              ${state.isTestingPrompt ? 'Running...' : 'Run Test'}
-            </button>
-            
-            ${state.testPromptResult ? `
-              <div class="mt-4 p-4 bg-[#0d1117] rounded-lg border border-[#30363d]">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Response</label>
-                <div class="text-sm text-slate-300 whitespace-pre-wrap">${esc(state.testPromptResult)}</div>
-              </div>
-            ` : ''}
+            <textarea id="test-user-prompt" rows="3" class="w-full p-2.5 bg-[#0d1117] rounded-lg border border-[#30363d] text-white text-sm" placeholder="Write something..."></textarea>
+            <button id="run-test-prompt" ${state.isTestingPrompt ? 'disabled' : ''} class="bg-sky-600 text-white px-6 py-2 rounded-lg font-bold">${state.isTestingPrompt ? 'Running...' : 'Run Test'}</button>
+            ${state.testPromptResult ? `<div class="mt-4 p-4 bg-[#0d1117] border border-[#30363d] rounded-lg text-sm text-slate-300 whitespace-pre-wrap">${esc(state.testPromptResult)}</div>` : ''}
           </div>
         </div>
       </div>
@@ -201,10 +134,7 @@ export async function renderSettings(el) {
     ];
 
     return `
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-2xl font-bold text-white">Connected Accounts</h2>
-      </div>
-      
+      <h2 class="text-2xl font-bold text-white mb-6">Connected Accounts</h2>
       <div class="grid gap-6">
         ${platforms.map(p => {
           const accounts = state.platformAccounts[p.id] || [];
@@ -212,39 +142,24 @@ export async function renderSettings(el) {
           <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden">
             <div class="p-6 border-b border-[#30363d] flex items-center justify-between bg-[#1c2128]">
               <div class="flex items-center gap-4">
-                <div class="w-10 h-10 bg-[#0d1117] rounded-lg flex items-center justify-center border border-[#30363d]">
-                  <span class="font-bold text-sky-400">${p.name[0]}</span>
-                </div>
-                <div>
-                  <h3 class="font-bold text-white">${p.name}</h3>
-                  <p class="text-xs text-slate-400">${p.desc}</p>
-                </div>
+                <div class="w-10 h-10 bg-[#0d1117] rounded-lg flex items-center justify-center border border-[#30363d] font-bold text-sky-400">${p.name[0]}</div>
+                <div><h3 class="font-bold text-white">${p.name}</h3><p class="text-xs text-slate-400">${p.desc}</p></div>
               </div>
-              <button data-add-account="${p.id}" class="text-xs bg-[#238636] hover:bg-[#2ea043] text-white px-3 py-1.5 rounded-md font-medium transition-all">
-                + Add Account
-              </button>
+              <button data-add-account="${p.id}" class="text-xs bg-[#238636] text-white px-3 py-1.5 rounded-md font-medium">+ Add Account</button>
             </div>
-            
             <div class="p-0">
-              ${accounts.length === 0 ? `
-                <div class="p-8 text-center text-slate-500 text-sm">
-                  No accounts connected yet.
-                </div>
-              ` : `
+              ${accounts.length === 0 ? `<div class="p-8 text-center text-slate-500 text-sm">No accounts connected yet.</div>` : `
                 <div class="divide-y divide-[#30363d]">
                   ${accounts.map(acc => `
-                    <div class="p-4 flex items-center justify-between hover:bg-[#1c2128] transition-colors group">
+                    <div class="p-4 flex items-center justify-between hover:bg-[#1c2128] group">
                       <div class="flex items-center gap-3">
                         <div class="w-2 h-2 rounded-full ${acc.is_active ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'bg-slate-600'}"></div>
-                        <div>
-                          <div class="text-sm font-medium text-slate-200">${esc(acc.account_name)}</div>
-                          <div class="text-[10px] text-slate-500 font-mono">${acc.id.split('-')[0]}...</div>
-                        </div>
-                        ${acc.is_active ? '<span class="text-[10px] bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded border border-emerald-500/20 ml-2">ACTIVE</span>' : ''}
+                        <div><div class="text-sm font-medium text-slate-200">${esc(acc.account_name)}</div></div>
+                        ${acc.is_active ? '<span class="text-[10px] bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded border border-emerald-500/20">ACTIVE</span>' : ''}
                       </div>
                       <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         ${!acc.is_active ? `<button data-activate-account="${acc.id}" class="text-[10px] text-sky-400 hover:underline px-2">Set Active</button>` : ''}
-                        <button data-edit-account="${acc.id}" class="text-[10px] text-slate-400 hover:text-white px-2">Edit</button>
+                        <button data-test-existing="${acc.id}" data-platform="${p.id}" class="text-[10px] text-purple-400 hover:underline px-2">Test</button>
                         <button data-delete-account="${acc.id}" class="text-[10px] text-red-400 hover:text-red-300 px-2">Delete</button>
                       </div>
                     </div>
@@ -252,19 +167,15 @@ export async function renderSettings(el) {
                 </div>
               `}
             </div>
-
-            <!-- New Account Form -->
-            <div id="${p.id}-add-form" class="hidden p-6 bg-[#0d1117] border-t border-[#30363d] animate-in fade-in slide-in-from-top-4 duration-200">
-               <h4 class="text-sm font-bold text-white mb-4">Connect New ${p.name} Account</h4>
+            <div id="${p.id}-add-form" class="hidden p-6 bg-[#0d1117] border-t border-[#30363d]">
+               <h4 class="text-sm font-bold text-white mb-4 text-sky-400">Add New Account</h4>
                <form data-platform-form="${p.id}" class="space-y-4">
-                 <div>
-                   <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Account Name</label>
-                   <input type="text" name="account_name" placeholder="e.g. My Primary Account" required class="w-full p-2.5 bg-[#161b22] rounded-lg border border-[#30363d] focus:border-[#58a6ff] outline-none text-sm text-white">
-                 </div>
+                 <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1">Name</label><input type="text" name="account_name" required class="w-full p-2.5 bg-[#161b22] rounded-lg border border-[#30363d] text-sm text-white"></div>
                  ${renderPlatformFields(p.id)}
                  <div class="flex items-center gap-3 pt-2">
-                   <button type="submit" class="bg-[#238636] hover:bg-[#2ea043] text-white px-4 py-2 rounded-lg text-sm font-bold transition-all">Connect Account</button>
-                   <button type="button" data-cancel-add="${p.id}" class="text-slate-400 hover:text-white text-sm font-medium">Cancel</button>
+                   <button type="submit" class="bg-[#238636] text-white px-4 py-2 rounded-lg text-sm font-bold">Connect</button>
+                   <button type="button" data-test-account="${p.id}" class="bg-[#21262d] text-slate-300 border border-[#30363d] px-4 py-2 rounded-lg text-sm font-bold">${state.isTestingAccount[p.id] ? '...' : 'Test Connection'}</button>
+                   <button type="button" data-cancel-add="${p.id}" class="text-slate-400 text-sm font-medium">Cancel</button>
                  </div>
                </form>
             </div>
@@ -275,221 +186,94 @@ export async function renderSettings(el) {
     `;
   }
 
-  function renderPlatformFields(platform, existingFields = {}) {
-    const commonClass = "w-full p-2.5 bg-[#161b22] rounded-lg border border-[#30363d] focus:border-[#58a6ff] outline-none text-sm text-white placeholder:text-slate-600";
-    const labelClass = "block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1";
-    
-    switch (platform) {
-      case 'meta': return `
-        <div>
-          <label class="${labelClass}">Access Token</label>
-          <input type="password" name="access_token" value="${existingFields.access_token || ''}" placeholder="Paste Meta access token" class="${commonClass}">
-        </div>
-      `;
-      case 'google': return `
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="${labelClass}">Developer Token</label>
-            <input type="password" name="developer_token" value="${existingFields.developer_token || ''}" placeholder="Google Ads Dev Token" class="${commonClass}">
-          </div>
-          <div>
-            <label class="${labelClass}">Credentials JSON Path</label>
-            <input type="text" name="credentials_path" value="${esc(existingFields.credentials_path || '')}" class="${commonClass}">
-          </div>
-        </div>
-      `;
-      case 'tiktok': return `
-        <div>
-          <label class="${labelClass}">Access Token</label>
-          <input type="password" name="access_token" value="${existingFields.access_token || ''}" class="${commonClass}">
-        </div>
-      `;
-      case 'x': return `
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div class="sm:col-span-2">
-            <label class="${labelClass}">Access Token</label>
-            <input type="password" name="access_token" value="${existingFields.access_token || ''}" class="${commonClass}">
-          </div>
-          <div>
-            <label class="${labelClass}">API Key</label>
-            <input type="text" name="api_key" value="${existingFields.api_key || ''}" class="${commonClass}">
-          </div>
-          <div>
-            <label class="${labelClass}">API Secret</label>
-            <input type="password" name="api_secret" value="${existingFields.api_secret || ''}" class="${commonClass}">
-          </div>
-        </div>
-      `;
-      case 'scalev': return `
-        <div>
-          <label class="${labelClass}">API Token</label>
-          <input type="password" name="api_token" value="${existingFields.api_token || ''}" class="${commonClass}">
-        </div>
-      `;
-      default: return '';
-    }
+  function renderPlatformFields(p, existing = {}) {
+    const common = "w-full p-2.5 bg-[#161b22] rounded-lg border border-[#30363d] text-sm text-white";
+    const label = "block text-xs font-bold text-slate-500 uppercase mb-1";
+    if (p === 'meta') return `<div><label class="${label}">Access Token</label><input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}"></div>`;
+    if (p === 'google') return `<div class="grid grid-cols-2 gap-4"><div><label class="${label}">Dev Token</label><input type="password" name="developer_token" value="${existing.developer_token || ''}" class="${common}"></div><div><label class="${label}">Cred Path</label><input type="text" name="credentials_path" value="${existing.credentials_path || ''}" class="${common}"></div></div>`;
+    if (p === 'tiktok') return `<div><label class="${label}">Access Token</label><input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}"></div>`;
+    if (p === 'x') return `<div class="grid grid-cols-2 gap-4"><div class="col-span-2"><label class="${label}">Access Token</label><input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}"></div><div><label class="${label}">API Key</label><input type="text" name="api_key" value="${existing.api_key || ''}" class="${common}"></div><div><label class="${label}">API Secret</label><input type="password" name="api_secret" value="${existing.api_secret || ''}" class="${common}"></div></div>`;
+    if (p === 'scalev') return `<div><label class="${label}">API Token</label><input type="password" name="api_token" value="${existing.api_token || ''}" class="${common}"></div>`;
+    return '';
   }
 
   function attachAccountHandlers() {
-    el.querySelectorAll('[data-add-account]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const platform = btn.dataset.addAccount;
-        el.querySelector(`#${platform}-add-form`).classList.remove('hidden');
-        btn.classList.add('hidden');
-      });
-    });
+    el.querySelectorAll('[data-add-account]').forEach(btn => btn.addEventListener('click', () => {
+      const p = btn.dataset.addAccount; el.querySelector(`#${p}-add-form`).classList.remove('hidden'); btn.classList.add('hidden');
+    }));
+    el.querySelectorAll('[data-cancel-add]').forEach(btn => btn.addEventListener('click', () => {
+      const p = btn.dataset.cancelAdd; el.querySelector(`#${p}-add-form`).classList.add('hidden'); el.querySelector(`[data-add-account="${p}"]`).classList.remove('hidden');
+    }));
 
-    el.querySelectorAll('[data-cancel-add]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const platform = btn.dataset.cancelAdd;
-        el.querySelector(`#${platform}-add-form`).classList.add('hidden');
-        el.querySelector(`[data-add-account="${platform}"]`).classList.remove('hidden');
-      });
-    });
+    el.querySelectorAll('[data-test-account]').forEach(btn => btn.addEventListener('click', async () => {
+      const p = btn.dataset.testAccount; const fd = new FormData(el.querySelector(`form[data-platform-form="${p}"]`));
+      const creds = Object.fromEntries(fd); delete creds.account_name;
+      state.isTestingAccount[p] = true; render();
+      try {
+        const res = await api.post('/settings/accounts/test', { platform: p, credentials: creds });
+        alert(res.message || 'Success!');
+      } catch (err) { alert('Failed: ' + err.message); }
+      finally { state.isTestingAccount[p] = false; render(); }
+    }));
 
-    el.querySelectorAll('[data-platform-form]').forEach(form => {
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const platform = form.dataset.platformForm;
-        const fd = new FormData(form);
-        const rawData = Object.fromEntries(fd);
-        
-        const account_name = rawData.account_name;
-        delete rawData.account_name;
-        
-        const credentials = rawData;
-        for (const key of Object.keys(credentials)) { if (!credentials[key]) delete credentials[key]; }
+    el.querySelectorAll('[data-test-existing]').forEach(btn => btn.addEventListener('click', async () => {
+       const id = btn.dataset.testExisting; const p = btn.dataset.platform;
+       const acc = state.accounts.find(a => a.id === id);
+       try {
+         const res = await api.post('/settings/accounts/test', { platform: p, credentials: acc.credentials });
+         alert(res.message);
+       } catch (err) { alert('Token invalid/expired: ' + err.message); }
+    }));
 
-        try {
-          await api.post('/settings/accounts', { platform, account_name, credentials });
-          await loadData();
-          render();
-        } catch (err) {
-          alert('Failed to connect account: ' + err.message);
-        }
-      });
-    });
+    el.querySelectorAll('[data-platform-form]').forEach(form => form.addEventListener('submit', async (e) => {
+      e.preventDefault(); const p = form.dataset.platformForm; const fd = new FormData(form);
+      const raw = Object.fromEntries(fd); const name = raw.account_name; delete raw.account_name;
+      try { await api.post('/settings/accounts', { platform: p, account_name: name, credentials: raw }); await loadData(); render(); }
+      catch (err) { alert(err.message); }
+    }));
 
-    el.querySelectorAll('[data-activate-account]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.dataset.activateAccount;
-        try {
-          const acc = state.accounts.find(a => a.id === id);
-          if (!acc) return;
-          
-          const platformAccs = state.accounts.filter(a => a.platform === acc.platform && a.id !== id);
-          for (const a of platformAccs) {
-             if (a.is_active) await api.put(`/settings/accounts/${a.id}`, { is_active: 0 });
-          }
-          
-          await api.put(`/settings/accounts/${id}`, { is_active: 1 });
-          await loadData();
-          render();
-        } catch (err) {
-          alert('Failed to activate account: ' + err.message);
-        }
-      });
-    });
+    el.querySelectorAll('[data-activate-account]').forEach(btn => btn.addEventListener('click', async () => {
+      const id = btn.dataset.activateAccount; const acc = state.accounts.find(a => a.id === id); if (!acc) return;
+      try {
+        const others = state.accounts.filter(a => a.platform === acc.platform && a.id !== id);
+        for (const o of others) { if (o.is_active) await api.put(`/settings/accounts/${o.id}`, { is_active: 0 }); }
+        await api.put(`/settings/accounts/${id}`, { is_active: 1 }); await loadData(); render();
+      } catch (err) { alert(err.message); }
+    }));
 
-    el.querySelectorAll('[data-delete-account]').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const id = btn.dataset.deleteAccount;
-        if (!confirm('Are you sure you want to delete this account?')) return;
-        try {
-          await api.delete(`/settings/accounts/${id}`);
-          await loadData();
-          render();
-        } catch (err) {
-          alert('Failed to delete account: ' + err.message);
-        }
-      });
-    });
-    
-    el.querySelectorAll('[data-edit-account]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        alert('Edit functionality coming soon! For now, please delete and re-add.');
-      });
-    });
+    el.querySelectorAll('[data-delete-account]').forEach(btn => btn.addEventListener('click', async () => {
+      const id = btn.dataset.deleteAccount; if (!confirm('Are you sure?')) return;
+      try { await api.delete(`/settings/accounts/${id}`); await loadData(); render(); }
+      catch (err) { alert(err.message); }
+    }));
   }
 
   function attachAIHandlers() {
-    const form = el.querySelector('#ai-config-form');
-    if (!form) return;
-    const statusDiv = el.querySelector('#ai-status');
-
+    const form = el.querySelector('#ai-config-form'); if (!form) return;
     form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const fd = new FormData(form);
-      const data = Object.fromEntries(fd);
-      
-      try {
-        await api.put('/settings/ai', data);
-        statusDiv.innerHTML = '<div class="text-emerald-400 text-sm font-medium">Configuration saved successfully</div>';
-        await loadData();
-        setTimeout(render, 1500);
-      } catch (err) {
-        statusDiv.innerHTML = `<div class="text-red-400 text-sm font-medium">${esc(err.message)}</div>`;
-      }
+      e.preventDefault(); const fd = new FormData(form);
+      try { await api.put('/settings/ai', Object.fromEntries(fd)); await loadData(); render(); }
+      catch (err) { alert(err.message); }
     });
-
-    el.querySelector('#test-connection-btn').addEventListener('click', async () => {
-      const fd = new FormData(form);
-      const data = Object.fromEntries(fd);
-      
-      // Update state with current form values before rendering
-      state.aiConfig = { ...state.aiConfig, ...data };
-      state.isTestingConnection = true;
-      render();
-      try {
-        const res = await api.post('/settings/ai/test-connection', data);
-        alert(res.message || 'Connection Success');
-      } catch (err) {
-        alert('Connection Failed: ' + err.message);
-      } finally {
-        state.isTestingConnection = false;
-        render();
-      }
+    el.querySelector('#test-connection-btn')?.addEventListener('click', async () => {
+      const fd = new FormData(form); const data = Object.fromEntries(fd);
+      state.aiConfig = { ...state.aiConfig, ...data }; state.isTestingConnection = true; render();
+      try { const res = await api.post('/settings/ai/test-connection', data); alert(res.message); }
+      catch (err) { alert(err.message); } finally { state.isTestingConnection = false; render(); }
     });
-
-    el.querySelector('#fetch-models-btn').addEventListener('click', async () => {
-      const fd = new FormData(form);
-      const data = Object.fromEntries(fd);
-      
-      // Update state with current form values before rendering
-      state.aiConfig = { ...state.aiConfig, ...data };
-      state.isFetchingModels = true;
-      render();
-      try {
-        const res = await api.post('/settings/ai/models', data);
-        state.availableModels = res.data;
-        if (state.availableModels.length === 0) alert('No models found or provider does not support /v1/models');
-      } catch (err) {
-        alert('Failed to fetch models: ' + err.message);
-      } finally {
-        state.isFetchingModels = false;
-        render();
-      }
+    el.querySelector('#fetch-models-btn')?.addEventListener('click', async () => {
+      const fd = new FormData(form); const data = Object.fromEntries(fd);
+      state.aiConfig = { ...state.aiConfig, ...data }; state.isFetchingModels = true; render();
+      try { const res = await api.post('/settings/ai/models', data); state.availableModels = res.data; }
+      catch (err) { alert(err.message); } finally { state.isFetchingModels = false; render(); }
     });
-
-    el.querySelector('#run-test-prompt').addEventListener('click', async () => {
-      const prompt = el.querySelector('#test-user-prompt').value;
-      const systemPrompt = el.querySelector('#test-system-prompt').value;
-      
-      if (!prompt) return alert('Please enter a prompt');
-      
-      state.isTestingPrompt = true;
-      render();
-      try {
-        const res = await api.post('/settings/ai/test-prompt', { prompt, systemPrompt });
-        state.testPromptResult = res.data;
-      } catch (err) {
-        alert('Test failed: ' + err.message);
-      } finally {
-        state.isTestingPrompt = false;
-        render();
-      }
+    el.querySelector('#run-test-prompt')?.addEventListener('click', async () => {
+      const p = el.querySelector('#test-user-prompt').value;
+      if (!p) return alert('Prompt required');
+      state.isTestingPrompt = true; render();
+      try { const res = await api.post('/settings/ai/test-prompt', { prompt: p }); state.testPromptResult = res.data; }
+      catch (err) { alert(err.message); } finally { state.isTestingPrompt = false; render(); }
     });
   }
-
   render();
 }

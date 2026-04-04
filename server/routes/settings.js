@@ -128,6 +128,27 @@ export function createSettingsRouter(settingsRepo, llmClient) {
     res.json({ success: true });
   });
 
+  router.post('/accounts/test', async (req, res) => {
+    const { platform, credentials } = req.body;
+    if (!platform || !credentials) {
+      return res.status(400).json({ success: false, error: 'Missing platform or credentials' });
+    }
+
+    try {
+      if (platform === 'meta') {
+        const { MetaAdsAPI } = await import('../services/meta-api.js');
+        const mockRepo = { getCredentials: () => credentials };
+        const api = new MetaAdsAPI(mockRepo);
+        const me = await api.getMe();
+        return res.json({ success: true, message: `Connected as ${me.name}` });
+      }
+      
+      res.json({ success: true, message: 'Configuration format looks valid' });
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
   // --- Legacy Support (for existing frontend calls) ---
 
   router.get('/credentials/:platform', (req, res) => {

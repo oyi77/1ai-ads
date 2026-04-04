@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { createAdForgeMCPServer } from '../services/mcp-server.js';
 
-export function createMcpRouter(mcpManager, settingsRepo, campaignsRepo, adsRepo, landingRepo) {
+export function createMcpRouter(mcpClient, settingsRepo, campaignsRepo, adsRepo, landingRepo) {
   const router = Router();
   
   const mcpServer = createAdForgeMCPServer(campaignsRepo, landingRepo, adsRepo);
@@ -24,7 +24,6 @@ export function createMcpRouter(mcpManager, settingsRepo, campaignsRepo, adsRepo
   });
 
   router.get('/status', (req, res) => {
-
     const status = mcpClient.getStatus();
     res.json({ success: true, data: status });
   });
