@@ -17,14 +17,15 @@ const getLast7Days = () => {
   return days;
 };
 
-// Sample trend data generator
-const generateTrendData = (base, variance) => {
-  return Array.from({ length: 7 }, () => Math.max(0, base + (Math.random() - 0.5) * variance));
-};
-
 export async function renderDashboard(el) {
   try {
     const { data: m } = await api.get('/analytics/dashboard');
+
+    const labels = getLast7Days();
+    const roasData = m.daily_roas || Array(7).fill(m.avg_roas || 0);
+    const spendData = m.daily_spend || Array(7).fill((m.total_spend || 0) / 7);
+    const revenueData = m.daily_revenue || Array(7).fill((m.total_revenue || 0) / 7);
+    const ctrData = m.daily_ctr || Array(7).fill(m.avg_ctr || 0);
 
     el.innerHTML = `
       <div class="p-4 sm:p-8">
@@ -107,11 +108,6 @@ export async function renderDashboard(el) {
     });
 
     // Initialize Charts
-    const labels = getLast7Days();
-    const roasData = generateTrendData(m.avg_roas || 2.5, 1);
-    const spendData = generateTrendData((m.total_spend || 1000000) / 7, 200000);
-    const revenueData = generateTrendData((m.total_revenue || 2500000) / 7, 500000);
-    const ctrData = generateTrendData(m.avg_ctr || 2.5, 1);
 
     // Chart.js dark theme defaults
     Chart.defaults.color = '#c9d1d9';

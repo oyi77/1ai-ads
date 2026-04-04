@@ -118,5 +118,19 @@ export function createMetaRouter(metaApi, campaignsRepo) {
     }
   });
 
+  router.get('/ad-library', async (req, res) => {
+    const { q, country, limit } = req.query;
+    try {
+      const ads = await metaApi.getAdLibrary({
+        query: q,
+        country: country || 'ID',
+        limit: parseInt(limit) || 20,
+      });
+      res.json({ success: true, data: ads });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   return router;
 }

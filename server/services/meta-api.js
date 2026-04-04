@@ -267,11 +267,29 @@ export class MetaAdsAPI {
   }
 
   async searchPages(query) {
-    const data = await this._get('/pages/search', {
+    const data = await this._get('/search', {
+      type: 'adpage',
       q: query,
       fields: 'id,name,category,fan_count,verification_status',
       limit: '10',
     });
+    return data.data || [];
+  }
+
+  async getAdLibrary({ query, country = 'ID', limit = 20 } = {}) {
+    const token = this._getToken();
+    const url = new URL(`${BASE}/ads_archive`);
+    url.searchParams.set('access_token', token);
+    url.searchParams.set('ad_reached_countries', JSON.stringify([country]));
+    url.searchParams.set('ad_active_status', 'ACTIVE');
+    url.searchParams.set('ad_type', 'ALL');
+    url.searchParams.set('fields', 'id,page_name,ad_creative_bodies,ad_creative_link_titles,ad_snapshot_url,ad_delivery_start_time,publisher_platforms,spend,impressions');
+    url.searchParams.set('limit', String(limit));
+    if (query) url.searchParams.set('search_terms', query);
+
+    const res = await fetch(url.toString());
+    const data = await res.json();
+    if (data.error) throw new Error(`Ad Library API: ${data.error.message}`);
     return data.data || [];
   }
 
