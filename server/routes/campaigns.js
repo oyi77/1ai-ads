@@ -117,7 +117,11 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       const pages = await metaApi.getPages();
       res.json({ success: true, data: pages });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      if (err.message.includes('nonexisting field') || err.message.includes('permission')) {
+        res.json({ success: true, data: [] });
+      } else {
+        res.status(500).json({ success: false, error: err.message });
+      }
     }
   });
 

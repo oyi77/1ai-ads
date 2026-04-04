@@ -94,9 +94,9 @@ export class LearningService {
   }
 
   async syncAllToKB() {
-    const campaigns = this.campaignsRepo.getAll();
-    const ads = this.adsRepo.getAll();
-    const landingPages = this.landingRepo.getAll();
+    const campaigns = this.campaignsRepo.findAll().data || [];
+    const ads = this.adsRepo.findAll().data || [];
+    const landingPages = this.landingRepo.findAll().data || [];
 
     let synced = 0;
 

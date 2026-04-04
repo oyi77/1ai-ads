@@ -128,7 +128,11 @@ export function createMetaRouter(metaApi, campaignsRepo) {
       });
       res.json({ success: true, data: ads });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      if (err.message.includes('permission') || err.message.includes('Application does not have permission')) {
+        res.json({ success: true, data: [], message: 'Ad Library API requires special app permissions. Use the Graph API Explorer with Ad Library access.' });
+      } else {
+        res.status(500).json({ success: false, error: err.message });
+      }
     }
   });
 
