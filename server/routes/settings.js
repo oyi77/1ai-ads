@@ -149,6 +149,65 @@ export function createSettingsRouter(settingsRepo, llmClient) {
     }
   });
 
+  router.post('/accounts/meta/exchange-token', async (req, res) => {
+    const { appId, appSecret, shortToken } = req.body;
+    if (!appId || !appSecret || !shortToken) {
+      return res.status(400).json({ success: false, error: 'appId, appSecret, and shortToken are required' });
+    }
+
+    try {
+      const url = `https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(appId)}&client_secret=${encodeURIComponent(appSecret)}&fb_exchange_token=${encodeURIComponent(shortToken)}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.error) {
+        return res.status(400).json({ success: false, error: data.error.message });
+      }
+
+      const longToken = data.access_token;
+      
+      const tokenInfoUrl = `https://graph.facebook.com/v21.0/debug_token?input_token=${encodeURIComponent(longToken)}&access_token=${encodeURIComponent(appId)}|${encodeURIComponent(appSecret)}`;
+      const tokenInfoRes = await fetch(tokenInfoUrl);
+      const tokenInfo = await tokenInfoRes.json();
+      
+      let expiresIn = 60;
+      if (tokenInfo.data?.expires_at) {
+        expiresIn = Math.floor((tokenInfo.data.expires_at * 1000 - Date.now()) / (1000 * 60 * 60 * 24));
+      }
+
+      const { MetaAdsAPI } = await import('../services/meta-api.js');
+      const mockRepo = { getCredentials: () => ({ access_token: longToken }) };
+      const api = new MetaAdsAPI(mockRepo);
+      const me = await api.getMe();
+
+      const accountName = `Meta - ${me.name}`;
+      const existingAccounts = settingsRepo.getAccounts('meta');
+      const existing = existingAccounts.find(a => a.account_name === accountName);
+
+      if (existing) {
+        settingsRepo.updateAccount(existing.id, { credentials: { access_token: longToken } });
+      } else {
+        settingsRepo.addAccount({
+          id: uuid(),
+          user_id: req.user?.id || 'admin',
+          platform: 'meta',
+          account_name: accountName,
+          credentials: { access_token: longToken },
+          is_active: existingAccounts.length === 0 ? 1 : 0
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Token exchanged & saved! Valid for ~${expiresIn} days. Connected as ${me.name}`,
+        expiresInDays: expiresIn,
+        userName: me.name
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // --- Legacy Support (for existing frontend calls) ---
 
   router.get('/credentials/:platform', (req, res) => {

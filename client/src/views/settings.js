@@ -189,7 +189,20 @@ export async function renderSettings(el) {
   function renderPlatformFields(p, existing = {}) {
     const common = "w-full p-2.5 bg-[#161b22] rounded-lg border border-[#30363d] text-sm text-white";
     const label = "block text-xs font-bold text-slate-500 uppercase mb-1";
-    if (p === 'meta') return `<div><label class="${label}">Access Token</label><input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}"></div>`;
+    if (p === 'meta') return `
+      <div>
+        <label class="${label}">Access Token</label>
+        <input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}" placeholder="Paste your long-lived token here">
+      </div>
+      <div class="bg-sky-900/20 border border-sky-700/30 rounded-lg p-3">
+        <label class="block text-xs font-bold text-sky-400 uppercase mb-2">Or Exchange Short Token for Long-Lived (60 Days)</label>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <input type="text" id="meta-app-id" class="${common}" placeholder="App ID">
+          <input type="password" id="meta-app-secret" class="${common}" placeholder="App Secret">
+        </div>
+        <input type="password" id="meta-short-token" class="${common} mb-2" placeholder="Short-lived token from Graph API Explorer">
+        <button type="button" id="meta-exchange-btn" class="w-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold py-2 rounded transition-all">Exchange & Save Token</button>
+      </div>`;
     if (p === 'google') return `<div class="grid grid-cols-2 gap-4"><div><label class="${label}">Dev Token</label><input type="password" name="developer_token" value="${existing.developer_token || ''}" class="${common}"></div><div><label class="${label}">Cred Path</label><input type="text" name="credentials_path" value="${existing.credentials_path || ''}" class="${common}"></div></div>`;
     if (p === 'tiktok') return `<div><label class="${label}">Access Token</label><input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}"></div>`;
     if (p === 'x') return `<div class="grid grid-cols-2 gap-4"><div class="col-span-2"><label class="${label}">Access Token</label><input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}"></div><div><label class="${label}">API Key</label><input type="text" name="api_key" value="${existing.api_key || ''}" class="${common}"></div><div><label class="${label}">API Secret</label><input type="password" name="api_secret" value="${existing.api_secret || ''}" class="${common}"></div></div>`;
@@ -231,6 +244,25 @@ export async function renderSettings(el) {
       try { await api.post('/settings/accounts', { platform: p, account_name: name, credentials: raw }); await loadData(); render(); }
       catch (err) { alert(err.message); }
     }));
+
+    el.querySelector('#meta-exchange-btn')?.addEventListener('click', async () => {
+      const appId = el.querySelector('#meta-app-id')?.value;
+      const appSecret = el.querySelector('#meta-app-secret')?.value;
+      const shortToken = el.querySelector('#meta-short-token')?.value;
+      if (!appId || !appSecret || !shortToken) return alert('All three fields are required');
+
+      const btn = el.querySelector('#meta-exchange-btn');
+      btn.disabled = true; btn.textContent = 'Exchanging...';
+      try {
+        const res = await api.post('/settings/accounts/meta/exchange-token', { appId, appSecret, shortToken });
+        alert(res.message);
+        if (res.success) {
+          await loadData();
+          render();
+        }
+      } catch (err) { alert('Exchange failed: ' + err.message); }
+      finally { btn.disabled = false; btn.textContent = 'Exchange & Save Token'; }
+    });
 
     el.querySelectorAll('[data-activate-account]').forEach(btn => btn.addEventListener('click', async () => {
       const id = btn.dataset.activateAccount; const acc = state.accounts.find(a => a.id === id); if (!acc) return;
