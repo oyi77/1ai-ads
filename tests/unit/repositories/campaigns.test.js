@@ -26,8 +26,8 @@ describe('CampaignsRepository', () => {
   });
 
   it('getDashboardMetrics returns aggregated data', () => {
-    repo.upsert(makeCampaign({ spend: 100000, impressions: 50000, clicks: 2500, conversions: 50, revenue: 300000 }));
-    repo.upsert(makeCampaign({ spend: 200000, impressions: 100000, clicks: 5000, conversions: 100, revenue: 700000 }));
+    repo.upsert(makeCampaign({ campaign_id: 'camp_1', spend: 100000, impressions: 50000, clicks: 2500, conversions: 50, revenue: 300000 }));
+    repo.upsert(makeCampaign({ campaign_id: 'camp_2', spend: 200000, impressions: 100000, clicks: 5000, conversions: 100, revenue: 700000 }));
 
     const metrics = repo.getDashboardMetrics();
     expect(metrics.total_spend).toBe(300000);

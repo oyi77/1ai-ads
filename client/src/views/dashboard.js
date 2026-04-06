@@ -22,10 +22,10 @@ export async function renderDashboard(el) {
     const { data: m } = await api.get('/analytics/dashboard');
 
     const labels = getLast7Days();
-    const roasData = m.daily_roas || Array(7).fill(m.avg_roas || 0);
-    const spendData = m.daily_spend || Array(7).fill((m.total_spend || 0) / 7);
-    const revenueData = m.daily_revenue || Array(7).fill((m.total_revenue || 0) / 7);
-    const ctrData = m.daily_ctr || Array(7).fill(m.avg_ctr || 0);
+    const roasData = m.daily_roas || [];
+    const spendData = m.daily_spend || [];
+    const revenueData = m.daily_revenue || [];
+    const ctrData = m.daily_ctr || [];
 
     el.innerHTML = `
       <div class="p-4 sm:p-8">
@@ -116,88 +116,100 @@ export async function renderDashboard(el) {
     // ROAS Chart
     const roasCtx = el.querySelector('#roasChart');
     if (roasCtx) {
-      new Chart(roasCtx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'ROAS',
-            data: roasData,
-            borderColor: '#58a6ff',
-            backgroundColor: 'rgba(88, 166, 255, 0.1)',
-            tension: 0.4,
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: { beginAtZero: true, ticks: { callback: v => v.toFixed(1) + 'x' } }
+      if (roasData.length === 0) {
+        roasCtx.parentElement.innerHTML += '<p class="text-slate-400 text-sm text-center py-8">No data available</p>';
+      } else {
+        new Chart(roasCtx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'ROAS',
+              data: roasData,
+              borderColor: '#58a6ff',
+              backgroundColor: 'rgba(88, 166, 255, 0.1)',
+              tension: 0.4,
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, ticks: { callback: v => v.toFixed(1) + 'x' } }
+            }
           }
-        }
-      });
+        });
+      }
     }
 
     // Spend vs Revenue Chart
     const spendCtx = el.querySelector('#spendChart');
     if (spendCtx) {
-      new Chart(spendCtx, {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [
-            {
-              label: 'Spend',
-              data: spendData,
-              backgroundColor: '#f78166',
-              borderRadius: 4
-            },
-            {
-              label: 'Revenue',
-              data: revenueData,
-              backgroundColor: '#3fb950',
-              borderRadius: 4
+      if (spendData.length === 0 && revenueData.length === 0) {
+        spendCtx.parentElement.innerHTML += '<p class="text-slate-400 text-sm text-center py-8">No data available</p>';
+      } else {
+        new Chart(spendCtx, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Spend',
+                data: spendData,
+                backgroundColor: '#f78166',
+                borderRadius: 4
+              },
+              {
+                label: 'Revenue',
+                data: revenueData,
+                backgroundColor: '#3fb950',
+                borderRadius: 4
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } },
+            scales: {
+              y: { beginAtZero: true, ticks: { callback: v => 'Rp ' + (v / 1000000).toFixed(1) + 'M' } }
             }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom' } },
-          scales: {
-            y: { beginAtZero: true, ticks: { callback: v => 'Rp ' + (v / 1000000).toFixed(1) + 'M' } }
           }
-        }
-      });
+        });
+      }
     }
 
     // CTR Chart
     const ctrCtx = el.querySelector('#ctrChart');
     if (ctrCtx) {
-      new Chart(ctrCtx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'CTR %',
-            data: ctrData,
-            borderColor: '#79c0ff',
-            backgroundColor: 'rgba(121, 192, 255, 0.1)',
-            tension: 0.4,
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: { beginAtZero: true, ticks: { callback: v => v.toFixed(2) + '%' } }
+      if (ctrData.length === 0) {
+        ctrCtx.parentElement.innerHTML += '<p class="text-slate-400 text-sm text-center py-8">No data available</p>';
+      } else {
+        new Chart(ctrCtx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'CTR %',
+              data: ctrData,
+              borderColor: '#79c0ff',
+              backgroundColor: 'rgba(121, 192, 255, 0.1)',
+              tension: 0.4,
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, ticks: { callback: v => v.toFixed(2) + '%' } }
+            }
           }
-        }
-      });
+        });
+      }
     }
 
   } catch (e) {

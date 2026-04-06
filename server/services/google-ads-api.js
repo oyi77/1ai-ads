@@ -1,13 +1,4 @@
-/**
- * Google Ads API client (REST, no Python dependency).
- * Base URL: https://googleads.googleapis.com/v18
- * Auth: OAuth 2.0 access token + developer token
- * Docs: https://developers.google.com/google-ads/api/docs/start
- *
- * Free to use - you only pay for ad spend.
- * Requires: Google Ads account + developer token (apply at Google Ads > Tools > API Center).
- * Developer token approval: 1-3 business days.
- */
+import { safeFetch } from '../lib/platform-client.js';
 
 const BASE = 'https://googleads.googleapis.com/v18';
 
@@ -29,7 +20,7 @@ export class GoogleAdsAPI {
 
   async _query(customerId, gaql) {
     const creds = this._getConfig();
-    const res = await fetch(`${BASE}/customers/${customerId}/googleAds:searchStream`, {
+    const res = await safeFetch('google', `${BASE}/customers/${customerId}/googleAds:searchStream`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${creds.oauth_token}`,
@@ -40,8 +31,7 @@ export class GoogleAdsAPI {
       body: JSON.stringify({ query: gaql }),
     });
     const data = await res.json();
-    if (data.error) throw new Error(`Google Ads API: ${data.error.message}`);
-    // searchStream returns array of result batches
+    
     const results = [];
     for (const batch of (data || [])) {
       if (batch.results) results.push(...batch.results);
@@ -51,15 +41,52 @@ export class GoogleAdsAPI {
 
   async listAccounts() {
     const creds = this._getConfig();
-    const res = await fetch(`${BASE}/customers:listAccessibleCustomers`, {
+    const res = await safeFetch('google', `${BASE}/customers:listAccessibleCustomers`, {
       headers: {
         'Authorization': `Bearer ${creds.oauth_token}`,
         'developer-token': creds.developer_token,
       },
     });
     const data = await res.json();
-    if (data.error) throw new Error(`Google Ads API: ${data.error.message}`);
     return (data.resourceNames || []).map(r => r.replace('customers/', ''));
+  }
+
+  async syncAllAccounts() {
+    const customerIds = await this.listAccounts();
+    const results = [];
+
+    for (const customerId of customerIds) {
+      try {
+        const campaigns = await this.getCampaigns(customerId);
+        const performance = await this.getCampaignPerformance(customerId);
+        
+        results.push({
+          account: { id: customerId, name: `Google Ads (${customerId})` },
+          campaigns: campaigns.map(c => ({
+            id: c.campaign.id,
+            name: c.campaign.name,
+            status: c.campaign.status.toLowerCase(),
+            budget: parseFloat(c.campaignBudget.amountMicros) / 1000000,
+          })),
+          insights: performance.map(p => ({
+            campaign_id: p.campaign.id,
+            spend: parseFloat(p.metrics.costMicros) / 1000000,
+            impressions: parseInt(p.metrics.impressions),
+            clicks: parseInt(p.metrics.clicks),
+            conversions: parseFloat(p.metrics.conversions),
+          })),
+          syncedAt: new Date().toISOString(),
+        });
+      } catch (err) {
+        results.push({
+          account: { id: customerId, name: `Google Ads (${customerId})` },
+          error: err.message,
+          syncedAt: new Date().toISOString(),
+        });
+      }
+    }
+
+    return results;
   }
 
   async getCampaigns(customerId) {

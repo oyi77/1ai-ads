@@ -1,12 +1,4 @@
-/**
- * TikTok Marketing API client.
- * Base URL: https://business-api.tiktok.com/open_api/v1.3
- * Auth: Access token from TikTok Business Center
- * Docs: https://business-api.tiktok.com/portal/docs
- *
- * Free to use - you only pay for ad spend.
- * Requires: TikTok Business account + approved app.
- */
+import { safeFetch } from '../lib/platform-client.js';
 
 const BASE = 'https://business-api.tiktok.com/open_api/v1.3';
 
@@ -29,12 +21,55 @@ export class TikTokAdsAPI {
     for (const [k, v] of Object.entries(params)) {
       url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
     }
-    const res = await fetch(url.toString(), {
+    const res = await safeFetch('tiktok', url.toString(), {
       headers: { 'Access-Token': token },
     });
     const data = await res.json();
-    if (data.code !== 0) throw new Error(`TikTok API: ${data.message}`);
     return data.data;
+  }
+
+  async syncAllAccounts(advertiserIds = []) {
+    const results = [];
+
+    for (const advertiserId of advertiserIds) {
+      try {
+        const campaignData = await this.getCampaigns(advertiserId);
+        const campaigns = campaignData.list || [];
+        
+        let insights = [];
+        if (campaigns.length > 0) {
+          const campaignIds = campaigns.map(c => c.campaign_id);
+          const insightData = await this.getCampaignInsights(advertiserId, campaignIds);
+          insights = insightData.list || [];
+        }
+
+        results.push({
+          account: { id: advertiserId, name: `TikTok Ads (${advertiserId})` },
+          campaigns: campaigns.map(c => ({
+            id: c.campaign_id,
+            name: c.campaign_name,
+            status: c.status.toLowerCase(),
+            budget: parseFloat(c.budget || 0),
+          })),
+          insights: insights.map(i => ({
+            campaign_id: i.dimensions.campaign_id,
+            spend: parseFloat(i.metrics.spend || 0),
+            impressions: parseInt(i.metrics.impressions || 0),
+            clicks: parseInt(i.metrics.clicks || 0),
+            conversions: parseInt(i.metrics.conversions || 0),
+          })),
+          syncedAt: new Date().toISOString(),
+        });
+      } catch (err) {
+        results.push({
+          account: { id: advertiserId, name: `TikTok Ads (${advertiserId})` },
+          error: err.message,
+          syncedAt: new Date().toISOString(),
+        });
+      }
+    }
+
+    return results;
   }
 
   async getAdvertiserInfo(advertiserId) {

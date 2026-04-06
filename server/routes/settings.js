@@ -119,7 +119,14 @@ export function createSettingsRouter(settingsRepo, llmClient) {
 
   router.put('/accounts/:id', (req, res) => {
     const { id } = req.params;
-    settingsRepo.updateAccount(id, req.body);
+    const { platform, is_active } = req.body;
+    
+    if (is_active === 1 && platform) {
+      settingsRepo.setActiveAccount(platform, id);
+    } else {
+      settingsRepo.updateAccount(id, req.body);
+    }
+    
     res.json({ success: true });
   });
 

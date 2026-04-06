@@ -1,8 +1,4 @@
-/**
- * Direct Meta Graph API client for ads management.
- * Uses fetch against graph.facebook.com - no MCP subprocess needed.
- * Confirmed working with real token and real ad accounts.
- */
+import { safeFetch } from '../lib/platform-client.js';
 
 const API_VERSION = 'v21.0';
 const BASE = `https://graph.facebook.com/${API_VERSION}`;
@@ -31,10 +27,8 @@ export class MetaAdsAPI {
       url.searchParams.set(k, v);
     }
 
-    const res = await fetch(url.toString());
-    const data = await res.json();
-    if (data.error) throw new Error(`Meta API: ${data.error.message}`);
-    return data;
+    const res = await safeFetch('meta', url.toString());
+    return await res.json();
   }
 
   async _post(path, body = {}) {
@@ -42,14 +36,12 @@ export class MetaAdsAPI {
     const url = new URL(`${BASE}${path}`);
     url.searchParams.set('access_token', token);
 
-    const res = await fetch(url.toString(), {
+    const res = await safeFetch('meta', url.toString(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    const data = await res.json();
-    if (data.error) throw new Error(`Meta API: ${data.error.message}`);
-    return data;
+    return await res.json();
   }
 
   // --- Account Management ---
@@ -98,6 +90,27 @@ export class MetaAdsAPI {
       date_preset: datePreset,
     });
     return this._parseInsights(data.data?.[0]);
+  }
+
+  async getMultiCampaignInsights(campaignIds, { datePreset = 'last_30d' } = {}) {
+    if (!campaignIds.length) return {};
+    // Meta supports up to 50 IDs in one request
+    const chunks = [];
+    for (let i = 0; i < campaignIds.length; i += 50) {
+      chunks.push(campaignIds.slice(i, i + 50));
+    }
+
+    const allResults = {};
+    for (const chunk of chunks) {
+      const data = await this._get('/', {
+        ids: chunk.join(','),
+        fields: `insights.date_preset(${datePreset}){spend,impressions,clicks,ctr,cpc,actions,cost_per_action_type}`,
+      });
+      for (const [id, res] of Object.entries(data)) {
+        allResults[id] = this._parseInsights(res.insights?.data?.[0]);
+      }
+    }
+    return allResults;
   }
 
   async getAccountInsights(accountId, { datePreset = 'last_30d' } = {}) {
@@ -290,9 +303,8 @@ export class MetaAdsAPI {
     url.searchParams.set('limit', String(limit));
     if (query) url.searchParams.set('search_terms', query);
 
-    const res = await fetch(url.toString());
+    const res = await safeFetch('meta', url.toString());
     const data = await res.json();
-    if (data.error) throw new Error(`Ad Library API: ${data.error.message}`);
     return data.data || [];
   }
 

@@ -96,6 +96,13 @@ export class SettingsRepository {
     this.db.prepare('DELETE FROM platform_accounts WHERE id = ?').run(id);
   }
 
+  setActiveAccount(platform, id) {
+    this.db.transaction(() => {
+      this.db.prepare('UPDATE platform_accounts SET is_active = 0 WHERE platform = ?').run(platform);
+      this.db.prepare('UPDATE platform_accounts SET is_active = 1 WHERE id = ?').run(id);
+    })();
+  }
+
   getActiveAccount(platform) {
     const row = this.db.prepare('SELECT * FROM platform_accounts WHERE platform = ? AND is_active = 1 LIMIT 1').get(platform);
     if (!row) return null;

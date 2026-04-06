@@ -171,12 +171,14 @@ export function renderCampaignWizard(el) {
   }
 
   function renderStep4(c) {
+    const ageMin = state.targeting?.age_min || 25;
+    const ageMax = state.targeting?.age_max || 55;
     c.innerHTML = `
       <h2 class="text-lg font-semibold mb-3">Targeting</h2>
       <div class="space-y-4">
         <div class="grid grid-cols-2 gap-3">
-          <div><label class="block text-sm text-slate-400 mb-1">Min Age</label><input id="w-age-min" type="number" value="25" class="w-full p-3 bg-slate-800 rounded-lg border border-slate-700"></div>
-          <div><label class="block text-sm text-slate-400 mb-1">Max Age</label><input id="w-age-max" type="number" value="55" class="w-full p-3 bg-slate-800 rounded-lg border border-slate-700"></div>
+          <div><label class="block text-sm text-slate-400 mb-1">Min Age</label><input id="w-age-min" type="number" value="${ageMin}" class="w-full p-3 bg-slate-800 rounded-lg border border-slate-700"></div>
+          <div><label class="block text-sm text-slate-400 mb-1">Max Age</label><input id="w-age-max" type="number" value="${ageMax}" class="w-full p-3 bg-slate-800 rounded-lg border border-slate-700"></div>
         </div>
         <div>
           <label class="block text-sm text-slate-400 mb-1">Interests</label>
@@ -195,7 +197,16 @@ export function renderCampaignWizard(el) {
         <button id="w-next" class="bg-sky-500 hover:bg-sky-600 px-6 py-3 rounded-lg font-bold">Next →</button>
       </div>`;
 
+    const updateTargetingState = () => {
+      state.targeting = {
+        ...state.targeting,
+        age_min: parseInt(c.querySelector('#w-age-min').value) || 25,
+        age_max: parseInt(c.querySelector('#w-age-max').value) || 55,
+      };
+    };
+
     c.querySelector('#w-interest-btn').addEventListener('click', async () => {
+      updateTargetingState();
       const q = c.querySelector('#w-interest-search').value.trim();
       if (!q) return;
       const resDiv = c.querySelector('#w-interest-results');
@@ -210,17 +221,19 @@ export function renderCampaignWizard(el) {
     });
 
     c.querySelectorAll('[data-remove]').forEach(btn => btn.addEventListener('click', () => {
+      updateTargetingState();
       state.interests = state.interests.filter(i => i.id !== btn.dataset.remove); render();
     }));
 
-    c.querySelector('#w-back').addEventListener('click', () => { step = 3; render(); });
+    c.querySelector('#w-back').addEventListener('click', () => { updateTargetingState(); step = 3; render(); });
     c.querySelector('#w-next').addEventListener('click', () => {
-      state.targeting = {
-        geo_locations: { countries: ['ID'] },
-        age_min: parseInt(c.querySelector('#w-age-min').value) || 25,
-        age_max: parseInt(c.querySelector('#w-age-max').value) || 55,
-        ...(state.interests.length > 0 && { flexible_spec: [{ interests: state.interests.map(i => ({ id: i.id, name: i.name })) }] }),
-      };
+      updateTargetingState();
+      if (state.interests.length > 0) {
+        state.targeting.flexible_spec = [{ interests: state.interests.map(i => ({ id: i.id, name: i.name })) }];
+      } else {
+        delete state.targeting.flexible_spec;
+      }
+      state.targeting.geo_locations = { countries: ['ID'] };
       step = 5; render();
     });
   }
@@ -247,15 +260,21 @@ export function renderCampaignWizard(el) {
     c.innerHTML = `
       <h2 class="text-lg font-semibold mb-3">AI Creative</h2>
       <div id="w-kb-inspiration" class="mb-4"></div>
-      <div id="w-creative-loading" class="p-8 text-center text-slate-400">
+      <div id="w-creative-loading" class="${state.aiResult ? 'hidden' : ''} p-8 text-center text-slate-400">
         <div class="inline-block w-6 h-6 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mb-4"></div>
         <p>Generating creative variations...</p>
       </div>
-      <div id="w-creative-result" class="hidden"></div>
+      <div id="w-creative-result" class="${state.aiResult ? '' : 'hidden'}"></div>
       <div class="flex gap-3 mt-4">
         <button id="w-back" class="bg-slate-700 hover:bg-slate-600 px-4 py-3 rounded-lg">← Back</button>
-        <button id="w-next" class="bg-sky-500 hover:bg-sky-600 px-6 py-3 rounded-lg font-bold hidden">Review & Confirm →</button>
+        <button id="w-next" class="bg-sky-500 hover:bg-sky-600 px-6 py-3 rounded-lg font-bold ${state.aiResult ? '' : 'hidden'}">Review & Confirm →</button>
       </div>`;
+
+    if (state.aiResult) {
+      const data = state.aiResult;
+      const resDiv = c.querySelector('#w-creative-result');
+      resDiv.innerHTML = `<div class="bg-slate-800 p-4 rounded-lg border-2 border-sky-500/50"><div class="text-xs text-sky-400 font-bold uppercase mb-2">Best Variation</div><div class="font-bold text-xl">${esc(data.copies[0].hook)}</div><div class="text-slate-300 mt-3 leading-relaxed">${esc(data.copies[0].body)}</div><div class="mt-4 text-sky-400 font-bold underline">${esc(data.copies[0].cta)}</div></div>`;
+    }
 
     api.get(`/learning/inspire/creative?product=${encodeURIComponent(state.product)}&target=${encodeURIComponent(state.target)}`).then(({data}) => {
       const kbDiv = c.querySelector('#w-kb-inspiration');
@@ -278,16 +297,18 @@ export function renderCampaignWizard(el) {
       }
     }).catch(() => {});
 
-    api.post('/campaigns/creative', { product: state.product, target: state.target, keunggulan: state.keunggulan }).then(({data}) => {
-      state.aiResult = data;
-      const resDiv = c.querySelector('#w-creative-result');
-      resDiv.innerHTML = `<div class="bg-slate-800 p-4 rounded-lg border-2 border-sky-500/50"><div class="text-xs text-sky-400 font-bold uppercase mb-2">Best Variation</div><div class="font-bold text-xl">${esc(data.copies[0].hook)}</div><div class="text-slate-300 mt-3 leading-relaxed">${esc(data.copies[0].body)}</div><div class="mt-4 text-sky-400 font-bold underline">${esc(data.copies[0].cta)}</div></div>`;
-      resDiv.classList.remove('hidden');
-      c.querySelector('#w-creative-loading').classList.add('hidden');
-      c.querySelector('#w-next').classList.remove('hidden');
-    }).catch(e => {
-      c.querySelector('#w-creative-loading').innerHTML = `<p class="text-red-400">Generation failed: ${esc(e.message)}</p>`;
-    });
+    if (!state.aiResult) {
+      api.post('/campaigns/creative', { product: state.product, target: state.target, keunggulan: state.keunggulan }).then(({data}) => {
+        state.aiResult = data;
+        const resDiv = c.querySelector('#w-creative-result');
+        resDiv.innerHTML = `<div class="bg-slate-800 p-4 rounded-lg border-2 border-sky-500/50"><div class="text-xs text-sky-400 font-bold uppercase mb-2">Best Variation</div><div class="font-bold text-xl">${esc(data.copies[0].hook)}</div><div class="text-slate-300 mt-3 leading-relaxed">${esc(data.copies[0].body)}</div><div class="mt-4 text-sky-400 font-bold underline">${esc(data.copies[0].cta)}</div></div>`;
+        resDiv.classList.remove('hidden');
+        c.querySelector('#w-creative-loading').classList.add('hidden');
+        c.querySelector('#w-next').classList.remove('hidden');
+      }).catch(e => {
+        c.querySelector('#w-creative-loading').innerHTML = `<p class="text-red-400">Generation failed: ${esc(e.message)}</p>`;
+      });
+    }
 
     c.querySelector('#w-back').addEventListener('click', () => { step = 5; render(); });
     c.querySelector('#w-next').addEventListener('click', () => { step = 7; render(); });

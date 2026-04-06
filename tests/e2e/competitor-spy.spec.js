@@ -20,8 +20,8 @@ test.describe('Competitor Spy page', () => {
 
   test.setTimeout(60000);
   test('renders competitor table with real data', async ({ page }) => {
-    await page.waitForSelector('a:has-text("Competitor Spy")');
-    await page.click('a:has-text("Competitor Spy")');
+    await page.waitForSelector('a:has-text("Spy")');
+    await page.click('a:has-text("Spy")');
 
     await page.waitForSelector('h1:has-text("Competitor Spy Dashboard")');
     await expect(page.locator('h1')).toContainText('Competitor Spy Dashboard');

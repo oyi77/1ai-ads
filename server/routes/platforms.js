@@ -78,35 +78,84 @@ export function createPlatformsRouter(platformApis, campaignsRepo) {
       let totalSynced = 0;
 
       if (platform === 'meta') {
-        const accounts = await api.getAdAccounts();
-        for (const account of accounts) {
-          if (account.status !== 'active') continue;
-          try {
-            const campaigns = await api.getCampaigns(account.id);
-            for (const camp of campaigns) {
-              let insights = null;
-              try { insights = await api.getCampaignInsights(camp.id); } catch {}
+        const results = await api.syncAllAccounts();
+        for (const result of results) {
+          if (!result.campaigns || !result.campaigns.length) continue;
 
-              campaignsRepo.upsert({
-                platform: 'meta',
-                campaign_id: camp.id,
-                name: camp.name,
-                status: camp.status,
-                budget: camp.dailyBudget || camp.lifetimeBudget,
-                spend: insights?.spend || 0,
-                impressions: insights?.impressions || 0,
-                clicks: insights?.clicks || 0,
-                conversions: insights?.conversions || insights?.linkClicks || 0,
-                roas: 0,
-              });
-              totalSynced++;
-            }
-          } catch {}
+          const campaignIds = result.campaigns.map(c => c.id);
+          const insightsMap = await api.getMultiCampaignInsights(campaignIds).catch(() => ({}));
+
+          for (const camp of result.campaigns) {
+            const campInsights = insightsMap[camp.id];
+
+            campaignsRepo.upsert({
+              platform: 'meta',
+              campaign_id: camp.id,
+              name: camp.name,
+              status: camp.status,
+              budget: camp.dailyBudget || camp.lifetimeBudget,
+              spend: campInsights?.spend || 0,
+              revenue: 0,
+              impressions: campInsights?.impressions || 0,
+              clicks: campInsights?.clicks || 0,
+              conversions: campInsights?.conversions || campInsights?.linkClicks || 0,
+              roas: 0,
+            });
+            totalSynced++;
+          }
+        }
+      } else if (platform === 'google') {
+        const results = await api.syncAllAccounts();
+        for (const result of results) {
+          if (!result.campaigns || !result.campaigns.length) continue;
+          
+          for (const camp of result.campaigns) {
+            const campInsights = (result.insights || []).find(i => i.campaign_id === camp.id);
+            
+            campaignsRepo.upsert({
+              platform: 'google',
+              campaign_id: camp.id,
+              name: camp.name,
+              status: camp.status,
+              budget: camp.budget,
+              spend: campInsights?.spend || 0,
+              revenue: 0,
+              impressions: campInsights?.impressions || 0,
+              clicks: campInsights?.clicks || 0,
+              conversions: campInsights?.conversions || 0,
+              roas: 0,
+            });
+            totalSynced++;
+          }
+        }
+      } else if (platform === 'tiktok') {
+        const accounts = await api.settingsRepo.getAccounts('tiktok');
+        const advertiserIds = accounts.map(a => a.credentials.advertiser_id).filter(Boolean);
+        
+        const results = await api.syncAllAccounts(advertiserIds);
+        for (const result of results) {
+          if (!result.campaigns || !result.campaigns.length) continue;
+          
+          for (const camp of result.campaigns) {
+            const campInsights = (result.insights || []).find(i => i.campaign_id === camp.id);
+            
+            campaignsRepo.upsert({
+              platform: 'tiktok',
+              campaign_id: camp.id,
+              name: camp.name,
+              status: camp.status,
+              budget: camp.budget,
+              spend: campInsights?.spend || 0,
+              revenue: 0,
+              impressions: campInsights?.impressions || 0,
+              clicks: campInsights?.clicks || 0,
+              conversions: campInsights?.conversions || 0,
+              roas: 0,
+            });
+            totalSynced++;
+          }
         }
       }
-
-      // TikTok and Google follow similar patterns when credentials are provided
-      // They'll work the same way once the user configures their tokens
 
       res.json({
         success: true,

@@ -20,14 +20,6 @@ export async function renderResearch(el) {
         </div>
       ` : ''}
 
-      <!-- Your Ad Accounts -->
-      <section class="mb-8">
-        <h2 class="text-xl font-semibold mb-4">Your Ad Accounts</h2>
-        <div id="accounts-list" class="grid gap-3">
-          <p class="text-slate-400">Loading accounts...</p>
-        </div>
-      </section>
-
       <!-- Competitor Research -->
       <section class="mb-8">
         <h2 class="text-xl font-semibold mb-4">Competitor Ad Spy</h2>
@@ -60,11 +52,6 @@ export async function renderResearch(el) {
     </div>
   `;
 
-  // Load accounts
-  if (metaConfigured) {
-    loadAccounts(el);
-  }
-
   // Spy search
   el.querySelector('#spy-btn')?.addEventListener('click', () => {
     const q = el.querySelector('#spy-search').value.trim();
@@ -83,81 +70,6 @@ export async function renderResearch(el) {
   el.querySelector('#adlib-search')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') el.querySelector('#adlib-btn').click();
   });
-}
-
-async function loadAccounts(el) {
-  const container = el.querySelector('#accounts-list');
-  try {
-    const { data: accounts } = await api.get('/meta/accounts');
-    if (accounts.length === 0) {
-      container.innerHTML = '<p class="text-slate-400">No ad accounts found.</p>';
-      return;
-    }
-    container.innerHTML = accounts.map(a => `
-      <div class="bg-slate-800 p-4 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div>
-          <div class="font-bold">${esc(a.name)}</div>
-          <div class="text-slate-400 text-sm">${esc(a.id)} | ${esc(a.currency)} | ${esc(a.status)}</div>
-          ${a.amountSpent > 0 ? `<div class="text-slate-500 text-xs">Total spent: Rp ${a.amountSpent.toLocaleString()}</div>` : ''}
-        </div>
-        <div class="flex gap-2">
-          <button data-view-campaigns="${esc(a.id)}" class="bg-sky-500 hover:bg-sky-600 px-3 py-2 rounded-lg text-sm min-h-[44px]">View Campaigns</button>
-          <button data-view-ads="${esc(a.id)}" class="bg-purple-500 hover:bg-purple-600 px-3 py-2 rounded-lg text-sm min-h-[44px]">View Ads</button>
-        </div>
-      </div>
-    `).join('');
-
-    // Campaign view buttons
-    container.querySelectorAll('[data-view-campaigns]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        btn.textContent = 'Loading...';
-        try {
-          const { data: campaigns } = await api.get(`/meta/accounts/${btn.dataset.viewCampaigns}/campaigns`);
-          const parent = btn.closest('.bg-slate-800');
-          let detail = parent.querySelector('.campaign-detail');
-          if (!detail) { detail = document.createElement('div'); detail.className = 'campaign-detail mt-3'; parent.appendChild(detail); }
-          detail.innerHTML = campaigns.length === 0 ? '<p class="text-slate-500 text-sm">No campaigns</p>' :
-            '<div class="space-y-2">' + campaigns.map(c => `
-              <div class="bg-slate-900 p-3 rounded-lg text-sm">
-                <span class="font-medium">${esc(c.name)}</span>
-                <span class="ml-2 text-xs px-1.5 py-0.5 rounded ${c.status === 'active' ? 'bg-emerald-900 text-emerald-300' : 'bg-slate-700 text-slate-400'}">${esc(c.status)}</span>
-                <span class="text-slate-500 ml-2">${esc(c.objective)} | Budget: Rp ${(c.dailyBudget || 0).toLocaleString()}/day</span>
-              </div>
-            `).join('') + '</div>';
-        } catch (err) {
-          alert(err.message);
-        }
-        btn.textContent = 'View Campaigns';
-      });
-    });
-
-    // Ads view buttons
-    container.querySelectorAll('[data-view-ads]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        btn.textContent = 'Loading...';
-        try {
-          const { data: ads } = await api.get(`/meta/accounts/${btn.dataset.viewAds}/ads`);
-          const parent = btn.closest('.bg-slate-800');
-          let detail = parent.querySelector('.ads-detail');
-          if (!detail) { detail = document.createElement('div'); detail.className = 'ads-detail mt-3'; parent.appendChild(detail); }
-          detail.innerHTML = ads.length === 0 ? '<p class="text-slate-500 text-sm">No ads</p>' :
-            '<div class="space-y-2">' + ads.map(ad => `
-              <div class="bg-slate-900 p-3 rounded-lg text-sm">
-                <span class="font-medium">${esc(ad.name)}</span>
-                <span class="ml-2 text-xs px-1.5 py-0.5 rounded ${ad.status === 'active' ? 'bg-emerald-900 text-emerald-300' : 'bg-slate-700 text-slate-400'}">${esc(ad.status)}</span>
-                ${ad.creative?.body ? `<p class="text-slate-400 mt-1">${esc(ad.creative.body.substring(0, 150))}${ad.creative.body.length > 150 ? '...' : ''}</p>` : ''}
-                ${ad.creative?.imageUrl ? `<img src="${esc(ad.creative.imageUrl)}" class="mt-2 rounded max-h-32 object-cover" loading="lazy">` : ''}
-              </div>
-            `).join('') + '</div>';
-        } catch (err) {
-          alert(err.message);
-        }
-        btn.textContent = 'View Ads';
-      });
-    });
-  } catch (err) {
-    container.innerHTML = `<div class="text-red-400">${esc(err.message)}</div>`;
-  }
 }
 
 async function searchPages(container, query) {

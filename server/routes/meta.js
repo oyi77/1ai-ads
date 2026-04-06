@@ -52,14 +52,14 @@ export function createMetaRouter(metaApi, campaignsRepo) {
       let totalSynced = 0;
 
       for (const result of results) {
-        if (!result.campaigns) continue;
+        if (!result.campaigns || !result.campaigns.length) continue;
+
+        // Fetch insights for all campaigns in this account in batch
+        const campaignIds = result.campaigns.map(c => c.id);
+        const insightsMap = await metaApi.getMultiCampaignInsights(campaignIds).catch(() => ({}));
 
         for (const camp of result.campaigns) {
-          // Get per-campaign insights
-          let campInsights = null;
-          try {
-            campInsights = await metaApi.getCampaignInsights(camp.id);
-          } catch {}
+          const campInsights = insightsMap[camp.id];
 
           campaignsRepo.upsert({
             platform: 'meta',

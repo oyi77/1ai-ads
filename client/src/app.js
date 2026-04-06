@@ -10,6 +10,7 @@ import { renderLogin, renderRegister } from './views/login.js';
 import { renderSettings } from './views/settings.js';
 import { renderResearch } from './views/research.js';
 import { renderCampaignWizard } from './views/campaign-wizard.js';
+import { renderCampaignsList } from './views/campaigns-list.js';
 import { renderOptimizer } from './views/optimizer.js';
 import { renderTrending } from './views/trending.js';
 import { renderCompetitorSpy } from './views/competitor-spy.js';
@@ -33,6 +34,7 @@ router.on('/landing', renderLandingList);
 router.on('/landing/create', renderLandingCreate);
 router.on('/analytics', renderAnalytics);
 router.on('/settings', renderSettings);
+router.on('/campaigns', renderCampaignsList);
 router.on('/research', renderResearch);
 router.on('/campaign/create', renderCampaignWizard);
 router.on('/optimizer', renderOptimizer);
@@ -52,12 +54,11 @@ function updateNav() {
     navLinks.classList.remove('hidden-when-unauth');
     
     const authOnlySelectors = [
-      'a[href="#/"]', 
-      'a[href="#/ads"]', 
-      'a[href="#/global-ads"]', 
-      'a[href="#/landing"]', 
+      'a[href="#/"]',
+      'a[href="#/ads"]',
+      'a[href="#/campaigns"]',
+      'a[href="#/landing"]',
       'a[href="#/analytics"]',
-      'a[href="#/research"]',
       'a[href="#/optimizer"]',
       'a[href="#/campaign/create"]',
       'a[href="#/settings"]'

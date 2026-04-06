@@ -65,7 +65,6 @@ export async function renderSettings(el) {
 <main class="flex-1 p-4 sm:p-8 overflow-y-auto">
              <div class="max-w-4xl mx-auto">
                <h1 class="text-2xl font-bold mb-6 text-white">Settings</h1>
-                <h2 class="text-xl font-semibold mb-4 text-white">Settings</h2>
                ${renderSection()}
              </div>
            </main>
@@ -169,7 +168,7 @@ export async function renderSettings(el) {
                 </div>
               `}
             </div>
-            <div id="${p.id}-add-form" class="p-6 bg-[#0d1117] border-t border-[#30363d]">
+            <div id="${p.id}-add-form" class="p-6 bg-[#0d1117] border-t border-[#30363d] hidden">
                <h4 class="text-sm font-bold text-white mb-4 text-sky-400">Add New Account</h4>
                <form id="${p.id}-creds-form" data-platform-form="${p.id}" class="space-y-4">
                  <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1">Name</label><input type="text" name="account_name" required class="w-full p-2.5 bg-[#161b22] rounded-lg border border-[#30363d] text-sm text-white"></div>
@@ -269,9 +268,7 @@ export async function renderSettings(el) {
     el.querySelectorAll('[data-activate-account]').forEach(btn => btn.addEventListener('click', async () => {
       const id = btn.dataset.activateAccount; const acc = state.accounts.find(a => a.id === id); if (!acc) return;
       try {
-        const others = state.accounts.filter(a => a.platform === acc.platform && a.id !== id);
-        for (const o of others) { if (o.is_active) await api.put(`/settings/accounts/${o.id}`, { is_active: 0 }); }
-        await api.put(`/settings/accounts/${id}`, { is_active: 1 }); await loadData(); render();
+        await api.put(`/settings/accounts/${id}`, { platform: acc.platform, is_active: 1 }); await loadData(); render();
       } catch (err) { alert(err.message); }
     }));
 

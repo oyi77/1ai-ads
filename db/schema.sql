@@ -98,6 +98,20 @@ CREATE TABLE IF NOT EXISTS performance_history (
   cpc REAL
 );
 
+CREATE TABLE IF NOT EXISTS platform_accounts (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  platform TEXT NOT NULL,
+  account_name TEXT NOT NULL,
+  credentials TEXT NOT NULL,
+  is_active BOOLEAN DEFAULT 1,
+  health_status TEXT DEFAULT 'ok',
+  last_error TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_ads_platform ON ads(platform);
 CREATE INDEX IF NOT EXISTS idx_ads_status ON ads(status);

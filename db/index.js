@@ -53,17 +53,37 @@ export function createDatabase(dbPath) {
       CREATE TABLE IF NOT EXISTS platform_accounts (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
-        platform TEXT NOT NULL, -- 'meta', 'google', 'tiktok', 'x', 'scalev'
+        platform TEXT NOT NULL,
         account_name TEXT NOT NULL,
-        credentials TEXT NOT NULL, -- JSON string
+        credentials TEXT NOT NULL,
         is_active BOOLEAN DEFAULT 1,
+        health_status TEXT DEFAULT 'ok',
+        last_error TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
 
+    const paCols = db.prepare("PRAGMA table_info(platform_accounts)").all().map(c => c.name);
+    if (!paCols.includes('health_status')) {
+      try { db.exec("ALTER TABLE platform_accounts ADD COLUMN health_status TEXT DEFAULT 'ok'"); } catch (e) { console.warn('Migration warning (health_status):', e.message); }
+    }
+    if (!paCols.includes('last_error')) {
+      try { db.exec("ALTER TABLE platform_accounts ADD COLUMN last_error TEXT"); } catch (e) { console.warn('Migration warning (last_error):', e.message); }
+    }
+
+    // Ensure campaigns have a unique constraint on campaign_id
+    const campIndices = db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='campaigns'").all().map(i => i.name);
+    if (!campIndices.includes('idx_campaigns_platform_external_id')) {
+      try {
+        db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_campaigns_platform_external_id ON campaigns(platform, campaign_id);');
+      } catch (e) {
+        console.warn('Migration warning (unique campaign index):', e.message);
+      }
+    }
+
     return db;
- }
+  }
 
 // No default export - use createDatabase() factory with DI

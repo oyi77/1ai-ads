@@ -6,7 +6,8 @@ export async function renderAdsList(el) {
     const { data: ads } = await api.get('/ads');
     el.innerHTML = `
       <div class="p-4 sm:p-8">
-        <h1 class="text-2xl sm:text-3xl font-bold mb-4">My Creatives</h1>
+        <h1 class="text-2xl sm:text-3xl font-bold mb-2">AI Creatives</h1>
+        <p class="text-slate-400 text-sm mb-4">AI-generated ads stored locally. For live Meta campaigns, see <a href="#/campaigns" class="text-sky-400 hover:underline">Campaigns</a>.</p>
         <div class="flex flex-col sm:flex-row gap-3 mb-4">
           <input type="text" id="ads-search" placeholder="Search ads..." class="flex-1 p-3 bg-slate-800 rounded-lg border border-slate-700 min-h-[44px]">
           <a href="#/ads/create" class="bg-sky-500 hover:bg-sky-600 px-4 py-3 rounded-lg text-center min-h-[44px] inline-flex items-center justify-center">Create Ad</a>
