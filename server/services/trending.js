@@ -1,9 +1,14 @@
 /**
  * Trending Data Service
- * 
+ *
  * Provides internal trending metrics (campaign performance) and external market trends (mock data).
  * Used for the Trending Ads dashboard feature.
  */
+
+import config from '../config/index.js';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('trending');
 
 export class TrendingService {
   constructor(campaignsRepo) {
@@ -49,8 +54,38 @@ export class TrendingService {
    * @returns {Promise<Array>} Array of market trend themes
    */
   async getExternalTrends() {
-    // Mock external market trends for MVP
-    // In production, this would integrate with a paid API
+    const source = config.trendingExternalSource;
+
+    // If mock mode, return the existing mock data
+    if (source === 'mock') {
+      return this._getMockTrends();
+    }
+
+    // If a URL is configured, try to fetch real data
+    try {
+      const response = await fetch(source, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(5000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Trending API returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      log.info('Fetched external trends from API', { source, count: data.length || 0 });
+      return data;
+    } catch (err) {
+      log.warn('External trends API failed, falling back to mock data', { source, error: err.message });
+      return this._getMockTrends();
+    }
+  }
+
+  /**
+   * Get mock external trending data - fallback data
+   * @returns {Array} Array of mock market trend themes
+   */
+  _getMockTrends() {
     return [
       {
         id: 'trend-1',

@@ -1,21 +1,24 @@
 import { Router } from 'express';
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { createAdForgeMCPServer } from '../services/mcp-server.js';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('mcp');
 
 export function createMcpRouter(mcpClient, settingsRepo, campaignsRepo, adsRepo, landingRepo) {
   const router = Router();
-  
+
   const mcpServer = createAdForgeMCPServer(campaignsRepo, landingRepo, adsRepo);
   let sseTransport = null;
 
   router.get('/sse', async (req, res) => {
-    console.log('[MCP] New SSE connection request');
+    log.info('New SSE connection request');
     sseTransport = new SSEServerTransport("/api/mcp/messages", res);
     await mcpServer.connect(sseTransport);
   });
 
   router.post('/messages', async (req, res) => {
-    console.log('[MCP] Message received');
+    log.info('Message received');
     if (sseTransport) {
       await sseTransport.handlePostMessage(req, res);
     } else {

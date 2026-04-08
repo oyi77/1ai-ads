@@ -1,4 +1,5 @@
 import { safeFetch } from '../lib/platform-client.js';
+import config from '../config/index.js';
 
 const API_VERSION = 'v21.0';
 const BASE = `https://graph.facebook.com/${API_VERSION}`;
@@ -9,8 +10,8 @@ export class MetaAdsAPI {
   }
 
   _getToken() {
-    if (process.env.FB_SYSTEM_TOKEN) {
-      return process.env.FB_SYSTEM_TOKEN;
+    if (config.fbSystemToken) {
+      return config.fbSystemToken;
     }
     const creds = this.settingsRepo.getCredentials('meta');
     if (!creds?.access_token) {

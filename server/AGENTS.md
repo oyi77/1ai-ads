@@ -1,47 +1,55 @@
-# SERVER AGENTS.md
+<!-- Parent: ../AGENTS.md -->
+<!-- Generated: 2026-04-08 | Updated: 2026-04-08 -->
 
-## OVERVIEW
-Backend of Adforge – an Express application built with ESM, providing a REST API for the front‑end and handling SQLite persistence.
+# server
 
-## ENTRY POINTS
-- `server.js` – bootstrap, creates DB via `db/index.js`, loads the Express app from `server/app.js` and starts the HTTP server.
-- `server/app.js` – exports `createApp({ db, llmClient, mcpClient })`; registers middleware, routes, and error handling.
-- `db/index.js` – creates SQLite DB, runs `schema.sql` migrations, and provides `createDatabase` helper.
+## Purpose
+Express 5 backend providing REST API for Adforge. Follows a layered architecture: routes → services → repositories → db. Handles auth, ad CRUD, campaign management, AI generation, and third-party API integrations.
 
-## ROUTE ORGANISATION (layered)
-```
-routes/      → HTTP endpoint definitions
-services/    → Business logic, data aggregation
-repositories/→ Direct DB queries via better‑sqlite3
-middleware/ → auth, validation, error handling
-```
-Key routes include:
-- `routes/trending.js` – internal/external data endpoints (`/trending/internal`, `/trending/external`).
-- `routes/ads.js`, `routes/campaigns.js`, `routes/users.js` – CRUD for core entities.
+## Key Files
+| File | Description |
+|------|-------------|
+| `app.js` | Express app factory — `createApp({ db, llmClient, mcpClient })`, registers middleware, routes, error handling |
 
-## CONVENTIONS
-- All files use `import/export` syntax.
-- Controllers are thin – they delegate to services.
-- Services are pure functions where possible; repositories contain raw SQL.
-- Errors are wrapped in custom `ApiError` subclasses; global error middleware normalises responses.
+## Subdirectories
+| Directory | Purpose |
+|-----------|---------|
+| `routes/` | HTTP endpoint definitions — see `routes/AGENTS.md` |
+| `services/` | Business logic and data aggregation — see `services/AGENTS.md` |
+| `lib/` | Core utilities (LLM, MCP, API adapters, generators) — see `lib/AGENTS.md` |
+| `repositories/` | Direct SQLite queries — see `repositories/AGENTS.md` |
+| `middleware/` | Auth, validation, rate limiting — see `middleware/AGENTS.md` |
 
-## ANTI‑PATTERNS
-- Demo data seeding (`seedDemoData(db)`) runs on every start – should be gated by an env flag for production.
-- No separate CI; linting/config checks are missing.
+## For AI Agents
 
-## INTERNAL vs EXTERNAL DATA
-`services/trending.js` documents the split; the internal endpoint returns live metrics, external returns mock market data. UI consumes via `/trending/internal`.
+### Working In This Directory
+- All files use ESM (`import/export`)
+- Controllers are thin — delegate to services
+- Services are pure functions where possible; repositories contain raw SQL
+- `createApp()` accepts injected dependencies (`db`, `llmClient`, `mcpClient`)
+- Errors use custom `ApiError` subclasses; global error middleware normalizes responses
 
-## TESTING
-Vitest tests for services and repositories live under `tests/unit/` and `tests/integration/`. Example:
-- `tests/unit/services/trending.test.js`
-- `tests/unit/repositories/ads.test.js`
-Playwright e2e tests target the full stack (`tests/e2e/`).
+### Testing Requirements
+- Unit tests: `tests/unit/` (services, repositories, middleware, lib)
+- Integration tests: `tests/integration/` (full Express app with supertest)
+- E2E tests: `tests/e2e/` (Playwright against live server)
 
-## COMMANDS
-```bash
-npm run dev          # start dev server (vite + backend)
-npm start            # production start (node server.js)
-npm run test        # run all Vitest tests
-npm run test:e2e    # run Playwright end‑to‑end tests
-```
+### Common Patterns
+- Repository pattern for DB access (injected `db` instance)
+- Service layer handles business logic, never raw SQL
+- Route handlers validate input, call service, return JSON
+- Platform API clients (Meta, Google, TikTok) in `lib/` abstract third-party calls
+
+## Dependencies
+
+### Internal
+- `db/` — SQLite database instance
+- `server/lib/` — Shared utilities used by services and routes
+
+### External
+- Express 5 — HTTP framework
+- bcryptjs + jsonwebtoken — Authentication
+- better-sqlite3 — Database driver
+- uuid — ID generation
+
+<!-- MANUAL: Custom project notes can be added below -->

@@ -37,7 +37,15 @@ export class AutomationRulesRepository {
     const fields = [];
     const params = [];
     for (const key of ['name', 'is_active', 'condition_metric', 'condition_operator', 'condition_value', 'action', 'action_value', 'check_interval']) {
-      if (data[key] !== undefined) { fields.push(`${key} = ?`); params.push(data[key]); }
+      if (data[key] !== undefined) {
+        fields.push(`${key} = ?`);
+        // Convert boolean to number for SQLite compatibility
+        let value = data[key];
+        if (key === 'is_active' && typeof value === 'boolean') {
+          value = value ? 1 : 0;
+        }
+        params.push(value);
+      }
     }
     if (fields.length === 0) return existing;
     params.push(id);

@@ -1,10 +1,8 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import config from '../config/index.js';
 
-const secret = process.env.JWT_SECRET || 'adforge-dev-secret';
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
-  console.warn('WARNING: JWT_SECRET not set. Using default secret. Set JWT_SECRET env var for production.');
-}
+const secret = config.jwtSecret;
 const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '30d';
 

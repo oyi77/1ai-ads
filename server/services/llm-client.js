@@ -1,9 +1,14 @@
+import config from '../config/index.js';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('llm');
+
 export class LLMClient {
   constructor({ url, model, apiKey, timeout } = {}) {
-    this.url = url || process.env.OMNIROUTE_URL || 'http://localhost:20128/v1/chat/completions';
-    this.model = model || process.env.OMNIROUTE_MODEL || 'auto/pro-fast';
-    this.apiKey = apiKey || process.env.OMNIROUTE_API_KEY || '';
-    this.timeout = timeout || parseInt(process.env.LLM_TIMEOUT || '30000', 10);
+    this.url = url || config.llm.url;
+    this.model = model || config.llm.model;
+    this.apiKey = apiKey || config.llm.apiKey;
+    this.timeout = timeout || config.llm.timeout;
   }
 
   updateConfig({ url, model, apiKey, timeout }) {
@@ -85,10 +90,10 @@ export class LLMClient {
         modelsUrl = modelsUrl.replace(/\/$/, '') + '/models';
       }
     }
-    
-    console.log(`[LLMClient] Fetching models from: ${modelsUrl}`);
 
-    const headers = { 
+    log.info(`Fetching models from: ${modelsUrl}`);
+
+    const headers = {
       'Accept': 'application/json',
       'Content-Type': 'application/json'
     };
@@ -99,16 +104,16 @@ export class LLMClient {
 
     const response = await fetch(modelsUrl, { headers });
     const contentType = response.headers.get('content-type') || '';
-    
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[LLMClient] Models fetch failed (${response.status}):`, errorText.substring(0, 200));
+      log.error(`Models fetch failed (${response.status})`, { preview: errorText.substring(0, 200) });
       throw new Error(`Failed to fetch models: ${response.statusText} (${response.status})`);
     }
 
     if (!contentType.includes('application/json')) {
       const text = await response.text();
-      console.error(`[LLMClient] Expected JSON but got ${contentType}:`, text.substring(0, 200));
+      log.error(`Expected JSON but got ${contentType}`, { preview: text.substring(0, 200) });
       throw new Error(`AI Provider returned non-JSON response (${contentType}). Check your API Endpoint URL.`);
     }
 

@@ -1,9 +1,10 @@
 import { verifyToken } from '../lib/auth.js';
+import { AuthError } from '../lib/errors.js';
 
 export function requireAuth(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, error: 'Unauthorized' });
+    throw new AuthError('Unauthorized');
   }
 
   try {
@@ -11,6 +12,6 @@ export function requireAuth(req, res, next) {
     req.user = verifyToken(token);
     next();
   } catch {
-    return res.status(401).json({ success: false, error: 'Invalid or expired token' });
+    throw new AuthError('Invalid or expired token');
   }
 }

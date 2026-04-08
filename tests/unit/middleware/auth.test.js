@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { requireAuth } from '../../../server/middleware/auth.js';
 import { generateToken } from '../../../server/lib/auth.js';
+import { AuthError } from '../../../server/lib/errors.js';
 
 function mockReqRes(authHeader) {
   const req = { headers: {} };
@@ -26,32 +27,26 @@ describe('requireAuth middleware', () => {
     expect(req.user.id).toBe('1');
   });
 
-  it('returns 401 with no header', () => {
+  it('throws AuthError with no header', () => {
     const { req, res } = mockReqRes(null);
     const next = vi.fn();
 
-    requireAuth(req, res, next);
-
-    expect(res.statusCode).toBe(401);
+    expect(() => requireAuth(req, res, next)).toThrow(AuthError);
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('returns 401 with bad token', () => {
+  it('throws AuthError with bad token', () => {
     const { req, res } = mockReqRes('Bearer garbage');
     const next = vi.fn();
 
-    requireAuth(req, res, next);
-
-    expect(res.statusCode).toBe(401);
+    expect(() => requireAuth(req, res, next)).toThrow(AuthError);
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('returns 401 with non-Bearer scheme', () => {
+  it('throws AuthError with non-Bearer scheme', () => {
     const { req, res } = mockReqRes('Basic abc123');
     const next = vi.fn();
 
-    requireAuth(req, res, next);
-
-    expect(res.statusCode).toBe(401);
+    expect(() => requireAuth(req, res, next)).toThrow(AuthError);
   });
 });

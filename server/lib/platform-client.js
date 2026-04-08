@@ -1,9 +1,12 @@
 import { RateLimiter } from './rate-limiter.js';
+import { createLogger } from './logger.js';
+
+const log = createLogger('platform-client');
 
 const platformLimiters = {
-  meta: new RateLimiter(30, 1000),   
-  google: new RateLimiter(50, 1000), 
-  tiktok: new RateLimiter(20, 1000), 
+  meta: new RateLimiter(30, 1000),
+  google: new RateLimiter(50, 1000),
+  tiktok: new RateLimiter(20, 1000),
 };
 
 export async function safeFetch(platformName, apiUrl, fetchOptions = {}) {
@@ -27,9 +30,9 @@ export async function safeFetch(platformName, apiUrl, fetchOptions = {}) {
       const errorText = await fetchResponse.text();
       let parsedError;
       try { parsedError = JSON.parse(errorText); } catch { parsedError = errorText; }
-      
-      console.error(`[${platformName.toUpperCase()} API ERROR] ${fetchResponse.status} ${apiUrl} (${requestDuration}ms):`, parsedError);
-      
+
+      log.error(`[${platformName.toUpperCase()} API ERROR] ${fetchResponse.status} ${apiUrl} (${requestDuration}ms)`, { error: parsedError });
+
       const apiError = new Error(`${platformName} API returned ${fetchResponse.status}`);
       apiError.status = fetchResponse.status;
       apiError.data = parsedError;
@@ -38,8 +41,8 @@ export async function safeFetch(platformName, apiUrl, fetchOptions = {}) {
 
     return fetchResponse;
   } catch (originalError) {
-    if (originalError.status) throw originalError; 
-    console.error(`[${platformName.toUpperCase()} FETCH ERROR] ${apiUrl}:`, originalError.message);
+    if (originalError.status) throw originalError;
+    log.error(`[${platformName.toUpperCase()} FETCH ERROR] ${apiUrl}`, { message: originalError.message });
     throw originalError;
   }
 }

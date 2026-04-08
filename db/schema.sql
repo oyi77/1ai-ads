@@ -112,6 +112,57 @@ CREATE TABLE IF NOT EXISTS platform_accounts (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS webhook_events (
+  id TEXT PRIMARY KEY,
+  source TEXT NOT NULL,
+  event_type TEXT,
+  payload TEXT DEFAULT '{}',
+  processed BOOLEAN DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_webhook_events_source ON webhook_events(source, created_at);
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  token TEXT NOT NULL,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON refresh_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id);
+
+CREATE TABLE IF NOT EXISTS payments (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  order_id TEXT,
+  amount REAL NOT NULL,
+  currency TEXT DEFAULT 'IDR',
+  status TEXT DEFAULT 'pending',
+  provider TEXT DEFAULT 'scalev',
+  provider_ref TEXT,
+  metadata TEXT DEFAULT '{}',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+
+CREATE TABLE IF NOT EXISTS competitor_snapshots (
+  id TEXT PRIMARY KEY,
+  url TEXT NOT NULL,
+  platform TEXT,
+  ad_data TEXT DEFAULT '{}',
+  snapshot_type TEXT DEFAULT 'auto',
+  captured_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_competitor_snapshots_url ON competitor_snapshots(url, captured_at);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_ads_platform ON ads(platform);
 CREATE INDEX IF NOT EXISTS idx_ads_status ON ads(status);
@@ -125,3 +176,6 @@ BEGIN UPDATE ads SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
 
 CREATE TRIGGER IF NOT EXISTS landing_pages_updated_at AFTER UPDATE ON landing_pages
 BEGIN UPDATE landing_pages SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
+
+CREATE TRIGGER IF NOT EXISTS payments_updated_at AFTER UPDATE ON payments
+BEGIN UPDATE payments SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id; END;

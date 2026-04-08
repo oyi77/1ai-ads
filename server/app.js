@@ -8,6 +8,8 @@ import { CampaignsRepository } from './repositories/campaigns.js';
 import { UsersRepository } from './repositories/users.js';
 import { RefreshTokensRepository } from './repositories/refresh-tokens.js';
 import { SettingsRepository } from './repositories/settings.js';
+import { WebhookEventsRepository } from './repositories/webhook-events.js';
+import { CompetitorsRepository } from './repositories/competitors.js';
 import { AdGenerator } from './services/ad-generator.js';
 import { LandingGenerator } from './services/landing-generator.js';
 import { MCPClientManager } from './services/mcp-client.js';
@@ -39,16 +41,21 @@ import { createTrendingRouter } from './routes/trending.js';
 import { createCompetitorSpyRouter } from './routes/competitor-spy.js';
 import { TrendingService } from './services/trending.js';
 import { createPaymentsRouter } from './routes/payments.js';
+import { PaymentsRepository } from './repositories/payments.js';
+import { PaymentService } from './services/payments.js';
 import { LearningService } from './services/learning.js';
 import { createLearningRouter } from './routes/learning.js';
+import config from './config/index.js';
+import { createLogger } from './lib/logger.js';
 
+const log = createLogger('app');
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export function createApp({ db, llmClient, mcpClient } = {}) {
   const app = express();
   app.set('trust proxy', 1);
 
-  app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
+  app.use(cors({ origin: config.corsOrigin }));
   app.use(express.json({ limit: '2mb' }));
 
   // Repositories
@@ -58,6 +65,9 @@ export function createApp({ db, llmClient, mcpClient } = {}) {
   const usersRepo = new UsersRepository(db);
   const refreshTokensRepo = new RefreshTokensRepository(db);
   const settingsRepo = new SettingsRepository(db);
+  const webhookEventsRepo = new WebhookEventsRepository(db);
+  const competitorsRepo = new CompetitorsRepository(db);
+  const paymentsRepo = new PaymentsRepository(db);
 
   const llmConfig = settingsRepo.get('llm_config');
   if (llmConfig) {
@@ -79,6 +89,7 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
   app.use('/api/mcp', requireAuth, createMcpRouter(mcp, settingsRepo, campaignsRepo, adsRepo, landingRepo));
   app.use('/api/settings', requireAuth, createSettingsRouter(settingsRepo, llmClient));
   const scalevService = new ScalevService(settingsRepo);
+  const paymentService = new PaymentService(paymentsRepo, scalevService);
   app.use('/api/research', requireAuth, createResearchRouter(new AdResearchService(settingsRepo)));
   app.use('/api/scalev', requireAuth, createScalevRouter(scalevService));
   const metaApi = new MetaAdsAPI(settingsRepo);
@@ -101,11 +112,10 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
   const trendingService = new TrendingService(campaignsRepo);
   app.use('/api/trending', requireAuth, createTrendingRouter(trendingService));
 
-  app.use('/api/competitor-spy', requireAuth, createCompetitorSpyRouter());
-  console.log('Competitor Spy route mounted');
+  app.use('/api/competitor-spy', requireAuth, createCompetitorSpyRouter(competitorsRepo));
 
-  // Payment Gateway (backlog/stub)
-  app.use('/api/payments', requireAuth, createPaymentsRouter());
+  // Payment Gateway
+  app.use('/api/payments', requireAuth, createPaymentsRouter(paymentService));
 
   // Learning Service (sync insights to bk-hub KB)
   const learningService = new LearningService(campaignsRepo, adsRepo, landingRepo);
@@ -113,7 +123,7 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
 
   // Landing Page Live Deployment (public - no auth, served to end users)
   app.get('/lp/:slug', (req, res) => {
-    const page = db.prepare('SELECT * FROM landing_pages WHERE slug = ? AND is_published = 1').get(req.params.slug);
+    const page = landingRepo.findBySlug(req.params.slug);
     if (!page) return res.status(404).send('Page not found');
     const html = page.html_output || renderLandingPage({
       theme: page.theme, product_name: page.product_name, price: page.price,
@@ -127,7 +137,9 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
 
   // Scalev webhook (public - no auth, called by Scalev servers)
   app.post('/api/webhooks/scalev', express.json(), (req, res) => {
-    console.log('Scalev webhook:', JSON.stringify(req.body).substring(0, 200));
+    log.info('Scalev webhook received', { body: req.body });
+    webhookEventsRepo.create({ source: 'scalev', eventType: req.body.type || 'unknown', payload: req.body });
+    paymentService.processWebhookEvent({ source: 'scalev', eventType: req.body.type, payload: req.body });
     res.json({ success: true });
   });
 
@@ -141,8 +153,9 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
     if (err.type === 'entity.parse.failed') {
       return res.status(400).json({ success: false, error: 'Invalid JSON in request body' });
     }
-    console.error('Unhandled error:', err.message);
-    res.status(err.status || 500).json({ success: false, error: err.message || 'Internal server error' });
+    const status = err.status || (err.name === 'ValidationError' ? 400 : err.name === 'AuthError' ? 401 : err.name === 'NotFoundError' ? 404 : 500);
+    log.error('Unhandled error', { message: err.message, name: err.name, stack: err.stack });
+    res.status(status).json({ success: false, error: err.message || 'Internal server error' });
   });
 
   return app;

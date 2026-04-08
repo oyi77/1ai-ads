@@ -18,6 +18,10 @@ export class LandingRepository {
     return this.db.prepare('SELECT * FROM landing_pages WHERE id = ?').get(id) || null;
   }
 
+  findBySlug(slug) {
+    return this.db.prepare('SELECT * FROM landing_pages WHERE slug = ? AND is_published = 1').get(slug);
+  }
+
   create(data) {
     const id = data.id || uuid();
     this.db.prepare(`

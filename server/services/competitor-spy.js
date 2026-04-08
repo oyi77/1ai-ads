@@ -8,6 +8,11 @@
  * of well‑known sites is used.
  */
 
+import config from '../config/index.js';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('competitor-spy');
+
 /**
  * Helper: fetch a URL and return its HTML text.
  */
@@ -17,7 +22,7 @@ async function fetchHtml(url) {
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     return await resp.text();
   } catch (e) {
-    console.error(`Failed to fetch ${url}:`, e.message);
+    log.error(`Failed to fetch ${url}`, { message: e.message });
     return null;
   }
 }
@@ -43,25 +48,35 @@ function extractMeta(html) {
  *   - `website`: the URL
  *   - `description`: meta description (or empty string)
  *   - `features`: empty array (can be populated later)
+ *
+ * If a single URL is provided, fetches only that URL.
+ * Otherwise, loads URLs from env or uses a sane fallback.
  */
-export async function getCompetitorData() {
-  // Load URLs from env or use a sane fallback.
-  const envList = process.env.COMPETITOR_URLS;
-  const fallback = [
-    'https://www.google.com',
-    'https://www.facebook.com',
-    'https://www.amazon.com'
-  ];
-  const urls = envList ? envList.split(/\s*,\s*/) : fallback;
+export async function getCompetitorData(url) {
+  let urls = [];
+
+  if (url) {
+    // Single URL provided
+    urls = [url];
+  } else {
+    // Load URLs from env or use a sane fallback.
+    const envList = config.competitorUrls;
+    const fallback = [
+      'https://www.google.com',
+      'https://www.facebook.com',
+      'https://www.amazon.com'
+    ];
+    urls = envList ? envList.split(/\s*,\s*/) : fallback;
+  }
 
   const results = [];
-  for (const url of urls) {
-    const html = await fetchHtml(url);
+  for (const u of urls) {
+    const html = await fetchHtml(u);
     const meta = extractMeta(html);
-    const hostname = (new URL(url)).hostname.replace('www.', '');
+    const hostname = (new URL(u)).hostname.replace('www.', '');
     results.push({
       name: meta.title || hostname,
-      website: url,
+      website: u,
       description: meta.description,
       features: []
     });
@@ -74,5 +89,5 @@ export async function getCompetitorData() {
       features: []
     });
   }
-  return results;
+  return url ? results[0] : results;
 }

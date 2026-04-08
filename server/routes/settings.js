@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
+import config from '../config/index.js';
 
 export function createSettingsRouter(settingsRepo, llmClient) {
   const router = Router();
@@ -16,12 +17,12 @@ export function createSettingsRouter(settingsRepo, llmClient) {
   });
 
   router.get('/ai', (req, res) => {
-    const config = settingsRepo.get('llm_config') || {
-      url: process.env.OMNIROUTE_URL || 'http://localhost:20128/v1',
-      model: process.env.OMNIROUTE_MODEL || 'auto/pro-fast',
-      apiKey: process.env.OMNIROUTE_API_KEY ? '••••••••' : ''
+    const llmConfig = settingsRepo.get('llm_config') || {
+      url: config.llm.url,
+      model: config.llm.model,
+      apiKey: config.llm.apiKey ? '••••••••' : ''
     };
-    res.json({ success: true, data: config });
+    res.json({ success: true, data: llmConfig });
   });
 
   router.put('/ai', (req, res) => {

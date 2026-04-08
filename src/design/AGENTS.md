@@ -1,29 +1,38 @@
-# DESIGN AGENTS.md
+<!-- Parent: ../../AGENTS.md -->
+<!-- Generated: 2026-04-08 | Updated: 2026-04-08 -->
 
-## OVERVIEW
-Design tokens for Adforge – centralised colour palette and CSS variables used throughout the front‑end.
+# design
 
-## FILES
-- `colors.js` – JavaScript export of colour names and hex values.
-- `tokens.css` – CSS custom properties (`--color-primary`, `--spacing-base`, etc.) that reference the colours.
+## Purpose
+Design tokens for Adforge — centralized color palette and CSS custom properties used throughout the frontend. Ensures visual consistency across all views.
 
-## USAGE
-Import the colour map in JS:
-```js
-import colors from './colors.js';
-export const primary = colors.blue;
-```
-Reference CSS variables in stylesheets or styled components:
-```css
-.button { background-color: var(--color-primary); }
-```
-All components under `client/src/components/` should use these tokens for consistency.
+## Key Files
+| File | Description |
+|------|-------------|
+| `colors.js` | JavaScript export of color names and hex values |
+| `tokens.css` | CSS custom properties (`--color-primary`, `--spacing-base`, etc.) declared in `:root` |
 
-## CONVENTIONS
-- Colours are defined in `colors.js` as an object literal.
-- CSS variables are declared in `:root` inside `tokens.css`.
-- No hard‑coded colour values in component files – always reference the token.
+## For AI Agents
 
-## ANTI‑PATTERNS
-- Direct hex strings in component style blocks are prohibited.
-- Duplicate colour definitions across `colors.js` and `tokens.css` should be avoided.
+### Working In This Directory
+- Colors defined in `colors.js` as an object literal
+- CSS variables declared in `:root` inside `tokens.css`
+- Components under `client/src/views/` reference these tokens
+- JS usage: `import colors from './colors.js'`
+- CSS usage: `background-color: var(--color-primary);`
+
+### Testing Requirements
+- No dedicated tests — tokens are consumed, not tested
+- Verify by checking component rendering
+
+### Common Patterns
+- No hard-coded color values in component style blocks
+- All colors must reference `tokens.css` variables or `colors.js` exports
+- Avoid duplicate definitions between `colors.js` and `tokens.css`
+
+## Dependencies
+
+### Internal
+- Consumed by all `client/src/views/` components
+
+<!-- MANUAL: Custom project notes can be added below -->

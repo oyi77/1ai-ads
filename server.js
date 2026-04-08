@@ -3,15 +3,18 @@ import { createApp } from './server/app.js';
 import { LLMClient } from './server/services/llm-client.js';
 import { MCPClientManager } from './server/services/mcp-client.js';
 import { seedDemoData } from './db/seed.js';
+import config, { validateConfig } from './server/config/index.js';
 
-const db = createDatabase(process.env.DB_PATH || './db/adforge.db');
+validateConfig();
+
+const db = createDatabase(config.dbPath);
 seedDemoData(db);
 
 const llmClient = new LLMClient();
 const mcpClient = new MCPClientManager();
 
 const app = createApp({ db, llmClient, mcpClient });
-const PORT = process.env.PORT || 3001;
+const PORT = config.port;
 
 const server = app.listen(PORT, () => console.log(`AdForge running on ${PORT}`));
 

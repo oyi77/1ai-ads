@@ -1,4 +1,7 @@
 import { Router } from 'express';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('scalev');
 
 export function createScalevRouter(scalevService) {
   const router = Router();
@@ -64,7 +67,7 @@ export function createScalevRouter(scalevService) {
   // This will be mounted separately outside requireAuth
   router.post('/webhook', (req, res) => {
     const event = req.body;
-    console.log('Scalev webhook received:', JSON.stringify(event).substring(0, 200));
+    log.info('Scalev webhook received', { preview: JSON.stringify(event).substring(0, 200) });
     // TODO: Process order events (paid, shipped, etc.)
     // Store in database for analytics
     res.json({ success: true });

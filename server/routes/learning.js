@@ -1,11 +1,12 @@
 import { Router } from 'express';
+import config from '../config/index.js';
 
 export function createLearningRouter(learningService) {
   const router = Router();
 
   router.get('/status', async (req, res) => {
     try {
-      const response = await fetch(`${process.env.BK_HUB_URL || 'http://localhost:9099'}/kb/status`);
+      const response = await fetch(`${config.bkHubUrl}/kb/status`);
       const kbStatus = await response.json();
       res.json({ success: true, data: { kb: kbStatus, connected: response.ok } });
     } catch (err) {

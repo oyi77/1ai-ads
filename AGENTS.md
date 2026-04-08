@@ -1,51 +1,66 @@
-# PROJECT KNOWLEDGE BASE
+<!-- Generated: 2026-04-08 | Updated: 2026-04-08 -->
 
-## OVERVIEW
-Adforge is a full‑stack JavaScript/TypeScript application using Vite for the frontend, Express for the backend, SQLite via better‑sqlite3, and Playwright/Vitest for testing.
+# Adforge
 
-## STRUCTURE
-```
-.
-├─ client/            # Front‑end (Vite, React)
-├─ server/           # Backend (Express, services, routes)
-├─ src/design/       # Design tokens (colors, CSS variables)
-├─ db/               # SQLite schema & init
-├─ tests/            # Vitest unit/integration + Playwright e2e
-└─ package.json      # Single monorepo manifest
-```
+## Purpose
+Full-stack ad management platform. Express backend with SQLite persistence, Vite/React SPA frontend, and integrations with Meta, Google, and TikTok ad APIs. Includes AI-powered ad generation, campaign orchestration, landing page builder, and competitor monitoring.
 
-## ENTRY POINTS
-| Component | Path | Role |
-|----------|------|------|
-| Server bootstrap | `server.js` | Starts Express app, seeds DB, loads `server/app.js` |
-| Express app factory | `server/app.js` | Creates and configures the Express instance |
-| Front‑end entry HTML | `client/index.html` | Loads `client/src/app.js` via `<script type="module">` |
-| Front‑end bootstrap | `client/src/app.js` | SPA entry point, router setup |
-| DB init | `db/index.js` | Creates SQLite DB, runs migrations |
+## Key Files
+| File | Description |
+|------|-------------|
+| `server.js` | Server bootstrap — seeds DB, creates Express app, starts HTTP server |
+| `mcp.js` | MCP (Model Context Protocol) server implementation |
+| `vite.config.js` | Vite build config — sets `root: 'client'`, outputs to `../dist` |
+| `vitest.config.js` | Vitest test runner configuration |
+| `playwright.config.js` | Playwright E2E test configuration |
+| `ecosystem.config.cjs` | PM2 process manager config for production |
+| `package.json` | Single monorepo manifest (ESM `"type": "module"`) |
+| `.env.example` | Environment variable template |
+| `qa.mjs` | QA validation scripts |
 
-## CONVENTIONS
-- ESM (`"type": "module"` in package.json) throughout.
-- Layered backend: `routes/ → services/ → repositories/ → db/`.
-- Front‑end UI components live under `client/src/views/`.
-- Tests under `tests/` follow the pattern `*.test.js` (Vitest) and `*.spec.js` (Playwright).
+## Subdirectories
+| Directory | Purpose |
+|-----------|---------|
+| `client/` | Frontend SPA (Vite + vanilla JS) — see `client/AGENTS.md` |
+| `server/` | Backend API (Express 5, services, repositories) — see `server/AGENTS.md` |
+| `db/` | SQLite database, schema, and seeding — see `db/AGENTS.md` |
+| `tests/` | Test suites (unit, integration, e2e, functional, smoke) — see `tests/AGENTS.md` |
+| `src/design/` | Design tokens (colors, CSS variables) — see `src/design/AGENTS.md` |
 
-## ANTI‑PATTERNS
-- No dedicated CI workflow (`.github/workflows` missing).
-- Database seeding (`seedDemoData`) runs on every server start – should be a separate script for production.
+## For AI Agents
 
-## INTERNAL vs EXTERNAL DATA CONVENTION
-Backend routes expose `/trending/internal` and `/trending/external`. The front‑end mirrors this with an "Internal" tab. Documented in `server/services/trending.js` and used in `client/src/views/trending.js`.
+### Working In This Directory
+- Always run `npm install` after modifying `package.json`
+- ESM throughout — use `import/export`, never `require()`
+- Backend follows layered architecture: `routes/ → services/ → repositories/ → db/`
+- Frontend views live under `client/src/views/`
+- No separate `package.json` for client — all deps in root manifest
 
-## TESTING
-- Vitest runs unit, integration, functional and smoke tests (`npm run test:*`).
-- Playwright runs e2e under `tests/e2e/` (`npm run test:e2e`).
+### Testing Requirements
+- Run `npm test` (Vitest) before committing
+- Run `npm run test:e2e` (Playwright) for full-stack tests
+- Tests follow `*.test.js` (Vitest) and `*.spec.js` (Playwright) conventions
 
-## COMMANDS
-```bash
-npm install        # install dependencies
-npm run dev        # start Vite dev server + backend
-npm run build      # build frontend, output to dist/
-npm start           # production: `node server.js`
-npm test            # run all Vitest tests
-npm run test:e2e   # run Playwright e2e tests
-```
+### Common Patterns
+- UUIDs for primary keys (via `uuid` package)
+- JSON fields stored as TEXT in SQLite (parsed/stringified in repositories)
+- Demo data seeding runs on every server start (should be env-gated for production)
+
+## Dependencies
+
+### Internal
+- `server/` depends on `db/` for persistence
+- `client/` consumes API from `server/` via `/api/…` namespace
+- `server/lib/` contains shared utilities (LLM client, MCP client, API adapters)
+
+### External
+- Express 5 — HTTP framework
+- better-sqlite3 — SQLite driver
+- Vite 8 — Frontend build tool
+- Vitest 4 — Unit/integration test runner
+- Playwright — E2E test framework
+- bcryptjs + jsonwebtoken — Auth
+- @modelcontextprotocol/sdk — MCP integration
+- meta-ads-mcp — Meta Ads API MCP bridge
+
+<!-- MANUAL: Custom project notes can be added below -->

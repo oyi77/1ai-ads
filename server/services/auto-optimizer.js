@@ -5,6 +5,10 @@
  * Actions: pause, scale_up, scale_down budget.
  */
 
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('auto-optimizer');
+
 export class AutoOptimizer {
   constructor(metaApi, rulesRepo, campaignsRepo) {
     this.meta = metaApi;
@@ -14,10 +18,10 @@ export class AutoOptimizer {
   }
 
   start(intervalMs = 6 * 60 * 60 * 1000) {
-    console.log(`AutoOptimizer started (check every ${intervalMs / 1000 / 60}min)`);
-    this._interval = setInterval(() => this.evaluate().catch(e => console.error('AutoOptimizer error:', e.message)), intervalMs);
+    log.info(`AutoOptimizer started (check every ${intervalMs / 1000 / 60}min)`);
+    this._interval = setInterval(() => this.evaluate().catch(e => log.error('AutoOptimizer error', { message: e.message })), intervalMs);
     // Also run once on start (after 30s delay to let server boot)
-    setTimeout(() => this.evaluate().catch(e => console.error('AutoOptimizer initial error:', e.message)), 30000);
+    setTimeout(() => this.evaluate().catch(e => log.error('AutoOptimizer initial error', { message: e.message })), 30000);
   }
 
   stop() {
@@ -60,7 +64,7 @@ export class AutoOptimizer {
       }
     }
 
-    console.log(`AutoOptimizer: checked ${activeRules.length} rules, triggered ${results.filter(r => !r.error).length}`);
+    log.info(`AutoOptimizer: checked ${activeRules.length} rules, triggered ${results.filter(r => !r.error).length}`);
     return { checked: activeRules.length, triggered: results.length, results };
   }
 
@@ -112,7 +116,7 @@ export class AutoOptimizer {
       }
 
       case 'alert':
-        console.log(`ALERT: Campaign ${campaignId} triggered rule`);
+        log.info(`ALERT: Campaign ${campaignId} triggered rule`);
         return { action: 'alert', campaignId };
 
       default:

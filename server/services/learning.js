@@ -1,6 +1,9 @@
 import fetch from 'node-fetch';
+import config from '../config/index.js';
+import { createLogger } from '../lib/logger.js';
 
-const BK_HUB_URL = process.env.BK_HUB_URL || 'http://localhost:9099';
+const log = createLogger('learning');
+const BK_HUB_URL = config.bkHubUrl;
 
 export class LearningService {
   constructor(campaignsRepo, adsRepo, landingRepo) {
@@ -20,15 +23,15 @@ export class LearningService {
 
       if (!response.ok) {
         const err = await response.text();
-        console.warn(`[LearningService] Failed to sync to KB: ${err}`);
+        log.warn(`Failed to sync to KB: ${err}`);
         return null;
       }
 
       const result = await response.json();
-      console.log(`[LearningService] Synced insight: ${insight.title} -> ${result.id}`);
+      log.info(`Synced insight: ${insight.title} -> ${result.id}`);
       return result;
     } catch (err) {
-      console.warn(`[LearningService] KB sync failed: ${err.message}`);
+      log.warn(`KB sync failed: ${err.message}`);
       return null;
     }
   }
@@ -45,7 +48,7 @@ export class LearningService {
       const data = await response.json();
       return data || [];
     } catch (err) {
-      console.warn(`[LearningService] KB query failed: ${err.message}`);
+      log.warn(`KB query failed: ${err.message}`);
       return [];
     }
   }
