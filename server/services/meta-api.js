@@ -1,6 +1,9 @@
 import { safeFetch } from '../lib/platform-client.js';
 import config from '../config/index.js';
+import { createLogger } from '../lib/logger.js';
+import { ConfigurationError, PlatformError } from '../lib/errors.js';
 
+const log = createLogger('meta-api');
 const API_VERSION = 'v21.0';
 const BASE = `https://graph.facebook.com/${API_VERSION}`;
 
@@ -15,7 +18,7 @@ export class MetaAdsAPI {
     }
     const creds = this.settingsRepo.getCredentials('meta');
     if (!creds?.access_token) {
-      throw new Error('Meta access token not configured. Go to Settings to add it.');
+      throw new ConfigurationError('Meta access token not configured. Go to Settings to add it.');
     }
     return creds.access_token;
   }
@@ -147,6 +150,7 @@ export class MetaAdsAPI {
   // --- Campaign WRITE Operations ---
 
   async createCampaign(accountId, { name, objective, status = 'PAUSED', dailyBudget, specialAdCategories = [] }) {
+    log.info('Creating Meta campaign', { accountId, name, objective });
     const body = {
       name,
       objective,
@@ -155,6 +159,7 @@ export class MetaAdsAPI {
     };
     if (dailyBudget) body.daily_budget = Math.round(dailyBudget * 100); // Meta expects cents
     const data = await this._post(`/${accountId}/campaigns`, body);
+    log.info('Campaign created successfully', { campaignId: data.id });
     return { id: data.id };
   }
 

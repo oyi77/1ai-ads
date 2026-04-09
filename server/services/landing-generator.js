@@ -1,3 +1,7 @@
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('landing-generator');
+
 const ANTI_HALLUCINATION_RULES = `
 STRICT RULES FOR LANDING PAGE GENERATION:
 1. NO <small> tags as headers
@@ -39,16 +43,21 @@ export class LandingGenerator {
     const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
+      log.info('Generating landing page', { product, price });
       const content = await this.llm.call(this.systemPrompt, this.buildPrompt(product, price, benefits, cta), {
         temperature: 0.7,
         max_tokens: 8000,
         signal: controller.signal
       });
-      return parseHtmlResponse(content);
+      const html = parseHtmlResponse(content);
+      log.info('Landing page generated successfully', { length: html?.length || 0 });
+      return html;
     } catch (err) {
       if (err.name === 'AbortError' || err.message?.includes('abort')) {
+        log.warn('Landing page generation timed out', { timeoutMs: this.timeoutMs });
         return { error: 'AI generation timed out after 45 seconds', timeout: true };
       }
+      log.error('Landing page generation failed', { error: err.message });
       throw err;
     } finally {
       clearTimeout(timeoutId);

@@ -10,6 +10,7 @@ import { RefreshTokensRepository } from './repositories/refresh-tokens.js';
 import { SettingsRepository } from './repositories/settings.js';
 import { WebhookEventsRepository } from './repositories/webhook-events.js';
 import { CompetitorsRepository } from './repositories/competitors.js';
+import { TemplatesRepository } from './repositories/templates.js';
 import { AdGenerator } from './services/ad-generator.js';
 import { LandingGenerator } from './services/landing-generator.js';
 import { MCPClientManager } from './services/mcp-client.js';
@@ -45,6 +46,7 @@ import { PaymentsRepository } from './repositories/payments.js';
 import { PaymentService } from './services/payments.js';
 import { LearningService } from './services/learning.js';
 import { createLearningRouter } from './routes/learning.js';
+import { createTemplatesRouter } from './routes/templates.js';
 import config from './config/index.js';
 import { createLogger } from './lib/logger.js';
 
@@ -68,6 +70,7 @@ export function createApp({ db, llmClient, mcpClient } = {}) {
   const webhookEventsRepo = new WebhookEventsRepository(db);
   const competitorsRepo = new CompetitorsRepository(db);
   const paymentsRepo = new PaymentsRepository(db);
+  const templatesRepo = new TemplatesRepository(db);
 
   const llmConfig = settingsRepo.get('llm_config');
   if (llmConfig) {
@@ -89,7 +92,7 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
   app.use('/api/mcp', requireAuth, createMcpRouter(mcp, settingsRepo, campaignsRepo, adsRepo, landingRepo));
   app.use('/api/settings', requireAuth, createSettingsRouter(settingsRepo, llmClient));
   const scalevService = new ScalevService(settingsRepo);
-  const paymentService = new PaymentService(paymentsRepo, scalevService);
+  const paymentService = new PaymentService(paymentsRepo, usersRepo, scalevService);
   app.use('/api/research', requireAuth, createResearchRouter(new AdResearchService(settingsRepo)));
   app.use('/api/scalev', requireAuth, createScalevRouter(scalevService));
   const metaApi = new MetaAdsAPI(settingsRepo);
@@ -115,11 +118,26 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
   app.use('/api/competitor-spy', requireAuth, createCompetitorSpyRouter(competitorsRepo));
 
   // Payment Gateway
-  app.use('/api/payments', requireAuth, createPaymentsRouter(paymentService));
+  const paymentsRouter = createPaymentsRouter(paymentService);
+  app.use('/api/payments', requireAuth, paymentsRouter);
+
+  // Payment webhook endpoint (public - no auth required)
+  app.post('/api/payments/webhook', async (req, res) => {
+    try {
+      const result = await paymentService.processWebhookEvent(req.body);
+      res.json(result);
+    } catch (err) {
+      log.error('Webhook processing failed', { error: err.message });
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
 
   // Learning Service (sync insights to bk-hub KB)
   const learningService = new LearningService(campaignsRepo, adsRepo, landingRepo);
   app.use('/api/learning', requireAuth, createLearningRouter(learningService));
+
+  // Templates Management
+  app.use('/api/templates', requireAuth, createTemplatesRouter(templatesRepo));
 
   // Landing Page Live Deployment (public - no auth, served to end users)
   app.get('/lp/:slug', (req, res) => {

@@ -4,6 +4,10 @@
  * All campaigns created as PAUSED by default (explicit activation required).
  */
 
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('campaign-orchestrator');
+
 export class CampaignOrchestrator {
   constructor(metaApi, creativeStudio) {
     this.meta = metaApi;
@@ -19,6 +23,7 @@ export class CampaignOrchestrator {
     objective = 'OUTCOME_TRAFFIC', targeting, dailyBudget,
     landingUrl, platform = 'meta', format = 'single_image',
   }) {
+    log.info('Creating full campaign', { product, objective, platform });
     const steps = [];
     const result = { campaignId: null, adsetId: null, creativeId: null, adId: null, steps };
 
@@ -89,9 +94,11 @@ export class CampaignOrchestrator {
         allCopies: aiResult.copies,
       };
 
+      log.info('Campaign creation completed', { campaignId: result.campaignId, adsetId: result.adsetId, adId: result.adId });
       return result;
 
     } catch (err) {
+      log.error('Campaign creation failed', { error: err.message });
       // Mark current step as failed
       if (steps.length > 0) {
         const lastStep = steps[steps.length - 1];
@@ -105,7 +112,12 @@ export class CampaignOrchestrator {
 
       // Cleanup: delete partially created objects
       if (result.campaignId) {
-        try { await this.meta.updateCampaign(result.campaignId, { status: 'DELETED' }); } catch {}
+        try {
+          await this.meta.updateCampaign(result.campaignId, { status: 'DELETED' });
+          log.info('Cleaned up partially created campaign', { campaignId: result.campaignId });
+        } catch (cleanupErr) {
+          log.error('Failed to cleanup campaign', { campaignId: result.campaignId, error: cleanupErr.message });
+        }
       }
 
       return result;

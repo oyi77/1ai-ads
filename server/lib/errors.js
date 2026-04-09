@@ -26,3 +26,27 @@ export class NotFoundError extends ApiError {
     this.name = 'NotFoundError';
   }
 }
+
+export class PlatformError extends Error {
+  constructor(message, platform, code = null) {
+    super(message);
+    this.name = 'PlatformError';
+    this.platform = platform;
+    this.code = code;
+  }
+}
+
+export class ConfigurationError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ConfigurationError';
+  }
+}
+
+export class RateLimitError extends Error {
+  constructor(message, retryAfter = null) {
+    super(message);
+    this.name = 'RateLimitError';
+    this.retryAfter = retryAfter;
+  }
+}

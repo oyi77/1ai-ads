@@ -1,6 +1,10 @@
 // Legacy utility exports - kept for backward compatibility with existing tests.
 // Real implementations live in llm-client.js, ad-generator.js, landing-generator.js
 
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('ai');
+
 export const ANTI_HALLUCINATION_RULES = `
 STRICT RULES FOR LANDING PAGE GENERATION:
 1. NO <small> tags as headers
@@ -29,7 +33,8 @@ export function parseJsonResponse(raw) {
   try {
     const jsonMatch = raw.match(/```json\n([\s\S]*?)\n```/) || raw.match(/```\n([\s\S]*?)\n```/);
     return jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(raw);
-  } catch {
+  } catch (err) {
+    log.error('Failed to parse AI response as JSON', { error: err.message });
     return { error: 'Failed to parse AI response as JSON', raw_content: raw };
   }
 }

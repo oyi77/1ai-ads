@@ -13,7 +13,8 @@ export async function renderSettings(el) {
     isTestingConnection: false,
     isFetchingModels: false,
     isTestingPrompt: false,
-    isTestingAccount: {} 
+    isTestingAccount: {},
+    planDetails: null
   };
 
   const loadData = async () => {
@@ -21,13 +22,15 @@ export async function renderSettings(el) {
       const results = await Promise.allSettled([
         api.get('/settings/accounts'),
         api.get('/mcp/status'),
-        api.get('/settings/ai')
+        api.get('/settings/ai'),
+        api.get('/settings/plan')
       ]);
 
       if (results[0].status === 'fulfilled') state.accounts = results[0].value.data;
       if (results[1].status === 'fulfilled') state.mcpStatus = results[1].value.data;
       if (results[2].status === 'fulfilled') state.aiConfig = results[2].value.data;
-      
+      if (results[3].status === 'fulfilled') state.planDetails = results[3].value.data;
+
       state.platformAccounts = { meta: [], google: [], tiktok: [], scalev: [], x: [] };
       state.accounts.forEach(acc => {
         if (state.platformAccounts[acc.platform]) {
@@ -80,6 +83,7 @@ export async function renderSettings(el) {
 
     if (state.activeSection === 'accounts') attachAccountHandlers();
     if (state.activeSection === 'ai') attachAIHandlers();
+    if (state.activeSection === 'billing') attachBillingHandlers();
   }
 
   function renderSection() {
@@ -87,7 +91,7 @@ export async function renderSettings(el) {
       case 'accounts': return renderAccountsSection();
       case 'security': return `<h2 class="text-2xl font-bold mb-6 text-white">Security Settings</h2><div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6"><div class="space-y-4 max-w-sm"><div><label class="block text-sm text-slate-400 mb-1">New Password</label><input type="password" class="w-full p-3 bg-[#0d1117] rounded-lg border border-[#30363d] text-white"></div><button class="bg-[#21262d] text-[#c9d1d9] border border-[#30363d] px-6 py-2 rounded-lg font-bold">Update Password</button></div></div>`;
       case 'ai': return renderAISection();
-      case 'billing': return `<h2 class="text-2xl font-bold mb-6 text-white">Subscription</h2><div class="bg-gradient-to-br from-[#161b22] to-[#0d1117] border border-[#58a6ff]/30 rounded-xl p-8 text-center text-white"><h3 class="text-xl font-bold mb-2">Free Starter Plan</h3><button class="bg-[#58a6ff] px-8 py-3 rounded-lg font-bold">View Plans</button></div>`;
+      case 'billing': return renderBillingSection();
       default: return '';
     }
   }
@@ -279,6 +283,83 @@ export async function renderSettings(el) {
     }));
   }
 
+  function renderBillingSection() {
+    const plan = state.planDetails;
+    if (!plan) {
+      return `<h2 class="text-2xl font-bold mb-6 text-white">Subscription</h2><div class="bg-gradient-to-br from-[#161b22] to-[#0d1117] border border-[#58a6ff]/30 rounded-xl p-8 text-center text-white"><h3 class="text-xl font-bold mb-2">Loading...</h3></div>`;
+    }
+
+    const features = [
+      { key: 'basic_ads', label: 'Basic Ad Creation', icon: '📢' },
+      { key: 'analytics', label: 'Analytics Dashboard', icon: '📊' },
+      { key: 'ai_generation', label: 'AI Ad Generation', icon: '🤖' },
+      { key: 'competitor_spy', label: 'Competitor Spy', icon: '🕵️' },
+      { key: 'auto_optimization', label: 'Auto Optimization', icon: '⚡' },
+      { key: 'api_access', label: 'API Access', icon: '🔌' },
+    ];
+
+    const limits = [
+      { label: 'Max Ads', value: plan.maxAds === -1 ? 'Unlimited' : plan.maxAds },
+      { label: 'Max Campaigns', value: plan.maxCampaigns === -1 ? 'Unlimited' : plan.maxCampaigns },
+      { label: 'Platform Accounts', value: plan.maxPlatformAccounts === -1 ? 'Unlimited' : plan.maxPlatformAccounts },
+    ];
+
+    return `
+      <h2 class="text-2xl font-bold mb-6 text-white">Subscription</h2>
+      <div class="grid gap-6">
+        <div class="bg-gradient-to-br from-[#161b22] to-[#0d1117] border border-[#58a6ff]/30 rounded-xl p-8">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h3 class="text-2xl font-bold text-white">${plan.name} Plan</h3>
+              ${plan.isAdmin ? '<span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold">ADMIN ACCESS</span>' : ''}
+            </div>
+            <div class="text-4xl font-black text-sky-400">${plan.tier}</div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            ${limits.map(l => `
+              <div class="bg-[#0d1117] rounded-lg p-4 border border-[#30363d]">
+                <div class="text-xs text-slate-400 uppercase font-bold mb-1">${l.label}</div>
+                <div class="text-lg font-bold text-white">${l.value}</div>
+              </div>
+            `).join('')}
+          </div>
+
+          <h4 class="text-lg font-bold text-white mb-4">Included Features</h4>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            ${features.map(f => `
+              <div class="flex items-center gap-2 ${plan.features.includes(f.key) ? 'text-emerald-400' : 'text-slate-600'}">
+                <span class="text-xl">${f.icon}</span>
+                <span class="text-sm font-medium">${f.label}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6">
+          <h4 class="text-lg font-bold text-white mb-4">Upgrade Your Plan</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            ${['Free', 'Pro', 'Enterprise'].map((p, i) => `
+              <div class="bg-[#0d1117] rounded-lg p-4 border ${i + 1 === plan.tier ? 'border-sky-500 ring-2 ring-sky-500/20' : 'border-[#30363d]'}">
+                <h5 class="text-lg font-bold text-white mb-2">${p}</h5>
+                <div class="text-2xl font-black ${i + 1 === plan.tier ? 'text-sky-400' : 'text-slate-500'} mb-4">
+                  ${['Basic', 'Pro', 'Enterprise'][i]}
+                </div>
+                <ul class="space-y-2 text-sm text-slate-400">
+                  <li>✓ ${i === 0 ? '5 Ads' : i === 1 ? '50 Ads' : 'Unlimited'}</li>
+                  <li>✓ ${i === 0 ? '2 Campaigns' : i === 1 ? '10 Campaigns' : 'Unlimited'}</li>
+                  <li>✓ ${i === 0 ? '1 Platform' : i === 1 ? '3 Platforms' : 'All Platforms'}</li>
+                </ul>
+                ${i + 1 > plan.tier ? `<button data-upgrade-plan="${i === 1 ? 'plan_pro' : 'plan_enterprise'}" class="btn-upgrade-${i === 1 ? 'pro' : 'enterprise'} w-full mt-4 bg-[#58a6ff] hover:bg-sky-500 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors">Upgrade</button>` : '<button disabled class="w-full mt-4 bg-[#21262d] text-slate-500 px-4 py-2 rounded-lg font-bold text-sm cursor-not-allowed">Current Plan</button>'}
+              </div>
+            `).join('')}
+          </div>
+          <div id="billing-error" class="hidden mt-4 p-4 bg-red-900/20 border border-red-500/30 rounded-lg text-red-400 text-sm"></div>
+        </div>
+      </div>
+    `;
+  }
+
   function attachAIHandlers() {
     const form = el.querySelector('#ai-config-form'); if (!form) return;
     form.addEventListener('submit', async (e) => {
@@ -304,6 +385,58 @@ export async function renderSettings(el) {
       state.isTestingPrompt = true; render();
       try { const res = await api.post('/settings/ai/test-prompt', { prompt: p }); state.testPromptResult = res.data; }
       catch (err) { alert(err.message); } finally { state.isTestingPrompt = false; render(); }
+    });
+  }
+
+  function attachBillingHandlers() {
+    const errorEl = el.querySelector('#billing-error');
+    el.querySelectorAll('[data-upgrade-plan]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const planId = btn.dataset.upgradePlan;
+        const token = localStorage.getItem('adforge_token');
+
+        if (!token) {
+          if (errorEl) {
+            errorEl.textContent = 'You must be logged in to upgrade your plan';
+            errorEl.classList.remove('hidden');
+          }
+          return;
+        }
+
+        btn.disabled = true;
+        btn.classList.add('loading');
+        const originalText = btn.textContent;
+        btn.textContent = 'Processing...';
+
+        try {
+          const res = await fetch('/api/payments', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ planId })
+          });
+
+          const data = await res.json();
+
+          if (data.success && data.data?.checkoutUrl) {
+            window.location.href = data.data.checkoutUrl;
+          } else {
+            throw new Error(data.error || 'Failed to initiate payment');
+          }
+        } catch (err) {
+          console.error('Payment initiation failed:', err);
+          if (errorEl) {
+            errorEl.textContent = err.message || 'Failed to initiate payment. Please try again.';
+            errorEl.classList.remove('hidden');
+          }
+        } finally {
+          btn.disabled = false;
+          btn.classList.remove('loading');
+          btn.textContent = originalText;
+        }
+      });
     });
   }
   render();

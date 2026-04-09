@@ -22,4 +22,26 @@ export class UsersRepository {
     this.db.prepare('INSERT INTO users (id, username, email, password_hash, confirmed) VALUES (?, ?, ?, ?, ?)').run(id, username, email, password_hash, confirmed);
     return id;
   }
+
+  update(id, data) {
+    const existing = this.findById(id);
+    if (!existing) return null;
+
+    const fields = [];
+    const params = [];
+    const updatable = ['username', 'email', 'password_hash', 'role', 'plan', 'confirmed'];
+
+    for (const field of updatable) {
+      if (data[field] !== undefined) {
+        fields.push(`${field} = ?`);
+        params.push(data[field]);
+      }
+    }
+
+    if (fields.length === 0) return existing;
+
+    params.push(id);
+    this.db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...params);
+    return this.findById(id);
+  }
 }

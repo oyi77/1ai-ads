@@ -18,8 +18,12 @@ export class PaymentsRepository {
     return this.db.prepare('SELECT * FROM payments WHERE id = ?').get(id);
   }
 
-  findByUserId(userId) {
-    return this.db.prepare('SELECT * FROM payments WHERE user_id = ? ORDER BY created_at DESC').all(userId);
+  findByUserId(userId, { limit } = {}) {
+    let query = 'SELECT * FROM payments WHERE user_id = ? ORDER BY created_at DESC';
+    if (limit) {
+      query += ` LIMIT ${limit}`;
+    }
+    return this.db.prepare(query).all(userId);
   }
 
   findByOrderId(orderId) {

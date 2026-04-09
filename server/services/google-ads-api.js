@@ -1,5 +1,8 @@
 import { safeFetch } from '../lib/platform-client.js';
+import { createLogger } from '../lib/logger.js';
+import { ConfigurationError, PlatformError } from '../lib/errors.js';
 
+const log = createLogger('google-ads-api');
 const BASE = 'https://googleads.googleapis.com/v18';
 
 export class GoogleAdsAPI {
@@ -10,10 +13,10 @@ export class GoogleAdsAPI {
   _getConfig() {
     const creds = this.settingsRepo.getCredentials('google');
     if (!creds?.developer_token) {
-      throw new Error('Google Ads developer token not configured. Go to Settings > Google Ads. Get one at Google Ads > Tools > API Center.');
+      throw new ConfigurationError('Google Ads developer token not configured. Go to Settings > Google Ads. Get one at Google Ads > Tools > API Center.');
     }
     if (!creds?.oauth_token) {
-      throw new Error('Google Ads OAuth token not configured. Complete OAuth flow in Settings.');
+      throw new ConfigurationError('Google Ads OAuth token not configured. Complete OAuth flow in Settings.');
     }
     return creds;
   }
@@ -90,6 +93,7 @@ export class GoogleAdsAPI {
   }
 
   async getCampaigns(customerId) {
+    log.debug('Fetching Google Ads campaigns', { customerId });
     return this._query(customerId, `
       SELECT campaign.id, campaign.name, campaign.status, campaign_budget.amount_micros,
              campaign.advertising_channel_type

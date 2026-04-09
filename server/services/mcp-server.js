@@ -3,6 +3,9 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('mcp-server');
 
 export function createAdForgeMCPServer(campaignsRepo, landingRepo, adsRepo) {
   const server = new Server(

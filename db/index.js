@@ -31,6 +31,12 @@ export function createDatabase(dbPath) {
    if (!userCols.includes('confirmed')) {
      try { db.exec('ALTER TABLE users ADD COLUMN confirmed BOOLEAN DEFAULT 0;'); } catch (e) { console.warn('Migration warning (confirmed):', e.message); }
    }
+   if (!userCols.includes('role')) {
+     try { db.exec('ALTER TABLE users ADD COLUMN role TEXT DEFAULT "user";'); } catch (e) { console.warn('Migration warning (role):', e.message); }
+   }
+   if (!userCols.includes('plan')) {
+     try { db.exec('ALTER TABLE users ADD COLUMN plan TEXT DEFAULT "free";'); } catch (e) { console.warn('Migration warning (plan):', e.message); }
+   }
    // Backfill null emails for existing users
    try { db.exec("UPDATE users SET email = username || '@adforge.local' WHERE email IS NULL OR email = ''"); } catch (e) { console.warn('Backfill warning (email):', e.message); }
     // Backfill confirmed for admin

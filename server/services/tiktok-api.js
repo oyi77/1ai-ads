@@ -1,5 +1,8 @@
 import { safeFetch } from '../lib/platform-client.js';
+import { createLogger } from '../lib/logger.js';
+import { ConfigurationError, PlatformError } from '../lib/errors.js';
 
+const log = createLogger('tiktok-api');
 const BASE = 'https://business-api.tiktok.com/open_api/v1.3';
 
 export class TikTokAdsAPI {
@@ -10,7 +13,7 @@ export class TikTokAdsAPI {
   _getToken() {
     const creds = this.settingsRepo.getCredentials('tiktok');
     if (!creds?.access_token) {
-      throw new Error('TikTok access token not configured. Go to Settings > TikTok to add it. Get one at business-api.tiktok.com/portal');
+      throw new ConfigurationError('TikTok access token not configured. Go to Settings > TikTok to add it. Get one at business-api.tiktok.com/portal');
     }
     return creds.access_token;
   }
@@ -77,6 +80,7 @@ export class TikTokAdsAPI {
   }
 
   async getCampaigns(advertiserId, { page = 1, pageSize = 50 } = {}) {
+    log.debug('Fetching TikTok campaigns', { advertiserId, page });
     return this._get('/campaign/get/', {
       advertiser_id: advertiserId,
       page,

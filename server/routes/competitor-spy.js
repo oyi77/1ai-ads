@@ -75,5 +75,78 @@ export function createCompetitorSpyRouter(competitorsRepo) {
     }
   });
 
+  // GET /:competitorId/ads - Get active competitor ads
+  router.get('/:competitorId/ads', async (req, res) => {
+    try {
+      const { competitorId } = req.params;
+      const { platform } = req.query;
+
+      const snapshots = competitorsRepo.findByUrl(competitorId);
+      if (!snapshots || snapshots.length === 0) {
+        return res.status(404).json({ success: false, error: 'No data found for this competitor' });
+      }
+
+      const latestSnapshot = snapshots[0];
+      const ads = latestSnapshot.ad_data?.ads || [];
+
+      const activeAds = platform
+        ? ads.filter(ad => ad.status === 'active' && ad.platform === platform)
+        : ads.filter(ad => ad.status === 'active');
+
+      res.json({ success: true, data: activeAds, total: activeAds.length });
+    } catch (e) {
+      log.error('Failed to fetch competitor ads', { competitorId: req.params.competitorId, error: e.message });
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // GET /:competitorId/metrics - Get performance metrics
+  router.get('/:competitorId/metrics', async (req, res) => {
+    try {
+      const { competitorId } = req.params;
+
+      const { CompetitorSpyService } = await import('../services/competitor-spy.js');
+      const competitorSpyService = new CompetitorSpyService(competitorsRepo.db);
+      const metrics = await competitorSpyService.getCompetitorMetrics(competitorId);
+
+      if (!metrics.hasData) {
+        return res.status(404).json({ success: false, error: metrics.message });
+      }
+
+      res.json({ success: true, data: metrics });
+    } catch (e) {
+      log.error('Failed to fetch competitor metrics', { competitorId: req.params.competitorId, error: e.message });
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /:competitorId/analyze - Trigger strategy analysis
+  router.post('/:competitorId/analyze', async (req, res) => {
+    try {
+      const { competitorId } = req.params;
+      const { platform } = req.body || {};
+      const userId = req.user?.id || 'anonymous';
+
+      const { CompetitorSpyService } = await import('../services/competitor-spy.js');
+      const { AdIntelligenceService } = await import('../services/ad-intelligence.js');
+
+      const competitorSpyService = new CompetitorSpyService(
+        competitorsRepo.db,
+        new AdIntelligenceService()
+      );
+
+      const result = await competitorSpyService.monitorCompetitor(competitorId, userId, { platform });
+
+      if (!result.success) {
+        return res.status(500).json({ success: false, error: result.error });
+      }
+
+      res.json({ success: true, data: result });
+    } catch (e) {
+      log.error('Failed to analyze competitor', { competitorId: req.params.competitorId, error: e.message });
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
   return router;
 }

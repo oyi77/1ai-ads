@@ -1,154 +1,123 @@
-import { darkPalettes, lightPalettes } from '../../src/design/colors.js';
-import { escapeHtml, validateUrl } from '../lib/escape.js';
+export function renderLandingPage({ theme, product_name, price, benefits, pain_points, cta_primary, cta_secondary, wa_link, checkout_link }) {
+  const themeStyles = {
+    dark: {
+      bg: '#0a0a0a',
+      text: '#ffffff',
+      accent: '#6366f1',
+      secondary: '#374151'
+    },
+    light: {
+      bg: '#ffffff',
+      text: '#111827',
+      accent: '#6366f1',
+      secondary: '#9ca3af'
+    }
+  };
 
-function safeParseArray(val) {
-  if (Array.isArray(val)) return val;
-  if (typeof val !== 'string') return [];
-  try { const parsed = JSON.parse(val); return Array.isArray(parsed) ? parsed : []; }
-  catch { return []; }
-}
-
-function safeUrl(url, fallback = '#') {
-  if (!url) return fallback;
-  return validateUrl(url) ? escapeHtml(url) : fallback;
-}
-
-// Uncodixfy: Strict template rules to prevent AI hallucination
-export const templates = {
-  dark: {
-    colors: darkPalettes.void,
-    name: 'Void Space'
-  },
-  slate: {
-    colors: darkPalettes.slate,
-    name: 'Slate Noir'
-  },
-  obsidian: {
-    colors: darkPalettes.obsidian,
-    name: 'Obsidian Depth'
-  },
-  light: {
-    colors: lightPalettes.cloud,
-    name: 'Cloud Canvas'
-  }
-};
-
-// Anti-hallucination: Strict template rendering
-export function renderLandingPage(data) {
-  const t = templates[data.theme] || templates.dark;
-  const c = t.colors;
-  
-  // Uncodixfy rules enforced:
-  // - No <small> headers
-  // - No rounded-[20px+] 
-  // - No glassmorphism
-  // - No gradient backgrounds
-  // - No decorative copy
-  // - Max border-radius: 12px
-  // - System fonts only
-  // - Predefined color palette
-  
-  const benefits = safeParseArray(data.benefits);
-  const painPoints = safeParseArray(data.pain_points);
-
-  const productName = escapeHtml(data.product_name || 'Produk');
-  const price = escapeHtml(data.price || '');
-  const ctaPrimary = escapeHtml(data.cta_primary || 'Beli Sekarang');
-  const ctaSecondary = data.cta_secondary ? escapeHtml(data.cta_secondary) : '';
-  const checkoutLink = safeUrl(data.checkout_link);
-  const waLink = safeUrl(data.wa_link);
+  const styles = themeStyles[theme] || themeStyles.dark;
+  const benefitsList = Array.isArray(benefits) ? benefits : JSON.parse(benefits || '[]');
+  const painPointsList = Array.isArray(pain_points) ? pain_points : JSON.parse(pain_points || '[]');
 
   return `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${productName}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>${product_name} | Exclusive Offer</title>
   <style>
-    :root {
-      --bg: ${c.bg};
-      --surface: ${c.surface};
-      --primary: ${c.primary};
-      --text: ${c.text};
-    }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-    .card {
-      background: var(--surface);
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-    .btn {
-      background: var(--primary);
-      border-radius: 8px;
-      padding: 12px 24px;
-      font-weight: 500;
-      color: ${c.bg};
-      text-decoration: none;
-      display: inline-block;
-      min-height: 44px;
-      line-height: 20px;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: ${styles.bg}; color: ${styles.text}; line-height: 1.6; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+    .hero { text-align: center; padding: 100px 20px; }
+    .hero h1 { font-size: 3rem; margin-bottom: 20px; background: linear-gradient(135deg, ${styles.accent}, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p { font-size: 1.25rem; color: ${styles.secondary}; margin-bottom: 30px; }
+    .price-tag { font-size: 2.5rem; font-weight: bold; color: ${styles.accent}; margin: 20px 0; }
+    .btn { display: inline-block; padding: 16px 40px; font-size: 1.1rem; font-weight: 600; border-radius: 8px; cursor: pointer; text-decoration: none; transition: all 0.3s ease; border: none; margin: 10px; }
+    .btn-primary { background: ${styles.accent}; color: white; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3); }
+    .btn-secondary { background: transparent; color: ${styles.text}; border: 2px solid ${styles.accent}; }
+    .btn-secondary:hover { background: ${styles.accent}; color: white; }
+    .section { padding: 80px 20px; }
+    .section-title { text-align: center; font-size: 2.5rem; margin-bottom: 50px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+    .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 30px; }
+    .card h3 { margin-bottom: 15px; color: ${styles.accent}; }
+    .pain-points .card { border-color: rgba(239, 68, 68, 0.3); }
+    .pain-points h3 { color: #ef4444; }
+    .urgency-bar { background: linear-gradient(90deg, ${styles.accent}, #8b5cf6); padding: 15px; text-align: center; font-weight: 600; }
+    .cta-section { text-align: center; padding: 100px 20px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1)); }
+    @media (max-width: 768px) { .hero h1 { font-size: 2rem; } .price-tag { font-size: 2rem; } }
   </style>
 </head>
 <body>
-  <div class="min-h-screen">
-    <!-- Hero Section -->
-    <section class="p-8 text-center">
-      <h1 class="text-3xl font-bold">${productName}</h1>
-      <p class="mt-2 text-lg">${price}</p>
-    </section>
+  <div class="urgency-bar">🔥 Limited Time Offer - Act Now!</div>
 
-    <!-- Pain Points Section -->
-    <section class="p-8">
-      <h2 class="text-xl font-semibold mb-4">Masalah yang Dihadapi</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        ${painPoints.map(p => `<div class="card p-4">${escapeHtml(p)}</div>`).join('')}
+  <section class="hero">
+    <div class="container">
+      <h1>${product_name}</h1>
+      <p>Transform your life with our exclusive solution</p>
+      ${price ? `<div class="price-tag">${price}</div>` : ''}
+      <div>
+        ${cta_primary ? `<a href="${checkout_link || '#'}" class="btn btn-primary">${cta_primary}</a>` : ''}
+        ${cta_secondary ? `<a href="${wa_link || '#'}" class="btn btn-secondary">${cta_secondary}</a>` : ''}
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- Benefits Section -->
-    <section class="p-8">
-      <h2 class="text-xl font-semibold mb-4">Keunggulan</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        ${benefits.map(b => `<div class="card p-4">${escapeHtml(b)}</div>`).join('')}
+  ${painPointsList.length > 0 ? `
+  <section class="section pain-points">
+    <div class="container">
+      <h2 class="section-title">Struggling With These Problems?</h2>
+      <div class="grid">
+        ${painPointsList.map(point => `
+          <div class="card">
+            <h3>❌ ${point}</h3>
+            <p>You're not alone - thousands face this daily challenge.</p>
+          </div>
+        `).join('')}
       </div>
-    </section>
+    </div>
+  </section>
+  ` : ''}
 
-    <!-- CTA Section -->
-    <section class="p-8 text-center">
-      <a href="${checkoutLink}" class="btn">
-        ${ctaPrimary}
-      </a>
-      ${ctaSecondary ? `<a href="${waLink}" class="btn ml-4" style="background: var(--surface); border: 1px solid var(--primary);">${ctaSecondary}</a>` : ''}
-    </section>
+  ${benefitsList.length > 0 ? `
+  <section class="section benefits">
+    <div class="container">
+      <h2 class="section-title">Why Choose ${product_name}?</h2>
+      <div class="grid">
+        ${benefitsList.map(benefit => `
+          <div class="card">
+            <h3>✨ ${benefit}</h3>
+            <p>Experience the difference with our proven solution.</p>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </section>
+  ` : ''}
 
-    ${data.scalev_embed_url ? `
-    <!-- Scalev Checkout Section -->
-    <section class="p-8">
-      <h2 class="text-xl font-semibold mb-4 text-center">Order Sekarang</h2>
-      <iframe
-        id="scalev-checkout"
-        width="100%"
-        frameborder="0"
-        style="min-height: 500px; border-radius: 12px;"
-        src="${safeUrl(data.scalev_embed_url)}">
-      </iframe>
-      <script>
-        window.addEventListener('message', function(e) {
-          var iframe = document.getElementById('scalev-checkout');
-          if (e.data && e.data.height) {
-            iframe.style.height = e.data.height + 'px';
-          }
-        });
-      </script>
-    </section>
-    ` : ''}
-  </div>
+  <section class="cta-section">
+    <div class="container">
+      <h2>Ready to Get Started?</h2>
+      <p style="margin: 20px 0; color: ${styles.secondary};">Join thousands of satisfied customers today</p>
+      <div>
+        ${cta_primary ? `<a href="${checkout_link || '#'}" class="btn btn-primary">${cta_primary}</a>` : ''}
+        ${cta_secondary ? `<a href="${wa_link || '#'}" class="btn btn-secondary">${cta_secondary}</a>` : ''}
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        if (this.getAttribute('href') === '#') {
+          e.preventDefault();
+          alert('Please configure your checkout or WhatsApp link!');
+        }
+      });
+    });
+  </script>
 </body>
 </html>`;
 }

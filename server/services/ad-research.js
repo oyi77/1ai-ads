@@ -7,6 +7,10 @@
  * Spend/impressions data only available for political/EU ads.
  */
 
+import { createLogger } from '../lib/logger.js';
+import { ConfigurationError, PlatformError } from '../lib/errors.js';
+
+const log = createLogger('ad-research');
 const GRAPH_API_VERSION = 'v21.0';
 const GRAPH_API_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
 
@@ -26,7 +30,7 @@ export class AdResearchService {
   _getToken() {
     const creds = this.settingsRepo.getCredentials('meta');
     if (!creds?.access_token) {
-      throw new Error('Meta access token not configured. Go to Settings to add it.');
+      throw new ConfigurationError('Meta access token not configured. Go to Settings to add it.');
     }
     return creds.access_token;
   }
@@ -35,7 +39,12 @@ export class AdResearchService {
    * Search ads by keyword across the Meta Ad Library.
    */
   async searchAds({ query, country = 'ID', activeStatus = 'ALL', mediaType, limit = 50 }) {
-    if (!query) throw new Error('Search query is required');
+    if (!query) {
+      log.error('Search query is required');
+      throw new Error('Search query is required');
+    }
+
+    log.info('Searching Meta Ad Library', { query, country, limit });
 
     const token = this._getToken();
     const params = new URLSearchParams({
@@ -57,22 +66,26 @@ export class AdResearchService {
     const data = await res.json();
 
     if (data.error) {
-      throw new Error(`Meta API error: ${data.error.message}`);
+      log.error('Meta API error in ad search', { error: data.error.message, code: data.error.code });
+      throw new PlatformError(`Meta API error: ${data.error.message}`, 'meta', data.error.code);
     }
 
-    return {
+    const result = {
       ads: (data.data || []).map(this._formatAd),
       total: data.data?.length || 0,
       hasMore: !!data.paging?.next,
       nextCursor: data.paging?.cursors?.after || null,
     };
+
+    log.info('Ad search completed', { total: result.total, hasMore: result.hasMore });
+    return result;
   }
 
   /**
    * Search ads by a specific competitor page ID.
    */
   async searchByPage({ pageId, country = 'ID', activeStatus = 'ACTIVE', limit = 100 }) {
-    if (!pageId) throw new Error('Page ID is required');
+    if (!pageId) throw new ConfigurationError('Page ID is required');
 
     const token = this._getToken();
     const params = new URLSearchParams({
@@ -90,7 +103,7 @@ export class AdResearchService {
     const data = await res.json();
 
     if (data.error) {
-      throw new Error(`Meta API error: ${data.error.message}`);
+      throw new PlatformError(`Meta API error: ${data.error.message}`, 'meta', data.error.code);
     }
 
     return {
@@ -104,6 +117,8 @@ export class AdResearchService {
    * Resolve a Facebook page name/URL to a page ID.
    */
   async resolvePageId(pageNameOrUrl) {
+    log.info('Resolving Facebook page ID', { input: pageNameOrUrl });
+
     const token = this._getToken();
 
     // If it looks like a URL, extract the page name
@@ -116,15 +131,19 @@ export class AdResearchService {
     const data = await res.json();
 
     if (data.error) {
-      throw new Error(`Could not resolve page: ${data.error.message}`);
+      log.error('Failed to resolve Facebook page', { error: data.error.message });
+      throw new PlatformError(`Could not resolve page: ${data.error.message}`, 'meta', data.error.code);
     }
 
-    return {
+    const result = {
       id: data.id,
       name: data.name,
       fanCount: data.fan_count,
       category: data.category,
     };
+
+    log.info('Facebook page resolved', { name: result.name, id: result.id });
+    return result;
   }
 
   _formatAd(ad) {

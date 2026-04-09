@@ -1,108 +1,65 @@
-import { Router } from 'express';
-import { validateLandingPage, validateRequired } from '../lib/validate.js';
-import { renderLandingPage } from '../services/templates.js';
+import express from 'express';
 
 export function createLandingRouter(landingRepo, landingGenerator) {
-  const router = Router();
+  const router = express.Router();
 
+  // GET /api/landing - List all landing pages
   router.get('/', (req, res) => {
-    const { page = 1, limit = 20 } = req.query;
-    const result = landingRepo.findAll({ page: +page, limit: +limit });
-    res.json({ success: true, ...result });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const result = landingRepo.findAll({ page, limit });
+    res.json({ success: true, data: result.data, total: result.total, page: result.page, limit: result.limit });
   });
 
-  router.get('/:id/export', (req, res) => {
-    const page = landingRepo.findById(req.params.id);
-    if (!page) return res.status(404).json({ success: false, error: 'Not found' });
-
-    const html = page.html_output || renderLandingPage({
-      theme: page.theme,
-      product_name: page.product_name,
-      price: page.price,
-      benefits: page.benefits,
-      pain_points: page.pain_points,
-      cta_primary: page.cta_primary,
-      cta_secondary: page.cta_secondary,
-      wa_link: page.wa_link,
-      checkout_link: page.checkout_link,
-    });
-
-    res.setHeader('Content-Type', 'text/html');
-    res.setHeader('Content-Disposition', `attachment; filename="${page.name || 'landing-page'}.html"`);
-    res.send(html);
-  });
-
+  // GET /api/landing/:id - Get single landing page
   router.get('/:id', (req, res) => {
-    const page = landingRepo.findById(req.params.id);
-    if (!page) return res.status(404).json({ success: false, error: 'Not found' });
+    const page = landingRepo.getById(req.params.id);
+    if (!page) {
+      return res.status(404).json({ success: false, error: 'Landing page not found' });
+    }
     res.json({ success: true, data: page });
   });
 
-  router.post('/', (req, res) => {
-    const v = validateLandingPage(req.body);
-    if (!v.valid) return res.status(400).json({ success: false, error: v.error });
-
-    const id = landingRepo.create(req.body);
-    res.json({ success: true, data: { id } });
+  // POST /api/landing - Generate new landing page
+  router.post('/', async (req, res) => {
+    try {
+      const { product_name, target, industry, template } = req.body;
+      const generated = await landingGenerator.generate(req.body);
+      const id = landingRepo.create({
+        name: `Landing: ${product_name}`,
+        template: template || 'modern',
+        theme: 'dark',
+        ...generated
+      });
+      const page = landingRepo.getById(id);
+      res.status(201).json({ success: true, data: page });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
+  // PUT /api/landing/:id - Update landing page
   router.put('/:id', (req, res) => {
-    const updated = landingRepo.update(req.params.id, req.body);
-    if (!updated) return res.status(404).json({ success: false, error: 'Not found' });
-    res.json({ success: true, data: updated });
+    const page = landingRepo.update(req.params.id, req.body);
+    if (!page) {
+      return res.status(404).json({ success: false, error: 'Landing page not found' });
+    }
+    res.json({ success: true, data: page });
   });
 
+  // DELETE /api/landing/:id - Delete landing page
   router.delete('/:id', (req, res) => {
-    const removed = landingRepo.remove(req.params.id);
-    if (!removed) return res.status(404).json({ success: false, error: 'Not found' });
+    landingRepo.delete(req.params.id);
     res.json({ success: true });
   });
 
-  // Deploy landing page to live URL
-  router.post('/:id/deploy', (req, res) => {
-    const page = landingRepo.findById(req.params.id);
-    if (!page) return res.status(404).json({ success: false, error: 'Not found' });
-
-    const slug = req.body.slug || page.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const updated = landingRepo.update(req.params.id, { slug, is_published: 1 });
-    if (!updated) return res.status(500).json({ success: false, error: 'Failed to deploy' });
-
-    const liveUrl = `/lp/${slug}`;
-    res.json({ success: true, data: { id: req.params.id, slug, liveUrl, is_published: true } });
-  });
-
-  // Undeploy landing page
-  router.post('/:id/undeploy', (req, res) => {
-    const updated = landingRepo.update(req.params.id, { is_published: 0 });
-    if (!updated) return res.status(404).json({ success: false, error: 'Not found' });
-    res.json({ success: true, data: { id: req.params.id, is_published: false } });
-  });
-
-  router.post('/generate', async (req, res) => {
-    const v = validateRequired(req.body, ['product_name', 'price']);
-    if (!v.valid) return res.status(400).json({ success: false, error: v.error });
-
-    try {
-      const { product_name, price, benefits, cta_primary } = req.body;
-      const html = await landingGenerator.generateLandingPage(product_name, price, benefits, cta_primary);
-      res.json({ success: true, data: { html_output: html } });
-    } catch (e) {
-      res.status(500).json({ success: false, error: e.message });
+  // POST /api/landing/:id/publish - Publish landing page
+  router.post('/:id/publish', (req, res) => {
+    const page = landingRepo.update(req.params.id, { is_published: true });
+    if (!page) {
+      return res.status(404).json({ success: false, error: 'Landing page not found' });
     }
-  });
-
-  router.post('/render', (req, res) => {
-    const { id, theme, product_name, price, benefits, cta_primary, checkout_link, pain_points, cta_secondary, wa_link } = req.body;
-    const html = renderLandingPage({
-      theme: theme || 'dark', product_name, price, benefits, cta_primary, checkout_link, pain_points, cta_secondary, wa_link
-    });
-
-    // If id provided, save the rendered html to the landing page
-    if (id) {
-      landingRepo.update(id, { html_output: html });
-    }
-
-    res.json({ success: true, data: { html_output: html } });
+    res.json({ success: true, data: page });
   });
 
   return router;

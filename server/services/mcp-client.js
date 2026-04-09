@@ -1,5 +1,9 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { createLogger } from '../lib/logger.js';
+import { ConfigurationError, PlatformError } from '../lib/errors.js';
+
+const log = createLogger('mcp-client');
 
 /**
  * Real MCP client manager. Spawns MCP servers as child processes
@@ -16,6 +20,8 @@ export class MCPClientManager {
    * @param {object} credentials - Platform-specific credentials
    */
   async connect(platform, credentials) {
+    log.info('Connecting to MCP server', { platform });
+
     // Disconnect existing if any
     if (this.clients.has(platform)) {
       await this.disconnect(platform);
@@ -23,7 +29,8 @@ export class MCPClientManager {
 
     const config = this._getServerConfig(platform, credentials);
     if (!config) {
-      throw new Error(`Unsupported platform: ${platform}`);
+      log.error('Unsupported platform for MCP', { platform });
+      throw new ConfigurationError(`Unsupported platform: ${platform}`);
     }
 
     const transport = new StdioClientTransport({
@@ -57,6 +64,7 @@ export class MCPClientManager {
         error: null,
       });
 
+      log.info('MCP server connected successfully', { platform, toolCount: toolNames.length });
       return { connected: true, tools: toolNames, toolCount: toolNames.length };
     } catch (err) {
       this.clients.set(platform, {
@@ -66,6 +74,7 @@ export class MCPClientManager {
         tools: [],
         error: err.message,
       });
+      log.error('Failed to connect to MCP server', { platform, error: err.message });
       throw new Error(`Failed to connect to ${platform} MCP: ${err.message}`);
     }
   }
@@ -76,7 +85,12 @@ export class MCPClientManager {
   async disconnect(platform) {
     const entry = this.clients.get(platform);
     if (entry?.client) {
-      try { await entry.client.close(); } catch {}
+      try {
+        await entry.client.close();
+        log.info('MCP server disconnected', { platform });
+      } catch (err) {
+        log.warn('Error closing MCP client', { platform, error: err.message });
+      }
     }
     this.clients.delete(platform);
   }
@@ -87,7 +101,7 @@ export class MCPClientManager {
   async callTool(platform, toolName, args = {}) {
     const entry = this.clients.get(platform);
     if (!entry?.connected || !entry.client) {
-      throw new Error(`${platform} is not connected. Connect first via Settings.`);
+      throw new ConfigurationError(`${platform} is not connected. Connect first via Settings.`);
     }
 
     try {
@@ -113,7 +127,7 @@ export class MCPClientManager {
         entry.connected = false;
         entry.error = 'Connection lost. Reconnect via Settings.';
       }
-      throw new Error(`MCP tool ${toolName} failed: ${err.message}`);
+      throw new PlatformError(`MCP tool ${toolName} failed: ${err.message}`, platform);
     }
   }
 

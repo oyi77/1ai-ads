@@ -5,6 +5,10 @@
  * Docs: https://developers.scalev.id/
  */
 
+import { createLogger } from '../lib/logger.js';
+import { ConfigurationError, PlatformError } from '../lib/errors.js';
+
+const log = createLogger('scalev');
 const SCALEV_API_BASE = 'https://api.scalev.id/v2';
 
 export class ScalevService {
@@ -15,7 +19,7 @@ export class ScalevService {
   _getConfig() {
     const creds = this.settingsRepo.getCredentials('scalev');
     if (!creds?.api_token) {
-      throw new Error('Scalev API token not configured. Go to Settings to add it.');
+      throw new ConfigurationError('Scalev API token not configured. Go to Settings to add it.');
     }
     return {
       token: creds.api_token,
@@ -39,7 +43,7 @@ export class ScalevService {
     const data = await res.json();
 
     if (data.code && data.code !== 200 && data.code !== 201) {
-      throw new Error(`Scalev API error: ${data.status || data.message || 'Unknown error'}`);
+      throw new PlatformError(`Scalev API error: ${data.status || data.message || 'Unknown error'}`, 'scalev', data.code);
     }
 
     return data;
@@ -49,14 +53,18 @@ export class ScalevService {
    * List products from Scalev store.
    */
   async listProducts() {
+    log.debug('Fetching Scalev products');
     const data = await this._request('GET', '/products');
-    return data.data?.results || data.data || [];
+    const products = data.data?.results || data.data || [];
+    log.debug('Scalev products fetched', { count: products.length });
+    return products;
   }
 
   /**
    * Create an order in Scalev (generates checkout link).
    */
   async createOrder({ storeUniqueId, customerName, customerPhone, customerEmail, variantUniqueId, quantity = 1, paymentMethod = 'invoice' }) {
+    log.info('Creating Scalev order', { storeUniqueId, customerEmail, paymentMethod });
     const data = await this._request('POST', '/orders', {
       store_unique_id: storeUniqueId,
       customer_name: customerName,
@@ -68,6 +76,15 @@ export class ScalevService {
       }],
       payment_method: paymentMethod,
     });
+    log.info('Scalev order created', { orderId: data.data?.order_id });
+    return data.data;
+  }
+
+  /**
+   * Get order details from Scalev.
+   */
+  async getOrder(orderId) {
+    const data = await this._request('GET', `/orders/${orderId}`);
     return data.data;
   }
 

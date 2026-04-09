@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
 import config from '../config/index.js';
+import { PlanCheck } from '../lib/plan-check.js';
 
-export function createSettingsRouter(settingsRepo, llmClient) {
+export function createSettingsRouter(settingsRepo, llmClient, db) {
   const router = Router();
+  const planCheck = new PlanCheck(db);
 
   // Get all general settings
   router.get('/', (req, res) => {
@@ -14,6 +16,21 @@ export function createSettingsRouter(settingsRepo, llmClient) {
       safe[key] = value;
     }
     res.json({ success: true, data: safe });
+  });
+
+  // Get user's plan details
+  router.get('/plan', (req, res) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    const planDetails = planCheck.getPlanDetails(userId);
+    if (!planDetails) {
+      return res.status(404).json({ success: false, error: 'Plan not found' });
+    }
+
+    res.json({ success: true, data: planDetails });
   });
 
   router.get('/ai', (req, res) => {

@@ -4,6 +4,10 @@
  * Uses OmniRoute LLM for all generation.
  */
 
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('creative-studio');
+
 const PLATFORM_SPECS = {
   meta: { primaryText: 125, headline: 40, description: 30, imageRatio: '1:1 or 4:5' },
   google: { headline: 30, description: 90, headlineCount: 15, descCount: 4 },
@@ -99,20 +103,31 @@ Generate 4 copy variations (P.A.S, Efek Gravitasi, Hasil x3, Prospects-to-Prospe
     const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
+      log.info('Generating ad package', { product, platform, format });
       const content = await this.llm.call(SYSTEM_PROMPT, userPrompt, { temperature: 0.8, max_tokens: 4000, signal: controller.signal });
       const result = parseJsonSafe(content);
 
-      return {
+      const response = {
         copies: result.copies || [],
         imageDirections: result.imageDirections || [],
         videoScript: result.videoScript || null,
         targetingSuggestions: result.targetingSuggestions || { interests: [], ageRange: { min: 25, max: 55 }, locations: ['Indonesia'] },
         raw: result.error ? content : undefined,
       };
+
+      if (result.error) {
+        log.warn('Ad package generation had parsing errors', { error: result.error });
+      } else {
+        log.info('Ad package generated successfully', { copiesCount: response.copies.length, platform });
+      }
+
+      return response;
     } catch (err) {
       if (err.name === 'AbortError' || err.message?.includes('abort')) {
+        log.warn('Ad package generation timed out', { timeoutMs: this.timeoutMs });
         return { error: 'AI generation timed out after 45 seconds', timeout: true, copies: [], imageDirections: [], targetingSuggestions: { interests: [] } };
       }
+      log.error('Ad package generation failed', { error: err.message });
       throw err;
     } finally {
       clearTimeout(timeoutId);

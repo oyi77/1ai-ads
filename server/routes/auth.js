@@ -37,7 +37,7 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
          confirmed: 1
        });
 
-       const accessToken = generateToken({ id: userId, username });
+       const accessToken = generateToken({ id: userId, username, role: 'user', plan: 'free' });
        const refreshToken = generateRefreshToken({ id: userId, username });
        
        const expiresAt = new Date();
@@ -47,7 +47,7 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
        res.json({
          success: true,
          data: {
-           user: { id: userId, username, email },
+           user: { id: userId, username, email, role: 'user', plan: 'free' },
            accessToken,
            refreshToken
          }
@@ -69,7 +69,7 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
        // Remove any existing refresh tokens for this user to prevent UNIQUE constraint conflicts
        refreshTokensRepo.deleteByUserId(user.id);
 
-       const accessToken = generateToken({ id: user.id, username: user.username });
+       const accessToken = generateToken({ id: user.id, username: user.username, role: user.role || 'user', plan: user.plan || 'free' });
        const refreshToken = generateRefreshToken({ id: user.id, username: user.username });
 
        const expiresAt = new Date();
@@ -79,7 +79,7 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
        res.json({
          success: true,
          data: {
-           user: { id: user.id, username: user.username, email: user.email },
+           user: { id: user.id, username: user.username, email: user.email, role: user.role || 'user', plan: user.plan || 'free' },
            accessToken,
            refreshToken
          }
@@ -113,7 +113,7 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
       if (!user) return res.status(401).json({ success: false, error: 'User not found' });
 
       // Rotate token
-      const newAccessToken = generateToken({ id: user.id, username: user.username });
+      const newAccessToken = generateToken({ id: user.id, username: user.username, role: user.role || 'user', plan: user.plan || 'free' });
       const newRefreshToken = generateRefreshToken({ id: user.id, username: user.username });
 
       refreshTokensRepo.deleteByToken(refreshToken);

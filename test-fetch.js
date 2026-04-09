@@ -1,7 +1,7 @@
 async function run() {
   try {
     const url = 'http://localhost:20128/v1/models';
-    const apiKey = 'sk-f0c1ddf471008e76-2eede9-78bb94ff';
+    const apiKey = process.env.OMNIROUTE_API_KEY;
     const headers = { 'Authorization': `Bearer ${apiKey}` };
     const res = await fetch(url, { headers });
     const text = await res.text();

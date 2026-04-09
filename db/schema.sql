@@ -66,9 +66,35 @@ CREATE TABLE IF NOT EXISTS users (
    username TEXT UNIQUE NOT NULL,
    email TEXT UNIQUE NOT NULL,
    password_hash TEXT NOT NULL,
+   role TEXT DEFAULT 'user',
+   plan TEXT DEFAULT 'free',
    confirmed BOOLEAN DEFAULT 0,
    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
  );
+
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_plan ON users(plan);
+
+CREATE TABLE IF NOT EXISTS plans (
+   id TEXT PRIMARY KEY,
+   name TEXT UNIQUE NOT NULL,
+   tier INTEGER NOT NULL,
+   max_ads INTEGER,
+   max_campaigns INTEGER,
+   max_platform_accounts INTEGER,
+   features TEXT DEFAULT '[]',
+   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_plans_tier ON plans(tier);
+
+-- Insert default plans
+INSERT OR IGNORE INTO plans (id, name, tier, max_ads, max_campaigns, max_platform_accounts, features) VALUES
+  ('plan_free', 'Free', 1, 5, 2, 1, '["basic_ads", "analytics"]'),
+  ('plan_pro', 'Pro', 2, 50, 10, 3, '["basic_ads", "analytics", "ai_generation", "competitor_spy"]'),
+  ('plan_enterprise', 'Enterprise', 3, -1, -1, -1, '["basic_ads", "analytics", "ai_generation", "competitor_spy", "auto_optimization", "api_access"]');
 
 CREATE TABLE IF NOT EXISTS automation_rules (
   id TEXT PRIMARY KEY,
@@ -162,6 +188,24 @@ CREATE TABLE IF NOT EXISTS competitor_snapshots (
 );
 
 CREATE INDEX IF NOT EXISTS idx_competitor_snapshots_url ON competitor_snapshots(url, captured_at);
+
+CREATE TABLE IF NOT EXISTS templates (
+  id TEXT PRIMARY KEY,
+  category TEXT NOT NULL DEFAULT 'general',
+  name TEXT NOT NULL,
+  description TEXT,
+  hook_template TEXT,
+  body_template TEXT,
+  cta_template TEXT,
+  design_config TEXT DEFAULT '{}',
+  thumbnail_url TEXT DEFAULT '',
+  industry TEXT DEFAULT '',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_templates_category ON templates(category);
+CREATE INDEX IF NOT EXISTS idx_templates_industry ON templates(industry);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_ads_platform ON ads(platform);

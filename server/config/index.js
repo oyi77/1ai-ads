@@ -14,6 +14,11 @@ const config = {
   bkHubUrl: process.env.BK_HUB_URL || 'http://localhost:9099',
   competitorUrls: process.env.COMPETITOR_URLS || '',
   trendingExternalSource: process.env.TRENDING_EXTERNAL_SOURCE || 'mock',
+  externalTrendingApi: {
+    url: process.env.EXTERNAL_TRENDING_API_URL || 'https://api.example.com/trending',
+    apiKey: process.env.EXTERNAL_TRENDING_API_KEY || 'placeholder-key',
+    cacheTTL: parseInt(process.env.TRENDING_CACHE_TTL || '3600', 10),
+  },
   logLevel: process.env.LOG_LEVEL || 'info',
 };
 
