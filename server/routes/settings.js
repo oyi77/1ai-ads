@@ -274,6 +274,27 @@ export function createSettingsRouter(settingsRepo, llmClient, db) {
     res.json({ success: true, data: { platform, configured: true } });
   });
 
+  // Get integration configs
+  router.get('/integrations', (req, res) => {
+    const enabled = settingsRepo.get('integration_adspirer_enabled');
+    res.json({
+      success: true,
+      data: {
+        adspirer: { enabled: enabled === true || enabled === 'true' || enabled === 1 },
+      },
+    });
+  });
+
+  // Toggle an integration on/off
+  router.post('/integrations/:name', (req, res) => {
+    const { name } = req.params;
+    const { enabled } = req.body;
+    if (enabled === undefined) return res.status(400).json({ success: false, error: 'enabled is required' });
+    if (!['adspirer'].includes(name)) return res.status(400).json({ success: false, error: `Unknown integration: ${name}` });
+    settingsRepo.set(`integration_${name}_enabled`, Boolean(enabled));
+    res.json({ success: true, data: { [name]: { enabled: Boolean(enabled) } } });
+  });
+
   // Save a general setting
   router.put('/:key', (req, res) => {
     const { value } = req.body;

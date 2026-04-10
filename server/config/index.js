@@ -22,6 +22,8 @@ const config = {
   logLevel: process.env.LOG_LEVEL || 'info',
   adSpireApiKey: process.env.AD_SPIRE_API_KEY || '',
   adSpireApiUrl: process.env.AD_SPIRE_API_URL || 'https://api.adspire.io/v1',
+  adspirerClientId: process.env.ADSPIRER_CLIENT_ID || '',
+  adspirerRedirectUri: process.env.ADSPIRER_REDIRECT_URI || 'http://localhost:5173/api/adspirer/auth/callback',
   similarwebApiKey: process.env.SIMILARWEB_API_KEY || '',
   rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
   rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),

@@ -47,6 +47,9 @@ import { PaymentService } from './services/payments.js';
 import { LearningService } from './services/learning.js';
 import { createLearningRouter } from './routes/learning.js';
 import { createTemplatesRouter } from './routes/templates.js';
+import { AdspirerMcpClient } from './services/adspirer-mcp-client.js';
+import { createAdspirerRouter } from './routes/adspirer.js';
+import { PlatformAccountsRepository } from './repositories/platform-accounts.js';
 import rateLimit from 'express-rate-limit';
 import config from './config/index.js';
 import { createLogger } from './lib/logger.js';
@@ -80,6 +83,8 @@ export function createApp({ db, llmClient, mcpClient } = {}) {
   const competitorsRepo = new CompetitorsRepository(db);
   const paymentsRepo = new PaymentsRepository(db);
   const templatesRepo = new TemplatesRepository(db);
+  const platformAccountsRepo = new PlatformAccountsRepository(db);
+  const adspirerClient = new AdspirerMcpClient(platformAccountsRepo);
 
   const llmConfig = settingsRepo.get('llm_config');
   if (llmConfig && llmClient) {
@@ -147,6 +152,9 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
 
   // Templates Management
   app.use('/api/templates', requireAuth, createTemplatesRouter(templatesRepo));
+
+  // Adspirer MCP Integration
+  app.use('/api/adspirer', requireAuth, createAdspirerRouter(adspirerClient, platformAccountsRepo, settingsRepo));
 
   // Unified Ads Library (public - no auth required for research)
   app.use('/api/ads-library', publicRateLimit, createAdsLibraryRoutes());

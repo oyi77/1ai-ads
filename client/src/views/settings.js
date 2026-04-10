@@ -14,7 +14,9 @@ export async function renderSettings(el) {
     isFetchingModels: false,
     isTestingPrompt: false,
     isTestingAccount: {},
-    planDetails: null
+    planDetails: null,
+    integrations: { adspirer: { enabled: false } },
+    adspirerStatus: { connected: false, enabled: false }
   };
 
   const loadData = async () => {
@@ -23,13 +25,17 @@ export async function renderSettings(el) {
         api.get('/settings/accounts'),
         api.get('/mcp/status'),
         api.get('/settings/ai'),
-        api.get('/settings/plan')
+        api.get('/settings/plan'),
+        api.get('/settings/integrations'),
+        api.get('/adspirer/status')
       ]);
 
       if (results[0].status === 'fulfilled') state.accounts = results[0].value.data;
       if (results[1].status === 'fulfilled') state.mcpStatus = results[1].value.data;
       if (results[2].status === 'fulfilled') state.aiConfig = results[2].value.data;
       if (results[3].status === 'fulfilled') state.planDetails = results[3].value.data;
+      if (results[4].status === 'fulfilled') state.integrations = results[4].value.data;
+      if (results[5].status === 'fulfilled') state.adspirerStatus = results[5].value.data;
 
       state.platformAccounts = { meta: [], google: [], tiktok: [], scalev: [], x: [] };
       state.accounts.forEach(acc => {
@@ -62,6 +68,9 @@ export async function renderSettings(el) {
             <button data-section="billing" class="flex-shrink-0 w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${state.activeSection === 'billing' ? 'bg-[#58a6ff] text-white' : 'text-slate-400 hover:bg-[#21262d] hover:text-white'}">
               Subscription
             </button>
+            <button data-section="integrations" class="flex-shrink-0 w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${state.activeSection === 'integrations' ? 'bg-[#58a6ff] text-white' : 'text-slate-400 hover:bg-[#21262d] hover:text-white'}">
+              Integrations
+            </button>
           </nav>
         </aside>
 
@@ -84,6 +93,7 @@ export async function renderSettings(el) {
     if (state.activeSection === 'accounts') attachAccountHandlers();
     if (state.activeSection === 'ai') attachAIHandlers();
     if (state.activeSection === 'billing') attachBillingHandlers();
+    if (state.activeSection === 'integrations') attachIntegrationsHandlers();
   }
 
   function renderSection() {
@@ -92,6 +102,7 @@ export async function renderSettings(el) {
       case 'security': return `<h2 class="text-2xl font-bold mb-6 text-white">Security Settings</h2><div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6"><div class="space-y-4 max-w-sm"><div><label class="block text-sm text-slate-400 mb-1">New Password</label><input type="password" class="w-full p-3 bg-[#0d1117] rounded-lg border border-[#30363d] text-white"></div><button class="bg-[#21262d] text-[#c9d1d9] border border-[#30363d] px-6 py-2 rounded-lg font-bold">Update Password</button></div></div>`;
       case 'ai': return renderAISection();
       case 'billing': return renderBillingSection();
+      case 'integrations': return renderIntegrationsSection();
       default: return '';
     }
   }
@@ -439,5 +450,79 @@ export async function renderSettings(el) {
       });
     });
   }
+  function renderIntegrationsSection() {
+    const { enabled } = state.integrations.adspirer || {};
+    const { connected } = state.adspirerStatus || {};
+    return `
+      <h2 class="text-2xl font-bold mb-6 text-white">Integrations</h2>
+      <div class="grid gap-6">
+        <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden">
+          <div class="p-6 border-b border-[#30363d] flex items-center justify-between bg-[#1c2128]">
+            <div class="flex items-center gap-4">
+              <div class="w-10 h-10 bg-[#0d1117] rounded-lg flex items-center justify-center border border-[#30363d] font-bold text-sky-400">A</div>
+              <div>
+                <h3 class="font-bold text-white">Adspirer</h3>
+                <p class="text-xs text-slate-400">MCP-powered ad management across Google, Meta, TikTok &amp; LinkedIn</p>
+              </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="adspirer-toggle" ${enabled ? 'checked' : ''} class="sr-only peer">
+              <div class="w-11 h-6 bg-[#30363d] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#238636]"></div>
+            </label>
+          </div>
+          <div class="p-6 space-y-4">
+            <div class="flex items-center gap-3">
+              <span class="text-sm text-slate-400">Status:</span>
+              ${enabled
+                ? connected
+                  ? '<span class="inline-flex items-center gap-1.5 text-xs bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>Connected</span>'
+                  : '<span class="inline-flex items-center gap-1.5 text-xs bg-yellow-500/10 text-yellow-400 px-2.5 py-1 rounded-full border border-yellow-500/20"><span class="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block"></span>Enabled · Not Connected</span>'
+                : '<span class="inline-flex items-center gap-1.5 text-xs bg-slate-700/50 text-slate-400 px-2.5 py-1 rounded-full border border-slate-600/30"><span class="w-1.5 h-1.5 rounded-full bg-slate-500 inline-block"></span>Disabled</span>'
+              }
+            </div>
+            ${enabled ? `
+              <p class="text-xs text-slate-500">Adspirer connects via OAuth 2.1 and allows AdForge's AI to manage campaigns across platforms using the MCP protocol.</p>
+              <div class="flex items-center gap-3 pt-2">
+                ${connected
+                  ? `<button id="adspirer-disconnect" class="text-xs bg-red-900/20 text-red-400 border border-red-500/30 px-4 py-2 rounded-lg font-medium hover:bg-red-900/40 transition-colors">Disconnect</button>`
+                  : `<a href="/api/adspirer/auth" id="adspirer-connect" class="text-xs bg-[#238636] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#2ea043] transition-colors">Connect with Adspirer</a>`
+                }
+              </div>
+            ` : `
+              <p class="text-xs text-slate-500">Enable Adspirer to connect your ad accounts and allow AI-powered campaign management via the MCP protocol.</p>
+            `}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function attachIntegrationsHandlers() {
+    el.querySelector('#adspirer-toggle')?.addEventListener('change', async (e) => {
+      const enabled = e.target.checked;
+      try {
+        await api.post('/settings/integrations/adspirer', { enabled });
+        state.integrations.adspirer = { enabled };
+        const statusRes = await api.get('/adspirer/status');
+        state.adspirerStatus = statusRes.data;
+        render();
+      } catch (err) {
+        alert('Failed to update Adspirer: ' + err.message);
+        e.target.checked = !enabled;
+      }
+    });
+
+    el.querySelector('#adspirer-disconnect')?.addEventListener('click', async () => {
+      if (!confirm('Disconnect Adspirer? This will remove stored tokens.')) return;
+      try {
+        await api.post('/adspirer/disconnect');
+        state.adspirerStatus = { ...state.adspirerStatus, connected: false };
+        render();
+      } catch (err) {
+        alert('Failed to disconnect: ' + err.message);
+      }
+    });
+  }
+
   render();
 }
