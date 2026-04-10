@@ -8,12 +8,13 @@ Each suggestion must be: { type: "ad_copy"|"landing_page"|"bid"|"pause_ad"|"crea
 Return ONLY a valid JSON array of suggestions, no other text.`;
 
 export class AiAgent {
-  constructor(settingsRepo, adsRepo, campaignsRepo, llmClient, suggestionsRepo) {
+  constructor(settingsRepo, adsRepo, campaignsRepo, llmClient, suggestionsRepo, landingPagesRepo) {
     this.settingsRepo = settingsRepo;
     this.adsRepo = adsRepo;
     this.campaignsRepo = campaignsRepo;
     this.llmClient = llmClient;
     this.suggestionsRepo = suggestionsRepo;
+    this.landingPagesRepo = landingPagesRepo;
   }
 
   isEnabled() {
@@ -29,7 +30,6 @@ export class AiAgent {
   async analyzeAndSuggest(userId) {
     if (!this.isEnabled()) return [];
 
-    // Gather data
     const ads = this.adsRepo.getByUserId ? this.adsRepo.getByUserId(userId) : [];
     const campaigns = this.campaignsRepo.getAll ? this.campaignsRepo.getAll(userId) : [];
 
@@ -97,7 +97,24 @@ export class AiAgent {
     } else if (type === 'pause_ad') {
       if (this.adsRepo.update) this.adsRepo.update(target_id, { status: 'paused' });
     } else if (type === 'landing_page') {
-      // landing page updates handled by landing repo if available
+      const updates = {};
+      for (const { field, value } of changes) updates[field] = value;
+      if (this.landingPagesRepo?.update) this.landingPagesRepo.update(target_id, updates);
     }
+  }
+
+  startScheduler(getActiveUserIds, intervalMs = 5 * 60 * 1000) {
+    this._schedulerInterval = setInterval(async () => {
+      if (!this.isEnabled()) return;
+      const userIds = getActiveUserIds();
+      for (const userId of userIds) {
+        this.analyzeAndSuggest(userId).catch(err => log.warn('Scheduler analyzeAndSuggest failed', { userId, error: err.message }));
+      }
+    }, intervalMs);
+  }
+
+  stopScheduler() {
+    clearInterval(this._schedulerInterval);
+    this._schedulerInterval = null;
   }
 }

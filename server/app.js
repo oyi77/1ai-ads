@@ -161,8 +161,9 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
 
   // AI Agent
   const aiSuggestionsRepo = new AiSuggestionsRepository(db);
-  const aiAgent = new AiAgent(settingsRepo, adsRepo, campaignsRepo, llmClient, aiSuggestionsRepo);
+  const aiAgent = new AiAgent(settingsRepo, adsRepo, campaignsRepo, llmClient, aiSuggestionsRepo, landingRepo);
   app.use('/api/ai-agent', requireAuth, createAiAgentRouter(aiAgent, settingsRepo));
+  aiAgent.startScheduler(() => usersRepo.findAll ? usersRepo.findAll().map(u => u.id) : []);
 
   // Unified Ads Library (public - no auth required for research)
   app.use('/api/ads-library', publicRateLimit, createAdsLibraryRoutes());
