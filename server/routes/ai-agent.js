@@ -4,11 +4,11 @@ export function createAiAgentRouter(aiAgent, settingsRepo) {
   const router = Router();
 
   function getStatus() {
-    const aiRaw = settingsRepo.get('ai_mode_enabled');
-    const autoRaw = settingsRepo.get('ai_auto_mode_enabled');
+    const level = aiAgent.getAutonomyLevel();
     return {
-      ai_mode: aiRaw === true || aiRaw === 'true' || aiRaw === 1,
-      auto_mode: autoRaw === true || autoRaw === 'true' || autoRaw === 1,
+      autonomy_level: level,
+      ai_mode: level !== 'off',
+      auto_mode: level === 'fully_auto',
     };
   }
 
@@ -17,11 +17,39 @@ export function createAiAgentRouter(aiAgent, settingsRepo) {
     res.json({ success: true, data: getStatus() });
   });
 
-  // POST /toggle — toggle ai_mode and/or auto_mode
+  // POST /toggle — backward-compat toggle; maps ai_mode/auto_mode to ai_autonomy_level
   router.post('/toggle', (req, res) => {
     const { ai_mode, auto_mode } = req.body;
-    if (ai_mode !== undefined) settingsRepo.set('ai_mode_enabled', Boolean(ai_mode));
-    if (auto_mode !== undefined) settingsRepo.set('ai_auto_mode_enabled', Boolean(auto_mode));
+    const current = aiAgent.getAutonomyLevel();
+
+    if (ai_mode !== undefined) {
+      if (!ai_mode) {
+        settingsRepo.set('ai_autonomy_level', 'off');
+      } else if (current === 'off') {
+        settingsRepo.set('ai_autonomy_level', auto_mode === true ? 'fully_auto' : 'manual');
+      }
+    }
+
+    if (auto_mode !== undefined) {
+      const level = aiAgent.getAutonomyLevel();
+      if (auto_mode && level !== 'off') {
+        settingsRepo.set('ai_autonomy_level', 'fully_auto');
+      } else if (!auto_mode && level === 'fully_auto') {
+        settingsRepo.set('ai_autonomy_level', 'manual');
+      }
+    }
+
+    res.json({ success: true, data: getStatus() });
+  });
+
+  // POST /autonomy — set AI autonomy level
+  router.post('/autonomy', (req, res) => {
+    const VALID = ['off', 'manual', 'semi_auto', 'fully_auto'];
+    const { level } = req.body;
+    if (!VALID.includes(level)) {
+      return res.status(400).json({ success: false, error: `Invalid level. Must be one of: ${VALID.join(', ')}` });
+    }
+    settingsRepo.set('ai_autonomy_level', level);
     res.json({ success: true, data: getStatus() });
   });
 

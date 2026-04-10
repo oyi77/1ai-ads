@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { AiAgent } from '../../../server/services/ai-agent.js';
 
 function makeMocks() {
-  const settingsRepo = { get: vi.fn().mockReturnValue(true) };
+  // Default: fully_auto (AI enabled + auto-apply everything)
+  const settingsRepo = { get: vi.fn().mockImplementation(key => key === 'ai_autonomy_level' ? 'fully_auto' : null) };
   const adsRepo = {
     getByUserId: vi.fn().mockReturnValue([
       { id: 'ad1', title: 'Test Ad', status: 'active', platform: 'meta' },
@@ -40,22 +41,22 @@ describe('AiAgent', () => {
     agent = new AiAgent(mocks.settingsRepo, mocks.adsRepo, mocks.campaignsRepo, mocks.llmClient, mocks.suggestionsRepo, mocks.landingPagesRepo);
   });
 
-  it('analyzeAndSuggest returns [] when ai_mode_enabled is false', async () => {
-    mocks.settingsRepo.get.mockReturnValue(false);
+  it('analyzeAndSuggest returns [] when autonomy level is off', async () => {
+    mocks.settingsRepo.get.mockImplementation(key => key === 'ai_autonomy_level' ? 'off' : null);
     const result = await agent.analyzeAndSuggest('u1');
     expect(result).toEqual([]);
     expect(mocks.llmClient.call).not.toHaveBeenCalled();
   });
 
-  it('analyzeAndSuggest calls LLM and creates suggestion with pending status when auto mode off', async () => {
-    mocks.settingsRepo.get.mockImplementation((key) => key === 'ai_mode_enabled' ? true : false);
+  it('analyzeAndSuggest calls LLM and creates suggestion with pending status when level is manual', async () => {
+    mocks.settingsRepo.get.mockImplementation(key => key === 'ai_autonomy_level' ? 'manual' : null);
     const ids = await agent.analyzeAndSuggest('u1');
     expect(ids).toHaveLength(1);
     expect(mocks.suggestionsRepo.create).toHaveBeenCalledWith(expect.objectContaining({ status: 'pending' }));
   });
 
-  it('analyzeAndSuggest auto-applies suggestions when auto_mode is on', async () => {
-    mocks.settingsRepo.get.mockReturnValue(true); // both enabled
+  it('analyzeAndSuggest auto-applies suggestions when level is fully_auto', async () => {
+    // default mock is already fully_auto
     const ids = await agent.analyzeAndSuggest('u1');
     expect(ids).toHaveLength(1);
     expect(mocks.suggestionsRepo.create).toHaveBeenCalledWith(expect.objectContaining({ status: 'applied' }));
@@ -63,6 +64,7 @@ describe('AiAgent', () => {
   });
 
   it('analyzeAndSuggest returns [] when LLM returns invalid JSON', async () => {
+    // default is fully_auto, but LLM returns garbage
     mocks.llmClient.call.mockResolvedValue('not json');
     const ids = await agent.analyzeAndSuggest('u1');
     expect(ids).toEqual([]);
@@ -95,7 +97,7 @@ describe('AiAgent', () => {
 
   // US-001: landing_page apply
   it('auto-applies landing_page suggestion by calling landingPagesRepo.update', async () => {
-    mocks.settingsRepo.get.mockReturnValue(true);
+    // default is fully_auto
     mocks.llmClient.call.mockResolvedValue(JSON.stringify([{
       type: 'landing_page',
       target_id: 'lp1',
@@ -142,7 +144,7 @@ describe('AiAgent', () => {
     });
 
     it('scheduler skips analyzeAndSuggest when AI mode is disabled', async () => {
-      mocks.settingsRepo.get.mockReturnValue(false);
+      mocks.settingsRepo.get.mockImplementation(key => key === 'ai_autonomy_level' ? 'off' : null);
       const spy = vi.spyOn(agent, 'analyzeAndSuggest').mockResolvedValue([]);
       agent.startScheduler(() => ['u1'], 1000);
       vi.advanceTimersByTime(1000);
@@ -151,9 +153,59 @@ describe('AiAgent', () => {
     });
   });
 
+  // Autonomy level behavior
+  describe('autonomy levels', () => {
+    it('getAutonomyLevel returns off when setting missing', () => {
+      mocks.settingsRepo.get.mockReturnValue(undefined);
+      expect(agent.getAutonomyLevel()).toBe('off');
+    });
+
+    it('getAutonomyLevel returns the stored valid level', () => {
+      mocks.settingsRepo.get.mockImplementation(key => key === 'ai_autonomy_level' ? 'semi_auto' : null);
+      expect(agent.getAutonomyLevel()).toBe('semi_auto');
+    });
+
+    it('isEnabled is false when level is off', () => {
+      mocks.settingsRepo.get.mockImplementation(key => key === 'ai_autonomy_level' ? 'off' : null);
+      expect(agent.isEnabled()).toBe(false);
+    });
+
+    it('isEnabled is true for manual, semi_auto, fully_auto', () => {
+      for (const level of ['manual', 'semi_auto', 'fully_auto']) {
+        mocks.settingsRepo.get.mockImplementation(key => key === 'ai_autonomy_level' ? level : null);
+        expect(agent.isEnabled()).toBe(true);
+      }
+    });
+
+    it('isAutoMode is true only for fully_auto', () => {
+      for (const level of ['off', 'manual', 'semi_auto']) {
+        mocks.settingsRepo.get.mockImplementation(key => key === 'ai_autonomy_level' ? level : null);
+        expect(agent.isAutoMode()).toBe(false);
+      }
+      mocks.settingsRepo.get.mockImplementation(key => key === 'ai_autonomy_level' ? 'fully_auto' : null);
+      expect(agent.isAutoMode()).toBe(true);
+    });
+
+    it('semi_auto auto-applies ad_copy but not landing_page', async () => {
+      mocks.settingsRepo.get.mockImplementation(key => key === 'ai_autonomy_level' ? 'semi_auto' : null);
+      mocks.llmClient.call.mockResolvedValue(JSON.stringify([
+        { type: 'ad_copy', target_id: 'ad1', target_type: 'ad', changes: [{ field: 'headline', value: 'New' }], rationale: '' },
+        { type: 'landing_page', target_id: 'lp1', target_type: 'landing_page', changes: [{ field: 'cta_primary', value: 'Buy' }], rationale: '' },
+        { type: 'pause_ad', target_id: 'ad1', target_type: 'ad', changes: [], rationale: '' },
+      ]));
+      await agent.analyzeAndSuggest('u1');
+      // ad_copy: applied
+      expect(mocks.suggestionsRepo.create).toHaveBeenCalledWith(expect.objectContaining({ type: 'ad_copy', status: 'applied' }));
+      // landing_page: pending
+      expect(mocks.suggestionsRepo.create).toHaveBeenCalledWith(expect.objectContaining({ type: 'landing_page', status: 'pending' }));
+      // pause_ad: pending (changes is empty so _applyChanges short-circuits, but status should be pending)
+      expect(mocks.suggestionsRepo.create).toHaveBeenCalledWith(expect.objectContaining({ type: 'pause_ad', status: 'pending' }));
+    });
+  });
+
   // US-003: creative with design_json
   it('auto-applies creative suggestion updating design_json and content fields', async () => {
-    mocks.settingsRepo.get.mockReturnValue(true);
+    // default is fully_auto
     mocks.llmClient.call.mockResolvedValue(JSON.stringify([{
       type: 'creative',
       target_id: 'ad1',

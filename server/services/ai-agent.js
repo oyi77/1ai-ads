@@ -2,6 +2,9 @@ import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('ai-agent');
 
+const VALID_LEVELS = ['off', 'manual', 'semi_auto', 'fully_auto'];
+const SEMI_AUTO_TYPES = new Set(['ad_copy', 'creative']);
+
 const SYSTEM_PROMPT = `You are an AI advertising optimization agent.
 Analyze the provided campaigns, ads, and analytics data, then return improvement suggestions as a JSON array.
 Each suggestion must be: { type: "ad_copy"|"landing_page"|"bid"|"pause_ad"|"creative", target_id: string, target_type: "ad"|"campaign"|"landing_page", changes: [{field, value}], rationale: string }
@@ -17,14 +20,24 @@ export class AiAgent {
     this.landingPagesRepo = landingPagesRepo;
   }
 
+  getAutonomyLevel() {
+    const level = this.settingsRepo.get('ai_autonomy_level');
+    return VALID_LEVELS.includes(level) ? level : 'off';
+  }
+
   isEnabled() {
-    const raw = this.settingsRepo.get('ai_mode_enabled');
-    return raw === true || raw === 'true' || raw === 1;
+    return this.getAutonomyLevel() !== 'off';
   }
 
   isAutoMode() {
-    const raw = this.settingsRepo.get('ai_auto_mode_enabled');
-    return raw === true || raw === 'true' || raw === 1;
+    return this.getAutonomyLevel() === 'fully_auto';
+  }
+
+  shouldAutoApply(type) {
+    const level = this.getAutonomyLevel();
+    if (level === 'fully_auto') return true;
+    if (level === 'semi_auto') return SEMI_AUTO_TYPES.has(type);
+    return false;
   }
 
   async analyzeAndSuggest(userId) {
@@ -50,11 +63,11 @@ export class AiAgent {
       return [];
     }
 
-    const autoMode = this.isAutoMode();
     const created = [];
 
     for (const s of suggestions) {
-      const status = autoMode ? 'applied' : 'pending';
+      const autoApply = Boolean(s.target_id) && this.shouldAutoApply(s.type || 'ad_copy');
+      const status = autoApply ? 'applied' : 'pending';
       const id = this.suggestionsRepo.create({
         user_id: userId,
         type: s.type || 'ad_copy',
@@ -65,7 +78,7 @@ export class AiAgent {
         status,
       });
 
-      if (autoMode && s.target_id) {
+      if (autoApply) {
         await this._applyChanges(s).catch(err => log.warn('Auto-apply failed', { id, error: err.message }));
         this.suggestionsRepo.updateStatus(id, 'applied');
       }
