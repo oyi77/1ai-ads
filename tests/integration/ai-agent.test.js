@@ -52,43 +52,51 @@ describe('AI Agent API Integration', () => {
     if (db) db.close();
   });
 
-  it('GET /api/ai-agent/status — returns ai_mode and auto_mode booleans', async () => {
+  it('GET /api/ai-agent/status — returns autonomy_level', async () => {
     const res = await request(app)
       .get('/api/ai-agent/status')
       .set('Authorization', `Bearer ${authToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(typeof res.body.data.ai_mode).toBe('boolean');
-    expect(typeof res.body.data.auto_mode).toBe('boolean');
+    expect(typeof res.body.data.autonomy_level).toBe('string');
   });
 
-  it('POST /api/ai-agent/toggle — enables ai_mode', async () => {
+  it('POST /api/ai-agent/autonomy — sets level to manual', async () => {
     const res = await request(app)
-      .post('/api/ai-agent/toggle')
+      .post('/api/ai-agent/autonomy')
       .set('Authorization', `Bearer ${authToken}`)
-      .send({ ai_mode: true });
+      .send({ level: 'manual' });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.ai_mode).toBe(true);
+    expect(res.body.data.autonomy_level).toBe('manual');
   });
 
-  it('POST /api/ai-agent/toggle — disables auto_mode', async () => {
+  it('POST /api/ai-agent/autonomy — sets level to fully_auto', async () => {
     const res = await request(app)
-      .post('/api/ai-agent/toggle')
+      .post('/api/ai-agent/autonomy')
       .set('Authorization', `Bearer ${authToken}`)
-      .send({ auto_mode: false });
+      .send({ level: 'fully_auto' });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.auto_mode).toBe(false);
+    expect(res.body.data.autonomy_level).toBe('fully_auto');
   });
 
-  it('POST /api/ai-agent/run — creates suggestions when ai_mode enabled', async () => {
-    // ensure ai mode on
+  it('POST /api/ai-agent/autonomy — rejects invalid level', async () => {
+    const res = await request(app)
+      .post('/api/ai-agent/autonomy')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ level: 'turbo' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('POST /api/ai-agent/run — creates suggestions when autonomy level is not off', async () => {
     await request(app)
-      .post('/api/ai-agent/toggle')
+      .post('/api/ai-agent/autonomy')
       .set('Authorization', `Bearer ${authToken}`)
-      .send({ ai_mode: true });
+      .send({ level: 'manual' });
 
     const res = await request(app)
       .post('/api/ai-agent/run')
@@ -127,9 +135,9 @@ describe('AI Agent API Integration', () => {
 
   it('full lifecycle: run → list → dismiss', async () => {
     await request(app)
-      .post('/api/ai-agent/toggle')
+      .post('/api/ai-agent/autonomy')
       .set('Authorization', `Bearer ${authToken}`)
-      .send({ ai_mode: true, auto_mode: false });
+      .send({ level: 'manual' });
 
     await request(app)
       .post('/api/ai-agent/run')

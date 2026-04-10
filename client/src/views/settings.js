@@ -17,7 +17,7 @@ export async function renderSettings(el) {
     planDetails: null,
     integrations: { adspirer: { enabled: false } },
     adspirerStatus: { connected: false, enabled: false },
-    aiMode: { autonomy_level: 'off', ai_mode: false, auto_mode: false }
+    aiMode: { autonomy_level: 'off' }
   };
 
   const loadData = async () => {

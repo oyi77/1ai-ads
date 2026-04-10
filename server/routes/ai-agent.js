@@ -4,41 +4,11 @@ export function createAiAgentRouter(aiAgent, settingsRepo) {
   const router = Router();
 
   function getStatus() {
-    const level = aiAgent.getAutonomyLevel();
-    return {
-      autonomy_level: level,
-      ai_mode: level !== 'off',
-      auto_mode: level === 'fully_auto',
-    };
+    return { autonomy_level: aiAgent.getAutonomyLevel() };
   }
 
-  // GET /status — returns current AI mode settings
+  // GET /status — returns current autonomy level
   router.get('/status', (req, res) => {
-    res.json({ success: true, data: getStatus() });
-  });
-
-  // POST /toggle — backward-compat toggle; maps ai_mode/auto_mode to ai_autonomy_level
-  router.post('/toggle', (req, res) => {
-    const { ai_mode, auto_mode } = req.body;
-    const current = aiAgent.getAutonomyLevel();
-
-    if (ai_mode !== undefined) {
-      if (!ai_mode) {
-        settingsRepo.set('ai_autonomy_level', 'off');
-      } else if (current === 'off') {
-        settingsRepo.set('ai_autonomy_level', auto_mode === true ? 'fully_auto' : 'manual');
-      }
-    }
-
-    if (auto_mode !== undefined) {
-      const level = aiAgent.getAutonomyLevel();
-      if (auto_mode && level !== 'off') {
-        settingsRepo.set('ai_autonomy_level', 'fully_auto');
-      } else if (!auto_mode && level === 'fully_auto') {
-        settingsRepo.set('ai_autonomy_level', 'manual');
-      }
-    }
-
     res.json({ success: true, data: getStatus() });
   });
 
