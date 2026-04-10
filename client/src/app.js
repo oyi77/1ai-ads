@@ -15,6 +15,7 @@ import { renderOptimizer } from './views/optimizer.js';
 import { renderTrending } from './views/trending.js';
 import { renderCompetitorSpy } from './views/competitor-spy.js';
 import { renderGlobalAds } from './views/global-ads.js';
+import { renderAiSuggestions } from './views/ai-suggestions.js';
 import { renderMarketingLP } from './views/marketing-lp.js';
 import { renderDocs } from './views/docs.js';
 
@@ -41,6 +42,7 @@ router.on('/optimizer', renderOptimizer);
 router.on('/trending', renderTrending);
 router.on('/competitor-spy', renderCompetitorSpy);
 router.on('/global-ads', renderGlobalAds);
+router.on('/ai-suggestions', renderAiSuggestions);
 router.on('/login', renderLogin);
 router.on('/register', renderRegister);
 
@@ -61,6 +63,7 @@ function updateNav() {
       'a[href="#/trending"]',           // Trending
       'a[href="#/competitor-spy"]',   // Competitor Spy
       'a[href="#/global-ads"]',        // Global Ads
+      'a[href="#/ai-suggestions"]',    // AI Suggestions
       'a[href="#/research"]',            // Research
       'a[href="#/campaign/create"]',    // Create Campaign
       'a[href="#/settings"]'            // Settings

@@ -79,6 +79,23 @@ export function createDatabase(dbPath) {
       try { db.exec("ALTER TABLE platform_accounts ADD COLUMN last_error TEXT"); } catch (e) { console.warn('Migration warning (last_error):', e.message); }
     }
 
+    // AI suggestions table
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS ai_suggestions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        target_id TEXT,
+        target_type TEXT,
+        suggestion TEXT NOT NULL,
+        rationale TEXT,
+        status TEXT DEFAULT 'pending',
+        created_at TEXT DEFAULT (datetime('now')),
+        applied_at TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
     // Ensure campaigns have a unique constraint on campaign_id
     const campIndices = db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='campaigns'").all().map(i => i.name);
     if (!campIndices.includes('idx_campaigns_platform_external_id')) {

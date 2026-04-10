@@ -50,6 +50,9 @@ import { createTemplatesRouter } from './routes/templates.js';
 import { AdspirerMcpClient } from './services/adspirer-mcp-client.js';
 import { createAdspirerRouter } from './routes/adspirer.js';
 import { PlatformAccountsRepository } from './repositories/platform-accounts.js';
+import { AiAgent } from './services/ai-agent.js';
+import { AiSuggestionsRepository } from './repositories/ai-suggestions.js';
+import { createAiAgentRouter } from './routes/ai-agent.js';
 import rateLimit from 'express-rate-limit';
 import config from './config/index.js';
 import { createLogger } from './lib/logger.js';
@@ -155,6 +158,11 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
 
   // Adspirer MCP Integration
   app.use('/api/adspirer', requireAuth, createAdspirerRouter(adspirerClient, platformAccountsRepo, settingsRepo));
+
+  // AI Agent
+  const aiSuggestionsRepo = new AiSuggestionsRepository(db);
+  const aiAgent = new AiAgent(settingsRepo, adsRepo, campaignsRepo, llmClient, aiSuggestionsRepo);
+  app.use('/api/ai-agent', requireAuth, createAiAgentRouter(aiAgent, settingsRepo));
 
   // Unified Ads Library (public - no auth required for research)
   app.use('/api/ads-library', publicRateLimit, createAdsLibraryRoutes());

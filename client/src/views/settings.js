@@ -16,7 +16,8 @@ export async function renderSettings(el) {
     isTestingAccount: {},
     planDetails: null,
     integrations: { adspirer: { enabled: false } },
-    adspirerStatus: { connected: false, enabled: false }
+    adspirerStatus: { connected: false, enabled: false },
+    aiMode: { ai_mode: false, auto_mode: false }
   };
 
   const loadData = async () => {
@@ -27,7 +28,8 @@ export async function renderSettings(el) {
         api.get('/settings/ai'),
         api.get('/settings/plan'),
         api.get('/settings/integrations'),
-        api.get('/adspirer/status')
+        api.get('/adspirer/status'),
+        api.get('/ai-agent/status')
       ]);
 
       if (results[0].status === 'fulfilled') state.accounts = results[0].value.data;
@@ -36,6 +38,7 @@ export async function renderSettings(el) {
       if (results[3].status === 'fulfilled') state.planDetails = results[3].value.data;
       if (results[4].status === 'fulfilled') state.integrations = results[4].value.data;
       if (results[5].status === 'fulfilled') state.adspirerStatus = results[5].value.data;
+      if (results[6].status === 'fulfilled') state.aiMode = results[6].value.data;
 
       state.platformAccounts = { meta: [], google: [], tiktok: [], scalev: [], x: [] };
       state.accounts.forEach(acc => {
@@ -493,6 +496,53 @@ export async function renderSettings(el) {
             `}
           </div>
         </div>
+
+        <!-- AI Mode Card -->
+        <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden">
+          <div class="p-6 border-b border-[#30363d] flex items-center justify-between bg-[#1c2128]">
+            <div class="flex items-center gap-4">
+              <div class="w-10 h-10 bg-[#0d1117] rounded-lg flex items-center justify-center border border-[#30363d] font-bold text-purple-400">AI</div>
+              <div>
+                <h3 class="font-bold text-white">AI Mode</h3>
+                <p class="text-xs text-slate-400">Let AI manage and optimize your ads, copy, landing pages, and creatives</p>
+              </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="ai-mode-toggle" ${state.aiMode.ai_mode ? 'checked' : ''} class="sr-only peer">
+              <div class="w-11 h-6 bg-[#30363d] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+          <div class="p-6 space-y-4">
+            ${state.aiMode.ai_mode ? `
+              <p class="text-xs text-slate-500">AI Mode is active. The AI can manage ads, ad copy, landing pages, creatives, and read analytics to generate improvement suggestions.</p>
+
+              <div class="flex items-center justify-between py-3 border-t border-[#30363d]">
+                <div>
+                  <p class="text-sm font-medium text-white">Auto-apply suggestions</p>
+                  <p class="text-xs text-slate-400 mt-0.5">When on, AI suggestions are applied automatically. When off, they queue for your review.</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer ml-4">
+                  <input type="checkbox" id="auto-mode-toggle" ${state.aiMode.auto_mode ? 'checked' : ''} class="sr-only peer">
+                  <div class="w-11 h-6 bg-[#30363d] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                </label>
+              </div>
+
+              <div class="flex items-center gap-3 pt-1">
+                <a href="#/ai-suggestions" class="text-xs bg-[#21262d] text-slate-300 border border-[#30363d] px-3 py-1.5 rounded-md font-medium hover:bg-[#30363d] transition-colors">View Suggestions</a>
+              </div>
+            ` : `
+              <div class="space-y-3">
+                <p class="text-xs text-slate-500">When enabled, AI will:</p>
+                <ul class="space-y-1.5 text-xs text-slate-400">
+                  <li class="flex items-center gap-2"><span class="text-purple-400">✓</span> Manage and optimize ads &amp; ad copy</li>
+                  <li class="flex items-center gap-2"><span class="text-purple-400">✓</span> Generate and improve landing pages</li>
+                  <li class="flex items-center gap-2"><span class="text-purple-400">✓</span> Read analytics and suggest creative improvements</li>
+                  <li class="flex items-center gap-2"><span class="text-purple-400">✓</span> Queue suggestions for review or auto-apply them</li>
+                </ul>
+              </div>
+            `}
+          </div>
+        </div>
       </div>
     `;
   }
@@ -520,6 +570,30 @@ export async function renderSettings(el) {
         render();
       } catch (err) {
         alert('Failed to disconnect: ' + err.message);
+      }
+    });
+
+    el.querySelector('#ai-mode-toggle')?.addEventListener('change', async (e) => {
+      const ai_mode = e.target.checked;
+      try {
+        const res = await api.post('/ai-agent/toggle', { ai_mode });
+        state.aiMode = res.data;
+        render();
+      } catch (err) {
+        alert('Failed to update AI Mode: ' + err.message);
+        e.target.checked = !ai_mode;
+      }
+    });
+
+    el.querySelector('#auto-mode-toggle')?.addEventListener('change', async (e) => {
+      const auto_mode = e.target.checked;
+      try {
+        const res = await api.post('/ai-agent/toggle', { auto_mode });
+        state.aiMode = res.data;
+        render();
+      } catch (err) {
+        alert('Failed to update Auto Mode: ' + err.message);
+        e.target.checked = !auto_mode;
       }
     });
   }
