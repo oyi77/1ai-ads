@@ -2,7 +2,7 @@ const config = {
   port: parseInt(process.env.PORT || '3001', 10),
   dbPath: process.env.DB_PATH || './db/adforge.db',
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-  jwtSecret: process.env.JWT_SECRET, // REQUIRED - no fallback
+  jwtSecret: process.env.JWT_SECRET || '',
   nodeEnv: process.env.NODE_ENV || 'development',
   llm: {
     url: process.env.OMNIROUTE_URL || 'http://localhost:20128/v1/chat/completions',
@@ -20,11 +20,16 @@ const config = {
     cacheTTL: parseInt(process.env.TRENDING_CACHE_TTL || '3600', 10),
   },
   logLevel: process.env.LOG_LEVEL || 'info',
+  adSpireApiKey: process.env.AD_SPIRE_API_KEY || '',
+  adSpireApiUrl: process.env.AD_SPIRE_API_URL || 'https://api.adspire.io/v1',
+  similarwebApiKey: process.env.SIMILARWEB_API_KEY || '',
+  rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
+  rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
 };
 
 export function validateConfig() {
   if (!config.jwtSecret) {
-    throw new Error('FATAL: JWT_SECRET environment variable is required. Set it before starting the server.');
+    throw new Error('FATAL: JWT_SECRET environment variable is required. Set it before starting the server. See .env.example for configuration.');
   }
 }
 

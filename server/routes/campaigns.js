@@ -73,13 +73,30 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     }
   });
 
-  // Get campaign detail with insights
-  router.get('/:id', async (req, res) => {
+  // Search targeting interests — must be before GET /:id to avoid route shadowing
+  router.get('/targeting/search', async (req, res) => {
+    const { q } = req.query;
+    if (!q) return res.status(400).json({ success: false, error: 'q is required' });
+
     try {
-      const insights = await metaApi.getCampaignInsights(req.params.id);
-      res.json({ success: true, data: { id: req.params.id, insights } });
+      const options = await metaApi.getTargetingOptions(q);
+      res.json({ success: true, data: options });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // List Facebook pages — must be before GET /:id to avoid route shadowing
+  router.get('/pages', async (_req, res) => {
+    try {
+      const pages = await metaApi.getPages();
+      res.json({ success: true, data: pages });
+    } catch (err) {
+      if (err.message.includes('nonexisting field') || err.message.includes('permission')) {
+        res.json({ success: true, data: [] });
+      } else {
+        res.status(500).json({ success: false, error: err.message });
+      }
     }
   });
 
@@ -98,30 +115,13 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     }
   });
 
-  // Search targeting interests
-  router.get('/targeting/search', async (req, res) => {
-    const { q } = req.query;
-    if (!q) return res.status(400).json({ success: false, error: 'q is required' });
-
+  // Get campaign detail with insights
+  router.get('/:id', async (req, res) => {
     try {
-      const options = await metaApi.getTargetingOptions(q);
-      res.json({ success: true, data: options });
+      const insights = await metaApi.getCampaignInsights(req.params.id);
+      res.json({ success: true, data: { id: req.params.id, insights } });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  // List Facebook pages (needed for ad creative)
-  router.get('/pages', async (req, res) => {
-    try {
-      const pages = await metaApi.getPages();
-      res.json({ success: true, data: pages });
-    } catch (err) {
-      if (err.message.includes('nonexisting field') || err.message.includes('permission')) {
-        res.json({ success: true, data: [] });
-      } else {
-        res.status(500).json({ success: false, error: err.message });
-      }
     }
   });
 

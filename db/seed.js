@@ -1,3 +1,6 @@
+import { hashPassword } from '../server/lib/auth.js';
+import { v4 as uuid } from 'uuid';
+
 export function seedTemplates(db) {
   const templates = [
     // E-commerce templates
@@ -16,8 +19,8 @@ export function seedTemplates(db) {
       category: 'ecommerce',
       name: 'New Product Launch',
       description: 'Announce new products with exclusivity and social proof',
-      hook_template: '✨ Introducing: {product_name}! ✨ Be the first to experience exclusive early-bird access.',
-      body_template: '🎉 Join the waitlist · {reward_1} early access for VIPs 🎉\n🎉 {reward_2} Get exclusive discounts when you invite friends.',
+      hook_template: '✨ Introducing: {product_name}! ✨ Be first to experience exclusive early-bird access.',
+      body_template: '🎉 Join waitlist · {reward_1} early access for VIPs 🎉\n🎉 {reward_2} Get exclusive discounts when you invite friends.',
       cta_template: 'Join Waitlist → Get VIP Access',
       design_config: JSON.stringify({ style: 'exciting', color: '#6366f1' })
     },
@@ -60,7 +63,7 @@ export function seedTemplates(db) {
       category: 'brand',
       name: 'Brand Launch Campaign',
       description: 'Introduce new brand or product line to market',
-      hook_template: '🚀 {brand_name} Launch Day! 🚀\n\nBe the first to experience {product_name}.\n\nEarly bird pricing for first {early_bird_count} users!',
+      hook_template: '🚀 {brand_name} Launch Day! 🚀\n\nBe first to experience {product_name}.\n\nEarly bird pricing for first {early_bird_count} users!',
       body_template: '🎁 {slogan_placeholder}\n\n📦 Limited launch offer for early adopters.\n📞 Sign up for brand alerts.',
       cta_template: 'Learn More → Get Exclusive Access',
       design_config: JSON.stringify({ style: 'bold', color: '#2563eb' })
@@ -71,7 +74,7 @@ export function seedTemplates(db) {
       name: 'Seasonal Promotion',
       description: 'Create urgency-driven seasonal campaigns with limited-time offers',
       hook_template: '🎃 {season} Sale is LIVE! 🎃\n\nGet {discount_amount}% OFF storewide · {products_category} collection\n\n⏰ Limited time - While supplies last!',
-      body_template: 'Shop the {season} collection before it\'s gone.\n\nGet notified for restock → Get VIP early access.',
+      body_template: 'Shop {season} collection before it\'s gone.\n\nGet notified for restock → Get VIP early access.',
       cta_template: 'Shop Collection',
       design_config: JSON.stringify({ style: 'seasonal', color: '#eab308' })
     },
@@ -117,7 +120,7 @@ export function seedTemplates(db) {
       hook_template: '🩺 First session FREE! 🩺\n\nGet {duration_min} min personalized health assessment.\n\nBook your follow-up sessions to continue your journey.',
       body_template: 'Expert advice on {topics}.\n\nLimited spots available.',
       cta_template: 'Book Free Session',
-      design_config: JSON.stringify({ style: 'professional', color: '#0891e2' })
+      design_config: JSON.stringify({ style: 'professional', color: '#0891b2' })
     },
 
     // Tech/SaaS templates
@@ -127,7 +130,7 @@ export function seedTemplates(db) {
       name: 'Feature Announcement',
       description: 'Announce new product features or updates',
       hook_template: '🚀 New Feature! 🚀\n\n{feature_name} is now LIVE!\n\n✨ {benefit_1} - {benefit_2} - {benefit_3}\n\nEarly adopters get {early_bird_discount}!\n\n📞 Update now → See what\'s new',
-      body_template: 'Discover the power of {feature_name}.\n\nStreamline your workflow.',
+      body_template: 'Discover to power of {feature_name}.\n\nStreamline your workflow.',
       cta_template: 'Try for Free → Upgrade to Pro',
       design_config: JSON.stringify({ style: 'modern', color: '#6366f1' })
     },
@@ -136,7 +139,7 @@ export function seedTemplates(db) {
       category: 'saas',
       name: 'Beta Program Invite',
       description: 'Invite users to join beta testing program',
-      hook_template: '🔬 Be a beta tester! 🔬\n\nGet early access to {feature_name} before anyone else.\n\nShape the future with your feedback.\n\nLimited spots - Join waitlist.',
+      hook_template: '🔬 Be a beta tester! 🔬\n\nGet early access to {feature_name} before anyone else.\n\nShape future with your feedback.\n\nLimited spots - Join waitlist.',
       body_template: 'Exclusive beta features + {reward_program}.\n\nFirst {early_adopter_count} get access.',
       cta_template: 'Join Beta Program',
       design_config: JSON.stringify({ style: 'exclusive', color: '#7c3aed' })
@@ -151,7 +154,7 @@ export function seedTemplates(db) {
       hook_template: '📚 New Course Alert! 📚\n\n{course_name} is now OPEN for enrollment!\n\n🎓 {early_bird_discount} - Limited time!\n\n📚 {seats_left} seats available.\n\n✨ {instructor_name} teaching live · {duration} {duration_weeks} weeks.\n\nEnroll now → Get {completion_certificate}!',
       body_template: 'Course description with {topics}.\n\nSelf-paced learning schedule.\n\nInteractive exercises and quizzes.',
       cta_template: 'Enroll Now → Get Access',
-      design_config: JSON.stringify({ style: 'academic', color: '#05966e' })
+      design_config: JSON.stringify({ style: 'academic', color: '#059669' })
     },
 
     // Non-profit templates
@@ -181,7 +184,7 @@ export function seedTemplates(db) {
       tpl.hook_template,
       tpl.body_template,
       tpl.cta_template,
-      JSON.stringify(tpl.design_config),
+      tpl.design_config,
       '',
       tpl.industry || ''
     );
@@ -190,6 +193,55 @@ export function seedTemplates(db) {
   console.log(`Seeded ${templates.length} templates`);
 }
 
+export function seedUsers(db) {
+  const passwordHash = hashPassword('admin123');
+
+  // Create admin user if not exists
+  const adminId = uuid();
+  db.prepare(`
+    INSERT OR IGNORE INTO users (id, username, email, password_hash, role, plan, confirmed, created_at)
+    VALUES (?, ?, ?, ?, 'admin', 'pro', 1, CURRENT_TIMESTAMP)
+  `).run(adminId, 'admin', 'admin@adforge.test', passwordHash);
+
+  // Create demo user
+  const demoId = uuid();
+  db.prepare(`
+    INSERT OR IGNORE INTO users (id, username, email, password_hash, role, plan, confirmed, created_at)
+    VALUES (?, ?, ?, ?, 'user', 'free', 1, CURRENT_TIMESTAMP)
+  `).run(demoId, 'demo', 'demo@adforge.test', passwordHash);
+
+  console.log('Seeded demo users');
+}
+
 export function seedDemoData(db) {
   seedTemplates(db);
+  seedUsers(db);
+
+  // Seed demo ads — stable IDs so INSERT OR IGNORE deduplicates on re-seed
+  const DEMO_AD_ID = 'demo-ad-0000-0000-0000-summer-sale1';
+  db.prepare(`
+    INSERT OR IGNORE INTO ads (id, name, product, target, platform, format, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `).run(DEMO_AD_ID, 'Summer Sale', 'Running Shoes', 'Active Users', 'meta', 'single_image', 'active');
+
+  // Seed demo landing page — stable IDs so INSERT OR IGNORE deduplicates on re-seed
+  const DEMO_LANDING_ID = 'demo-lp-0000-0000-0000-summer-camp';
+  db.prepare(`
+    INSERT OR IGNORE INTO landing_pages (id, name, template, theme, product_name, price, pain_points, benefits, cta_primary, cta_secondary, wa_link, checkout_link, slug, is_published, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `).run(
+    DEMO_LANDING_ID, 'Summer Campaign', 'tpl_flash_sale', 'dark', 'Running Shoes', 'Rp 500.000',
+    '["Slow delivery", "High cost"]', '["Fast shipping", "Low price"]',
+    'Buy Now', 'Chat Us', 'https://wa.me/628123456789', 'https://checkout.example.com',
+    'summer-campaign', 1, 'published'
+  );
+
+  // Seed demo campaigns for analytics — stable IDs so INSERT OR IGNORE deduplicates on re-seed
+  const DEMO_CAMPAIGN_ID = 'demo-cmp-0000-0000-0000-summer-c01';
+  db.prepare(`
+    INSERT OR IGNORE INTO campaigns (id, platform, campaign_id, name, status, budget, spend, revenue, impressions, clicks, conversions, roas, last_synced, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `).run(DEMO_CAMPAIGN_ID, 'meta', '238000000000000', 'Summer Campaign', 'active', 1000000, 500000, 1500000, 50000, 2500, 100, 3.0);
+
+  console.log('Seeded demo data: templates, users, ads, landing pages, campaigns');
 }

@@ -1,7 +1,4 @@
 import { Router } from 'express';
-import { createLogger } from '../lib/logger.js';
-
-const log = createLogger('scalev');
 
 export function createScalevRouter(scalevService) {
   const router = Router();
@@ -61,16 +58,6 @@ export function createScalevRouter(scalevService) {
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
-  });
-
-  // Webhook endpoint for Scalev order notifications (public - no auth required)
-  // This will be mounted separately outside requireAuth
-  router.post('/webhook', (req, res) => {
-    const event = req.body;
-    log.info('Scalev webhook received', { preview: JSON.stringify(event).substring(0, 200) });
-    // TODO: Process order events (paid, shipped, etc.)
-    // Store in database for analytics
-    res.json({ success: true });
   });
 
   return router;

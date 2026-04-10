@@ -4,7 +4,7 @@ export function createMetaRouter(metaApi, campaignsRepo) {
   const router = Router();
 
   // List all ad accounts
-  router.get('/accounts', async (req, res) => {
+  router.get('/accounts', async (_req, res) => {
     try {
       const accounts = await metaApi.getAdAccounts();
       res.json({ success: true, data: accounts });
@@ -46,7 +46,7 @@ export function createMetaRouter(metaApi, campaignsRepo) {
   });
 
   // Sync all accounts + campaigns + insights to local DB
-  router.post('/sync', async (req, res) => {
+  router.post('/sync', async (_req, res) => {
     try {
       const results = await metaApi.syncAllAccounts();
       let totalSynced = 0;
@@ -118,21 +118,21 @@ export function createMetaRouter(metaApi, campaignsRepo) {
     }
   });
 
+  // Search Meta Ad Library with source parameter
   router.get('/ad-library', async (req, res) => {
-    const { q, country, limit } = req.query;
     try {
-      const ads = await metaApi.getAdLibrary({
-        query: q,
-        country: country || 'ID',
-        limit: parseInt(limit) || 20,
-      });
-      res.json({ success: true, data: ads });
-    } catch (err) {
-      if (err.message.includes('permission') || err.message.includes('Application does not have permission')) {
-        res.json({ success: true, data: [], message: 'Ad Library API requires special app permissions. Use the Graph API Explorer with Ad Library access.' });
-      } else {
-        res.status(500).json({ success: false, error: err.message });
+      const { q, country, source = 'api', limit = 50 } = req.query;
+      if (!q) {
+        return res.status(400).json({ success: false, error: 'Query parameter "q" is required' });
       }
+      const validSources = ['api', 'scrape', 'auto'];
+      if (!validSources.includes(source)) {
+        return res.status(400).json({ success: false, error: `Invalid source: ${source}. Valid: ${validSources.join(', ')}` });
+      }
+      const result = await metaApi.searchAdLibrary({ q, country, source, limit: parseInt(limit, 10) });
+      res.json({ success: true, data: result, source });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
     }
   });
 

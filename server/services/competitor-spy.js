@@ -9,14 +9,14 @@
 import config from '../config/index.js';
 import { createLogger } from '../lib/logger.js';
 import { CompetitorsRepository } from '../repositories/competitors.js';
-import { AdIntelligenceService } from './ad-intelligence.js';
 
 const log = createLogger('competitor-spy');
 
 export class CompetitorSpyService {
-  constructor(db, adIntelligence = null) {
+  constructor(db, adIntelligence = null, adSpireAdapter = null) {
     this.db = db;
     this.adIntelligence = adIntelligence;
+    this.adSpireAdapter = adSpireAdapter;
     this.competitorsRepo = new CompetitorsRepository(db);
   }
 
@@ -40,17 +40,21 @@ export class CompetitorSpyService {
       userId,
     });
 
-    if (!this.adIntelligence) {
-      log.warn('AdIntelligenceService not available, using basic monitoring only');
+    // Use AdSpire if available and primary service is not configured
+    const intelligenceService = this.adIntelligence ||
+      (this.adSpireAdapter?.isAvailable() ? this.adSpireAdapter : null);
+
+    if (!intelligenceService) {
+      log.warn('No ad intelligence service available, using basic monitoring only');
       return this._performBasicMonitoring(domain, userId);
     }
 
     try {
-      const adData = await this.adIntelligence.getCompetitorAds(domain, { platform });
+      const adData = await intelligenceService.getCompetitorAds(domain, { platform });
 
       const snapshot = this.competitorsRepo.create({
-        url: domain,
-        platform,
+        url: competitorId,
+        platform: platform || null,
         adData,
         snapshotType: 'monitor',
       });
@@ -67,7 +71,7 @@ export class CompetitorSpyService {
         success: true,
         competitorId,
         domain,
-        platform,
+        platform: platform || null,
         adsCount: adData.ads?.length || 0,
         totalSpend: adData.ads?.reduce((sum, ad) => sum + (ad.metrics?.spend || 0), 0) || 0,
         totalImpressions: adData.ads?.reduce((sum, ad) => sum + (ad.metrics?.impressions || 0), 0) || 0,
@@ -105,7 +109,7 @@ export class CompetitorSpyService {
 
     log.info('Fetching competitor metrics', { competitorId, domain });
 
-    const snapshots = this.competitorsRepo.findByUrl(domain);
+    const snapshots = this.competitorsRepo.findByUrl(competitorId);
 
     if (!snapshots || snapshots.length === 0) {
       log.warn('No snapshots found for competitor', { competitorId, domain });
@@ -172,7 +176,7 @@ export class CompetitorSpyService {
    * @returns {Promise<Object>} Basic monitoring result
    * @private
    */
-  async _performBasicMonitoring(domain, userId) {
+  async _performBasicMonitoring(domain, _userId) {
     const html = await this._fetchHtml(domain);
     const meta = this._extractMeta(html);
 

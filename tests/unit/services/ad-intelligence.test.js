@@ -2,7 +2,7 @@
  * Unit tests for Ad Intelligence Service
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { AdIntelligenceService } from '../../../server/services/ad-intelligence.js';
 
@@ -139,7 +139,7 @@ describe('AdIntelligenceService', () => {
       expect(snapshot).toHaveProperty('captured_at');
     });
 
-    it('should store ad_data as JSON string', () => {
+    it('should store and return parsed ad_data', () => {
       const data = {
         domain: 'example.com',
         platform: 'google',
@@ -151,8 +151,7 @@ describe('AdIntelligenceService', () => {
       const snapshot = service.saveSnapshot(data);
 
       expect(snapshot.ad_data).toBeTruthy();
-      const parsedData = JSON.parse(snapshot.ad_data);
-      expect(parsedData).toEqual(data);
+      expect(snapshot.ad_data).toEqual(data);
     });
   });
 

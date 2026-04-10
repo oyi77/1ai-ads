@@ -14,7 +14,6 @@ import { TemplatesRepository } from './repositories/templates.js';
 import { AdGenerator } from './services/ad-generator.js';
 import { LandingGenerator } from './services/landing-generator.js';
 import { MCPClientManager } from './services/mcp-client.js';
-import { hashPassword, verifyPassword, generateToken } from './lib/auth.js';
 import { requireAuth } from './middleware/auth.js';
 import { createAdsRouter } from './routes/ads.js';
 import { createLandingRouter } from './routes/landing.js';
@@ -39,6 +38,7 @@ import { createOptimizerRouter } from './routes/optimizer.js';
 import { renderLandingPage } from './services/templates.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createTrendingRouter } from './routes/trending.js';
+import { createAdsLibraryRoutes } from './routes/ads-library.js';
 import { createCompetitorSpyRouter } from './routes/competitor-spy.js';
 import { TrendingService } from './services/trending.js';
 import { createPaymentsRouter } from './routes/payments.js';
@@ -47,6 +47,7 @@ import { PaymentService } from './services/payments.js';
 import { LearningService } from './services/learning.js';
 import { createLearningRouter } from './routes/learning.js';
 import { createTemplatesRouter } from './routes/templates.js';
+import rateLimit from 'express-rate-limit';
 import config from './config/index.js';
 import { createLogger } from './lib/logger.js';
 
@@ -59,6 +60,14 @@ export function createApp({ db, llmClient, mcpClient } = {}) {
 
   app.use(cors({ origin: config.corsOrigin }));
   app.use(express.json({ limit: '2mb' }));
+
+  // Rate limiting for public endpoints
+  const publicRateLimit = rateLimit({
+    windowMs: config.rateLimitWindowMs,
+    max: config.rateLimitMax,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
 
   // Repositories
   const adsRepo = new AdsRepository(db);
@@ -73,7 +82,7 @@ export function createApp({ db, llmClient, mcpClient } = {}) {
   const templatesRepo = new TemplatesRepository(db);
 
   const llmConfig = settingsRepo.get('llm_config');
-  if (llmConfig) {
+  if (llmConfig && llmClient) {
     llmClient.updateConfig(llmConfig);
   }
 
@@ -90,7 +99,7 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
   app.use('/api/landing', requireAuth, createLandingRouter(landingRepo, landingGenerator));
   app.use('/api/analytics', requireAuth, createAnalyticsRouter(campaignsRepo));
   app.use('/api/mcp', requireAuth, createMcpRouter(mcp, settingsRepo, campaignsRepo, adsRepo, landingRepo));
-  app.use('/api/settings', requireAuth, createSettingsRouter(settingsRepo, llmClient));
+  app.use('/api/settings', requireAuth, createSettingsRouter(settingsRepo, llmClient, db));
   const scalevService = new ScalevService(settingsRepo);
   const paymentService = new PaymentService(paymentsRepo, usersRepo, scalevService);
   app.use('/api/research', requireAuth, createResearchRouter(new AdResearchService(settingsRepo)));
@@ -117,12 +126,8 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
 
   app.use('/api/competitor-spy', requireAuth, createCompetitorSpyRouter(competitorsRepo));
 
-  // Payment Gateway
-  const paymentsRouter = createPaymentsRouter(paymentService);
-  app.use('/api/payments', requireAuth, paymentsRouter);
-
-  // Payment webhook endpoint (public - no auth required)
-  app.post('/api/payments/webhook', async (req, res) => {
+  // Payment webhook endpoint (public - must be before requireAuth router)
+  app.post('/api/payments/webhook', publicRateLimit, async (req, res) => {
     try {
       const result = await paymentService.processWebhookEvent(req.body);
       res.json(result);
@@ -132,12 +137,19 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
     }
   });
 
+  // Payment Gateway (protected)
+  const paymentsRouter = createPaymentsRouter(paymentService);
+  app.use('/api/payments', requireAuth, paymentsRouter);
+
   // Learning Service (sync insights to bk-hub KB)
   const learningService = new LearningService(campaignsRepo, adsRepo, landingRepo);
   app.use('/api/learning', requireAuth, createLearningRouter(learningService));
 
   // Templates Management
   app.use('/api/templates', requireAuth, createTemplatesRouter(templatesRepo));
+
+  // Unified Ads Library (public - no auth required for research)
+  app.use('/api/ads-library', publicRateLimit, createAdsLibraryRoutes());
 
   // Landing Page Live Deployment (public - no auth, served to end users)
   app.get('/lp/:slug', (req, res) => {
@@ -154,10 +166,14 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
   });
 
   // Scalev webhook (public - no auth, called by Scalev servers)
-  app.post('/api/webhooks/scalev', express.json(), (req, res) => {
+  app.post('/api/webhooks/scalev', publicRateLimit, express.json(), async (req, res) => {
     log.info('Scalev webhook received', { body: req.body });
     webhookEventsRepo.create({ source: 'scalev', eventType: req.body.type || 'unknown', payload: req.body });
-    paymentService.processWebhookEvent({ source: 'scalev', eventType: req.body.type, payload: req.body });
+    try {
+      await paymentService.processWebhookEvent({ source: 'scalev', eventType: req.body.type, payload: req.body });
+    } catch (err) {
+      log.error('Scalev webhook processing failed', { error: err.message });
+    }
     res.json({ success: true });
   });
 
@@ -167,7 +183,7 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
 
   // Global error handler
   // eslint-disable-next-line no-unused-vars
-  app.use((err, req, res, next) => {
+  app.use((err, _req, res, _next) => {
     if (err.type === 'entity.parse.failed') {
       return res.status(400).json({ success: false, error: 'Invalid JSON in request body' });
     }

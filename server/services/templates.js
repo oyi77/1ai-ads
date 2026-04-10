@@ -1,3 +1,24 @@
+import { escapeHtml, validateUrl } from '../lib/escape.js';
+
+export const templates = {
+  dark: {
+    colors: {
+      bg: '#0a0a0a',
+      text: '#ffffff',
+      accent: '#6366f1',
+      secondary: '#374151'
+    }
+  },
+  light: {
+    colors: {
+      bg: '#ffffff',
+      text: '#111827',
+      accent: '#6366f1',
+      secondary: '#9ca3af'
+    }
+  }
+};
+
 export function renderLandingPage({ theme, product_name, price, benefits, pain_points, cta_primary, cta_secondary, wa_link, checkout_link }) {
   const themeStyles = {
     dark: {
@@ -15,15 +36,43 @@ export function renderLandingPage({ theme, product_name, price, benefits, pain_p
   };
 
   const styles = themeStyles[theme] || themeStyles.dark;
-  const benefitsList = Array.isArray(benefits) ? benefits : JSON.parse(benefits || '[]');
-  const painPointsList = Array.isArray(pain_points) ? pain_points : JSON.parse(pain_points || '[]');
+
+  // Safely parse benefits and pain_points
+  let benefitsList = [];
+  let painPointsList = [];
+
+  if (Array.isArray(benefits)) {
+    benefitsList = benefits;
+  } else if (typeof benefits === 'string') {
+    try {
+      benefitsList = JSON.parse(benefits);
+      if (!Array.isArray(benefitsList)) benefitsList = [];
+    } catch {
+      benefitsList = [];
+    }
+  }
+
+  if (Array.isArray(pain_points)) {
+    painPointsList = pain_points;
+  } else if (typeof pain_points === 'string') {
+    try {
+      painPointsList = JSON.parse(pain_points);
+      if (!Array.isArray(painPointsList)) painPointsList = [];
+    } catch {
+      painPointsList = [];
+    }
+  }
+
+  // Escape and validate URLs
+  const safeCheckoutLink = validateUrl(checkout_link) ? escapeHtml(checkout_link) : '#';
+  const safeWaLink = validateUrl(wa_link) ? escapeHtml(wa_link) : '#';
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${product_name} | Exclusive Offer</title>
+  <title>${escapeHtml(product_name || 'Product')} | Exclusive Offer</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: ${styles.bg}; color: ${styles.text}; line-height: 1.6; }
@@ -40,6 +89,10 @@ export function renderLandingPage({ theme, product_name, price, benefits, pain_p
     .section { padding: 80px 20px; }
     .section-title { text-align: center; font-size: 2.5rem; margin-bottom: 50px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+    .sm\\:grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+    .md\\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+    @media (min-width: 640px) { .sm\\:grid-cols-2 { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 768px) { .md\\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); } }
     .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 30px; }
     .card h3 { margin-bottom: 15px; color: ${styles.accent}; }
     .pain-points .card { border-color: rgba(239, 68, 68, 0.3); }
@@ -54,12 +107,12 @@ export function renderLandingPage({ theme, product_name, price, benefits, pain_p
 
   <section class="hero">
     <div class="container">
-      <h1>${product_name}</h1>
+      <h1>${escapeHtml(product_name || 'Product')}</h1>
       <p>Transform your life with our exclusive solution</p>
-      ${price ? `<div class="price-tag">${price}</div>` : ''}
+      ${price ? `<div class="price-tag">${escapeHtml(price)}</div>` : ''}
       <div>
-        ${cta_primary ? `<a href="${checkout_link || '#'}" class="btn btn-primary">${cta_primary}</a>` : ''}
-        ${cta_secondary ? `<a href="${wa_link || '#'}" class="btn btn-secondary">${cta_secondary}</a>` : ''}
+        ${cta_primary ? `<a href="${safeCheckoutLink}" class="btn btn-primary">${escapeHtml(cta_primary)}</a>` : ''}
+        ${cta_secondary ? `<a href="${safeWaLink}" class="btn btn-secondary">${escapeHtml(cta_secondary)}</a>` : ''}
       </div>
     </div>
   </section>
@@ -68,10 +121,10 @@ export function renderLandingPage({ theme, product_name, price, benefits, pain_p
   <section class="section pain-points">
     <div class="container">
       <h2 class="section-title">Struggling With These Problems?</h2>
-      <div class="grid">
+      <div class="grid sm\:grid-cols-2 md\:grid-cols-3">
         ${painPointsList.map(point => `
           <div class="card">
-            <h3>❌ ${point}</h3>
+            <h3>❌ ${escapeHtml(point)}</h3>
             <p>You're not alone - thousands face this daily challenge.</p>
           </div>
         `).join('')}
@@ -83,12 +136,12 @@ export function renderLandingPage({ theme, product_name, price, benefits, pain_p
   ${benefitsList.length > 0 ? `
   <section class="section benefits">
     <div class="container">
-      <h2 class="section-title">Why Choose ${product_name}?</h2>
-      <div class="grid">
+      <h2 class="section-title">Why Choose ${escapeHtml(product_name || 'Product')}?</h2>
+      <div class="grid sm\:grid-cols-2 md\:grid-cols-3">
         ${benefitsList.map(benefit => `
           <div class="card">
-            <h3>✨ ${benefit}</h3>
-            <p>Experience the difference with our proven solution.</p>
+            <h3>✨ ${escapeHtml(benefit)}</h3>
+            <p>Experience difference with our proven solution.</p>
           </div>
         `).join('')}
       </div>
@@ -101,8 +154,8 @@ export function renderLandingPage({ theme, product_name, price, benefits, pain_p
       <h2>Ready to Get Started?</h2>
       <p style="margin: 20px 0; color: ${styles.secondary};">Join thousands of satisfied customers today</p>
       <div>
-        ${cta_primary ? `<a href="${checkout_link || '#'}" class="btn btn-primary">${cta_primary}</a>` : ''}
-        ${cta_secondary ? `<a href="${wa_link || '#'}" class="btn btn-secondary">${cta_secondary}</a>` : ''}
+        ${cta_primary ? `<a href="${safeCheckoutLink}" class="btn btn-primary">${escapeHtml(cta_primary)}</a>` : ''}
+        ${cta_secondary ? `<a href="${safeWaLink}" class="btn btn-secondary">${escapeHtml(cta_secondary)}</a>` : ''}
       </div>
     </div>
   </section>

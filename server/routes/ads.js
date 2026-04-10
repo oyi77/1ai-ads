@@ -1,15 +1,16 @@
 import { Router } from 'express';
 import { validateAd, validateRequired } from '../lib/validate.js';
-
-// In-memory wizard session storage (production: use Redis/database)
-const wizardSessions = new Map();
+import { escapeHtml } from '../lib/escape.js';
 
 export function createAdsRouter(adsRepo, adGenerator) {
   const router = Router();
 
   function generateAdPreview(ad) {
     if (!ad) return '';
-    const cta = ad.cta || 'Learn More';
+    const safeName = escapeHtml(ad.name || 'Untitled');
+    const safeHook = ad.hook ? escapeHtml(ad.hook) : null;
+    const safeBody = ad.body ? escapeHtml(ad.body) : null;
+    const safeCta = escapeHtml(ad.cta || 'Learn More');
 
     return `
 <!DOCTYPE html>
@@ -17,16 +18,16 @@ export function createAdsRouter(adsRepo, adGenerator) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ad Preview - ${ad.name || 'Untitled'}</title>
+  <title>Ad Preview - ${safeName}</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gradient-to-br from-slate-900 to-slate-800 min-h-screen p-4">
   <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl overflow-hidden">
     <div class="p-8">
-      <h1 class="text-2xl font-bold text-slate-900 mb-2">${ad.name || 'Untitled'}</h1>
-      ${ad.hook ? `<p class="text-lg text-slate-700 mb-4"><em>${ad.hook}</em></p>` : ''}
-      ${ad.body ? `<p class="text-lg text-slate-700 mb-4">${ad.body}</p>` : ''}
-      <button class="mt-6 bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-lg font-bold transition-colors">${cta}</button>
+      <h1 class="text-2xl font-bold text-slate-900 mb-2">${safeName}</h1>
+      ${safeHook ? `<p class="text-lg text-slate-700 mb-4"><em>${safeHook}</em></p>` : ''}
+      ${safeBody ? `<p class="text-lg text-slate-700 mb-4">${safeBody}</p>` : ''}
+      <button class="mt-6 bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-lg font-bold transition-colors">${safeCta}</button>
     </div>
   </div>
 </body>
@@ -72,53 +73,79 @@ export function createAdsRouter(adsRepo, adGenerator) {
     res.json({ success: true, data: { id } });
   });
 
-  router.post('/preview', async (req, res) => {
-    const { id } = req.body;
-    const ad = adsRepo.findById(id);
-    if (!ad) return res.status(404).json({ success: false, error: 'Ad not found' });
-
-    // Generate preview HTML
-    const html = generateAdPreview(ad);
-    res.json({ success: true, data: { html } });
+  router.post('/preview', (req, res) => {
+    try {
+      const { id } = req.body;
+      const ad = adsRepo.findById(id);
+      if (!ad) return res.status(404).json({ success: false, error: 'Ad not found' });
+      const html = generateAdPreview(ad);
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   router.get('/', (req, res) => {
-    const { page = 1, limit = 20, platform, status } = req.query;
-    const result = adsRepo.findAll({ page: +page, limit: +limit, platform, status });
-    res.json({ success: true, ...result });
+    try {
+      const { page = 1, limit = 20, platform, status } = req.query;
+      const result = adsRepo.findAll({ page: +page, limit: +limit, platform, status });
+      res.json({ success: true, ...result });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   router.get('/search', (req, res) => {
-    const { q, page = 1, limit = 20 } = req.query;
-    if (!q) return res.json({ success: true, data: [], total: 0 });
-    const result = adsRepo.search(q, { page: +page, limit: +limit });
-    res.json({ success: true, ...result });
+    try {
+      const { q, page = 1, limit = 20 } = req.query;
+      if (!q) return res.json({ success: true, data: [], total: 0 });
+      const result = adsRepo.search(q, { page: +page, limit: +limit });
+      res.json({ success: true, ...result });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   router.get('/:id', (req, res) => {
-    const ad = adsRepo.findById(req.params.id);
-    if (!ad) return res.status(404).json({ success: false, error: 'Not found' });
-    res.json({ success: true, data: ad });
+    try {
+      const ad = adsRepo.findById(req.params.id);
+      if (!ad) return res.status(404).json({ success: false, error: 'Not found' });
+      res.json({ success: true, data: ad });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   router.post('/', (req, res) => {
-    const v = validateAd(req.body);
-    if (!v.valid) return res.status(400).json({ success: false, error: v.error });
-
-    const id = adsRepo.create(req.body);
-    res.json({ success: true, data: { id } });
+    try {
+      const v = validateAd(req.body);
+      if (!v.valid) return res.status(400).json({ success: false, error: v.error });
+      const id = adsRepo.create(req.body);
+      res.json({ success: true, data: { id } });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   router.put('/:id', (req, res) => {
-    const updated = adsRepo.update(req.params.id, req.body);
-    if (!updated) return res.status(404).json({ success: false, error: 'Not found' });
-    res.json({ success: true, data: updated });
+    try {
+      const updated = adsRepo.update(req.params.id, req.body);
+      if (!updated) return res.status(404).json({ success: false, error: 'Not found' });
+      res.json({ success: true, data: updated });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   router.delete('/:id', (req, res) => {
-    const removed = adsRepo.remove(req.params.id);
-    if (!removed) return res.status(404).json({ success: false, error: 'Not found' });
-    res.json({ success: true });
+    try {
+      const removed = adsRepo.remove(req.params.id);
+      if (!removed) return res.status(404).json({ success: false, error: 'Not found' });
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   router.post('/generate', async (req, res) => {

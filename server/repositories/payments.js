@@ -34,4 +34,18 @@ export class PaymentsRepository {
     this.db.prepare('UPDATE payments SET status = ? WHERE id = ?').run(status, id);
     return this.findById(id);
   }
+
+  updateMetadata(id, metadata) {
+    this.db.prepare('UPDATE payments SET metadata = ? WHERE id = ?').run(JSON.stringify(metadata), id);
+    return this.findById(id);
+  }
+
+  findPlanById(planId) {
+    return this.db.prepare('SELECT * FROM plans WHERE id = ?').get(planId) || null;
+  }
+
+  getScalevConfig(planName) {
+    const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(`scalev_plan_${planName}`);
+    return row ? JSON.parse(row.value) : null;
+  }
 }

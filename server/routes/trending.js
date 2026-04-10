@@ -3,7 +3,7 @@ import { Router } from 'express';
 export function createTrendingRouter(trendingService) {
   const router = Router();
 
-  router.get('/internal', async (req, res) => {
+  router.get('/internal', async (_req, res) => {
     try {
       const trends = await trendingService.getInternalTrends();
       res.json({ success: true, data: trends });
@@ -14,9 +14,9 @@ export function createTrendingRouter(trendingService) {
 
   router.get('/external', async (req, res) => {
     try {
-      const { industry, region } = req.query;
+      const { industry, region, source = 'api' } = req.query;
       const trends = await trendingService.getExternalTrends(industry, region);
-      res.json({ success: true, data: trends });
+      res.json({ success: true, data: trends, source });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -24,9 +24,9 @@ export function createTrendingRouter(trendingService) {
 
   router.get('/all', async (req, res) => {
     try {
-      const { industry, region } = req.query;
+      const { industry, region, source = 'api' } = req.query;
       const trends = await trendingService.getAllTrends(industry, region);
-      res.json({ success: true, data: trends });
+      res.json({ success: true, data: trends, source });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }

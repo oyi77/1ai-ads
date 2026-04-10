@@ -51,19 +51,21 @@ function updateNav() {
   const isAuth = api.isAuthenticated();
 
   if (navLinks) {
-    navLinks.classList.remove('hidden-when-unauth');
-    
     const authOnlySelectors = [
-      'a[href="#/"]',
-      'a[href="#/ads"]',
-      'a[href="#/campaigns"]',
-      'a[href="#/landing"]',
-      'a[href="#/analytics"]',
-      'a[href="#/optimizer"]',
-      'a[href="#/campaign/create"]',
-      'a[href="#/settings"]'
+      'a[href="#/"]',              // Dashboard (shows marketing LP for unauth)
+      'a[href="#/campaigns"]',         // Campaigns
+      'a[href="#/ads"]',              // Creatives
+      'a[href="#/landing"]',           // Landing Pages
+      'a[href="#/analytics"]',          // Analytics
+      'a[href="#/optimizer"]',          // Auto Optimizer
+      'a[href="#/trending"]',           // Trending
+      'a[href="#/competitor-spy"]',   // Competitor Spy
+      'a[href="#/global-ads"]',        // Global Ads
+      'a[href="#/research"]',            // Research
+      'a[href="#/campaign/create"]',    // Create Campaign
+      'a[href="#/settings"]'            // Settings
     ];
-    
+
     authOnlySelectors.forEach(sel => {
       const el = navLinks.querySelector(sel);
       if (el) el.classList.toggle('hidden', !isAuth);
@@ -72,7 +74,8 @@ function updateNav() {
 
   if (logoutBtn) {
     logoutBtn.classList.toggle('hidden', !isAuth);
-    logoutBtn.textContent = isAuth ? `Logout (${localStorage.getItem('adforge_user') || ''})` : '';
+    const username = localStorage.getItem('adforge_user');
+    logoutBtn.textContent = isAuth && username ? `Logout (${username})` : (isAuth ? 'Logout' : '');
   }
 }
 

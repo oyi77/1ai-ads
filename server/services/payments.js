@@ -59,13 +59,13 @@ export class PaymentService {
     log.info('Creating payment', { userId, planId });
 
     // Validate plan exists
-    const plan = this.paymentsRepo.db.prepare('SELECT * FROM plans WHERE id = ?').get(planId);
+    const plan = this.paymentsRepo.findPlanById(planId);
     if (!plan) {
       throw new Error(`Invalid plan ID: ${planId}`);
     }
 
     // Get user details for Scalev order
-    const user = this.paymentsRepo.db.prepare('SELECT id, username, email, plan FROM users WHERE id = ?').get(userId);
+    const user = this.usersRepo.findById(userId);
     if (!user) {
       throw new Error('User not found');
     }
@@ -76,16 +76,12 @@ export class PaymentService {
     }
 
     // Get Scalev configuration for plan pricing
-    const scalevConfig = this.paymentsRepo.db.prepare(`
-      SELECT value FROM settings WHERE key = ?
-    `).get(`scalev_plan_${plan.name.toLowerCase()}`);
-
+    const scalevConfig = this.paymentsRepo.getScalevConfig(plan.name.toLowerCase());
     if (!scalevConfig) {
       throw new Error(`Scalev configuration not found for plan: ${plan.name}`);
     }
 
-    const config = JSON.parse(scalevConfig.value);
-    const { storeUniqueId, variantUniqueId, amount } = config;
+    const { storeUniqueId, variantUniqueId, amount } = scalevConfig;
 
     // Generate unique order ID
     const orderId = `order_${uuidv4().slice(0, 8)}`;
@@ -220,11 +216,11 @@ export class PaymentService {
                 userUpdateData.role = 'admin';
               }
 
-              const updatedUser = this.usersRepo.update(payment.userId, userUpdateData);
+              const updatedUser = this.usersRepo.update(payment.user_id, userUpdateData);
               if (updatedUser) {
-                log.info('User plan upgraded', { userId: payment.userId, plan: planName, role: updatedUser.role });
+                log.info('User plan upgraded', { userId: payment.user_id, plan: planName, role: updatedUser.role });
               } else {
-                log.error('Failed to update user plan', { userId: payment.userId });
+                log.error('Failed to update user plan', { userId: payment.user_id });
                 return { success: false, error: 'Failed to update user plan' };
               }
             }
@@ -242,7 +238,7 @@ export class PaymentService {
             log.info('Payment status updated to shipped', { paymentId: payment.id });
 
             // Send notification (optional, for now just log)
-            log.info('Order shipped notification', { paymentId: payment.id, userId: payment.userId });
+            log.info('Order shipped notification', { paymentId: payment.id, userId: payment.user_id });
 
             return { success: true };
           }
@@ -260,9 +256,7 @@ export class PaymentService {
                 failureReason,
                 failedAt: new Date().toISOString()
               };
-              this.paymentsRepo.db.prepare(
-                'UPDATE payments SET metadata = ? WHERE id = ?'
-              ).run(JSON.stringify(updatedMetadata), payment.id);
+              this.paymentsRepo.updateMetadata(payment.id, updatedMetadata);
             }
 
             log.info('Payment status updated to failed', { paymentId: payment.id, reason: failureReason });

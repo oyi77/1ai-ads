@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { getCompetitorData } from '../services/competitor-spy.js';
 import { createLogger } from '../lib/logger.js';
 const log = createLogger('competitor-spy');
 
@@ -7,7 +6,7 @@ export function createCompetitorSpyRouter(competitorsRepo) {
   const router = Router();
 
   // GET - list latest competitor snapshots
-  router.get('/', async (req, res) => {
+  router.get('/', async (_req, res) => {
     try {
       const snapshots = competitorsRepo.findLatest();
       res.json({ success: true, data: snapshots });
@@ -34,8 +33,10 @@ export function createCompetitorSpyRouter(competitorsRepo) {
       const { url, platform } = req.body;
       if (!url) return res.status(400).json({ success: false, error: 'url is required' });
 
-      const adData = await getCompetitorData(url);
-      const snapshot = competitorsRepo.create({ url, platform, adData, snapshotType: 'manual' });
+      const { AdIntelligenceService } = await import('../services/ad-intelligence.js');
+      const adService = new AdIntelligenceService(competitorsRepo.db);
+      const adData = await adService.getCompetitorAds(url, { platform }).catch(() => ({ ads: [], total: 0 }));
+      const snapshot = competitorsRepo.create({ url, platform: platform || null, adData, snapshotType: 'manual' });
       log.info('Competitor snapshot created', { url, id: snapshot.id });
       res.json({ success: true, data: snapshot });
     } catch (e) {
@@ -45,13 +46,15 @@ export function createCompetitorSpyRouter(competitorsRepo) {
   });
 
   // POST /refresh - refresh all tracked competitors
-  router.post('/refresh', async (req, res) => {
+  router.post('/refresh', async (_req, res) => {
     try {
       const latest = competitorsRepo.findLatest();
       const results = [];
       for (const snapshot of latest) {
         try {
-          const adData = await getCompetitorData(snapshot.url);
+          const { AdIntelligenceService } = await import('../services/ad-intelligence.js');
+          const adService = new AdIntelligenceService(competitorsRepo.db);
+          const adData = await adService.getCompetitorAds(snapshot.url, { platform: snapshot.platform }).catch(() => ({ ads: [], total: 0 }));
           const newSnapshot = competitorsRepo.create({ url: snapshot.url, platform: snapshot.platform, adData, snapshotType: 'auto' });
           results.push(newSnapshot);
         } catch (e) {
@@ -110,7 +113,7 @@ export function createCompetitorSpyRouter(competitorsRepo) {
       const metrics = await competitorSpyService.getCompetitorMetrics(competitorId);
 
       if (!metrics.hasData) {
-        return res.status(404).json({ success: false, error: metrics.message });
+        return res.status(404).json({ success: false, data: metrics });
       }
 
       res.json({ success: true, data: metrics });
@@ -132,7 +135,7 @@ export function createCompetitorSpyRouter(competitorsRepo) {
 
       const competitorSpyService = new CompetitorSpyService(
         competitorsRepo.db,
-        new AdIntelligenceService()
+        new AdIntelligenceService(competitorsRepo.db)
       );
 
       const result = await competitorSpyService.monitorCompetitor(competitorId, userId, { platform });

@@ -177,6 +177,7 @@ CREATE TABLE IF NOT EXISTS payments (
 
 CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);
 CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+CREATE INDEX IF NOT EXISTS idx_payments_order_id ON payments(order_id);
 
 CREATE TABLE IF NOT EXISTS competitor_snapshots (
   id TEXT PRIMARY KEY,
@@ -217,6 +218,8 @@ CREATE INDEX IF NOT EXISTS idx_perf_history_campaign ON performance_history(camp
 -- Triggers for updated_at
 CREATE TRIGGER IF NOT EXISTS ads_updated_at AFTER UPDATE ON ads
 BEGIN UPDATE ads SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
+
+CREATE INDEX IF NOT EXISTS idx_landing_pages_slug ON landing_pages(slug);
 
 CREATE TRIGGER IF NOT EXISTS landing_pages_updated_at AFTER UPDATE ON landing_pages
 BEGIN UPDATE landing_pages SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id; END;

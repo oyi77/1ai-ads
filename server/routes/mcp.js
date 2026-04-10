@@ -9,18 +9,23 @@ export function createMcpRouter(mcpClient, settingsRepo, campaignsRepo, adsRepo,
   const router = Router();
 
   const mcpServer = createAdForgeMCPServer(campaignsRepo, landingRepo, adsRepo);
-  let sseTransport = null;
+  // Per-user transport map prevents concurrent connections from overwriting each other
+  const sseTransports = new Map();
 
   router.get('/sse', async (req, res) => {
-    log.info('New SSE connection request');
-    sseTransport = new SSEServerTransport("/api/mcp/messages", res);
-    await mcpServer.connect(sseTransport);
+    const userId = req.user.id;
+    log.info('New SSE connection request', { userId });
+    const transport = new SSEServerTransport("/api/mcp/messages", res);
+    sseTransports.set(userId, transport);
+    res.on('close', () => sseTransports.delete(userId));
+    await mcpServer.connect(transport);
   });
 
   router.post('/messages', async (req, res) => {
-    log.info('Message received');
-    if (sseTransport) {
-      await sseTransport.handlePostMessage(req, res);
+    const userId = req.user.id;
+    const transport = sseTransports.get(userId);
+    if (transport) {
+      await transport.handlePostMessage(req, res);
     } else {
       res.status(400).json({ error: "No active SSE transport" });
     }
