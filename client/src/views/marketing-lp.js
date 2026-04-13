@@ -119,6 +119,12 @@ export async function renderMarketingLP(el) {
 
       <!-- Footer -->
       <footer class="py-12 px-4 border-t border-[#30363d] text-center text-slate-500 text-sm">
+        <div class="flex justify-center gap-6 mb-6">
+          <a href="#/privacy" class="hover:text-sky-400 transition-colors">Privacy Policy</a>
+          <a href="#/terms" class="hover:text-sky-400 transition-colors">Terms & Service</a>
+          <a href="#/gdpr" class="hover:text-sky-400 transition-colors">GDPR</a>
+          <a href="#/docs" class="hover:text-sky-400 transition-colors">Docs</a>
+        </div>
         <p>© 2026 AdForge AI. All rights reserved. Powered by OmniRoute.</p>
       </footer>
     </div>

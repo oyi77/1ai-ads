@@ -18,6 +18,7 @@ import { renderGlobalAds } from './views/global-ads.js';
 import { renderAiSuggestions } from './views/ai-suggestions.js';
 import { renderMarketingLP } from './views/marketing-lp.js';
 import { renderDocs } from './views/docs.js';
+import { renderPrivacyPolicy, renderTermsService, renderGDPR } from './views/legal.js';
 
 const router = new Router(document.getElementById('app'));
 
@@ -29,6 +30,9 @@ router.on('/', (el) => {
   }
 });
 router.on('/docs', renderDocs);
+router.on('/privacy', renderPrivacyPolicy);
+router.on('/terms', renderTermsService);
+router.on('/gdpr', renderGDPR);
 router.on('/ads', renderAdsList);
 router.on('/ads/create', renderAdsCreate);
 router.on('/landing', renderLandingList);
