@@ -1,0 +1,255 @@
+- generic [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e4]:
+      - link "AdForge" [ref=e5] [cursor=pointer]:
+        - /url: "#/"
+      - generic [ref=e6]:
+        - link "Dashboard" [ref=e26] [cursor=pointer]:
+          - /url: "#/"
+        - link "Campaigns" [ref=e27] [cursor=pointer]:
+          - /url: "#/campaigns"
+        - link "Creatives" [active] [ref=e28] [cursor=pointer]:
+          - /url: "#/ads"
+        - link "Landing" [ref=e29] [cursor=pointer]:
+          - /url: "#/landing"
+        - link "Analytics" [ref=e30] [cursor=pointer]:
+          - /url: "#/analytics"
+        - link "Auto" [ref=e31] [cursor=pointer]:
+          - /url: "#/optimizer"
+        - link "+ Campaign" [ref=e7] [cursor=pointer]:
+          - /url: "#campaign/create"
+        - link "Settings" [ref=e32] [cursor=pointer]:
+          - /url: "#/settings"
+        - button "Logout (admin)" [ref=e33] [cursor=pointer]
+  - generic [ref=e112]:
+    - heading "AI Creatives" [level=1] [ref=e113]
+    - paragraph [ref=e114]:
+      - text: AI-generated ads stored locally. For live Meta campaigns, see
+      - link "Campaigns" [ref=e115] [cursor=pointer]:
+        - /url: "#/campaigns"
+      - text: .
+    - generic [ref=e116]:
+      - textbox "Search ads..." [ref=e117]
+      - link "Create Ad" [ref=e118] [cursor=pointer]:
+        - /url: "#/ads/create"
+    - generic [ref=e119]:
+      - generic [ref=e120]:
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - generic [ref=e123]: QA Ad
+            - generic [ref=e124]: meta · P.A.S
+            - generic [ref=e125]: Slow?
+          - generic [ref=e126]: Default Account
+        - generic [ref=e127]:
+          - button "Preview" [ref=e128] [cursor=pointer]
+          - button "Edit" [ref=e129] [cursor=pointer]
+          - button "Delete" [ref=e130] [cursor=pointer]
+      - generic [ref=e131]:
+        - generic [ref=e132]:
+          - generic [ref=e133]:
+            - generic [ref=e134]: QA Ad
+            - generic [ref=e135]: meta · P.A.S
+            - generic [ref=e136]: Slow?
+          - generic [ref=e137]: Default Account
+        - generic [ref=e138]:
+          - button "Preview" [ref=e139] [cursor=pointer]
+          - button "Edit" [ref=e140] [cursor=pointer]
+          - button "Delete" [ref=e141] [cursor=pointer]
+      - generic [ref=e142]:
+        - generic [ref=e143]:
+          - generic [ref=e144]:
+            - generic [ref=e145]: QA Ad
+            - generic [ref=e146]: meta · P.A.S
+            - generic [ref=e147]: Slow?
+          - generic [ref=e148]: Default Account
+        - generic [ref=e149]:
+          - button "Preview" [ref=e150] [cursor=pointer]
+          - button "Edit" [ref=e151] [cursor=pointer]
+          - button "Delete" [ref=e152] [cursor=pointer]
+      - generic [ref=e153]:
+        - generic [ref=e154]:
+          - generic [ref=e155]:
+            - generic [ref=e156]: QA Ad
+            - generic [ref=e157]: meta · P.A.S
+            - generic [ref=e158]: Slow?
+          - generic [ref=e159]: Default Account
+        - generic [ref=e160]:
+          - button "Preview" [ref=e161] [cursor=pointer]
+          - button "Edit" [ref=e162] [cursor=pointer]
+          - button "Delete" [ref=e163] [cursor=pointer]
+      - generic [ref=e164]:
+        - generic [ref=e165]:
+          - generic [ref=e166]:
+            - generic [ref=e167]: QA Ad
+            - generic [ref=e168]: meta · P.A.S
+            - generic [ref=e169]: Slow?
+          - generic [ref=e170]: Default Account
+        - generic [ref=e171]:
+          - button "Preview" [ref=e172] [cursor=pointer]
+          - button "Edit" [ref=e173] [cursor=pointer]
+          - button "Delete" [ref=e174] [cursor=pointer]
+      - generic [ref=e175]:
+        - generic [ref=e176]:
+          - generic [ref=e177]:
+            - generic [ref=e178]: QA Ad
+            - generic [ref=e179]: meta · P.A.S
+            - generic [ref=e180]: Slow?
+          - generic [ref=e181]: Default Account
+        - generic [ref=e182]:
+          - button "Preview" [ref=e183] [cursor=pointer]
+          - button "Edit" [ref=e184] [cursor=pointer]
+          - button "Delete" [ref=e185] [cursor=pointer]
+      - generic [ref=e186]:
+        - generic [ref=e187]:
+          - generic [ref=e188]:
+            - generic [ref=e189]: QA Ad
+            - generic [ref=e190]: meta · P.A.S
+            - generic [ref=e191]: Slow?
+          - generic [ref=e192]: Default Account
+        - generic [ref=e193]:
+          - button "Preview" [ref=e194] [cursor=pointer]
+          - button "Edit" [ref=e195] [cursor=pointer]
+          - button "Delete" [ref=e196] [cursor=pointer]
+      - generic [ref=e197]:
+        - generic [ref=e198]:
+          - generic [ref=e199]:
+            - generic [ref=e200]: QA Ad
+            - generic [ref=e201]: meta · P.A.S
+            - generic [ref=e202]: Slow?
+          - generic [ref=e203]: Default Account
+        - generic [ref=e204]:
+          - button "Preview" [ref=e205] [cursor=pointer]
+          - button "Edit" [ref=e206] [cursor=pointer]
+          - button "Delete" [ref=e207] [cursor=pointer]
+      - generic [ref=e208]:
+        - generic [ref=e209]:
+          - generic [ref=e210]:
+            - generic [ref=e211]: QA Ad
+            - generic [ref=e212]: meta · P.A.S
+            - generic [ref=e213]: Slow?
+          - generic [ref=e214]: Default Account
+        - generic [ref=e215]:
+          - button "Preview" [ref=e216] [cursor=pointer]
+          - button "Edit" [ref=e217] [cursor=pointer]
+          - button "Delete" [ref=e218] [cursor=pointer]
+      - generic [ref=e219]:
+        - generic [ref=e220]:
+          - generic [ref=e221]:
+            - generic [ref=e222]: QA Ad
+            - generic [ref=e223]: meta · P.A.S
+            - generic [ref=e224]: Slow?
+          - generic [ref=e225]: Default Account
+        - generic [ref=e226]:
+          - button "Preview" [ref=e227] [cursor=pointer]
+          - button "Edit" [ref=e228] [cursor=pointer]
+          - button "Delete" [ref=e229] [cursor=pointer]
+      - generic [ref=e230]:
+        - generic [ref=e231]:
+          - generic [ref=e232]:
+            - generic [ref=e233]: QA Ad
+            - generic [ref=e234]: meta · P.A.S
+            - generic [ref=e235]: Slow?
+          - generic [ref=e236]: Default Account
+        - generic [ref=e237]:
+          - button "Preview" [ref=e238] [cursor=pointer]
+          - button "Edit" [ref=e239] [cursor=pointer]
+          - button "Delete" [ref=e240] [cursor=pointer]
+      - generic [ref=e241]:
+        - generic [ref=e242]:
+          - generic [ref=e243]:
+            - generic [ref=e244]: QA Ad
+            - generic [ref=e245]: meta · P.A.S
+            - generic [ref=e246]: Slow?
+          - generic [ref=e247]: Default Account
+        - generic [ref=e248]:
+          - button "Preview" [ref=e249] [cursor=pointer]
+          - button "Edit" [ref=e250] [cursor=pointer]
+          - button "Delete" [ref=e251] [cursor=pointer]
+      - generic [ref=e252]:
+        - generic [ref=e253]:
+          - generic [ref=e254]:
+            - generic [ref=e255]: QA Ad
+            - generic [ref=e256]: meta · P.A.S
+            - generic [ref=e257]: Slow?
+          - generic [ref=e258]: Default Account
+        - generic [ref=e259]:
+          - button "Preview" [ref=e260] [cursor=pointer]
+          - button "Edit" [ref=e261] [cursor=pointer]
+          - button "Delete" [ref=e262] [cursor=pointer]
+      - generic [ref=e263]:
+        - generic [ref=e264]:
+          - generic [ref=e265]:
+            - generic [ref=e266]: QA Ad
+            - generic [ref=e267]: meta · P.A.S
+            - generic [ref=e268]: Slow?
+          - generic [ref=e269]: Default Account
+        - generic [ref=e270]:
+          - button "Preview" [ref=e271] [cursor=pointer]
+          - button "Edit" [ref=e272] [cursor=pointer]
+          - button "Delete" [ref=e273] [cursor=pointer]
+      - generic [ref=e274]:
+        - generic [ref=e275]:
+          - generic [ref=e276]:
+            - generic [ref=e277]: QA Ad
+            - generic [ref=e278]: meta · P.A.S
+            - generic [ref=e279]: Slow?
+          - generic [ref=e280]: Default Account
+        - generic [ref=e281]:
+          - button "Preview" [ref=e282] [cursor=pointer]
+          - button "Edit" [ref=e283] [cursor=pointer]
+          - button "Delete" [ref=e284] [cursor=pointer]
+      - generic [ref=e285]:
+        - generic [ref=e286]:
+          - generic [ref=e287]:
+            - generic [ref=e288]: QA Ad
+            - generic [ref=e289]: meta · P.A.S
+            - generic [ref=e290]: Slow?
+          - generic [ref=e291]: Default Account
+        - generic [ref=e292]:
+          - button "Preview" [ref=e293] [cursor=pointer]
+          - button "Edit" [ref=e294] [cursor=pointer]
+          - button "Delete" [ref=e295] [cursor=pointer]
+      - generic [ref=e296]:
+        - generic [ref=e297]:
+          - generic [ref=e298]:
+            - generic [ref=e299]: QA Ad
+            - generic [ref=e300]: meta · P.A.S
+            - generic [ref=e301]: Slow?
+          - generic [ref=e302]: Default Account
+        - generic [ref=e303]:
+          - button "Preview" [ref=e304] [cursor=pointer]
+          - button "Edit" [ref=e305] [cursor=pointer]
+          - button "Delete" [ref=e306] [cursor=pointer]
+      - generic [ref=e307]:
+        - generic [ref=e308]:
+          - generic [ref=e309]:
+            - generic [ref=e310]: QA Ad
+            - generic [ref=e311]: meta · P.A.S
+            - generic [ref=e312]: Slow?
+          - generic [ref=e313]: Default Account
+        - generic [ref=e314]:
+          - button "Preview" [ref=e315] [cursor=pointer]
+          - button "Edit" [ref=e316] [cursor=pointer]
+          - button "Delete" [ref=e317] [cursor=pointer]
+      - generic [ref=e318]:
+        - generic [ref=e319]:
+          - generic [ref=e320]:
+            - generic [ref=e321]: QA Ad Updated
+            - generic [ref=e322]: meta · P.A.S
+            - generic [ref=e323]: Slow?
+          - generic [ref=e324]: Default Account
+        - generic [ref=e325]:
+          - button "Preview" [ref=e326] [cursor=pointer]
+          - button "Edit" [ref=e327] [cursor=pointer]
+          - button "Delete" [ref=e328] [cursor=pointer]
+      - generic [ref=e329]:
+        - generic [ref=e330]:
+          - generic [ref=e331]:
+            - generic [ref=e332]: QA Ad
+            - generic [ref=e333]: meta · P.A.S
+            - generic [ref=e334]: Slow?
+          - generic [ref=e335]: Default Account
+        - generic [ref=e336]:
+          - button "Preview" [ref=e337] [cursor=pointer]
+          - button "Edit" [ref=e338] [cursor=pointer]
+          - button "Delete" [ref=e339] [cursor=pointer]

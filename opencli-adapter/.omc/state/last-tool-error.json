@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"node /home/openclaw/projects/adforge/adforge-cli.js --help\",\"description\":\"Test CLI help command after fix\"}",
+  "error": "Exit code 1\nfile:///home/openclaw/projects/adforge/adforge-cli.js:10\nimport { fetch } from 'node-fetch';\n         ^^^^^\nSyntaxError: The requested module 'node-fetch' does not provide an export named 'fetch'\n    at #asyncInstantiate (node:internal/modules/esm/module_job:319:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:422:5)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/mo...",
+  "timestamp": "2026-04-09T14:47:29.338Z",
+  "retry_count": 1
+}

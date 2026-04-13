@@ -1,0 +1,22 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e4]:
+      - link "AdForge" [ref=e5] [cursor=pointer]:
+        - /url: "#/"
+      - link "+ Campaign" [ref=e7] [cursor=pointer]:
+        - /url: "#campaign/create"
+  - generic [ref=e13]:
+    - heading "Login to AdForge" [level=1] [ref=e14]
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]: Username or Email
+        - textbox [ref=e18]
+      - generic [ref=e19]:
+        - generic [ref=e20]: Password
+        - textbox [ref=e21]
+      - button "Login" [ref=e22] [cursor=pointer]
+    - paragraph [ref=e23]:
+      - text: No account?
+      - link "Register" [ref=e24] [cursor=pointer]:
+        - /url: "#/register"
+    - paragraph [ref=e25]: "Default: admin / admin123"

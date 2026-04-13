@@ -1,0 +1,60 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e4]:
+      - link "AdForge" [ref=e5] [cursor=pointer]:
+        - /url: "#/"
+      - generic [ref=e6]:
+        - link "Dashboard" [ref=e26] [cursor=pointer]:
+          - /url: "#/"
+        - link "Campaigns" [ref=e27] [cursor=pointer]:
+          - /url: "#/campaigns"
+        - link "Creatives" [ref=e28] [cursor=pointer]:
+          - /url: "#/ads"
+        - link "Landing" [ref=e29] [cursor=pointer]:
+          - /url: "#/landing"
+        - link "Analytics" [ref=e30] [cursor=pointer]:
+          - /url: "#/analytics"
+        - link "Auto" [ref=e31] [cursor=pointer]:
+          - /url: "#/optimizer"
+        - link "+ Campaign" [ref=e7] [cursor=pointer]:
+          - /url: "#campaign/create"
+        - link "Settings" [ref=e32] [cursor=pointer]:
+          - /url: "#/settings"
+        - button "Logout (admin)" [ref=e33] [cursor=pointer]
+  - generic [ref=e34]:
+    - generic [ref=e35]:
+      - heading "Dashboard" [level=1] [ref=e36]
+      - button "Sync Meta Ads" [ref=e38] [cursor=pointer]
+    - generic [ref=e39]:
+      - generic [ref=e40]:
+        - generic [ref=e41]: Total Spend
+        - generic [ref=e42]: Rp 71.966.771
+      - generic [ref=e43]:
+        - generic [ref=e44]: Total Revenue
+        - generic [ref=e45]: N/A
+      - generic [ref=e46]:
+        - generic [ref=e47]: ROAS
+        - generic [ref=e48]: 0.0x
+      - generic [ref=e49]:
+        - generic [ref=e50]: CTR
+        - generic [ref=e51]: 7.45%
+    - generic [ref=e52]:
+      - generic [ref=e53]:
+        - generic [ref=e54]: CPC
+        - generic [ref=e55]: Rp 80
+      - generic [ref=e56]:
+        - generic [ref=e57]: CPA
+        - generic [ref=e58]: Rp 94
+      - generic [ref=e59]:
+        - generic [ref=e60]: Conversions
+        - generic [ref=e61]: "768669"
+    - generic [ref=e62]:
+      - generic [ref=e63]:
+        - heading "ROAS Trend (7 Days)" [level=3] [ref=e64]
+        - paragraph [ref=e67]: No data available
+      - generic [ref=e68]:
+        - heading "Spend vs Revenue" [level=3] [ref=e69]
+        - paragraph [ref=e72]: No data available
+      - generic [ref=e73]:
+        - heading "Click‑Through Rate Trend (7 Days)" [level=3] [ref=e74]
+        - paragraph [ref=e77]: No data available

@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1776073959577,
+  "lastScanned": 1775733515478,
   "projectRoot": "/home/openclaw/projects/adforge",
   "techStack": {
     "languages": [
@@ -83,7 +83,7 @@
       "path": "client",
       "purpose": null,
       "fileCount": 2,
-      "lastAccessed": 1776073959557,
+      "lastAccessed": 1775733515470,
       "keyFiles": [
         "AGENTS.md",
         "index.html"
@@ -93,7 +93,7 @@
       "path": "db",
       "purpose": null,
       "fileCount": 5,
-      "lastAccessed": 1776073959557,
+      "lastAccessed": 1775733515470,
       "keyFiles": [
         "AGENTS.md",
         "adforge.db",
@@ -106,7 +106,7 @@
       "path": "dist",
       "purpose": "Distribution/build output",
       "fileCount": 3,
-      "lastAccessed": 1776073959563,
+      "lastAccessed": 1775733515474,
       "keyFiles": [
         "favicon.ico",
         "index.html",
@@ -117,29 +117,16 @@
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 1,
-      "lastAccessed": 1776073959568,
+      "lastAccessed": 1775733515476,
       "keyFiles": [
         "BACKLOG_PAYMENTS.md"
-      ]
-    },
-    "opencli-adapter": {
-      "path": "opencli-adapter",
-      "purpose": null,
-      "fileCount": 5,
-      "lastAccessed": 1776073959569,
-      "keyFiles": [
-        "README.md",
-        "USAGE.md",
-        "adapter.js",
-        "index.js",
-        "package.json"
       ]
     },
     "server": {
       "path": "server",
       "purpose": null,
       "fileCount": 2,
-      "lastAccessed": 1776073959569,
+      "lastAccessed": 1775733515476,
       "keyFiles": [
         "AGENTS.md",
         "app.js"
@@ -149,30 +136,21 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1776073959570,
+      "lastAccessed": 1775733515476,
       "keyFiles": []
-    },
-    "state": {
-      "path": "state",
-      "purpose": null,
-      "fileCount": 1,
-      "lastAccessed": 1776073959570,
-      "keyFiles": [
-        "cancel-signal-state.json"
-      ]
     },
     "test-results": {
       "path": "test-results",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1776073959571,
+      "lastAccessed": 1775733515476,
       "keyFiles": []
     },
     "tests": {
       "path": "tests",
       "purpose": "Test files",
       "fileCount": 2,
-      "lastAccessed": 1776073959571,
+      "lastAccessed": 1775733515476,
       "keyFiles": [
         "AGENTS.md",
         "setup.test.js"
@@ -182,7 +160,7 @@
       "path": "client/public",
       "purpose": "Public files",
       "fileCount": 1,
-      "lastAccessed": 1776073959572,
+      "lastAccessed": 1775733515477,
       "keyFiles": [
         "favicon.ico"
       ]
@@ -191,7 +169,7 @@
       "path": "client/src",
       "purpose": "Source code",
       "fileCount": 2,
-      "lastAccessed": 1776073959572,
+      "lastAccessed": 1775733515477,
       "keyFiles": [
         "AGENTS.md",
         "app.js"
@@ -200,19 +178,19 @@
     "dist/assets": {
       "path": "dist/assets",
       "purpose": "Static assets",
-      "fileCount": 41,
-      "lastAccessed": 1776073959573,
+      "fileCount": 36,
+      "lastAccessed": 1775733515477,
       "keyFiles": [
         "index-00XHAhoz.js",
-        "index-9LPe_zzz.js",
-        "index-BBz2FEvH.js"
+        "index-BBz2FEvH.js",
+        "index-BLAcVwpp.js"
       ]
     },
     "server/config": {
       "path": "server/config",
       "purpose": "Configuration files",
       "fileCount": 1,
-      "lastAccessed": 1776073959575,
+      "lastAccessed": 1775733515477,
       "keyFiles": [
         "index.js"
       ]
@@ -221,7 +199,7 @@
       "path": "server/lib",
       "purpose": "Library code",
       "fileCount": 9,
-      "lastAccessed": 1776073959575,
+      "lastAccessed": 1775733515477,
       "keyFiles": [
         "AGENTS.md",
         "auth.js",
@@ -232,7 +210,7 @@
       "path": "server/middleware",
       "purpose": "Middleware",
       "fileCount": 2,
-      "lastAccessed": 1776073959576,
+      "lastAccessed": 1775733515478,
       "keyFiles": [
         "AGENTS.md",
         "auth.js"
@@ -241,30 +219,30 @@
     "server/routes": {
       "path": "server/routes",
       "purpose": "Route handlers",
-      "fileCount": 21,
-      "lastAccessed": 1776073959577,
+      "fileCount": 16,
+      "lastAccessed": 1775733515478,
       "keyFiles": [
         "AGENTS.md",
-        "ads-library.js",
-        "ads.js"
+        "ads.js",
+        "analytics.js"
       ]
     },
     "server/services": {
       "path": "server/services",
       "purpose": "Business logic services",
-      "fileCount": 26,
-      "lastAccessed": 1776073959577,
+      "fileCount": 19,
+      "lastAccessed": 1775733515478,
       "keyFiles": [
         "AGENTS.md",
         "ad-generator.js",
-        "ad-intelligence.js"
+        "ad-research.js"
       ]
     },
     "tests/helpers": {
       "path": "tests/helpers",
       "purpose": "Helper functions",
       "fileCount": 2,
-      "lastAccessed": 1776073959577,
+      "lastAccessed": 1775733515478,
       "keyFiles": [
         "db.js",
         "fixtures.js"
@@ -274,68 +252,62 @@
   "hotPaths": [
     {
       "path": "server/app.js",
-      "accessCount": 92,
-      "lastAccessed": 1775813032978,
-      "type": "file"
-    },
-    {
-      "path": "tests/integration/competitor-spy.test.js",
-      "accessCount": 49,
-      "lastAccessed": 1775806886092,
+      "accessCount": 65,
+      "lastAccessed": 1775782746981,
       "type": "file"
     },
     {
       "path": "server",
-      "accessCount": 49,
-      "lastAccessed": 1775812527066,
+      "accessCount": 47,
+      "lastAccessed": 1775782872145,
       "type": "directory"
     },
     {
-      "path": "client/src/views/settings.js",
+      "path": "tests/integration/competitor-spy.test.js",
       "accessCount": 46,
-      "lastAccessed": 1775814240251,
-      "type": "file"
-    },
-    {
-      "path": "server/config/index.js",
-      "accessCount": 42,
-      "lastAccessed": 1775807048623,
+      "lastAccessed": 1775778665420,
       "type": "file"
     },
     {
       "path": "server/services/competitor-spy.js",
-      "accessCount": 39,
-      "lastAccessed": 1775803909627,
+      "accessCount": 37,
+      "lastAccessed": 1775782808396,
       "type": "file"
     },
     {
       "path": "server/services/payments.js",
-      "accessCount": 36,
-      "lastAccessed": 1775783402153,
+      "accessCount": 35,
+      "lastAccessed": 1775783192721,
       "type": "file"
     },
     {
-      "path": "",
-      "accessCount": 36,
-      "lastAccessed": 1775812531716,
-      "type": "directory"
-    },
-    {
-      "path": "db/schema.sql",
-      "accessCount": 34,
-      "lastAccessed": 1775812548322,
+      "path": "server/config/index.js",
+      "accessCount": 33,
+      "lastAccessed": 1775782747075,
       "type": "file"
     },
     {
       "path": "server/routes/competitor-spy.js",
-      "accessCount": 32,
-      "lastAccessed": 1775803915245,
+      "accessCount": 31,
+      "lastAccessed": 1775783041600,
       "type": "file"
     },
     {
       "path": "db/seed.js",
       "accessCount": 30,
       "lastAccessed": 1775782789467,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 29,
+      "lastAccessed": 1775782753865,
+      "type": "directory"
+    },
+    {
+      "path": "db/schema.sql",
+      "accessCount": 26,
+      "lastAccessed": 1775783081517,
       "type": "file"
     },
     {
@@ -351,21 +323,9 @@
       "type": "file"
     },
     {
-      "path": "client/src/app.js",
-      "accessCount": 19,
-      "lastAccessed": 1775812527288,
-      "type": "file"
-    },
-    {
-      "path": "server/services/trending.js",
-      "accessCount": 16,
-      "lastAccessed": 1775783621610,
-      "type": "file"
-    },
-    {
-      "path": "server/repositories/payments.js",
-      "accessCount": 16,
-      "lastAccessed": 1775806690971,
+      "path": "client/src/views/settings.js",
+      "accessCount": 15,
+      "lastAccessed": 1775734649878,
       "type": "file"
     },
     {
@@ -375,21 +335,21 @@
       "type": "file"
     },
     {
-      "path": ".env.example",
+      "path": "server/services/trending.js",
       "accessCount": 14,
-      "lastAccessed": 1775807048925,
+      "lastAccessed": 1775783191588,
       "type": "file"
     },
     {
-      "path": "db/index.js",
+      "path": "client/src/app.js",
       "accessCount": 13,
-      "lastAccessed": 1775809121450,
+      "lastAccessed": 1775780522670,
       "type": "file"
     },
     {
-      "path": "client/index.html",
+      "path": "server/repositories/payments.js",
       "accessCount": 13,
-      "lastAccessed": 1775809243438,
+      "lastAccessed": 1775782827814,
       "type": "file"
     },
     {
@@ -405,15 +365,27 @@
       "type": "file"
     },
     {
+      "path": "client/index.html",
+      "accessCount": 11,
+      "lastAccessed": 1775744291760,
+      "type": "file"
+    },
+    {
       "path": "server/repositories/competitors.js",
       "accessCount": 10,
       "lastAccessed": 1775782746527,
       "type": "file"
     },
     {
+      "path": ".env.example",
+      "accessCount": 9,
+      "lastAccessed": 1775779664073,
+      "type": "file"
+    },
+    {
       "path": "server/routes/scalev.js",
-      "accessCount": 10,
-      "lastAccessed": 1775806877446,
+      "accessCount": 9,
+      "lastAccessed": 1775783079665,
       "type": "file"
     },
     {
@@ -447,21 +419,21 @@
       "type": "file"
     },
     {
-      "path": "server/lib/logger.js",
+      "path": "db/index.js",
       "accessCount": 7,
-      "lastAccessed": 1775806717770,
+      "lastAccessed": 1775783192478,
+      "type": "file"
+    },
+    {
+      "path": "server/lib/logger.js",
+      "accessCount": 6,
+      "lastAccessed": 1775748105624,
       "type": "file"
     },
     {
       "path": "server/repositories/templates.js",
       "accessCount": 6,
       "lastAccessed": 1775782769825,
-      "type": "file"
-    },
-    {
-      "path": "server.js",
-      "accessCount": 6,
-      "lastAccessed": 1775783276526,
       "type": "file"
     },
     {
@@ -477,6 +449,12 @@
       "type": "directory"
     },
     {
+      "path": "server.js",
+      "accessCount": 5,
+      "lastAccessed": 1775782759331,
+      "type": "file"
+    },
+    {
       "path": "server/routes/templates.js",
       "accessCount": 5,
       "lastAccessed": 1775782762938,
@@ -489,21 +467,21 @@
       "type": "file"
     },
     {
-      "path": "server/repositories/campaigns.js",
-      "accessCount": 5,
-      "lastAccessed": 1775783368133,
+      "path": "client/src/lib/api.js",
+      "accessCount": 4,
+      "lastAccessed": 1775780630219,
       "type": "file"
     },
     {
       "path": "client/src",
-      "accessCount": 5,
-      "lastAccessed": 1775812526683,
+      "accessCount": 4,
+      "lastAccessed": 1775780636851,
       "type": "directory"
     },
     {
-      "path": "client/src/lib/api.js",
+      "path": "server/repositories/campaigns.js",
       "accessCount": 4,
-      "lastAccessed": 1775780630219,
+      "lastAccessed": 1775782745104,
       "type": "file"
     },
     {
@@ -513,21 +491,15 @@
       "type": "file"
     },
     {
-      "path": "server/services/mcp-server.js",
-      "accessCount": 4,
-      "lastAccessed": 1775803771686,
-      "type": "file"
-    },
-    {
       "path": "tests/unit/services/trending.test.js",
       "accessCount": 3,
       "lastAccessed": 1775738095429,
       "type": "file"
     },
     {
-      "path": "tests/unit/services/competitor-spy.test.js",
+      "path": "server/services/mcp-server.js",
       "accessCount": 3,
-      "lastAccessed": 1775803927041,
+      "lastAccessed": 1775739068823,
       "type": "file"
     },
     {
@@ -535,6 +507,12 @@
       "accessCount": 2,
       "lastAccessed": 1775734814489,
       "type": "directory"
+    },
+    {
+      "path": "tests/unit/services/competitor-spy.test.js",
+      "accessCount": 2,
+      "lastAccessed": 1775735961126,
+      "type": "file"
     },
     {
       "path": "client/src/views/dashboard.js",

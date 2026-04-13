@@ -1,0 +1,62 @@
+- generic [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e4]:
+      - link "AdForge" [ref=e5] [cursor=pointer]:
+        - /url: "#/"
+      - generic [ref=e6]:
+        - link "Dashboard" [ref=e26] [cursor=pointer]:
+          - /url: "#/"
+        - link "Campaigns" [active] [ref=e27] [cursor=pointer]:
+          - /url: "#/campaigns"
+        - link "Creatives" [ref=e28] [cursor=pointer]:
+          - /url: "#/ads"
+        - link "Landing" [ref=e29] [cursor=pointer]:
+          - /url: "#/landing"
+        - link "Analytics" [ref=e30] [cursor=pointer]:
+          - /url: "#/analytics"
+        - link "Auto" [ref=e31] [cursor=pointer]:
+          - /url: "#/optimizer"
+        - link "+ Campaign" [ref=e7] [cursor=pointer]:
+          - /url: "#campaign/create"
+        - link "Settings" [ref=e32] [cursor=pointer]:
+          - /url: "#/settings"
+        - button "Logout (admin)" [ref=e33] [cursor=pointer]
+  - generic [ref=e78]:
+    - generic [ref=e79]:
+      - generic [ref=e80]:
+        - heading "Campaigns" [level=1] [ref=e81]
+        - paragraph [ref=e82]: Real data from your connected ad accounts
+      - button "Sync All Platforms" [ref=e83] [cursor=pointer]
+    - generic [ref=e84]:
+      - generic [ref=e85]:
+        - generic [ref=e86]: Campaigns
+        - generic [ref=e87]: "0"
+      - generic [ref=e88]:
+        - generic [ref=e89]: Spend
+        - generic [ref=e90]: "-"
+      - generic [ref=e91]:
+        - generic [ref=e92]: Revenue
+        - generic [ref=e93]: "-"
+      - generic [ref=e94]:
+        - generic [ref=e95]: ROAS
+        - generic [ref=e96]: 0.0x
+      - generic [ref=e97]:
+        - generic [ref=e98]: CTR
+        - generic [ref=e99]: 0.00%
+      - generic [ref=e100]:
+        - generic [ref=e101]: Conv.
+        - generic [ref=e102]: "0"
+    - generic [ref=e103]:
+      - textbox "Search campaigns..." [ref=e104]
+      - combobox [ref=e105]:
+        - option "All Platforms" [selected]
+      - combobox [ref=e106]:
+        - option "All Status" [selected]
+        - option "Active"
+        - option "Paused"
+        - option "Completed"
+    - generic [ref=e108]:
+      - paragraph [ref=e109]: No campaigns found.
+      - paragraph [ref=e110]: Connect your ad accounts and sync to see your campaigns here.
+      - link "Go to Settings" [ref=e111] [cursor=pointer]:
+        - /url: "#/settings"

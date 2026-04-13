@@ -1,0 +1,51 @@
+{
+  "name": "adforge-cli",
+  "version": "1.0.0",
+  "description": "AdForge CLI - Universal command-line interface for ad management, competitor spy, and analytics",
+  "type": "commonjs",
+  "main": "index.cjs",
+  "bin": {
+    "adforge": "./index.js"
+  },
+  "scripts": {
+    "install": "echo 'Installation complete. Run with: adforge --help' && echo ''",
+    "list-campaigns": "node index.js campaigns list",
+    "get-campaign": "node index.js campaigns get <id>",
+    "create-campaign": "node index.js campaigns create",
+    "sync-campaigns": "node index.js campaigns sync",
+    "search-ads": "node index.js ads search <query>",
+    "competitor-add": "node index.js competitors add <url>",
+    "competitor-list": "node index.js competitors list",
+    "competitor-analyze": "node index.js competitors analyze <id>",
+    "trending": "node index.js trending",
+    "analytics": "node index.js analytics --campaign <id>",
+    "accounts": "node index.js accounts list",
+    "accounts-sync": "node index.js accounts sync"
+  },
+  "dependencies": {
+    "commander": "^13.1.0",
+    "node-fetch": "^3.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openclaw/adforge"
+  },
+  "keywords": [
+    "adforge",
+    "cli",
+    "ads",
+    "campaigns",
+    "competitor spy",
+    "trending",
+    "analytics",
+    "marketing"
+    "meta ads",
+    "google ads",
+    "tiktok ads"
+  ],
+  "author": "AdForge",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

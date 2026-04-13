@@ -1,0 +1,48 @@
+{
+  "title": "Configurable AI Autonomy Levels",
+  "description": "Replace binary ai_mode + auto_mode toggles with a single ai_autonomy_level setting: off/manual/semi_auto/fully_auto",
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "AiAgent service: getAutonomyLevel(), shouldAutoApply(), updated isEnabled/isAutoMode",
+      "priority": 1,
+      "passes": true,
+      "acceptanceCriteria": [
+        "getAutonomyLevel() reads 'ai_autonomy_level' from settingsRepo, defaults to 'off' if not set",
+        "isEnabled() returns true when autonomy level is NOT 'off'",
+        "isAutoMode() returns true ONLY when level is 'fully_auto'",
+        "shouldAutoApply(type) returns true for all types when fully_auto",
+        "shouldAutoApply(type) returns true only for ad_copy/creative when semi_auto",
+        "shouldAutoApply(type) returns false for all types when manual or off",
+        "analyzeAndSuggest uses shouldAutoApply(s.type) per-suggestion instead of global autoMode flag",
+        "Unit tests for all getAutonomyLevel, shouldAutoApply, semi_auto behavior"
+      ]
+    },
+    {
+      "id": "US-002",
+      "title": "API: POST /autonomy endpoint + updated GET /status + backward-compat /toggle",
+      "priority": 2,
+      "passes": true,
+      "acceptanceCriteria": [
+        "POST /api/ai-agent/autonomy { level } validates level is one of off/manual/semi_auto/fully_auto",
+        "POST /api/ai-agent/autonomy sets ai_autonomy_level in settingsRepo and returns updated status",
+        "POST /api/ai-agent/autonomy returns 400 for invalid level values",
+        "GET /api/ai-agent/status returns autonomy_level field",
+        "Existing POST /toggle endpoint maps ai_mode/auto_mode booleans to ai_autonomy_level"
+      ]
+    },
+    {
+      "id": "US-003",
+      "title": "UI: Replace dual toggle with autonomy level selector in settings",
+      "priority": 3,
+      "passes": true,
+      "acceptanceCriteria": [
+        "Settings page AI Mode card shows radio group with 4 options: Off / Manual Approval / Semi-Auto / Fully Automatic",
+        "Current autonomy_level is pre-selected from state.aiMode.autonomy_level",
+        "Changing selection calls POST /ai-agent/autonomy and re-renders",
+        "Each option has a clear description label",
+        "state.aiMode loads autonomy_level from GET /ai-agent/status"
+      ]
+    }
+  ]
+}
