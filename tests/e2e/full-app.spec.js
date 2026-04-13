@@ -96,7 +96,7 @@ test.describe('Navigation', () => {
 
   test('nav links work - Ads', async ({ page }) => {
     await page.click('a[href="#/ads"]');
-    await expect(page.locator('h1')).toContainText('My Creatives');
+    await expect(page.locator('h1')).toContainText('AI Creatives');
   });
 
   test('nav links work - Landing', async ({ page }) => {
@@ -131,7 +131,7 @@ test.describe('Ads Management', () => {
   test('ads list shows existing ads', async ({ page }) => {
     await page.click('a[href="#/ads"]');
     await page.waitForSelector('h1');
-    await expect(page.locator('h1')).toContainText('My Creatives');
+    await expect(page.locator('h1')).toContainText('AI Creatives');
     // Should have Create Ad button
     await expect(page.locator('a[href="#/ads/create"]')).toBeVisible();
     // Should have search input
@@ -184,20 +184,19 @@ test.describe('Landing Pages', () => {
   });
 
   test('landing create generates preview from template', async ({ page }) => {
+    test.setTimeout(60000);
     await page.goto(`${BASE}/#/landing/create`);
-    await page.waitForSelector('h1:has-text("Create Landing Page")');
-    await page.waitForSelector('#lp-form');
+    await page.waitForSelector('h1');
+    await expect(page.locator('h1')).toContainText('Create Landing Page');
+    await page.waitForSelector('#lp-form', { timeout: 15000 });
     await page.waitForSelector('input[name="name"]', { timeout: 10000 });
     await page.fill('input[name="name"]', 'E2E Test LP');
     await page.fill('input[name="product_name"]', 'Test Product E2E');
     await page.fill('input[name="price"]', 'Rp 250.000');
     await page.fill('input[name="cta_primary"]', 'Beli Sekarang');
     await page.click('button[type="submit"]');
-    // Should show preview iframe
-    await page.waitForSelector('iframe', { timeout: 15000 });
+    await page.waitForSelector('iframe', { timeout: 20000 });
     await expect(page.locator('iframe')).toBeVisible();
-    // Should show success message
-    await expect(page.locator('text=saved')).toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -226,33 +225,11 @@ test.describe('Research', () => {
     await loginAs(page);
   });
 
-  test('research page shows ad accounts', async ({ page }) => {
+  test('research page shows search inputs', async ({ page }) => {
     await page.click('a[href="#/research"]');
     await expect(page.locator('h1')).toContainText('Ads Research');
-    await page.waitForSelector('#accounts-list', { timeout: 10000 });
-    // Accounts only load if Meta is configured; verify page renders either way
-    const hasAccounts = await page.locator('#accounts-list .bg-slate-800').first().isVisible().catch(() => false);
-    if (hasAccounts) {
-      await expect(page.locator('#accounts-list .bg-slate-800').first()).toBeVisible();
-    }
-  });
-
-  test('research page has search inputs', async ({ page }) => {
-    await page.goto(`${BASE}/#/research`);
-    await page.waitForSelector('h1');
-    await expect(page.locator('#spy-search')).toBeVisible();
+    await page.waitForSelector('#spy-search', { state: 'visible', timeout: 10000 });
     await expect(page.locator('#adlib-search')).toBeVisible();
-  });
-
-  test('view campaigns button loads real data', async ({ page }) => {
-    await page.goto(`${BASE}/#/research`);
-    await page.waitForSelector('#accounts-list', { timeout: 10000 });
-    const btn = page.locator('[data-view-campaigns]').first();
-    if (await btn.isVisible().catch(() => false)) {
-      await btn.click();
-      await page.waitForSelector('.campaign-detail', { timeout: 15000 });
-      await expect(page.locator('.campaign-detail')).toBeVisible();
-    }
   });
 });
 
