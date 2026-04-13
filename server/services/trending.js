@@ -68,10 +68,10 @@ export class TrendingService {
       return cached;
     }
 
-    // If mock mode, return the existing mock data
+    // If mock mode, return empty array
     if (config.trendingExternalSource === 'mock') {
-      log.info('Mock mode enabled, returning mock trends');
-      return this._getMockTrends();
+      log.info('Mock mode enabled, returning empty trends');
+      return [];
     }
 
     // If a URL is configured, try to fetch real data
@@ -98,11 +98,11 @@ export class TrendingService {
 
       return normalized;
     } catch (err) {
-      log.warn('External trends API failed, falling back to mock data', {
+      log.warn('External trends API failed, returning empty data', {
         cacheKey,
         error: err.message
       });
-      return this._getMockTrends();
+      return [];
     }
   }
 
@@ -246,68 +246,5 @@ export class TrendingService {
       external,
       total: internal.length + external.length,
     };
-  }
-
-  /**
-   * Get mock external trending data - fallback data
-   * @returns {Array} Array of mock market trend themes
-   */
-  _getMockTrends() {
-    return [
-      {
-        id: 'trend-1',
-        theme: 'Minimalist Skincare',
-        category: 'Beauty',
-        growth: '+42%',
-        platforms: ['Meta', 'TikTok'],
-        ads_example: 'Clean beauty, fewer ingredients, maximum results',
-        popularity: 89,
-      },
-      {
-        id: 'trend-2',
-        theme: 'High-Ticket Coaching',
-        category: 'Education',
-        growth: '+67%',
-        platforms: ['LinkedIn', 'Google'],
-        ads_example: 'Premium coaching programs for career advancement',
-        popularity: 76,
-      },
-      {
-        id: 'trend-3',
-        theme: 'Sustainable Home Goods',
-        category: 'E-commerce',
-        growth: '+35%',
-        platforms: ['Meta', 'Instagram'],
-        ads_example: 'Eco-friendly alternatives for everyday items',
-        popularity: 82,
-      },
-      {
-        id: 'trend-4',
-        theme: 'AI Productivity Tools',
-        category: 'SaaS',
-        growth: '+156%',
-        platforms: ['Google', 'LinkedIn', 'TikTok'],
-        ads_example: 'Automate your workflow with AI-powered solutions',
-        popularity: 94,
-      },
-      {
-        id: 'trend-5',
-        theme: 'Pet Wellness & Nutrition',
-        category: 'Pet Care',
-        growth: '+28%',
-        platforms: ['Meta', 'TikTok'],
-        ads_example: 'Premium pet food and supplements for healthy pets',
-        popularity: 71,
-      },
-      {
-        id: 'trend-6',
-        theme: 'Remote Work Essentials',
-        category: 'Office',
-        growth: '+18%',
-        platforms: ['Google', 'Amazon'],
-        ads_example: 'Home office setup essentials for remote workers',
-        popularity: 65,
-      },
-    ];
   }
 }

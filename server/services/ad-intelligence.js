@@ -42,8 +42,8 @@ export class AdIntelligenceService {
     const { platform, country = 'US', startDate, endDate, limit = 50 } = options;
 
     if (!this.apiKey) {
-      log.warn('Similarweb API key not configured, returning mock data');
-      return this._getMockAds(domain, platform, limit);
+      log.warn('Similarweb API key not configured, returning empty data');
+      return { domain, platform: platform || 'google', ads: [], total: 0, fetchedAt: new Date().toISOString(), mock: false };
     }
 
     const params = new URLSearchParams({
@@ -90,7 +90,7 @@ export class AdIntelligenceService {
         throw new Error('Similarweb API key is missing or invalid. Please configure SIMILARWEB_API_KEY.');
       }
 
-      return this._getMockAds(domain, platform, limit);
+      return { domain, platform: platform || 'google', ads: [], total: 0, fetchedAt: new Date().toISOString(), mock: false };
     }
   }
 
@@ -102,7 +102,8 @@ export class AdIntelligenceService {
    */
   async getCompetitorMetrics(domain) {
     if (!this.apiKey) {
-      return this._getMockMetrics(domain);
+      log.warn('Similarweb API key not configured, returning empty metrics');
+      return { domain, totalVisits: 0, avgVisitDuration: 0, bounceRate: 0, trafficSources: { organic: 0, paid: 0, referral: 0, social: 0, direct: 0 }, adMetrics: { estimatedAdSpend: 0, adImpressions: 0, adClicks: 0 }, fetchedAt: new Date().toISOString(), mock: false };
     }
 
     const params = new URLSearchParams({
@@ -150,7 +151,7 @@ export class AdIntelligenceService {
         error: error.message,
       });
 
-      return this._getMockMetrics(domain);
+      return { domain, totalVisits: 0, avgVisitDuration: 0, bounceRate: 0, trafficSources: { organic: 0, paid: 0, referral: 0, social: 0, direct: 0 }, adMetrics: { estimatedAdSpend: 0, adImpressions: 0, adClicks: 0 }, fetchedAt: new Date().toISOString(), mock: false };
     }
   }
 
@@ -501,100 +502,5 @@ export class AdIntelligenceService {
     }
 
     return recommendations;
-  }
-
-  /**
-   * Generate mock ad data for testing/fallback.
-   *
-   * @param {string} domain - Domain
-   * @param {string} platform - Platform
-   * @param {number} limit - Maximum number of ads to return
-   * @returns {Object} Mock ads data
-   * @private
-   */
-  _getMockAds(domain, platform, limit = 50) {
-    const mockAds = [
-      {
-        id: `mock-1-${Date.now()}`,
-        headline: 'Best SaaS Solution for Your Business',
-        description: 'Streamline your workflow with our powerful platform. Try it free today!',
-        creativeUrl: null,
-        displayUrl: domain,
-        landingPage: `https://${domain}/`,
-        platform: platform || 'google',
-        metrics: {
-          impressions: 50000,
-          clicks: 1500,
-          ctr: 3.0,
-          spend: 750,
-          startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          endDate: null,
-        },
-        status: 'active',
-        adType: 'text',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: `mock-2-${Date.now()}`,
-        headline: '10x Your Productivity Today',
-        description: 'Join 10,000+ teams using our tools to achieve more.',
-        creativeUrl: null,
-        displayUrl: domain,
-        landingPage: `https://${domain}/features`,
-        platform: platform || 'google',
-        metrics: {
-          impressions: 35000,
-          clicks: 875,
-          ctr: 2.5,
-          spend: 520,
-          startDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-          endDate: null,
-        },
-        status: 'active',
-        adType: 'text',
-        createdAt: new Date().toISOString(),
-      },
-    ];
-
-    const limitedAds = mockAds.slice(0, limit);
-
-    return {
-      domain,
-      platform: platform || 'google',
-      ads: limitedAds,
-      total: mockAds.length,
-      fetchedAt: new Date().toISOString(),
-      mock: true,
-    };
-  }
-
-  /**
-   * Generate mock metrics for testing/fallback.
-   *
-   * @param {string} domain - Domain
-   * @returns {Object} Mock metrics
-   * @private
-   */
-  _getMockMetrics(domain) {
-    return {
-      domain,
-      totalVisits: 500000,
-      avgVisitDuration: 180,
-      bounceRate: 45,
-      trafficSources: {
-        organic: 40,
-        paid: 25,
-        referral: 15,
-        social: 10,
-        direct: 10,
-      },
-      adMetrics: {
-        estimatedAdSpend: 5000,
-        adImpressions: 500000,
-        adClicks: 15000,
-      },
-      fetchedAt: new Date().toISOString(),
-      mock: true,
-    };
   }
 }

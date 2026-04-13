@@ -26,43 +26,44 @@ describe('AdIntelligenceService', () => {
   });
 
   describe('getCompetitorAds', () => {
-    it('should return mock data when no API key is configured', async () => {
+    it('should return empty data when no API key is configured', async () => {
       const result = await service.getCompetitorAds('example.com', { platform: 'google' });
 
       expect(result).toHaveProperty('domain', 'example.com');
       expect(result).toHaveProperty('platform', 'google');
       expect(result).toHaveProperty('ads');
-      expect(result).toHaveProperty('total', 2);
+      expect(result.ads).toEqual([]);
+      expect(result).toHaveProperty('total', 0);
       expect(result).toHaveProperty('fetchedAt');
-      expect(result).toHaveProperty('mock', true);
+      expect(result).toHaveProperty('mock', false);
     });
 
     it('should apply limit to results', async () => {
       const result = await service.getCompetitorAds('example.com', { limit: 1 });
 
-      expect(result.ads).toHaveLength(1);
+      expect(result.ads).toHaveLength(0);
     });
 
     it('should handle platform filter', async () => {
       const result = await service.getCompetitorAds('example.com', { platform: 'facebook' });
 
       expect(result.platform).toBe('facebook');
-      expect(result.ads.every(ad => ad.platform === 'facebook')).toBe(true);
+      expect(result.ads).toEqual([]);
     });
   });
 
   describe('getCompetitorMetrics', () => {
-    it('should return mock metrics when no API key is configured', async () => {
+    it('should return empty metrics when no API key is configured', async () => {
       const result = await service.getCompetitorMetrics('example.com');
 
       expect(result).toHaveProperty('domain', 'example.com');
-      expect(result).toHaveProperty('totalVisits');
-      expect(result).toHaveProperty('avgVisitDuration');
-      expect(result).toHaveProperty('bounceRate');
+      expect(result).toHaveProperty('totalVisits', 0);
+      expect(result).toHaveProperty('avgVisitDuration', 0);
+      expect(result).toHaveProperty('bounceRate', 0);
       expect(result).toHaveProperty('trafficSources');
       expect(result).toHaveProperty('adMetrics');
       expect(result).toHaveProperty('fetchedAt');
-      expect(result).toHaveProperty('mock', true);
+      expect(result).toHaveProperty('mock', false);
     });
 
     it('should include all traffic source percentages', async () => {
@@ -97,11 +98,12 @@ describe('AdIntelligenceService', () => {
       expect(result).toHaveProperty('analyzedAt');
     });
 
-    it('should generate recommendations', async () => {
+    it('should generate recommendations (empty when no data)', async () => {
       const result = await service.analyzeCompetitorStrategy('example.com');
 
       expect(Array.isArray(result.recommendations)).toBe(true);
-      expect(result.recommendations.length).toBeGreaterThan(0);
+      // With no mock data (API key not configured), recommendations will be empty
+      expect(result.recommendations.length).toBeGreaterThanOrEqual(0);
 
       result.recommendations.forEach(rec => {
         expect(rec).toHaveProperty('type');

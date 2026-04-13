@@ -167,7 +167,7 @@ export async function renderTrending(el) {
             <div>
               <h3 class="font-semibold text-rose-300 mb-1">External Trends Unavailable</h3>
               <p class="text-slate-300 text-sm mb-3">${esc(externalError)}</p>
-              <div class="text-slate-400 text-xs">Showing mock data as fallback</div>
+              <div class="text-slate-400 text-xs">No external trend data available.</div>
             </div>
           </div>
         </div>

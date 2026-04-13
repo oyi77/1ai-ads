@@ -8,7 +8,9 @@ import config, { validateConfig } from './server/config/index.js';
 validateConfig();
 
 const db = createDatabase(config.dbPath);
-seedDemoData(db);
+if (process.env.NODE_ENV !== 'production' && process.env.SEED_DEMO_DATA === 'true') {
+  seedDemoData(db);
+}
 
 const llmClient = new LLMClient();
 const mcpClient = new MCPClientManager();

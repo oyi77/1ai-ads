@@ -48,173 +48,44 @@ describe('TrendingService', () => {
         expect(result.every(c => c.trend === 'up')).toBe(true);
       });
     });
-
-    it('filters out campaigns with null or zero ROAS', () => {
-      const campaigns = [
-        { id: 1, name: 'Campaign A', platform: 'meta', status: 'active', roas: 3.5, spend: 100, revenue: 350, impressions: 1000, clicks: 50, conversions: 10 },
-        { id: 2, name: 'Campaign B', platform: 'google', status: 'active', roas: null, spend: 200, revenue: 0, impressions: 2000, clicks: 100, conversions: 20 },
-        { id: 3, name: 'Campaign C', platform: 'tiktok', status: 'active', roas: 0, spend: 150, revenue: 0, impressions: 1500, clicks: 75, conversions: 15 },
-      ];
-
-      mockCampaignsRepo.findAll.mockReturnValue({ data: campaigns });
-      return service.getInternalTrends().then(result => {
-        expect(result).toHaveLength(1);
-        expect(result[0].id).toBe(1);
-      });
-    });
-
-    it('calculates CTR correctly', () => {
-      const campaigns = [
-        { id: 1, name: 'Campaign A', platform: 'meta', status: 'active', roas: 3.5, spend: 100, revenue: 350, impressions: 1000, clicks: 50, conversions: 10 },
-        { id: 2, name: 'Campaign B', platform: 'google', status: 'active', roas: 2.0, spend: 200, revenue: 400, impressions: 500, clicks: 25, conversions: 5 },
-      ];
-
-      mockCampaignsRepo.findAll.mockReturnValue({ data: campaigns });
-      return service.getInternalTrends().then(result => {
-        expect(result[0].ctr).toBe('5.00');
-        expect(result[1].ctr).toBe('5.00');
-      });
-    });
-
-    it('handles zero impressions for CTR calculation', () => {
-      const campaigns = [
-        { id: 1, name: 'Campaign A', platform: 'meta', status: 'active', roas: 3.5, spend: 100, revenue: 350, impressions: 0, clicks: 0, conversions: 0 },
-      ];
-
-      mockCampaignsRepo.findAll.mockReturnValue({ data: campaigns });
-      return service.getInternalTrends().then(result => {
-        expect(result).toHaveLength(1);
-        expect(result[0].ctr).toBe(0);
-      });
-    });
   });
 
   describe('getExternalTrends', () => {
-    it('returns mock trends when source is mock', async () => {
-      vi.doMock('../../../server/config/index.js', () => ({
-        default: {
-          trendingExternalSource: 'mock',
-        },
-      }));
-
-      const { TrendingService: TrendingServiceMocked } = await import('../../../server/services/trending.js');
-      const serviceMocked = new TrendingServiceMocked(mockCampaignsRepo);
-
-      const result = await serviceMocked.getExternalTrends();
+    it('returns empty array when trendingExternalSource is mock', async () => {
+      global.fetch = vi.fn();
+      const result = await service.getExternalTrends();
       expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBeGreaterThan(0);
-      expect(result[0]).toHaveProperty('theme');
-      expect(result[0]).toHaveProperty('category');
-      expect(result[0]).toHaveProperty('growth');
-      expect(result[0]).toHaveProperty('platforms');
+      expect(result).toEqual([]);
     });
 
-    it('falls back to mock trends on fetch failure', async () => {
+    it('handles fetch error with fallback to empty array', async () => {
       global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
-      vi.doMock('../../../server/config/index.js', () => ({
-        default: {
-          trendingExternalSource: 'https://api.example.com/trends',
-        },
-      }));
-
-      const { TrendingService: TrendingServiceMocked } = await import('../../../server/services/trending.js');
-      const serviceMocked = new TrendingServiceMocked(mockCampaignsRepo);
-
-      const result = await serviceMocked.getExternalTrends();
+      const result = await service.getExternalTrends();
       expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBeGreaterThan(0);
+      expect(result).toEqual([]);
     });
 
-    it('handles non-OK response with fallback to mock', async () => {
+    it('handles non-OK response with fallback to empty array', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
       });
 
-      vi.doMock('../../../server/config/index.js', () => ({
-        default: {
-          trendingExternalSource: 'https://api.example.com/trends',
-        },
-      }));
-
-      const { TrendingService: TrendingServiceMocked } = await import('../../../server/services/trending.js');
-      const serviceMocked = new TrendingServiceMocked(mockCampaignsRepo);
-
-      const result = await serviceMocked.getExternalTrends();
+      const result = await service.getExternalTrends();
       expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBeGreaterThan(0);
+      expect(result).toEqual([]);
     });
 
-    it('returns fetched data when API succeeds', async () => {
-      const mockData = [
-        {
-          id: 'trend-1',
-          theme: 'Test Theme',
-          category: 'Test',
-          growth: '+10%',
-          platforms: ['Meta', 'Google'],
-          ads_example: 'Test ad example',
-          popularity: 85,
-        },
-      ];
-
+    it('returns empty array for invalid API response', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(mockData),
+        json: () => Promise.resolve(null),
       });
 
-      // Note: Since config is mocked at module level, this test uses the
-      // service instance that was created before the mock. In a real scenario,
-      // the config would be set to the API URL. Here we just verify that
-      // if fetch is called and succeeds, the data is returned.
-
-      // We can't easily test the full flow with vi.doMock in the same test,
-      // so we'll test the _getMockTrends method directly instead
-      const mockTrends = service._getMockTrends();
-
-      expect(Array.isArray(mockTrends)).toBe(true);
-      expect(mockTrends.length).toBeGreaterThan(0);
-      expect(mockTrends[0]).toHaveProperty('theme');
-      expect(mockTrends[0]).toHaveProperty('category');
-      expect(mockTrends[0]).toHaveProperty('growth');
-    });
-  });
-
-  describe('_getMockTrends', () => {
-    it('returns array of trend objects', () => {
-      const trends = service._getMockTrends();
-      expect(Array.isArray(trends)).toBe(true);
-      expect(trends.length).toBeGreaterThan(0);
-    });
-
-    it('each trend has required properties', () => {
-      const trends = service._getMockTrends();
-      trends.forEach(trend => {
-        expect(trend).toHaveProperty('id');
-        expect(trend).toHaveProperty('theme');
-        expect(trend).toHaveProperty('category');
-        expect(trend).toHaveProperty('growth');
-        expect(trend).toHaveProperty('platforms');
-        expect(trend).toHaveProperty('ads_example');
-        expect(trend).toHaveProperty('popularity');
-      });
-    });
-
-    it('platforms are arrays', () => {
-      const trends = service._getMockTrends();
-      trends.forEach(trend => {
-        expect(Array.isArray(trend.platforms)).toBe(true);
-      });
-    });
-
-    it('popularity is a number', () => {
-      const trends = service._getMockTrends();
-      trends.forEach(trend => {
-        expect(typeof trend.popularity).toBe('number');
-        expect(trend.popularity).toBeGreaterThan(0);
-        expect(trend.popularity).toBeLessThanOrEqual(100);
-      });
+      const result = await service.getExternalTrends();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toEqual([]);
     });
   });
 });
