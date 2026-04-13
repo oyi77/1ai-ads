@@ -70,6 +70,47 @@
     </div>
   </nav>
   <div id="app"></div>
+
+  <!-- Cookie Consent Banner (global) -->
+  <div id="cookie-banner" class="fixed bottom-0 left-0 right-0 bg-[#0d1117] border-t border-[#30363d] p-4 z-50 flex flex-wrap justify-between items-center shadow-[0_-4px_20px_rgba(0,0,0,0.5)]" style="display: none;">
+    <p class="text-sm text-slate-300 mr-4 mb-2 md:mb-0 flex-1 min-w-[280px]">
+      We use cookies to enhance your browsing experience, serve personalized ads or content, and analyze our traffic. By clicking "Accept All", you consent to our use of cookies. Read our <a href="#/privacy" class="text-sky-400 hover:underline">Privacy Policy</a>.
+    </p>
+    <div class="flex gap-3">
+      <button id="decline-cookies" class="px-4 py-2 border border-slate-600 text-slate-300 rounded hover:bg-slate-800 transition-colors text-sm">Decline</button>
+      <button id="accept-cookies" class="px-4 py-2 bg-[#58a6ff] text-white rounded hover:bg-[#79c0ff] transition-colors text-sm font-semibold">Accept All</button>
+    </div>
+  </div>
+
+  <!-- Global Footer -->
+  <footer class="bg-slate-800 border-t border-slate-700 py-8 px-4 text-center text-slate-500 text-sm">
+    <div class="flex flex-wrap justify-center gap-4 sm:gap-6 mb-4">
+      <a href="#/privacy" class="hover:text-sky-400 transition-colors">Privacy Policy</a>
+      <a href="#/terms" class="hover:text-sky-400 transition-colors">Terms &amp; Service</a>
+      <a href="#/gdpr" class="hover:text-sky-400 transition-colors">GDPR</a>
+      <a href="#/docs" class="hover:text-sky-400 transition-colors">Docs</a>
+    </div>
+    <p>&copy; 2026 AdForge AI. All rights reserved. Powered by OmniRoute.</p>
+  </footer>
+
+  <script>
+    // Global cookie consent handler
+    (function() {
+      var banner = document.getElementById('cookie-banner');
+      if (banner && !localStorage.getItem('adforge_cookie_consent')) {
+        banner.style.display = 'flex';
+        document.getElementById('accept-cookies').addEventListener('click', function() {
+          localStorage.setItem('adforge_cookie_consent', 'accepted');
+          banner.style.display = 'none';
+        });
+        document.getElementById('decline-cookies').addEventListener('click', function() {
+          localStorage.setItem('adforge_cookie_consent', 'declined');
+          banner.style.display = 'none';
+        });
+      }
+    })();
+  </script>
+
   <script type="module" src="/src/app.js"></script>
 </body>
 </html>

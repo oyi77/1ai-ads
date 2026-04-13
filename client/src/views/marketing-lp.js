@@ -1,5 +1,3 @@
-import { esc } from '../lib/escape.js';
-
 export async function renderMarketingLP(el) {
   el.innerHTML = `
     <div class="bg-[#0d1117] text-[#c9d1d9] min-h-screen font-sans">
@@ -118,45 +116,6 @@ export async function renderMarketingLP(el) {
       </section>
 
     </main>
-
-    <!-- Cookie Consent Banner -->
-    <div id="cookie-banner" class="fixed bottom-0 left-0 right-0 bg-[#0d1117] border-t border-[#30363d] p-4 z-50 flex flex-wrap justify-between items-center shadow-[0_-4px_20px_rgba(0,0,0,0.5)]" style="display: none;">
-      <p class="text-sm text-slate-300 mr-4 mb-2 md:mb-0 flex-1 min-w-[280px]">
-        We use cookies to enhance your browsing experience, serve personalized ads or content, and analyze our traffic. By clicking "Accept All", you consent to our use of cookies. Read our <a href="#/privacy" class="text-sky-400 hover:underline">Privacy Policy</a>.
-      </p>
-      <div class="flex gap-3">
-        <button id="decline-cookies" class="px-4 py-2 border border-slate-600 text-slate-300 rounded hover:bg-slate-800 transition-colors text-sm">Decline</button>
-        <button id="accept-cookies" class="px-4 py-2 bg-[#58a6ff] text-white rounded hover:bg-[#79c0ff] transition-colors text-sm font-semibold">Accept All</button>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <footer class="py-12 px-4 border-t border-[#30363d] text-center text-slate-500 text-sm">
-      <div class="flex justify-center gap-6 mb-6">
-        <a href="#/privacy" class="hover:text-sky-400 transition-colors">Privacy Policy</a>
-        <a href="#/terms" class="hover:text-sky-400 transition-colors">Terms & Service</a>
-        <a href="#/gdpr" class="hover:text-sky-400 transition-colors">GDPR</a>
-        <a href="#/docs" class="hover:text-sky-400 transition-colors">Docs</a>
-      </div>
-      <p>© 2026 AdForge AI. All rights reserved. Powered by OmniRoute.</p>
-    </footer>
   </div>
   `;
-
-  setTimeout(() => {
-    const banner = document.getElementById('cookie-banner');
-    if (banner && !localStorage.getItem('adforge_cookie_consent')) {
-      banner.style.display = 'flex';
-      
-      document.getElementById('accept-cookies').addEventListener('click', () => {
-        localStorage.setItem('adforge_cookie_consent', 'accepted');
-        banner.style.display = 'none';
-      });
-      
-      document.getElementById('decline-cookies').addEventListener('click', () => {
-        localStorage.setItem('adforge_cookie_consent', 'declined');
-        banner.style.display = 'none';
-      });
-    }
-  }, 100);
 }

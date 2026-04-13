@@ -16,7 +16,7 @@ export async function renderCampaignsList(el) {
   const loadData = async () => {
     try {
       const { data } = await api.get('/analytics/campaigns');
-      campaigns = data.data || [];
+      campaigns = Array.isArray(data) ? data : [];
       
       const uniquePlatforms = [...new Set(campaigns.map(c => c.platform))];
       platforms = uniquePlatforms.sort();

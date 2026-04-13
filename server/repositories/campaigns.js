@@ -54,4 +54,36 @@ export class CampaignsRepository {
       avg_cpa: row.total_conversions > 0 ? total_spend / row.total_conversions : 0,
     };
   }
+
+  getMetricsByPlatform() {
+    return this.db.prepare(`
+      SELECT
+        platform,
+        COALESCE(SUM(spend), 0) as spend,
+        COALESCE(SUM(revenue), 0) as revenue,
+        COALESCE(SUM(impressions), 0) as impressions,
+        COALESCE(SUM(clicks), 0) as clicks,
+        COALESCE(SUM(conversions), 0) as conversions
+      FROM campaigns
+      GROUP BY platform
+      ORDER BY spend DESC
+    `).all().map(row => ({
+      platform: row.platform,
+      spend: row.spend,
+      revenue: row.revenue,
+      roas: row.spend > 0 && row.revenue > 0 ? row.revenue / row.spend : 0,
+      ctr: row.impressions > 0 ? (row.clicks / row.impressions) * 100 : 0,
+      conversions: row.conversions,
+    }));
+  }
+
+  getTopCampaigns(limit = 5) {
+    return this.db.prepare(`
+      SELECT name, platform, spend, revenue, roas, status
+      FROM campaigns
+      WHERE spend > 0 AND revenue > 0
+      ORDER BY roas DESC
+      LIMIT ?
+    `).all(limit);
+  }
 }
