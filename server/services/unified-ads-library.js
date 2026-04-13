@@ -160,7 +160,7 @@ export class UnifiedAdsLibraryService {
       ? SUPPORTED_PLATFORMS
       : [platform.toLowerCase()];
 
-    if (!SUPPORTED_PLATFORMS.includes(platform.toLowerCase())) {
+    if (platform !== 'all' && !SUPPORTED_PLATFORMS.includes(platform.toLowerCase())) {
       throw new Error(`Unsupported platform: ${platform}. Supported: ${SUPPORTED_PLATFORMS.join(', ')}`);
     }
 
