@@ -9,3 +9,6 @@ db/*.db
 db/*.db-shm
 db/*.db-wal
 .server_pid
+.playwright-mcp/
+e2e-*.png
+dashboard-check.png
