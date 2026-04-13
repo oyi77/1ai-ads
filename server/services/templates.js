@@ -78,27 +78,9 @@ export function renderLandingPage({ theme, product_name, price, benefits, pain_p
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: ${styles.bg}; color: ${styles.text}; line-height: 1.6; }
     .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
     .hero { text-align: center; padding: 100px 20px; }
-    .hero h1 { font-size: 3rem; margin-bottom: 20px; background: linear-gradient(135deg, ${styles.accent}, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .hero p { font-size: 1.25rem; color: ${styles.secondary}; margin-bottom: 30px; }
-    .price-tag { font-size: 2.5rem; font-weight: bold; color: ${styles.accent}; margin: 20px 0; }
-    .btn { display: inline-block; padding: 16px 40px; font-size: 1.1rem; font-weight: 600; border-radius: 8px; cursor: pointer; text-decoration: none; transition: all 0.3s ease; border: none; margin: 10px; }
-    .btn-primary { background: ${styles.accent}; color: white; }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3); }
-    .btn-secondary { background: transparent; color: ${styles.text}; border: 2px solid ${styles.accent}; }
-    .btn-secondary:hover { background: ${styles.accent}; color: white; }
-    .section { padding: 80px 20px; }
-    .section-title { text-align: center; font-size: 2.5rem; margin-bottom: 50px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
-    .sm\\:grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
-    .md\\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
-    @media (min-width: 640px) { .sm\\:grid-cols-2 { grid-template-columns: repeat(2, 1fr); } }
-    @media (min-width: 768px) { .md\\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); } }
-    .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 30px; }
-    .card h3 { margin-bottom: 15px; color: ${styles.accent}; }
-    .pain-points .card { border-color: rgba(239, 68, 68, 0.3); }
-    .pain-points h3 { color: #ef4444; }
-    .urgency-bar { background: linear-gradient(90deg, ${styles.accent}, #8b5cf6); padding: 15px; text-align: center; font-weight: 600; }
-    .cta-section { text-align: center; padding: 100px 20px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1)); }
+    .hero h1 { font-size: 3rem; margin-bottom: 20px; color: ${styles.accent}; }
+    .urgency-bar { background-color: ${styles.accent}; padding: 15px; text-align: center; font-weight: 600; }
+    .cta-section { text-align: center; padding: 100px 20px; background-color: rgba(99, 102, 241, 0.1); }
     @media (max-width: 768px) { .hero h1 { font-size: 2rem; } .price-tag { font-size: 2rem; } }
   </style>
 </head>
@@ -121,7 +103,7 @@ export function renderLandingPage({ theme, product_name, price, benefits, pain_p
   <section class="section pain-points">
     <div class="container">
       <h2 class="section-title">Struggling With These Problems?</h2>
-      <div class="grid sm\:grid-cols-2 md\:grid-cols-3">
+      <div class="grid sm:grid-cols-2 md:grid-cols-3">
         ${painPointsList.map(point => `
           <div class="card">
             <h3>❌ ${escapeHtml(point)}</h3>
@@ -137,7 +119,7 @@ export function renderLandingPage({ theme, product_name, price, benefits, pain_p
   <section class="section benefits">
     <div class="container">
       <h2 class="section-title">Why Choose ${escapeHtml(product_name || 'Product')}?</h2>
-      <div class="grid sm\:grid-cols-2 md\:grid-cols-3">
+      <div class="grid sm:grid-cols-2 md:grid-cols-3">
         ${benefitsList.map(benefit => `
           <div class="card">
             <h3>✨ ${escapeHtml(benefit)}</h3>
@@ -160,7 +142,43 @@ export function renderLandingPage({ theme, product_name, price, benefits, pain_p
     </div>
   </section>
 
+  <!-- Legal & Cookies Footer -->
+  <footer style="padding: 40px 20px; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 40px; font-size: 0.875rem; color: ${styles.secondary};">
+    <div style="margin-bottom: 15px;">
+      <a href="/#/privacy" style="color: ${styles.secondary}; text-decoration: none; margin: 0 10px;">Privacy Policy</a>
+      <a href="/#/terms" style="color: ${styles.secondary}; text-decoration: none; margin: 0 10px;">Terms of Service</a>
+      <a href="/#/gdpr" style="color: ${styles.secondary}; text-decoration: none; margin: 0 10px;">GDPR</a>
+    </div>
+    <p>&copy; ${new Date().getFullYear()} ${escapeHtml(product_name || 'Product')}. All rights reserved.</p>
+  </footer>
+
+  <!-- Cookie Consent Banner -->
+  <div id="cookie-banner" style="position: fixed; bottom: 0; left: 0; right: 0; background: ${styles.bg}; border-top: 1px solid ${styles.accent}; padding: 15px 20px; z-index: 9999; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; box-shadow: 0 -4px 20px rgba(0,0,0,0.2);">
+    <p style="margin: 0 20px 10px 0; font-size: 0.9rem; flex: 1; min-width: 280px;">
+      We use cookies to enhance your browsing experience, serve personalized ads or content, and analyze our traffic. By clicking "Accept All", you consent to our use of cookies. Read our <a href="/#/privacy" style="color: ${styles.accent}; text-decoration: underline;">Privacy Policy</a>.
+    </p>
+    <div style="display: flex; gap: 10px;">
+      <button id="decline-cookies" style="background: transparent; border: 1px solid ${styles.secondary}; color: ${styles.text}; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">Decline</button>
+      <button id="accept-cookies" style="background: ${styles.accent}; border: none; color: white; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; font-weight: 600;">Accept All</button>
+    </div>
+  </div>
+
   <script>
+    const cookieBanner = document.getElementById('cookie-banner');
+    if (!localStorage.getItem('cookieConsent')) {
+      cookieBanner.style.display = 'flex';
+    } else {
+      cookieBanner.style.display = 'none';
+    }
+    document.getElementById('accept-cookies').addEventListener('click', () => {
+      localStorage.setItem('cookieConsent', 'accepted');
+      cookieBanner.style.display = 'none';
+    });
+    document.getElementById('decline-cookies').addEventListener('click', () => {
+      localStorage.setItem('cookieConsent', 'declined');
+      cookieBanner.style.display = 'none';
+    });
+
     const buttons = document.querySelectorAll('.btn');
     buttons.forEach(btn => {
       btn.addEventListener('click', function(e) {

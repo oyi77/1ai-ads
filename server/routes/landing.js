@@ -53,7 +53,7 @@ export function createLandingRouter(landingRepo, landingGenerator) {
   // POST /api/landing - Generate new landing page and save
   router.post('/', async (req, res) => {
     try {
-      const { name, product_name, price, benefits, cta_primary, template, theme } = req.body;
+      const { name, product_name, price, benefits, cta_primary, template, theme, html_output } = req.body;
 
       if (!name && !product_name) {
         return res.status(400).json({ success: false, error: 'name or product_name is required' });
@@ -62,12 +62,26 @@ export function createLandingRouter(landingRepo, landingGenerator) {
         return res.status(400).json({ success: false, error: `Invalid theme. Valid values: ${VALID_THEMES.join(', ')}` });
       }
 
-      const html = await landingGenerator.generateLandingPage(
-        product_name || name,
-        price || '',
-        benefits || '',
-        cta_primary || 'Buy Now'
-      );
+      let html = html_output;
+      
+      if (!html) {
+        if (req.body.is_ai) {
+          html = await landingGenerator.generateLandingPage(
+            product_name || name,
+            price || '',
+            benefits || '',
+            cta_primary || 'Buy Now'
+          );
+        } else {
+          html = renderLandingPage({
+            theme: theme || 'dark',
+            product_name: product_name || name,
+            price,
+            benefits,
+            cta_primary
+          });
+        }
+      }
 
       const id = landingRepo.create({
         name: name || `Landing: ${product_name}`,
@@ -105,9 +119,19 @@ export function createLandingRouter(landingRepo, landingGenerator) {
     res.json({ success: true });
   });
 
-  // POST /api/landing/:id/publish - Publish landing page
-  router.post('/:id/publish', (req, res) => {
-    const page = landingRepo.update(req.params.id, { is_published: true });
+  // POST /api/landing/:id/deploy - Publish landing page
+  router.post('/:id/deploy', (req, res) => {
+    const slug = req.body.slug;
+    const page = landingRepo.update(req.params.id, { is_published: true, slug: slug });
+    if (!page) {
+      return res.status(404).json({ success: false, error: 'Landing page not found' });
+    }
+    res.json({ success: true, data: page });
+  });
+
+  // POST /api/landing/:id/undeploy - Unpublish landing page
+  router.post('/:id/undeploy', (req, res) => {
+    const page = landingRepo.update(req.params.id, { is_published: false });
     if (!page) {
       return res.status(404).json({ success: false, error: 'Landing page not found' });
     }
