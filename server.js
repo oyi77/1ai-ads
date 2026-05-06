@@ -3,16 +3,25 @@ import { createApp } from './server/app.js';
 import { LLMClient } from './server/services/llm-client.js';
 import { MCPClientManager } from './server/services/mcp-client.js';
 import { seedDemoData } from './db/seed.js';
-import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load .env FIRST before any imports
+// Load .env FIRST before any imports (manual parse to avoid dotenv overwrite)
 const envPath = join(__dirname, '.env');
-dotenv.config({ path: envPath });
+const envContent = fs.readFileSync(envPath, 'utf8');
+const lines = envContent.split('\n');
+for (const line of lines) {
+  const eqIndex = line.indexOf('=');
+  if (eqIndex > 0) {
+    const key = line.substring(0, eqIndex).trim();
+    const value = line.substring(eqIndex + 1).trim();
+    process.env[key] = value;
+  }
+}
 
 console.log('.env loaded:', Object.keys(process.env).filter(k => k.startsWith('FB_') || k === 'JWT_SECRET'));
 
