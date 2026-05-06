@@ -12,17 +12,34 @@ export class BigQueryExportService {
     this.projectId = projectId || process.env.GCP_PROJECT_ID;
     this.datasetId = process.env.BIGQUERY_DATASET || 'adforge_reports';
     
+    // Skip initialization if credentials not available (optional feature)
+    if (!this.projectId || !credentials) {
+      console.log('⚠️  BigQuery: Not configured, skipping initialization');
+      this.bigQuery = null;
+      return;
+    }
+    
     // Initialize BigQuery client with service account credentials
-    this.bigQuery = new BigQuery({
-      projectId: this.projectId,
-      credentials: JSON.parse(credentials || process.env.GCP_SERVICE_ACCOUNT),
-    });
+    try {
+      const parsedCredentials = typeof credentials === 'string' ? JSON.parse(credentials) : credentials;
+      this.bigQuery = new BigQuery({
+        projectId: this.projectId,
+        credentials: parsedCredentials,
+      });
+    } catch (error) {
+      console.log('⚠️  BigQuery: Failed to parse credentials:', error.message);
+      this.bigQuery = null;
+    }
   }
 
   /**
    * Create dataset if not exists
    */
   async ensureDataset() {
+    if (!this.bigQuery) {
+      console.log('⚠️  BigQuery not initialized, skipping dataset creation');
+      return null;
+    }
     try {
       const [dataset] = await this.bigQuery.createDataset(this.datasetId, {
         metadata: {
@@ -261,6 +278,10 @@ export class BigQueryExportService {
    * Export all Facebook Ads data to BigQuery
    */
   async exportFacebookData(campaigns, ads, metrics) {
+    if (!this.bigQuery) {
+      console.log('⚠️  BigQuery not initialized, skipping export');
+      return { error: 'Not configured' };
+    }
     console.log('🚀 Starting BigQuery export...');
     
     const results = {

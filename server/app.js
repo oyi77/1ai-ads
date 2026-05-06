@@ -141,24 +141,6 @@ export function createApp() {
     res.sendFile(path.join(clientPath, 'index.html'));
   });
 
-
-
-  // BigQuery Export API (for Looker Studio)
-  app.post('/api/bigquery/export-facebook', requireAuth, async (req, res) => {
-    const { campaigns, ads, metrics } = req.body;
-    try {
-      const result = await bigQueryExport.exportFacebookData(campaigns, ads, metrics);
-      res.json({ success: true, ...result });
-    } catch (error) {
-      console.error('BigQuery export error:', error);
-      res.status(500).json({ success: false, error: error.message });
-    }
-  });
-  
-  app.get('/api/bigquery/connection-info', async (req, res) => {
-    res.json({ success: true, data: bigQueryExport.getConnectionInfo() });
-  });
-  
   app.get('/health', publicRateLimit, (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });

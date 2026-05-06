@@ -71,6 +71,38 @@ const llmClient = new LLMClient();
 const mcpClient = new MCPClientManager();
 
 const app = createApp({ db, llmClient, mcpClient });
+
+// Add BigQuery routes directly (after createApp)
+import { BigQueryExportService } from './server/services/bigquery-export.js';
+const bigQueryExport = new BigQueryExportService();
+
+// Use router for /api/bigquery to ensure proper mounting
+import { Router } from 'express';
+const bigQueryRouter = Router();
+
+bigQueryRouter.post('/export-facebook', async (req, res) => {
+  const { campaigns, ads, metrics } = req.body;
+  try {
+    const result = await bigQueryExport.exportFacebookData(campaigns, ads, metrics);
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('BigQuery export error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+bigQueryRouter.get('/connection-info', (req, res) => {
+  console.log('BigQuery connection-info route called!');
+  res.json({ success: true, data: bigQueryExport.getConnectionInfo() });
+});
+
+// Simple test route
+app.get('/api/test-route', (req, res) => {
+  res.json({ ok: true });
+});
+
+app.use('/api/bigquery', bigQueryRouter);
+
 const PORT = config.port;
 
 const server = app.listen(PORT, () => console.log(`AdForge running on ${PORT}`));
