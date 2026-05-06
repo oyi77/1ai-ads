@@ -18,7 +18,14 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
   // --- Facebook OAuth routes (public) ---
   router.get('/facebook/login', (req, res) => {
     const { redirect_uri } = req.query;
-    const callbackUrl = redirect_uri || `${req.protocol}://${req.get('host')}/api/auth/facebook/callback`;
+    const hostname = req.get('host');
+    const callbackUrl = redirect_uri || (() => {
+      // In production, always use domain URL
+      if (process.env.NODE_ENV === 'production' || hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+        return 'https://adforge.aitradepulse.com/api/auth/facebook/callback';
+      }
+      return `${req.protocol}://${hostname}/api/auth/facebook/callback`;
+    })();
     
     // Load FB credentials from .env file (with fallback to process.env)
     let fbAppId = process.env.FB_APP_ID;
