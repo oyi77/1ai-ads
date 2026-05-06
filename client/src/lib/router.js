@@ -1,6 +1,6 @@
 import { api } from './api.js';
 
-const PUBLIC_ROUTES = new Set(['/', '/login', '/register', '/welcome', '/docs']);
+const PUBLIC_ROUTES = new Set(['/', '/login', '/register', '/welcome', '/docs', '/auth/facebook', '/auth/facebook/callback']);
 
 export class Router {
   constructor(container) {
@@ -20,14 +20,11 @@ export class Router {
   resolve() {
     const hash = window.location.hash.slice(1) || '/';
 
-    // Auth guard: redirect to login if not authenticated and not on public route
-    if (!api.isAuthenticated() && !PUBLIC_ROUTES.has(hash)) {
-      window.location.hash = '#/login';
-      return;
-    }
+    // NO AUTH GUARD - Frictionless onboarding!
+    // Users can access all routes without login
 
-    // If authenticated and on login/welcome, redirect to dashboard
-    if (api.isAuthenticated() && (hash === '/login' || hash === '/welcome')) {
+    // If authenticated and on login, redirect to dashboard
+    if (api.isAuthenticated() && hash === '/login') {
       window.location.hash = '#/';
       return;
     }

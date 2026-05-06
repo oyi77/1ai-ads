@@ -6,29 +6,23 @@ import { renderAdsCreate } from './views/ads-create.js';
 import { renderLandingList } from './views/landing-list.js';
 import { renderLandingCreate } from './views/landing-create.js';
 import { renderAnalytics } from './views/analytics.js';
-import { renderLogin, renderRegister } from './views/login.js';
+import { renderCreatorDashboard } from './views/creator-dashboard.js';
 import { renderSettings } from './views/settings.js';
 import { renderResearch } from './views/research.js';
-import { renderCampaignWizard } from './views/campaign-wizard.js';
 import { renderCampaignsList } from './views/campaigns-list.js';
 import { renderOptimizer } from './views/optimizer.js';
 import { renderTrending } from './views/trending.js';
 import { renderCompetitorSpy } from './views/competitor-spy.js';
 import { renderGlobalAds } from './views/global-ads.js';
 import { renderAiSuggestions } from './views/ai-suggestions.js';
-import { renderMarketingLP } from './views/marketing-lp.js';
 import { renderDocs } from './views/docs.js';
 import { renderPrivacyPolicy, renderTermsService, renderGDPR } from './views/legal.js';
 
 const router = new Router(document.getElementById('app'));
 
-router.on('/', (el) => {
-  if (api.isAuthenticated()) {
-    renderDashboard(el);
-  } else {
-    renderMarketingLP(el);
-  }
-});
+// Frictionless onboarding - dashboard for everyone!
+router.on('/', renderDashboard);
+router.on('/creator', renderCreatorDashboard);
 router.on('/docs', renderDocs);
 router.on('/privacy', renderPrivacyPolicy);
 router.on('/terms', renderTermsService);
@@ -41,48 +35,49 @@ router.on('/analytics', renderAnalytics);
 router.on('/settings', renderSettings);
 router.on('/campaigns', renderCampaignsList);
 router.on('/research', renderResearch);
-router.on('/campaign/create', renderCampaignWizard);
 router.on('/optimizer', renderOptimizer);
 router.on('/trending', renderTrending);
 router.on('/competitor-spy', renderCompetitorSpy);
 router.on('/global-ads', renderGlobalAds);
 router.on('/ai-suggestions', renderAiSuggestions);
-router.on('/login', renderLogin);
-router.on('/register', renderRegister);
 
-// Nav visibility based on auth
+// Nav visibility - ALL links visible without auth
 function updateNav() {
   const navLinks = document.getElementById('nav-links');
   const logoutBtn = document.getElementById('logout-btn');
-  const isAuth = api.isAuthenticated();
-
+  const loginLink = document.getElementById('login-link');
+  
   if (navLinks) {
-    const authOnlySelectors = [
-      'a[href="#/"]',              // Dashboard (shows marketing LP for unauth)
-      'a[href="#/campaigns"]',         // Campaigns
-      'a[href="#/ads"]',              // Creatives
-      'a[href="#/landing"]',           // Landing Pages
-      'a[href="#/analytics"]',          // Analytics
-      'a[href="#/optimizer"]',          // Auto Optimizer
-      'a[href="#/trending"]',           // Trending
-      'a[href="#/competitor-spy"]',   // Competitor Spy
-      'a[href="#/global-ads"]',        // Global Ads
-      'a[href="#/ai-suggestions"]',    // AI Suggestions
-      'a[href="#/research"]',            // Research
-      'a[href="#/campaign/create"]',    // Create Campaign
-      'a[href="#/settings"]'            // Settings
+    // Show all links - no auth required for anything
+    const allSelectors = [
+      'a[href="#/"]',
+      'a[href="#/campaigns"]',
+      'a[href="#/ads"]',
+      'a[href="#/landing"]',
+      'a[href="#/analytics"]',
+      'a[href="#/optimizer"]',
+      'a[href="#/trending"]',
+      'a[href="#/competitor-spy"]',
+      'a[href="#/global-ads"]',
+      'a[href="#/ai-suggestions"]',
+      'a[href="#/research"]',
+      'a[href="#/creator"]',
+      'a[href="#/settings"]'
     ];
-
-    authOnlySelectors.forEach(sel => {
+    allSelectors.forEach(sel => {
       const el = navLinks.querySelector(sel);
-      if (el) el.classList.toggle('hidden', !isAuth);
+      if (el) el.classList.remove('hidden');
     });
   }
 
+  // Show login only when not authenticated, logout only when authenticated
+  if (loginLink) {
+    loginLink.classList.toggle('hidden', api.isAuthenticated());
+  }
   if (logoutBtn) {
-    logoutBtn.classList.toggle('hidden', !isAuth);
+    logoutBtn.classList.toggle('hidden', !api.isAuthenticated());
     const username = localStorage.getItem('adforge_user');
-    logoutBtn.textContent = isAuth && username ? `Logout (${username})` : (isAuth ? 'Logout' : '');
+    logoutBtn.textContent = api.isAuthenticated() && username ? `Logout (${username})` : 'Logout';
   }
 }
 
@@ -90,7 +85,7 @@ function updateNav() {
 document.getElementById('logout-btn')?.addEventListener('click', () => {
   api.logout();
   updateNav();
-  window.location.hash = '#/login';
+  window.location.hash = '#/';
 });
 
 // Hamburger menu toggle
