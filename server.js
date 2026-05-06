@@ -9,8 +9,8 @@ import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const projectRoot = join(__dirname, '..'); // Parent directory of /server
-const envPath = join(projectRoot, '.env');
+// .env file is in the same directory as server.js (adforge folder)
+const envPath = join(__dirname, '.env');
 const envContent = fs.readFileSync(envPath, 'utf8');
 const lines = envContent.split('\n');
 for (const line of lines) {
@@ -38,7 +38,7 @@ const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   llm: {
     url: process.env.OMNIROUTE_URL || 'http://localhost:20128/v1/chat/completions',
-    model: process.env.OMNIROUTE_MODEL || 'auto/pro-fast',
+    model: process.env.OMNIROUTE_MODEL || 'auto/pro-reasoning',
     apiKey: process.env.OMNIROUTE_API_KEY || '',
     timeout: parseInt(process.env.LLM_TIMEOUT || '30000', 10),
   },
@@ -58,80 +58,38 @@ const config = {
   adspirerRedirectUri: process.env.ADSPIRER_REDIRECT_URI || 'http://localhost:5173/api/adspirer/auth/callback',
   similarwebApiKey: process.env.SIMILARWEB_API_KEY || '',
   rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
-  rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
+  privacyPolicyUrl: process.env.PRIVACY_POLICY_URL || '',
+  termsOfServiceUrl: process.env.TERMS_OF_SERVICE_URL || '',
 };
 
-const db = createDatabase(config.dbPath);
-if (process.env.NODE_ENV !== 'production' && process.env.SEED_DEMO_DATA === 'true') {
-  seedDemoData(db);
-}
+// Validate critical config
+validateConfig(config);
 
-const llmClient = new LLMClient();
-const mcpClient = new MCPClientManager();
-
-const app = createApp({ db, llmClient, mcpClient });
-
-// Add BigQuery routes directly (after createApp)
-import { BigQueryExportService } from './server/services/bigquery-export.js';
-const bigQueryExport = new BigQueryExportService();
-
-// Use router for /api/bigquery to ensure proper mounting
-import { Router } from 'express';
-const bigQueryRouter = Router();
-
-bigQueryRouter.post('/export-facebook', async (req, res) => {
-  const { campaigns, ads, metrics } = req.body;
-  try {
-    const result = await bigQueryExport.exportFacebookData(campaigns, ads, metrics);
-    res.json({ success: true, ...result });
-  } catch (error) {
-    console.error('BigQuery export error:', error);
-    res.status(500).json({ success: false, error: error.message });
+// Start server
+const app = createApp();
+const server = app.listen(config.port, '0.0.0.0', () => {
+  console.log(`Server running on port ${config.port}`);
+  console.log(`Environment: ${config.nodeEnv}`);
+  
+  // Seed demo data if in development
+  if (config.nodeEnv === 'development') {
+    seedDemoData();
   }
 });
-
-bigQueryRouter.get('/connection-info', (req, res) => {
-  console.log('BigQuery connection-info route called!');
-  res.json({ success: true, data: bigQueryExport.getConnectionInfo() });
-});
-
-// Simple test route
-app.get('/api/test-route', (req, res) => {
-  res.json({ ok: true });
-});
-
-app.use('/api/bigquery', bigQueryRouter);
-
-const PORT = config.port;
-
-const server = app.listen(PORT, () => console.log(`AdForge running on ${PORT}`));
 
 // Graceful shutdown
-function shutdown() {
-  console.log('Starting graceful shutdown...');
-  
-  // Step 1: Stop AI agent scheduler FIRST (before any other operations)
-  if (app.locals.aiAgent) {
-    console.log('Stopping AI agent scheduler...');
-    app.locals.aiAgent.stopScheduler();
-  }
-  
-  // Step 2: Give a small grace period for any pending scheduler callbacks
-  setTimeout(() => {
-    console.log('Closing HTTP server...');
-    server.close(() => {
-      console.log('HTTP server closed');
-      
-      // Step 3: Close database AFTER server is closed
-      console.log('Closing database...');
-      db.close();
-      console.log('Database closed. Shutdown complete.');
-      process.exit(0);
-    });
-  }, 100);
-}
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
 
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
-
-export default app;
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
