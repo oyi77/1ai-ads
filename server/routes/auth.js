@@ -53,7 +53,7 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
       return res.status(500).json({ success: false, error: 'FB_APP_ID or FB_APP_SECRET not configured' });
     }
     
-    const fbScope = 'ads_management,ads_read,pages_show_list,pages_read_engagement';
+    const fbScope = 'email,ads_management,ads_read,business_management,pages_show_list,pages_read_engagement';
     const fbUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${encodeURIComponent(fbAppId)}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=${encodeURIComponent(fbScope)}`;
     
     res.json({ success: true, data: { fb_url: fbUrl } });

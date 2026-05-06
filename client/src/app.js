@@ -97,5 +97,8 @@ document.getElementById('menu-toggle')?.addEventListener('click', () => {
 window.addEventListener('auth-change', updateNav);
 window.addEventListener('hashchange', updateNav);
 
+// Export router for other modules to use
+export { router };
+
 updateNav();
 router.start();

@@ -1,218 +1,284 @@
 import { api } from '../lib/api.js';
-import { esc } from '../lib/escape.js';
+import { renderCampaignsList } from '../components/campaigns.js';
+import { renderAnalyticsChart } from '../components/analytics.js';
+import { renderScheduleQueue } from '../components/schedule.js';
+import { renderAISuggestions } from '../components/ai-suggestions.js';
 
-const fmtIdr = (n) => {
-  if (n == null) return 'N/A';
-  return n.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
-};
-
-// Generate last 7 days labels
-const getLast7Days = () => {
-  const days = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    days.push(d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' }));
-  }
-  return days;
-};
-
-export async function renderDashboard(el) {
-  try {
-    const { data: m } = await api.get('/analytics/dashboard');
-
-    const labels = getLast7Days();
-    const roasData = m.daily_roas || [];
-    const spendData = m.daily_spend || [];
-    const revenueData = m.daily_revenue || [];
-    const ctrData = m.daily_ctr || [];
-
-    el.innerHTML = `
-      <div class="p-4 sm:p-8">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-2">
-          <h1 class="text-2xl sm:text-3xl font-bold">Dashboard</h1>
-          <div class="flex items-center gap-3 text-sm">
-            <button id="sync-btn" class="bg-sky-500 hover:bg-sky-600 px-3 py-2 rounded-lg text-sm min-h-[44px]">Sync Meta Ads</button>
-          </div>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <div class="bg-slate-800 p-3 sm:p-4 rounded-lg">
-            <div class="text-slate-400 text-xs sm:text-sm">Total Spend</div>
-            <div class="text-lg sm:text-2xl font-bold">${esc(fmtIdr(m.total_spend))}</div>
-          </div>
-          <div class="bg-slate-800 p-3 sm:p-4 rounded-lg">
-            <div class="text-slate-400 text-xs sm:text-sm">Total Revenue</div>
-            <div class="text-lg sm:text-2xl font-bold">${esc(fmtIdr(m.total_revenue))}</div>
-          </div>
-          <div class="bg-slate-800 p-3 sm:p-4 rounded-lg">
-            <div class="text-slate-400 text-xs sm:text-sm">ROAS</div>
-            <div class="text-lg sm:text-2xl font-bold">${esc((m.avg_roas || 0).toFixed(1))}x</div>
-          </div>
-          <div class="bg-slate-800 p-3 sm:p-4 rounded-lg">
-            <div class="text-slate-400 text-xs sm:text-sm">CTR</div>
-            <div class="text-lg sm:text-2xl font-bold">${esc((m.avg_ctr || 0).toFixed(2))}%</div>
-          </div>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <div class="bg-slate-800 p-3 sm:p-4 rounded-lg">
-            <div class="text-slate-400 text-xs sm:text-sm">CPC</div>
-            <div class="text-lg sm:text-2xl font-bold">${esc(fmtIdr(m.avg_cpc))}</div>
-          </div>
-          <div class="bg-slate-800 p-3 sm:p-4 rounded-lg">
-            <div class="text-slate-400 text-xs sm:text-sm">CPA</div>
-            <div class="text-lg sm:text-2xl font-bold">${esc(fmtIdr(m.avg_cpa))}</div>
-          </div>
-          <div class="bg-slate-800 p-3 sm:p-4 rounded-lg col-span-1 sm:col-span-2 lg:col-span-1">
-            <div class="text-slate-400 text-xs sm:text-sm">Conversions</div>
-            <div class="text-lg sm:text-2xl font-bold">${esc(m.total_conversions)}</div>
-          </div>
-        </div>
-        
-        <!-- Charts Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          <div class="bg-slate-800 p-4 sm:p-6 rounded-lg">
-            <h3 class="text-lg font-semibold mb-4 text-slate-200">ROAS Trend (7 Days)</h3>
-            <div class="relative h-64 sm:h-72">
-              <canvas id="roasChart"></canvas>
-            </div>
-          </div>
-          <div class="bg-slate-800 p-4 sm:p-6 rounded-lg">
-            <h3 class="text-lg font-semibold mb-4 text-slate-200">Spend vs Revenue</h3>
-            <div class="relative h-64 sm:h-72">
-              <canvas id="spendChart"></canvas>
-            </div>
-          </div>
-          <div class="bg-slate-800 p-4 sm:p-6 rounded-lg lg:col-span-2">
-            <h3 class="text-lg font-semibold mb-4 text-slate-200">Click‑Through Rate Trend (7 Days)</h3>
-            <div class="relative h-64 sm:h-72">
-              <canvas id="ctrChart"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    // Sync button handler
-    el.querySelector('#sync-btn')?.addEventListener('click', async () => {
-      const btn = el.querySelector('#sync-btn');
-      btn.disabled = true;
-      btn.textContent = 'Syncing...';
-      try {
-        const res = await api.post('/meta/sync');
-        btn.textContent = `Synced ${res.data.campaignsSynced} campaigns`;
-        setTimeout(() => renderDashboard(el), 1500);
-      } catch (err) {
-        btn.textContent = err.message.includes('not configured') ? 'Configure in Settings' : 'Sync Failed';
-        setTimeout(() => { btn.textContent = 'Sync Meta Ads'; btn.disabled = false; }, 3000);
-      }
-    });
-
-    // Initialize Charts
-
-    // Chart.js dark theme defaults
-    Chart.defaults.color = '#c9d1d9';
-    Chart.defaults.borderColor = '#30363d';
-
-    // ROAS Chart
-    const roasCtx = el.querySelector('#roasChart');
-    if (roasCtx) {
-      if (roasData.length === 0) {
-        roasCtx.parentElement.innerHTML += '<p class="text-slate-400 text-sm text-center py-8">No data available</p>';
-      } else {
-        new Chart(roasCtx, {
-          type: 'line',
-          data: {
-            labels,
-            datasets: [{
-              label: 'ROAS',
-              data: roasData,
-              borderColor: '#58a6ff',
-              backgroundColor: 'rgba(88, 166, 255, 0.1)',
-              tension: 0.4,
-              fill: true
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-              y: { beginAtZero: true, ticks: { callback: v => v.toFixed(1) + 'x' } }
-            }
-          }
-        });
-      }
-    }
-
-    // Spend vs Revenue Chart
-    const spendCtx = el.querySelector('#spendChart');
-    if (spendCtx) {
-      if (spendData.length === 0 && revenueData.length === 0) {
-        spendCtx.parentElement.innerHTML += '<p class="text-slate-400 text-sm text-center py-8">No data available</p>';
-      } else {
-        new Chart(spendCtx, {
-          type: 'bar',
-          data: {
-            labels,
-            datasets: [
-              {
-                label: 'Spend',
-                data: spendData,
-                backgroundColor: '#f78166',
-                borderRadius: 4
-              },
-              {
-                label: 'Revenue',
-                data: revenueData,
-                backgroundColor: '#3fb950',
-                borderRadius: 4
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom' } },
-            scales: {
-              y: { beginAtZero: true, ticks: { callback: v => 'Rp ' + (v / 1000000).toFixed(1) + 'M' } }
-            }
-          }
-        });
-      }
-    }
-
-    // CTR Chart
-    const ctrCtx = el.querySelector('#ctrChart');
-    if (ctrCtx) {
-      if (ctrData.length === 0) {
-        ctrCtx.parentElement.innerHTML += '<p class="text-slate-400 text-sm text-center py-8">No data available</p>';
-      } else {
-        new Chart(ctrCtx, {
-          type: 'line',
-          data: {
-            labels,
-            datasets: [{
-              label: 'CTR %',
-              data: ctrData,
-              borderColor: '#79c0ff',
-              backgroundColor: 'rgba(121, 192, 255, 0.1)',
-              tension: 0.4,
-              fill: true
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-              y: { beginAtZero: true, ticks: { callback: v => v.toFixed(2) + '%' } }
-            }
-          }
-        });
-      }
-    }
-
-  } catch (e) {
-    el.innerHTML = `<div class="p-4 sm:p-8"><h1 class="text-2xl font-bold mb-4">Dashboard</h1><p class="text-red-400">Failed to load metrics</p></div>`;
-  }
+// Simple auth check using localStorage
+function checkAuth() {
+  const token = localStorage.getItem('adforge_token');
+  return token !== null;
 }
+
+export function renderDashboard() {
+  if (!checkAuth()) {
+    router.navigate('/login');
+    return;
+  }
+
+  // Fetch all campaign data first
+  api.get('/api/campaigns')
+    .then(campaigns => {
+      const html = `
+        <div class="dashboard-container">
+          <!-- STATUS OVERVIEW -->
+          <div class="status-overview">
+            <h2 class="section-title">📊 Status Overview</h2>
+            <div class="status-cards">
+              <div class="status-card" onclick="syncPlatform('meta')">
+                <div class="status-icon">🔗 Meta</div>
+                <div class="status-value">${campaigns.filter(c => c.platform === 'meta').length} Active</div>
+              </div>
+              <div class="status-card" onclick="syncPlatform('tiktok')">
+                <div class="status-icon">🔗 TikTok</div>
+                <div class="status-value">Sync Now</div>
+              </div>
+              <div class="status-card" onclick="syncPlatform('google')">
+                <div class="status-icon">🔗 Google Ads</div>
+                <div class="status-value">Sync Now</div>
+              </div>
+              <div class="status-card">
+                <div class="status-icon">💰 Total Spend</div>
+                <div class="status-value">IDR 2.5M</div>
+              </div>
+              <div class="status-card">
+                <div class="status-icon">📈 Current ROAS</div>
+                <div class="status-value">3.4x</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PLATFORM STATUS -->
+          <div class="platform-status">
+            <h2 class="section-title">🔌 Platform Status</h2>
+            <div class="ad-account-selector-container">
+              ${renderAdAccountSelector()}
+            </div>
+            <div class="platform-cards">
+              <div class="platform-card">
+                <h3>Facebook (Meta)</h3>
+                <p>Last sync: 2h ago</p>
+                <button onclick="syncAllCampaigns('meta')">🔄 Sync Now</button>
+              </div>
+              <div class="platform-card">
+                <h3>TikTok Ads</h3>
+                <p>Last sync: 5h ago</p>
+                <button onclick="syncAllCampaigns('tiktok')">🔄 Sync Now</button>
+              </div>
+              <div class="platform-card">
+                <h3>Google Ads</h3>
+                <p>Last sync: 1d ago</p>
+                <button onclick="syncAllCampaigns('google')">🔄 Sync Now</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ACTIVE CAMPAIGNS -->
+          <div class="active-campaigns">
+            <h2 class="section-title">🎯 Active Campaigns</h2>
+            
+            <!-- Meta Ads -->
+            <div class="platform-section">
+              <div class="platform-header">
+                <h3> Meta Campaigns</h3>
+                <div class="platform-actions">
+                  <button onclick="createCampaign('meta')">+</button>
+                  <button onclick="filterCampaigns('meta')">Filter</button>
+                </div>
+              </div>
+              <div id="meta-campaigns-list">
+                ${renderCampaignsList(campaigns.filter(c => c.platform === 'meta'), 'meta')}
+              </div>
+            </div>
+
+            <!-- TikTok Ads -->
+            <div class="platform-section">
+              <div class="platform-header">
+                <h3> TikTok Campaigns</h3>
+                <div class="platform-actions">
+                  <button onclick="createCampaign('tiktok')">+</button>
+                  <button onclick="filterCampaigns('tiktok')">Filter</button>
+                </div>
+              </div>
+              <div id="tiktok-campaigns-list">
+                ${renderCampaignsList(campaigns.filter(c => c.platform === 'tiktok'), 'tiktok')}
+              </div>
+            </div>
+
+            <!-- Google Ads -->
+            <div class="platform-section">
+              <div class="platform-header">
+                <h3> Google Ads Campaigns</h3>
+                <div class="platform-actions">
+                  <button onclick="createCampaign('google')">+</button>
+                  <button onclick="filterCampaigns('google')">Filter</button>
+                </div>
+              </div>
+              <div id="google-campaigns-list">
+                ${renderCampaignsList(campaigns.filter(c => c.platform === 'google'), 'google')}
+              </div>
+            </div>
+          </div>
+
+          <!-- AI SUGGESTIONS -->
+          <div class="ai-suggestions">
+            <h2 class="section-title">🤖 AI Suggestions</h2>
+            <div id="ai-suggestions-container">
+              ${renderAISuggestions()}
+            </div>
+            <button class="btn-primary" onclick="applyAllAiSuggestions()">⚡ Apply All AI Suggestions</button>
+          </div>
+
+          <!-- ANALYTICS -->
+          <div class="analytics">
+            <h2 class="section-title">📊 Analytics</h2>
+            <div id="analytics-container">
+              ${renderAnalyticsChart()}
+            </div>
+          </div>
+
+          <!-- SCHEDULED POSTS -->
+          <div class="scheduled-posts">
+            <h2 class="section-title">⏰ Scheduled Posts</h2>
+            <div id="schedule-container">
+              ${renderScheduleQueue()}
+            </div>
+            <button class="btn-primary" onclick="openScheduleModal()">⏱️ Schedule Post</button>
+          </div>
+
+          <!-- AD LIBRARY -->
+          <div class="ad-library">
+            <h2 class="section-title">📁 Ad Library</h2>
+            <div class="library-actions">
+              <button onclick="openUploadModal('image')">Upload Image</button>
+              <button onclick="openUploadModal('video')">Upload Video</button>
+              <button onclick="openUploadModal('copy')">Upload Copy</button>
+            </div>
+            <div class="ads-grid">
+              <div class="ad-item">
+                <div class="ad-preview">🖼️</div>
+                <div class="ad-info">
+                  <div class="ad-name">Summer Sale Image 1</div>
+                  <div class="ad-type">Image</div>
+                </div>
+                <div class="ad-status">✅ Used</div>
+              </div>
+              <div class="ad-item">
+                <div class="ad-preview">🎥</div>
+                <div class="ad-info">
+                  <div class="ad-name">Flash Sale Video</div>
+                  <div class="ad-type">Video</div>
+                </div>
+                <div class="ad-status">✅ Used</div>
+              </div>
+              <div class="ad-item">
+                <div class="ad-preview">🖼️</div>
+                <div class="ad-info">
+                  <div class="ad-name">New Arrival Image 1</div>
+                  <div class="ad-type">Image</div>
+                </div>
+                <div class="ad-status">Draft</div>
+              </div>
+              <div class="ad-item">
+                <div class="ad-preview">🎥</div>
+                <div class="ad-info">
+                  <div class="ad-name">Test Video 1</div>
+                  <div class="ad-type">Video</div>
+                </div>
+                <div class="ad-status">Draft</div>
+              </div>
+              <div class="ad-item">
+                <div class="ad-preview">📝</div>
+                <div class="ad-info">
+                  <div class="ad-name">Copy - Summer Sale</div>
+                  <div class="ad-type">Text</div>
+                </div>
+                <div class="ad-status">Draft</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- QUICK ACTIONS -->
+          <div class="quick-actions">
+            <button class="btn-danger" onclick="optimizeAllCampaigns()">⚡ Optimize All</button>
+            <button class="btn-primary" onclick="syncAllPlatforms()">🔄 Sync All Platforms</button>
+            <button class="btn-success" onclick="schedulePost()">📅 Schedule Post</button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('app').innerHTML = html;
+    })
+    .catch(err => {
+      console.error('Dashboard load failed:', err);
+      alert('Failed to load dashboard');
+    });
+}
+
+// Global functions for button handlers
+window.syncPlatform = (platform) => {
+  alert('Syncing ' + platform + '...');
+  api.post('/api/platforms/' + platform + '/sync')
+    .then(() => alert('Sync complete!'))
+    .catch(err => alert('Sync failed: ' + err.message));
+};
+
+window.syncAllCampaigns = (platform) => {
+  alert('Syncing ' + platform + ' campaigns...');
+  api.post('/api/campaigns/sync')
+    .then(() => alert('Campaigns synced!'))
+    .catch(err => alert('Sync failed: ' + err.message));
+};
+
+window.createCampaign = (platform) => {
+  router.navigate('/campaigns/create?platform=' + platform);
+};
+
+window.filterCampaigns = (platform) => {
+  alert('Filtering ' + platform + ' campaigns...');
+};
+
+window.optimizeAllCampaigns = () => {
+  if (!confirm('Apply AI optimizations to all campaigns?')) return;
+  
+  api.post('/api/campaigns/optimize-all')
+    .then(result => {
+      alert('Optimization complete!\n' + result.message);
+      renderDashboard();
+    })
+    .catch(err => alert('Optimization failed: ' + err.message));
+};
+
+window.syncAllPlatforms = () => {
+  if (!confirm('Sync all platforms (Meta, TikTok, Google)?')) return;
+  
+  api.post('/api/platforms/sync-all')
+    .then(result => {
+      alert('Sync complete for all platforms!');
+      renderDashboard();
+    })
+    .catch(err => alert('Sync failed: ' + err.message));
+};
+
+window.applyAllAiSuggestions = () => {
+  if (!confirm('Apply all AI suggestions?')) return;
+  
+  api.post('/api/ai/apply-all')
+    .then(result => {
+      alert('AI suggestions applied!');
+      renderDashboard();
+    })
+    .catch(err => alert('Apply failed: ' + err.message));
+};
+
+window.openScheduleModal = () => {
+  alert('Open schedule modal (to be implemented)');
+};
+
+window.openUploadModal = (type) => {
+  alert('Open upload modal for ' + type + ' (to be implemented)');
+};
+
+window.schedulePost = () => {
+  alert('Open schedule post flow (to be implemented)');
+};
