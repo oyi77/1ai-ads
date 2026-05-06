@@ -1,4 +1,4 @@
-const config = {
+const configFactory = () => ({
   port: parseInt(process.env.PORT || '3001', 10),
   dbPath: process.env.DB_PATH || './db/adforge.db',
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
@@ -27,12 +27,13 @@ const config = {
   similarwebApiKey: process.env.SIMILARWEB_API_KEY || '',
   rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
   rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
-};
+});
 
 export function validateConfig() {
-  if (!config.jwtSecret) {
-    throw new Error('FATAL: JWT_SECRET environment variable is required. Set it before starting the server. See .env.example for configuration.');
+  const c = configFactory();
+  if (!c.jwtSecret) {
+    throw new Error('FATAL: JWT_SECRET environment variable is required. Set it in .env before starting the server.');
   }
 }
 
-export default config;
+export default configFactory();
