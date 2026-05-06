@@ -16,9 +16,10 @@ dotenv.config({ path: envPath });
 
 console.log('.env loaded:', Object.keys(process.env).filter(k => k.startsWith('FB_') || k === 'JWT_SECRET'));
 
-// Now validate config
-import { validateConfig } from './server/config/index.js';
-validateConfig();
+// Validate config (re-read from process.env)
+if (!process.env.JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable is required. Set it in .env before starting the server.');
+}
 
 // Now create config object
 const config = {
