@@ -85,6 +85,11 @@ export function createApp() {
   
   app.use(express.json());
   
+  // Serve frontend static files (SPA)
+  const clientPath = '/home/openclaw/projects/adforge/dist';
+  app.use(express.static(clientPath));
+  
+
   // Rate limiting
   const publicRateLimit = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -121,20 +126,19 @@ export function createApp() {
   app.use('/api/meta', requireAuth, metaAccountsRouter);
 
   // Frontend routes (SPA)
+  app.get('/', publicRateLimit, (req, res) => {
+    res.sendFile(path.join(clientPath, 'index.html'));
+  });
   app.get('/login', publicRateLimit, (req, res) => {
-    res.sendFile(path.join(__dirname, '../../dist/index.html'));
+    res.sendFile(path.join(clientPath, 'index.html'));
   });
 
   app.get('/dashboard', requireAuth, (req, res) => {
-    res.sendFile(path.join(__dirname, '../../dist/index.html'));
+    res.sendFile(path.join(clientPath, 'index.html'));
   });
 
-  // Catch-all for SPA routing - skipped due to path-to-regexp compatibility
-  // app.get('/*', publicRateLimit, (req, res) => {
-  //   res.sendFile(path.join(__dirname, '../../dist/index.html'));
-  // });
 
-  // Health check
+
   app.get('/health', publicRateLimit, (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
