@@ -214,13 +214,11 @@ export async function renderSettings(el) {
         <input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}" placeholder="Paste your long-lived token here">
       </div>
       <div class="bg-sky-900/20 border border-sky-700/30 rounded-lg p-3">
-        <label class="block text-xs font-bold text-sky-400 uppercase mb-2">Or Exchange Short Token for Long-Lived (60 Days)</label>
-        <div class="grid grid-cols-2 gap-2 mb-2">
-          <input type="text" id="meta-app-id" class="${common}" placeholder="App ID">
-          <input type="password" id="meta-app-secret" class="${common}" placeholder="App Secret">
+        <div class="flex items-center justify-between mb-3">
+          <label class="block text-xs font-bold text-sky-400 uppercase">Or Connect via Facebook OAuth</label>
+          <button type="button" id="fb-oauth-btn" class="text-xs bg-sky-600 hover:bg-sky-500 text-white px-3 py-1.5 rounded-lg transition-all">Connect Facebook</button>
         </div>
-        <input type="password" id="meta-short-token" class="${common} mb-2" placeholder="Short-lived token from Graph API Explorer">
-        <button type="button" id="meta-exchange-btn" class="w-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold py-2 rounded transition-all">Exchange & Save Token</button>
+        <p class="text-[10px] text-sky-300 mb-2">Click "Connect Facebook" to login with your Meta credentials and automatically connect your Business Manager and Ads Accounts.</p>
       </div>`;
     if (p === 'google') return `<div class="grid grid-cols-2 gap-4"><div><label class="${label}">Dev Token</label><input type="password" name="developer_token" value="${existing.developer_token || ''}" class="${common}"></div><div><label class="${label}">Cred Path</label><input type="text" name="credentials_path" value="${existing.credentials_path || ''}" class="${common}"></div></div>`;
     if (p === 'tiktok') return `<div><label class="${label}">Access Token</label><input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}"></div>`;
@@ -236,6 +234,20 @@ export async function renderSettings(el) {
     el.querySelectorAll('[data-cancel-add]').forEach(btn => btn.addEventListener('click', () => {
       const p = btn.dataset.cancelAdd; el.querySelector(`#${p}-add-form`).classList.add('hidden'); el.querySelector(`[data-add-account="${p}"]`).classList.remove('hidden');
     }));
+
+    // Facebook OAuth handler
+    el.querySelector('#fb-oauth-btn')?.addEventListener('click', async () => {
+      try {
+        const res = await api.get('/auth/facebook/login');
+        if (res.success && res.data?.fb_url) {
+          window.location.href = res.data.fb_url;
+        } else {
+          alert('Failed to initialize Facebook OAuth: ' + (res.error || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Facebook OAuth failed: ' + err.message);
+      }
+    });
 
     el.querySelectorAll('[data-test-account]').forEach(btn => btn.addEventListener('click', async () => {
       const p = btn.dataset.testAccount; const fd = new FormData(el.querySelector(`form[data-platform-form="${p}"]`));

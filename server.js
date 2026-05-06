@@ -3,9 +3,10 @@ import { createApp } from './server/app.js';
 import { LLMClient } from './server/services/llm-client.js';
 import { MCPClientManager } from './server/services/mcp-client.js';
 import { seedDemoData } from './db/seed.js';
-import config, { validateConfig } from './server/config/index.js';
+import config from './server/config/index.js';
+import dotenv from 'dotenv';
 
-validateConfig();
+dotenv.config({ path: './.env' });
 
 const db = createDatabase(config.dbPath);
 if (process.env.NODE_ENV !== 'production' && process.env.SEED_DEMO_DATA === 'true') {
