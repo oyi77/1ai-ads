@@ -30,6 +30,7 @@ import { AiSuggestionsRepository } from './repositories/ai-suggestions.js';
 import { WebhookEventsRepository } from './repositories/webhook-events.js';
 
 // Import services
+import { RulesRepository } from './repositories/rules.js';
 import { LLMClient } from './services/llm-client.js';
 import { AdspirerMcpClient } from './services/adspirer-mcp-client.js';
 import { TrendingService } from './services/trending.js';
@@ -59,7 +60,9 @@ export function createApp() {
   const templatesRepo = new TemplatesRepository(db);
   const competitorsRepo = new CompetitorsRepository(db);
   const platformAccountsRepo = new PlatformAccountsRepository(db);
-  const aiSuggestionsRepo = new AiSuggestionsRepository(db);
+
+  // Rules repository for autonomous campaign manager
+  const rulesRepo = new RulesRepository(db);
   const webhookEventsRepo = new WebhookEventsRepository(db);
 
   // Create services
@@ -132,7 +135,7 @@ export function createApp() {
 
 
   // Autonomous campaign monitor
-  const autonomousRouter = createAutonomousRouter(settingsRepo, platformAccountsRepo, campaignsRepo);
+  const autonomousRouter = createAutonomousRouter(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo);
   app.use('/api/autonomous', requireAuth, autonomousRouter);
   // Frontend routes (SPA)
   app.get('/', publicRateLimit, (req, res) => {
