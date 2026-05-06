@@ -35,6 +35,7 @@ import { TrendingService } from './services/trending.js';
 import { CompetitorSpyService } from './services/competitor-spy.js';
 import { LearningService } from './services/learning.js';
 import { PaymentService } from './services/payments.js';
+import { BigQueryExportService } from './services/bigquery-export.js';
 
 
 
@@ -72,6 +73,9 @@ export function createApp() {
   const trendingService = new TrendingService(campaignsRepo);
   const paymentService = new PaymentService(db);
   const learningService = new LearningService(campaignsRepo, adsRepo, landingRepo);
+  
+  // Create BigQuery export service (for Looker Studio)
+  const bigQueryExport = new BigQueryExportService();
 
   // Create app
   const app = express();
@@ -139,6 +143,22 @@ export function createApp() {
 
 
 
+  // BigQuery Export API (for Looker Studio)
+  app.post('/api/bigquery/export-facebook', requireAuth, async (req, res) => {
+    const { campaigns, ads, metrics } = req.body;
+    try {
+      const result = await bigQueryExport.exportFacebookData(campaigns, ads, metrics);
+      res.json({ success: true, ...result });
+    } catch (error) {
+      console.error('BigQuery export error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+  
+  app.get('/api/bigquery/connection-info', async (req, res) => {
+    res.json({ success: true, data: bigQueryExport.getConnectionInfo() });
+  });
+  
   app.get('/health', publicRateLimit, (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
