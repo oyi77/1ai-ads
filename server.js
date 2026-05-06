@@ -5,8 +5,13 @@ import { MCPClientManager } from './server/services/mcp-client.js';
 import { seedDemoData } from './db/seed.js';
 import config from './server/config/index.js';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-dotenv.config({ path: './.env' });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+dotenv.config({ path: join(__dirname, '.env') });
 
 const db = createDatabase(config.dbPath);
 if (process.env.NODE_ENV !== 'production' && process.env.SEED_DEMO_DATA === 'true') {

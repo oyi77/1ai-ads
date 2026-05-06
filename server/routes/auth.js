@@ -20,9 +20,34 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
     const { redirect_uri } = req.query;
     const callbackUrl = redirect_uri || `${req.protocol}://${req.get('host')}/api/auth/facebook/callback`;
     
-    const fbAppId = process.env.FB_APP_ID;
+    // Load FB credentials from .env file (with fallback to process.env)
+    let fbAppId = process.env.FB_APP_ID;
+    let fbSecret = process.env.FB_APP_SECRET;
+    
+    if (!fbAppId || !fbSecret) {
+      // Manual .env parse as fallback
+      try {
+        const fs = require('fs');
+        const envContent = fs.readFileSync('./.env', 'utf8');
+        const lines = envContent.split('\n');
+        for (const line of lines) {
+          const [key, ...valueParts] = line.split('=');
+          const trimmedKey = key.trim();
+          const trimmedValue = valueParts.join('=').trim();
+          if (trimmedKey === 'FB_APP_ID') fbAppId = trimmedValue;
+          if (trimmedKey === 'FB_APP_SECRET') fbSecret = trimmedValue;
+        }
+      } catch (e) {
+        // Ignore parse error
+      }
+    }
+    
+    if (!fbAppId || !fbSecret) {
+      return res.status(500).json({ success: false, error: 'FB_APP_ID or FB_APP_SECRET not configured' });
+    }
+    
     const fbScope = 'ads_management,ads_read,pages_show_list,pages_read_engagement';
-    const fbUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${fbAppId}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=${encodeURIComponent(fbScope)}`;
+    const fbUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${encodeURIComponent(fbAppId)}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=${encodeURIComponent(fbScope)}`;
     
     res.json({ success: true, data: { fb_url: fbUrl } });
   });
