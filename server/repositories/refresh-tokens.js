@@ -29,4 +29,11 @@ export class RefreshTokensRepository {
   deleteByUserId(userId) {
     this.db.prepare('DELETE FROM refresh_tokens WHERE user_id = ?').run(userId);
   }
+
+  upsert(userId, token, expiresAt) {
+    // Delete existing tokens for this user first
+    this.deleteByUserId(userId);
+    // Create new token
+    return this.create(userId, token, expiresAt);
+  }
 }
