@@ -9,6 +9,7 @@ import { createAdspirerRouter } from './routes/adspirer.js';
 
 import { createScheduleRouter } from './routes/schedule.js';
 import { createMetaAccountsRouter } from './routes/meta-accounts.js';
+import { createAutonomousRouter } from './routes/autonomous.js';
 import rateLimit from 'express-rate-limit';
 import express from 'express';
 import cors from 'cors';
@@ -129,6 +130,10 @@ export function createApp() {
   app.use('/api/schedule', requireAuth, scheduleRouter);
   app.use('/api/meta', requireAuth, metaAccountsRouter);
 
+
+  // Autonomous campaign monitor
+  const autonomousRouter = createAutonomousRouter(settingsRepo, platformAccountsRepo, campaignsRepo);
+  app.use('/api/autonomous', requireAuth, autonomousRouter);
   // Frontend routes (SPA)
   app.get('/', publicRateLimit, (req, res) => {
     res.sendFile(path.join(clientPath, 'index.html'));
