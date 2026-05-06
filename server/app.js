@@ -196,7 +196,7 @@ app.use('/api/auth', createAuthRouter(usersRepo, refreshTokensRepo));
   });
 
   // Serve static files (Production or if dist exists)
-  const distPath = join(__dirname, '../client/dist');
+  const distPath = join(__dirname, '../dist');
   app.use(express.static(distPath));
 
   // Global error handler
