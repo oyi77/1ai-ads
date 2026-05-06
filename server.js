@@ -9,9 +9,8 @@ import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-// Load .env FIRST before any imports (manual parse to avoid dotenv overwrite)
-const envPath = join(__dirname, '.env');
+const projectRoot = join(__dirname, '..'); // Parent directory of /server
+const envPath = join(projectRoot, '.env');
 const envContent = fs.readFileSync(envPath, 'utf8');
 const lines = envContent.split('\n');
 for (const line of lines) {
@@ -23,7 +22,7 @@ for (const line of lines) {
   }
 }
 
-console.log('.env loaded:', Object.keys(process.env).filter(k => k.startsWith('FB_') || k === 'JWT_SECRET'));
+console.log('.env loaded successfully');
 
 // Validate config (re-read from process.env)
 if (!process.env.JWT_SECRET) {

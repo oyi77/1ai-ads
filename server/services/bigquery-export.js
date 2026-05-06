@@ -1,30 +1,66 @@
 import { BigQuery } from '@google-cloud/bigquery';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import fs from 'fs';
+import path from 'path';
 
 /**
  * BigQuery Export Service
  * Exports Facebook Ads data to Google BigQuery for Looker Studio dashboards
  */
 export class BigQueryExportService {
-  constructor(projectId, credentials) {
+  /**
+   * Load credentials from service account JSON file
+   */
+  static loadCredentials() {
+    console.log('🔍 loadCredentials called');
+    console.log('🔍 process.env.GCP_SERVICE_ACCOUNT:', process.env.GCP_SERVICE_ACCOUNT);
+    const credentialPath = process.env.GCP_SERVICE_ACCOUNT;
+    if (!credentialPath) {
+      console.log('⚠️  GCP_SERVICE_ACCOUNT not configured in .env');
+      return null;
+    }
+    try {
+      const credContent = fs.readFileSync(credentialPath, 'utf8');
+      const credentials = JSON.parse(credContent);
+      console.log('✅ BigQuery: Service account credentials loaded from:', credentialPath);
+      return credentials;
+    } catch (error) {
+      console.error('❌ BigQuery: Failed to load credentials from', credentialPath, ':', error.message);
+      return null;
+    }
+  }
+
+  constructor(projectId) {
+    console.log('🔍 BigQueryExportService constructor called');
+    console.log('🔍 projectId param:', projectId);
+    console.log('🔍 process.env.GCP_PROJECT_ID:', process.env.GCP_PROJECT_ID);
+    console.log('🔍 process.env.BIGQUERY_DATASET:', process.env.BIGQUERY_DATASET);
+    
     this.projectId = projectId || process.env.GCP_PROJECT_ID;
     this.datasetId = process.env.BIGQUERY_DATASET || 'adforge_reports';
     
+    console.log('🔍 this.projectId:', this.projectId);
+    console.log('🔍 this.datasetId:', this.datasetId);
+    
     // Skip initialization if credentials not available (optional feature)
-    if (!this.projectId || !credentials) {
+    if (!this.projectId) {
       console.log('⚠️  BigQuery: Not configured, skipping initialization');
+      this.bigQuery = null;
+      return;
+    }
+    
+    // Load credentials from service account file
+    const credentials = BigQueryExportService.loadCredentials();
+    if (!credentials) {
+      console.log('⚠️  BigQuery: Credentials not available');
       this.bigQuery = null;
       return;
     }
     
     // Initialize BigQuery client with service account credentials
     try {
-      const parsedCredentials = typeof credentials === 'string' ? JSON.parse(credentials) : credentials;
       this.bigQuery = new BigQuery({
         projectId: this.projectId,
-        credentials: parsedCredentials,
+        credentials: credentials,
       });
     } catch (error) {
       console.log('⚠️  BigQuery: Failed to parse credentials:', error.message);
