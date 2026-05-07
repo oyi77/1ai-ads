@@ -1,4 +1,4 @@
-function renderAutonomousSection() {
+export function renderAutonomousSection() {
   return `
     <h2 class="text-2xl font-bold mb-6 text-white">Autonomous Campaign Manager</h2>
     <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden">

@@ -8,30 +8,13 @@ import { seedDemoData } from './db/seed.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
+import 'dotenv/config';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-// .env file is in the same directory as server.js (adforge folder)
-const envPath = join(__dirname, '.env');
-const envContent = fs.readFileSync(envPath, 'utf8');
-const lines = envContent.split('\n');
-for (const line of lines) {
-  const eqIndex = line.indexOf('=');
-  if (eqIndex > 0) {
-    const key = line.substring(0, eqIndex).trim();
-    const value = line.substring(eqIndex + 1).trim();
-    process.env[key] = value;
-  }
-}
 
 console.log('.env loaded successfully');
 
-// Validate config (re-read from process.env)
-if (!process.env.JWT_SECRET) {
-  throw new Error('FATAL: JWT_SECRET environment variable is required. Set it in .env before starting the server.');
-}
-
-// Now create config object
 const config = {
   port: parseInt(process.env.PORT || '3001', 10),
   dbPath: process.env.DB_PATH || './db/adforge.db',
@@ -64,18 +47,16 @@ const config = {
   termsOfServiceUrl: process.env.TERMS_OF_SERVICE_URL || '',
 };
 
-// Validate critical config
-validateConfig(config);
-
 // Start server
-const app = createApp();
+const db = createDatabase(config.dbPath);
+const app = createApp(db);
 const server = app.listen(config.port, '0.0.0.0', () => {
   console.log(`Server running on port ${config.port}`);
   console.log(`Environment: ${config.nodeEnv}`);
   
   // Seed demo data if in development
   if (config.nodeEnv === 'development') {
-    seedDemoData();
+    seedDemoData(db);
   }
 });
 

@@ -1,5 +1,6 @@
 import { api } from '../lib/api.js';
 import { esc } from '../lib/escape.js';
+import { renderAutonomousSection } from './settings_autonomous.js';
 
 export async function renderSettings(el) {
   let state = {
@@ -62,13 +63,10 @@ export async function renderSettings(el) {
             <button data-section="accounts" class="flex-shrink-0 w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${state.activeSection === 'accounts' ? 'bg-[#58a6ff] text-white' : 'text-slate-400 hover:bg-[#21262d] hover:text-white'}">
               Connected Accounts
             </button>
-            <button data-section="security" class="flex-shrink-0 w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${state.activeSection === 'security' ? 'bg-[#58a6ff] text-white' : 'text-slate-400 hover:bg-[#21262d] hover:text-white'}">
-              Security & Privacy
-            </button>
-            <button data-section="ai" class="flex-shrink-0 w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${state.activeSection === 'ai' ? 'bg-[#58a6ff] text-white' : 'text-slate-400 hover:bg-[#21262d] hover:text-white'}">
             <button data-section="autonomous" class="flex-shrink-0 w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${state.activeSection === 'autonomous' ? 'bg-[#58a6ff] text-white' : 'text-slate-400 hover:bg-[#21262d] hover:text-white'}">
               Autonomous Campaigns
             </button>
+            <button data-section="ai" class="flex-shrink-0 w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${state.activeSection === 'ai' ? 'bg-[#58a6ff] text-white' : 'text-slate-400 hover:bg-[#21262d] hover:text-white'}">
               AI Configuration
             </button>
             <button data-section="billing" class="flex-shrink-0 w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${state.activeSection === 'billing' ? 'bg-[#58a6ff] text-white' : 'text-slate-400 hover:bg-[#21262d] hover:text-white'}">
@@ -98,6 +96,7 @@ export async function renderSettings(el) {
 
     if (state.activeSection === 'accounts') attachAccountHandlers();
     if (state.activeSection === 'ai') attachAIHandlers();
+    if (state.activeSection === 'autonomous') attachAutonomousHandlers();
     if (state.activeSection === 'billing') attachBillingHandlers();
     if (state.activeSection === 'integrations') attachIntegrationsHandlers();
   }
@@ -590,6 +589,82 @@ export async function renderSettings(el) {
         }
       });
     });
+  }
+
+  function attachAutonomousHandlers() {
+    const connectBtn = el.querySelector('#fb-connect-btn');
+    if (connectBtn) {
+      connectBtn.addEventListener('click', async () => {
+        try {
+          const res = await api.get('/auth/facebook/login');
+          if (res.success && res.data?.fb_url) {
+            window.location.href = res.data.fb_url;
+          } else {
+            alert('Failed to initialize Facebook OAuth: ' + (res.error || 'Unknown error'));
+          }
+        } catch (err) {
+          alert('Facebook OAuth failed: ' + err.message);
+        }
+      });
+    }
+
+    const startBtn = el.querySelector('#start-autonomous');
+    if (startBtn) {
+      startBtn.addEventListener('click', async () => {
+        try {
+          const res = await api.post('/autonomous/check-campaigns', { userId: state.planDetails?.id });
+          alert(res.message);
+        } catch (err) {
+          alert('Failed to start monitoring: ' + err.message);
+        }
+      });
+    }
+
+    const saveRuleBtn = el.querySelector('#save-rule-btn');
+    if (saveRuleBtn) {
+      saveRuleBtn.addEventListener('click', async () => {
+        const name = el.querySelector('#rule-name').value;
+        const condition = el.querySelector('#rule-condition').value;
+        const value = el.querySelector('#rule-condition-value').value;
+        const action = el.querySelector('#rule-action').value;
+
+        if (!name || !value) return alert('Name and value required');
+
+        try {
+          // Rule format for repo
+          const ruleData = {
+            name,
+            condition: `${condition} > ${value}`, // simple logic for now
+            action,
+            userId: state.planDetails?.id || 'anonymous'
+          };
+          
+          await api.post('/autonomous/rules', ruleData);
+          alert('Rule added successfully!');
+          // reload rules list if needed
+        } catch (err) {
+          alert('Failed to save rule: ' + err.message);
+        }
+      });
+    }
+
+    const toggle = el.querySelector('#autonomy-toggle');
+    if (toggle) {
+      toggle.addEventListener('change', async (e) => {
+        const enabled = e.target.checked;
+        try {
+          await api.post('/autonomous/toggle-autonomy', { enabled });
+          el.querySelector('#autonomy-feedback').textContent = `AI Mode: ${enabled ? 'ON' : 'OFF'}`;
+          if (enabled) {
+            el.querySelector('#autonomy-feedback').classList.add('text-emerald-400');
+          } else {
+            el.querySelector('#autonomy-feedback').classList.remove('text-emerald-400');
+          }
+        } catch (err) {
+          alert('Failed to toggle autonomy: ' + err.message);
+        }
+      });
+    }
   }
 
   render();

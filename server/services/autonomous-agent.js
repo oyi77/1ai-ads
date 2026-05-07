@@ -375,7 +375,7 @@ export class AutonomousAgent {
       activeCampaigns: campaigns.filter(c => c.status === 'ACTIVE').length,
       totalSpend: stats.totalSpend,
       totalROAS: stats.totalROAS,
-      actionsTaken: await this._getActionsTaken today(userId),
+      actionsTaken: await this._getActionsTakenToday(userId),
       newRecommendations: await this.aiAgent.analyzeAndSuggest(userId)
     };
 

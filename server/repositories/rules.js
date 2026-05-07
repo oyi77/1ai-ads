@@ -1,12 +1,16 @@
 import { createLogger } from '../lib/logger.js';
-import { createDatabase } from '../db/index.js';
+import { createDatabase } from '../../db/index.js';
 
 const log = createLogger('rules-repo');
 
 export class RulesRepository {
-  constructor(dbPath = './db/adforge.db') {
-    this.db = createDatabase(dbPath);
-    this.table = 'automation_rules';
+  constructor(dbOrPath = './db/adforge.db') {
+    if (typeof dbOrPath === 'string') {
+      this.db = createDatabase(dbOrPath);
+    } else {
+      this.db = dbOrPath;
+    }
+    this.table = 'autonomous_rules';
     this._ensureTable();
   }
 
@@ -31,6 +35,9 @@ export class RulesRepository {
 
   create(rule) {
     const now = new Date().toISOString();
+    const conditionStr = typeof rule.condition === 'string' ? rule.condition : JSON.stringify(rule.condition);
+    const actionStr = typeof rule.action === 'string' ? rule.action : JSON.stringify(rule.action);
+
     const stmt = this.db.prepare(`
       INSERT INTO ${this.table} (user_id, name, condition, action, priority, enabled, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -39,8 +46,8 @@ export class RulesRepository {
     const result = stmt.run(
       rule.user_id,
       rule.name,
-      rule.condition,
-      rule.action,
+      conditionStr,
+      actionStr,
       rule.priority,
       rule.enabled ? 1 : 0,
       now
@@ -77,17 +84,24 @@ export class RulesRepository {
   }
 
   getAll(userId) {
-    return this.db.prepare(`SELECT * FROM ${this.table} WHERE user_id = ?`).all(userId).map(r => ({
-      id: r.id,
-      user_id: r.user_id,
-      name: r.name,
-      condition: JSON.parse(r.condition),
-      action: JSON.parse(r.action),
-      priority: r.priority,
-      enabled: r.enabled === 1,
-      created_at: r.created_at,
-      updated_at: r.updated_at
-    }));
+    return this.db.prepare(`SELECT * FROM ${this.table} WHERE user_id = ?`).all(userId).map(r => {
+      let condition = r.condition;
+      let action = r.action;
+      try { condition = JSON.parse(r.condition); } catch(e) {}
+      try { action = JSON.parse(r.action); } catch(e) {}
+      
+      return {
+        id: r.id,
+        user_id: r.user_id,
+        name: r.name,
+        condition,
+        action,
+        priority: r.priority,
+        enabled: r.enabled === 1,
+        created_at: r.created_at,
+        updated_at: r.updated_at
+      };
+    });
   }
 
   getAllEnabled(userId) {

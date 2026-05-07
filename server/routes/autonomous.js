@@ -108,6 +108,34 @@ router.post('/check-campaigns', async (req, res) => {
   }
 });
 
+// POST /api/autonomous/rules - Create a new automation rule
+router.post('/rules', async (req, res) => {
+  try {
+    const { userId, name, condition, action, priority } = req.body;
+
+    if (!userId || !name || !condition || !action) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const rule = await router.rulesRepo.create({
+      user_id: userId,
+      name,
+      condition,
+      action,
+      priority: priority || 1,
+      enabled: 1
+    });
+
+    res.json({
+      success: true,
+      data: rule
+    });
+  } catch (err) {
+    log.error('Create rule error', { error: err.message });
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/autonomous/toggle-autonomy - Toggle full autonomy mode
 router.post('/toggle-autonomy', async (req, res) => {
   try {

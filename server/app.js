@@ -47,9 +47,7 @@ import { requireAuth } from './middleware/auth.js';
 // Import database
 import { createDatabase } from '../db/index.js';
 
-export function createApp() {
-  const db = createDatabase(config.dbPath);
-  
+export function createApp(db) {
   // Create repositories
   const usersRepo = new UsersRepository(db);
   const refreshTokensRepo = new RefreshTokensRepository(db);
@@ -83,6 +81,13 @@ export function createApp() {
 
   // Create app
   const app = express();
+
+  // Set repositories in app locals for access in routes
+  app.locals.usersRepo = usersRepo;
+  app.locals.settingsRepo = settingsRepo;
+  app.locals.campaignsRepo = campaignsRepo;
+  app.locals.rulesRepo = rulesRepo;
+  app.locals.platformAccountsRepo = platformAccountsRepo;
   
   // Set up JSON body parser
   app.use(cors({
