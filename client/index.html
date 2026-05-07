@@ -40,35 +40,51 @@
     .hidden { display: none !important; }
   </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen">
-  <nav class="bg-slate-800 border-b border-slate-700">
-    <div class="max-w-7xl mx-auto px-4 py-3">
+<body class="min-h-screen font-sans">
+  <!-- Navigation - Modern Glass Interface -->
+  <nav class="sticky top-0 z-50 bg-[#0d1117]/80 backdrop-blur-xl border-b border-[#1c2128]">
+    <div class="max-w-[1600px] mx-auto px-6 py-4">
       <div class="flex items-center justify-between">
-        <a href="#/" class="font-bold text-lg text-sky-400">AdForge</a>
-        <button id="menu-toggle" class="md:hidden p-2 text-slate-300 hover:text-white">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-          </svg>
-        </button>
-        <div id="nav-links" class="flex items-center gap-4 md:gap-6">
-          <a href="#/" class="text-slate-300 hover:text-white py-1">Dashboard</a>
-          <a href="#/campaigns" class="text-slate-300 hover:text-white py-1">Campaigns</a>
-          <a href="#/ads" class="text-slate-300 hover:text-white py-1">Creatives</a>
-          <a href="#/landing" class="text-slate-300 hover:text-white py-1">Landing</a>
-          <a href="#/analytics" class="text-slate-300 hover:text-white py-1">Analytics</a>
-          <a href="#/optimizer" class="text-slate-300 hover:text-white py-1">Auto</a>
-          <a href="#/trending" class="text-slate-300 hover:text-white py-1">Trending</a>
-          <a href="#/competitor-spy" class="text-slate-300 hover:text-white py-1">Competitor Spy</a>
-          <a href="#/global-ads" class="text-slate-300 hover:text-white py-1">Global Ads</a>
-          <a href="#/ai-suggestions" class="text-slate-300 hover:text-white py-1">AI Mode</a>
-          <a href="#/research" class="text-slate-300 hover:text-white py-1">Research</a>
-          <a href="#/campaign/create" class="bg-emerald-500 hover:bg-emerald-600 px-3 py-1.5 rounded-lg text-white text-sm font-medium">+ Campaign</a>
-          <a href="#/settings" class="text-slate-300 hover:text-white py-1">Settings</a>
-          <button id="logout-btn" class="hidden text-slate-400 hover:text-red-400 py-1 text-sm md:ml-4">Logout</button>
+        <div class="flex items-center gap-8">
+          <a href="#/" class="flex items-center gap-3 group">
+            <div class="w-8 h-8 bg-gradient-to-br from-sky-400 to-indigo-600 rounded-lg flex items-center justify-center font-black text-black text-lg transition-transform group-hover:rotate-12">A</div>
+            <span class="font-black text-xl tracking-tighter text-white">ADFORGE<span class="text-sky-500">.AI</span></span>
+          </a>
+          
+          <div id="nav-links" class="hidden xl:flex items-center gap-1">
+            ${renderTopNavItem('Dashboard', '#/')}
+            ${renderTopNavItem('Campaigns', '#/campaigns')}
+            ${renderTopNavItem('Creatives', '#/ads')}
+            ${renderTopNavItem('Landing', '#/landing')}
+            ${renderTopNavItem('Analytics', '#/analytics')}
+            ${renderTopNavItem('Trending', '#/trending')}
+            ${renderTopNavItem('Spy', '#/competitor-spy')}
+            ${renderTopNavItem('Global', '#/global-ads')}
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <a href="#/campaign/create" class="hidden sm:flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-xs font-black hover:bg-sky-400 transition-all uppercase tracking-widest shadow-lg shadow-white/5">
+             <span>+ New Campaign</span>
+          </a>
+          <button id="menu-toggle" class="xl:hidden p-2 text-slate-400 hover:text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div class="h-8 w-[1px] bg-[#1c2128] mx-2 hidden sm:block"></div>
+          <a href="#/settings" class="w-10 h-10 rounded-xl bg-[#161b22] border border-[#30363d] flex items-center justify-center hover:border-sky-500 transition-colors">⚙️</a>
         </div>
       </div>
     </div>
   </nav>
+
+  <div id="app" class="animate-fadeIn"></div>
+
+  <script>
+    function renderTopNavItem(label, hash) {
+      const active = window.location.hash === hash || (hash === '#/' && (window.location.hash === '' || window.location.hash === '#'));
+      return `<a href="${hash}" class="px-4 py-2 rounded-lg text-xs font-bold transition-all ${active ? 'bg-sky-500/10 text-sky-400' : 'text-slate-500 hover:text-white hover:bg-[#161b22]'} uppercase tracking-widest">${label}</a>`;
+    }
+  </script>
   <div id="app"></div>
 
   <!-- Cookie Consent Banner (global) -->

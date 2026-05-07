@@ -4,206 +4,228 @@ import { renderAnalyticsChart } from '../components/analytics.js';
 import { renderScheduleQueue } from '../components/schedule.js';
 import { renderAISuggestions } from '../components/ai-suggestions.js';
 
-// Simple auth check using localStorage
 function checkAuth() {
-  const token = localStorage.getItem('adforge_token');
-  return token !== null;
+  return localStorage.getItem('adforge_token') !== null;
 }
 
 export function renderDashboard() {
   if (!checkAuth()) {
-    router.navigate('/login');
+    window.location.hash = '/login';
     return;
   }
 
-  // Fetch all campaign data first
   api.get('/api/campaigns')
-    .then(campaigns => {
+    .then(response => {
+      const campaigns = response.data || [];
+      const stats = calculateStats(campaigns);
+      
       const html = `
-        <div class="dashboard-container">
-          <!-- STATUS OVERVIEW -->
-          <div class="status-overview">
-            <h2 class="section-title">📊 Status Overview</h2>
-            <div class="status-cards">
-              <div class="status-card" onclick="syncPlatform('meta')">
-                <div class="status-icon">🔗 Meta</div>
-                <div class="status-value">${campaigns.filter(c => c.platform === 'meta').length} Active</div>
+        <div class="flex h-screen bg-[#05070a] text-slate-200 overflow-hidden">
+          <!-- SIDEBAR -->
+          <aside class="w-64 bg-[#0d1117] border-r border-[#1c2128] hidden md:flex flex-col">
+            <div class="p-6">
+              <div class="flex items-center gap-3 mb-8">
+                <div class="w-8 h-8 bg-sky-500 rounded-lg flex items-center justify-center font-bold text-black text-xl">A</div>
+                <span class="text-xl font-bold tracking-tight text-white">AdForge <span class="text-sky-500">AI</span></span>
               </div>
-              <div class="status-card" onclick="syncPlatform('tiktok')">
-                <div class="status-icon">🔗 TikTok</div>
-                <div class="status-value">Sync Now</div>
-              </div>
-              <div class="status-card" onclick="syncPlatform('google')">
-                <div class="status-icon">🔗 Google Ads</div>
-                <div class="status-value">Sync Now</div>
-              </div>
-              <div class="status-card">
-                <div class="status-icon">💰 Total Spend</div>
-                <div class="status-value">IDR 2.5M</div>
-              </div>
-              <div class="status-card">
-                <div class="status-icon">📈 Current ROAS</div>
-                <div class="status-value">3.4x</div>
-              </div>
+              
+              <nav class="space-y-1">
+                ${renderNavItem('Dashboard', '#/', '🏠', true)}
+                ${renderNavItem('Campaigns', '#/campaigns', '🎯')}
+                ${renderNavItem('Creatives', '#/ads', '🖼️')}
+                ${renderNavItem('Landing Pages', '#/landing', '🌐')}
+                ${renderNavItem('Analytics', '#/analytics', '📊')}
+                ${renderNavItem('Autonomous', '#/settings', '🧠')}
+              </nav>
             </div>
-          </div>
-
-          <!-- PLATFORM STATUS -->
-          <div class="platform-status">
-            <h2 class="section-title">🔌 Platform Status</h2>
-            <div class="ad-account-selector-container">
-              ${renderAdAccountSelector()}
-            </div>
-            <div class="platform-cards">
-              <div class="platform-card">
-                <h3>Facebook (Meta)</h3>
-                <p>Last sync: 2h ago</p>
-                <button onclick="syncAllCampaigns('meta')">🔄 Sync Now</button>
-              </div>
-              <div class="platform-card">
-                <h3>TikTok Ads</h3>
-                <p>Last sync: 5h ago</p>
-                <button onclick="syncAllCampaigns('tiktok')">🔄 Sync Now</button>
-              </div>
-              <div class="platform-card">
-                <h3>Google Ads</h3>
-                <p>Last sync: 1d ago</p>
-                <button onclick="syncAllCampaigns('google')">🔄 Sync Now</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- ACTIVE CAMPAIGNS -->
-          <div class="active-campaigns">
-            <h2 class="section-title">🎯 Active Campaigns</h2>
             
-            <!-- Meta Ads -->
-            <div class="platform-section">
-              <div class="platform-header">
-                <h3> Meta Campaigns</h3>
-                <div class="platform-actions">
-                  <button onclick="createCampaign('meta')">+</button>
-                  <button onclick="filterCampaigns('meta')">Filter</button>
+            <div class="mt-auto p-6">
+              <div class="bg-[#161b22] rounded-xl p-4 border border-[#30363d]">
+                <p class="text-xs text-slate-500 uppercase font-bold mb-2">Active Plan</p>
+                <p class="text-sm font-bold text-white mb-1">PRO Business</p>
+                <div class="w-full bg-[#0d1117] h-1.5 rounded-full mt-3 overflow-hidden">
+                  <div class="bg-sky-500 h-full w-3/4"></div>
                 </div>
               </div>
-              <div id="meta-campaigns-list">
-                ${renderCampaignsList(campaigns.filter(c => c.platform === 'meta'), 'meta')}
-              </div>
             </div>
+          </aside>
 
-            <!-- TikTok Ads -->
-            <div class="platform-section">
-              <div class="platform-header">
-                <h3> TikTok Campaigns</h3>
-                <div class="platform-actions">
-                  <button onclick="createCampaign('tiktok')">+</button>
-                  <button onclick="filterCampaigns('tiktok')">Filter</button>
+          <!-- MAIN CONTENT -->
+          <main class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+            <!-- TOP BAR -->
+            <header class="h-16 bg-[#0d1117]/80 backdrop-blur-md border-b border-[#1c2128] flex items-center justify-between px-8 sticky top-0 z-10">
+              <div class="flex items-center gap-4 flex-1">
+                <div class="relative max-w-md w-full">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
+                  <input type="text" placeholder="Search data, campaigns, or ads..." class="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-1.5 pl-10 pr-4 text-sm focus:outline-none focus:border-sky-500 transition-colors">
                 </div>
               </div>
-              <div id="tiktok-campaigns-list">
-                ${renderCampaignsList(campaigns.filter(c => c.platform === 'tiktok'), 'tiktok')}
+              
+              <div class="flex items-center gap-6">
+                <button class="text-slate-400 hover:text-white transition-colors relative">
+                   🔔
+                   <span class="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full border-2 border-[#0d1117]"></span>
+                </button>
+                <div class="flex items-center gap-3 border-l border-[#30363d] pl-6">
+                   <div class="text-right hidden sm:block">
+                     <p class="text-sm font-bold text-white leading-none">${localStorage.getItem('adforge_user') || 'Admin'}</p>
+                     <p class="text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Super Administrator</p>
+                   </div>
+                   <div class="w-10 h-10 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-full border-2 border-[#30363d] flex items-center justify-center text-white font-bold">A</div>
+                </div>
               </div>
-            </div>
+            </header>
 
-            <!-- Google Ads -->
-            <div class="platform-section">
-              <div class="platform-header">
-                <h3> Google Ads Campaigns</h3>
-                <div class="platform-actions">
-                  <button onclick="createCampaign('google')">+</button>
-                  <button onclick="filterCampaigns('google')">Filter</button>
+            <div class="p-8">
+              <!-- HERO WELCOME -->
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <div>
+                  <h1 class="text-3xl font-bold text-white tracking-tight">Performance Command Center</h1>
+                  <p class="text-slate-400 mt-1">Real-time cross-platform revenue monitoring and AI optimization.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                  <button onclick="syncAllPlatforms()" class="bg-[#161b22] border border-[#30363d] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#1c2128] transition-colors">🔄 Sync Platforms</button>
+                  <button onclick="router.navigate('/campaign/create')" class="bg-sky-500 text-black px-4 py-2 rounded-lg text-sm font-bold hover:bg-sky-400 transition-colors shadow-lg shadow-sky-500/20">🚀 Launch Campaign</button>
                 </div>
               </div>
-              <div id="google-campaigns-list">
-                ${renderCampaignsList(campaigns.filter(c => c.platform === 'google'), 'google')}
-              </div>
-            </div>
-          </div>
 
-          <!-- AI SUGGESTIONS -->
-          <div class="ai-suggestions">
-            <h2 class="section-title">🤖 AI Suggestions</h2>
-            <div id="ai-suggestions-container">
-              ${renderAISuggestions()}
-            </div>
-            <button class="btn-primary" onclick="applyAllAiSuggestions()">⚡ Apply All AI Suggestions</button>
-          </div>
+              <!-- KPI GRID -->
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                ${renderStatCard('Total Revenue', 'IDR ' + stats.revenue, '+12.5%', '💰', 'emerald')}
+                ${renderStatCard('Total Spend', 'IDR ' + stats.spend, '+4.2%', '📉', 'rose')}
+                ${renderStatCard('Avg. ROAS', stats.roas + 'x', '+1.1x', '📈', 'sky')}
+                ${renderStatCard('Active Ads', stats.activeCount, '-2', '🎯', 'indigo')}
+              </div>
 
-          <!-- ANALYTICS -->
-          <div class="analytics">
-            <h2 class="section-title">📊 Analytics</h2>
-            <div id="analytics-container">
-              ${renderAnalyticsChart()}
-            </div>
-          </div>
+              <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- CHART SECTION -->
+                <div class="lg:col-span-2 space-y-8">
+                  <div class="bg-[#0d1117] border border-[#1c2128] rounded-2xl p-6 shadow-xl">
+                    <div class="flex items-center justify-between mb-8">
+                      <div>
+                        <h3 class="text-lg font-bold text-white">Revenue vs Spend</h3>
+                        <p class="text-xs text-slate-500 mt-1">Daily trend across all connected accounts</p>
+                      </div>
+                      <select class="bg-[#161b22] border border-[#30363d] rounded-lg px-3 py-1 text-xs text-slate-300">
+                        <option>Last 7 Days</option>
+                        <option>Last 30 Days</option>
+                      </select>
+                    </div>
+                    <div class="h-64 flex items-end justify-between gap-2 px-2">
+                       <!-- Mock chart bars -->
+                       ${[45, 65, 42, 80, 55, 90, 72].map((h, i) => `
+                         <div class="flex-1 flex flex-col items-center gap-2 group">
+                            <div class="w-full bg-sky-500/10 rounded-t-lg relative flex flex-col justify-end overflow-hidden h-40">
+                               <div class="bg-sky-500 w-full rounded-t-lg transition-all duration-1000" style="height: ${h}%"></div>
+                               <div class="bg-indigo-500 w-full opacity-40" style="height: ${h * 0.4}%"></div>
+                            </div>
+                            <span class="text-[10px] text-slate-500">Day ${i+1}</span>
+                         </div>
+                       `).join('')}
+                    </div>
+                  </div>
 
-          <!-- SCHEDULED POSTS -->
-          <div class="scheduled-posts">
-            <h2 class="section-title">⏰ Scheduled Posts</h2>
-            <div id="schedule-container">
-              ${renderScheduleQueue()}
-            </div>
-            <button class="btn-primary" onclick="openScheduleModal()">⏱️ Schedule Post</button>
-          </div>
+                  <!-- ACTIVE CAMPAIGNS LIST -->
+                  <div class="bg-[#0d1117] border border-[#1c2128] rounded-2xl overflow-hidden shadow-xl">
+                    <div class="p-6 border-b border-[#1c2128] flex items-center justify-between">
+                      <h3 class="text-lg font-bold text-white">Top Performing Campaigns</h3>
+                      <button class="text-sky-500 text-xs font-bold hover:underline">View All</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-left">
+                        <thead class="bg-[#161b22]/50 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
+                          <tr>
+                            <th class="px-6 py-4">Campaign Name</th>
+                            <th class="px-6 py-4">Status</th>
+                            <th class="px-6 py-4">Spend</th>
+                            <th class="px-6 py-4">ROAS</th>
+                            <th class="px-6 py-4">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-[#1c2128]">
+                          ${campaigns.slice(0, 5).map(c => `
+                            <tr class="hover:bg-[#161b22]/30 transition-colors">
+                              <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                  <div class="w-2 h-2 rounded-full ${getStatusColor(c.status)}"></div>
+                                  <div>
+                                    <p class="text-sm font-bold text-white">${c.name}</p>
+                                    <p class="text-[10px] text-slate-500 uppercase">${c.platform}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td class="px-6 py-4">
+                                <span class="px-2 py-1 rounded-md text-[10px] font-bold bg-[#161b22] border border-[#30363d]">${c.status}</span>
+                              </td>
+                              <td class="px-6 py-4 text-sm font-medium">IDR ${c.spend?.toLocaleString() || '0'}</td>
+                              <td class="px-6 py-4">
+                                <div class="flex items-center gap-2">
+                                  <span class="text-sm font-bold ${c.roas >= 2 ? 'text-emerald-400' : 'text-rose-400'}">${c.roas || '0.0'}x</span>
+                                </div>
+                              </td>
+                              <td class="px-6 py-4">
+                                <button class="p-2 hover:bg-[#30363d] rounded-lg transition-colors">⚙️</button>
+                              </td>
+                            </tr>
+                          `).join('')}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
 
-          <!-- AD LIBRARY -->
-          <div class="ad-library">
-            <h2 class="section-title">📁 Ad Library</h2>
-            <div class="library-actions">
-              <button onclick="openUploadModal('image')">Upload Image</button>
-              <button onclick="openUploadModal('video')">Upload Video</button>
-              <button onclick="openUploadModal('copy')">Upload Copy</button>
-            </div>
-            <div class="ads-grid">
-              <div class="ad-item">
-                <div class="ad-preview">🖼️</div>
-                <div class="ad-info">
-                  <div class="ad-name">Summer Sale Image 1</div>
-                  <div class="ad-type">Image</div>
-                </div>
-                <div class="ad-status">✅ Used</div>
-              </div>
-              <div class="ad-item">
-                <div class="ad-preview">🎥</div>
-                <div class="ad-info">
-                  <div class="ad-name">Flash Sale Video</div>
-                  <div class="ad-type">Video</div>
-                </div>
-                <div class="ad-status">✅ Used</div>
-              </div>
-              <div class="ad-item">
-                <div class="ad-preview">🖼️</div>
-                <div class="ad-info">
-                  <div class="ad-name">New Arrival Image 1</div>
-                  <div class="ad-type">Image</div>
-                </div>
-                <div class="ad-status">Draft</div>
-              </div>
-              <div class="ad-item">
-                <div class="ad-preview">🎥</div>
-                <div class="ad-info">
-                  <div class="ad-name">Test Video 1</div>
-                  <div class="ad-type">Video</div>
-                </div>
-                <div class="ad-status">Draft</div>
-              </div>
-              <div class="ad-item">
-                <div class="ad-preview">📝</div>
-                <div class="ad-info">
-                  <div class="ad-name">Copy - Summer Sale</div>
-                  <div class="ad-type">Text</div>
-                </div>
-                <div class="ad-status">Draft</div>
-              </div>
-            </div>
-          </div>
+                <!-- SIDEBAR PANEL -->
+                <div class="space-y-8">
+                  <!-- AUTONOMOUS AGENT STATUS -->
+                  <div class="bg-gradient-to-br from-indigo-900/20 to-sky-900/20 border border-sky-500/20 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-sky-500/10 blur-3xl rounded-full"></div>
+                    <div class="flex items-center gap-3 mb-6">
+                      <div class="w-10 h-10 bg-sky-500 rounded-xl flex items-center justify-center shadow-lg shadow-sky-500/40 animate-pulse">🧠</div>
+                      <div>
+                        <h4 class="text-white font-bold">Autonomous Agent</h4>
+                        <div class="flex items-center gap-2">
+                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]"></span>
+                          <span class="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Active & Learning</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="space-y-4 mb-6">
+                      <div class="flex justify-between text-xs">
+                        <span class="text-slate-400">Rules Running</span>
+                        <span class="text-white font-bold">12 Active</span>
+                      </div>
+                      <div class="flex justify-between text-xs">
+                        <span class="text-slate-400">Actions Today</span>
+                        <span class="text-white font-bold">4 Success</span>
+                      </div>
+                      <div class="flex justify-between text-xs">
+                        <span class="text-slate-400">Budget Protected</span>
+                        <span class="text-emerald-400 font-bold">IDR 1.2M</span>
+                      </div>
+                    </div>
+                    
+                    <button onclick="window.location.hash='/settings'" class="w-full py-3 bg-white text-black text-xs font-bold rounded-xl hover:bg-sky-400 transition-colors">Open Control Center</button>
+                  </div>
 
-          <!-- QUICK ACTIONS -->
-          <div class="quick-actions">
-            <button class="btn-danger" onclick="optimizeAllCampaigns()">⚡ Optimize All</button>
-            <button class="btn-primary" onclick="syncAllPlatforms()">🔄 Sync All Platforms</button>
-            <button class="btn-success" onclick="schedulePost()">📅 Schedule Post</button>
-          </div>
+                  <!-- AI SUGGESTIONS QUICK VIEW -->
+                  <div class="bg-[#0d1117] border border-[#1c2128] rounded-2xl p-6 shadow-xl">
+                    <h3 class="text-white font-bold mb-4 flex items-center gap-2">✨ AI Recommendations</h3>
+                    <div class="space-y-4">
+                       <div class="p-3 bg-[#161b22] border-l-2 border-emerald-500 rounded-lg">
+                         <p class="text-xs font-bold text-white">Scaling Opportunity</p>
+                         <p class="text-[10px] text-slate-400 mt-1">"Summer Sale" Meta campaign ROAS is 4.5x. AI suggests 20% budget increase.</p>
+                       </div>
+                       <div class="p-3 bg-[#161b22] border-l-2 border-rose-500 rounded-lg">
+                         <p class="text-xs font-bold text-white">Creative Fatigue</p>
+                         <p class="text-[10px] text-slate-400 mt-1">CTR on TikTok Ads dropped 30%. Suggest rotating video creative.</p>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
         </div>
       `;
 
@@ -211,8 +233,58 @@ export function renderDashboard() {
     })
     .catch(err => {
       console.error('Dashboard load failed:', err);
-      alert('Failed to load dashboard');
     });
+}
+
+function calculateStats(campaigns) {
+  const totRev = campaigns.reduce((sum, c) => sum + (c.revenue || 0), 0);
+  const totSpend = campaigns.reduce((sum, c) => sum + (c.spend || 0), 0);
+  return {
+    revenue: totRev.toLocaleString(),
+    spend: totSpend.toLocaleString(),
+    roas: totSpend > 0 ? (totRev / totSpend).toFixed(1) : '0.0',
+    activeCount: campaigns.filter(c => c.status === 'active' || c.status === 'ACTIVE').length
+  };
+}
+
+function renderNavItem(label, hash, icon, active = false) {
+  return `
+    <a href="${hash}" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${active ? 'bg-sky-500/10 text-sky-500 border border-sky-500/20' : 'text-slate-400 hover:text-white hover:bg-[#161b22]'}">
+      <span class="text-lg">${icon}</span>
+      <span class="text-sm font-bold">${label}</span>
+      ${active ? '<div class="ml-auto w-1 h-4 bg-sky-500 rounded-full"></div>' : ''}
+    </a>
+  `;
+}
+
+function renderStatCard(label, value, trend, icon, color) {
+  const colors = {
+    emerald: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+    rose: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
+    sky: 'text-sky-400 bg-sky-500/10 border-sky-500/20',
+    indigo: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20'
+  };
+  
+  return `
+    <div class="bg-[#0d1117] border border-[#1c2128] p-6 rounded-2xl shadow-lg relative overflow-hidden group hover:border-[#30363d] transition-all">
+      <div class="flex justify-between items-start mb-4">
+        <div class="p-3 bg-[#161b22] rounded-xl text-xl">${icon}</div>
+        <span class="text-[10px] font-bold px-2 py-1 rounded-md ${colors[color]}">${trend}</span>
+      </div>
+      <div>
+        <p class="text-xs text-slate-500 font-bold uppercase tracking-wider">${label}</p>
+        <p class="text-2xl font-bold text-white mt-1">${value}</p>
+      </div>
+      <div class="absolute -right-2 -bottom-2 opacity-10 blur-xl w-16 h-16 bg-white rounded-full group-hover:scale-150 transition-transform duration-700"></div>
+    </div>
+  `;
+}
+
+function getStatusColor(status) {
+  const s = status.toLowerCase();
+  if (s === 'active' || s === 'running') return 'bg-emerald-500 shadow-[0_0_8px_#10b981]';
+  if (s === 'paused') return 'bg-amber-400';
+  return 'bg-slate-600';
 }
 
 // Global functions for button handlers
