@@ -1,0 +1,30 @@
+// Start autonomous scheduler
+  try {
+    // Create autonomous agent with repositories
+    const autonomousAgent = new AutonomousAgent(config, platformAccountsRepo, campaignsRepo, rulesRepo, llmClient, aiAgent);
+    
+    // Start the autonomous monitoring loop
+    const stopAutonomous = autonomousAgent.runAutonomousMode();
+    console.log('Autonomous Campaign Monitor started');
+    
+    // Set up graceful shutdown
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM received, shutting down gracefully');
+      stopAutonomous();
+      server.close(() => {
+        console.log('Server closed');
+        process.exit(0);
+      });
+    });
+    
+    process.on('SIGINT', () => {
+      console.log('SIGINT received, shutting down gracefully');
+      stopAutonomous();
+      server.close(() => {
+        console.log('Server closed');
+        process.exit(0);
+      });
+    });
+  } catch (err) {
+    console.error('Failed to start autonomous agent:', err.message);
+  }

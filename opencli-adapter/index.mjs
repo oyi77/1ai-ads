@@ -80,39 +80,41 @@ program
 // CAMPAIGN COMMANDS
 // ================================
 
-const campaigns = program.command('campaigns').description('Campaign management commands');
-
-campaigns
-  .command('list')
+program
+  .command('campaigns')
+  .description('Campaign management commands')
+  .addCommand('list')
   .argument('[filters...]')
   .description('List all campaigns')
-  .action(async (filters, options) => {
+  .action(async (options, filters) => {
     const parsedFilters = parseFilters(filters);
 
     try {
-      const campaignsResult = await adapter.listCampaigns(parsedFilters);
-      displayCampaignsTable(campaignsResult, program.opts().format, program.opts().verbose);
+      const campaigns = await adapter.listCampaigns(parsedFilters);
+      displayCampaignsTable(campaigns, options.format, options.verbose);
     } catch (error) {
       console.error(`Failed to list campaigns: ${error.message}`);
       process.exit(1);
     }
   });
 
-campaigns
-  .command('get <id>')
+program
+  .command('campaigns')
+  .addCommand('get <id>')
   .description('Get campaign details')
-  .action(async (id, options) => {
+  .action(async (options, id) => {
     try {
       const campaign = await adapter.getCampaign(id);
-      displayCampaignDetails(campaign, program.opts().verbose);
+      displayCampaignDetails(campaign, options.verbose);
     } catch (error) {
       console.error(`Failed to get campaign: ${error.message}`);
       process.exit(1);
     }
   });
 
-campaigns
-  .command('create')
+program
+  .command('campaigns')
+  .addCommand('create')
   .description('Create a new campaign')
   .option('--platform <platform>', 'Platform: meta, google, tiktok')
   .option('--name <name>', 'Campaign name')
@@ -143,16 +145,17 @@ campaigns
     }
   });
 
-campaigns
-  .command('update <id>')
+program
+  .command('campaigns')
+  .addCommand('update <id>')
   .description('Update campaign status, budget, etc.')
   .option('--status <status>', 'New status')
   .option('--budget <amount>', 'New budget')
-  .action(async (id, options) => {
+  .action(async (options, id, status, budget) => {
     try {
       const updates = {};
-      if (options.status) updates.status = options.status;
-      if (options.budget) updates.budget = parseFloat(options.budget);
+      if (status) updates.status = status;
+      if (budget) updates.budget = parseFloat(budget);
 
       const campaign = await adapter.updateCampaign(id, updates);
       console.log(`✓ Campaign "${campaign.name}" updated`);
@@ -162,8 +165,9 @@ campaigns
     }
   });
 
-campaigns
-  .command('sync')
+program
+  .command('campaigns')
+  .addCommand('sync')
   .description('Sync all campaigns from connected platforms')
   .option('--platform <platform>', 'Sync specific platform')
   .action(async (options) => {
@@ -183,33 +187,35 @@ campaigns
 // ADS LIBRARY COMMANDS
 // ================================
 
-const ads = program.command('ads').description('Ads library commands');
-
-ads
-  .command('search <query>')
+program
+  .command('ads')
+  .description('Ads library commands')
+  .addCommand('search')
+  .argument('<query>')
   .description('Search ad library')
   .option('--platform <platform>', 'Platform: meta, facebook, instagram, google, tiktok, all')
   .option('--country <code>', 'Country code: US, ID, MY, SG, GB, etc.')
   .option('--limit <number>', 'Max results (default: 30)')
-  .action(async (query, options) => {
+  .action(async (options, query, platform, country, limit) => {
     try {
       const result = await adapter.searchAdsLibrary({
         query,
-        platform: options.platform || 'meta',
-        country: options.country || 'US',
-        limit: options.limit || 30,
+        platform: platform || 'meta',
+        country: country || 'US',
+        limit: limit || 30,
       });
 
-      displayAdsTable(result, program.opts().format, program.opts().verbose);
-      console.log(`\nFound ${result.ads.length} ads from ${result.platform} library`);
+      displayAdsTable(result, options.format, options.verbose);
+      console.log(`\nFound ${result.count} ads from ${result.platform} library`);
     } catch (error) {
       console.error(`Search failed: ${error.message}`);
       process.exit(1);
     }
   });
 
-ads
-  .command('list')
+program
+  .command('ads')
+  .addCommand('list')
   .description('List all ad creatives')
   .option('--platform <platform>', 'Filter by platform')
   .option('--status <status>', 'Filter by status')
@@ -218,15 +224,16 @@ ads
     try {
       const creatives = await adapter.listCreatives(options);
 
-      displayCreativesTable(creatives, program.opts().format, program.opts().verbose);
+      displayCreativesTable(creatives, options.format, options.verbose);
     } catch (error) {
       console.error(`Failed to list creatives: ${error.message}`);
       process.exit(1);
     }
   });
 
-ads
-  .command('create')
+program
+  .command('ads')
+  .addCommand('create')
   .description('Create a new ad creative')
   .option('--platform <platform>', 'Platform')
   .option('--name <name>', 'Creative name')
@@ -259,42 +266,43 @@ ads
 // COMPETITOR SPY COMMANDS
 // ================================
 
-const competitors = program.command('competitors').description('Competitor monitoring and analysis');
-
-competitors
-  .command('list')
+program
+  .command('competitors')
+  .description('Competitor monitoring and analysis')
+  .addCommand('list')
   .description('List all tracked competitors')
   .action(async () => {
     try {
-      const competitorsResult = await adapter.listCompetitors();
+      const competitors = await adapter.listCompetitors();
 
-      if (competitorsResult.length === 0) {
+      if (competitors.length === 0) {
         console.log('No competitors tracked yet.');
         console.log('Use: adforge competitors add <url>');
         return;
       }
 
-      displayCompetitorsTable(competitorsResult, program.opts().format, program.opts().verbose);
+      displayCompetitorsTable(competitors, options.format, options.verbose);
     } catch (error) {
       console.error(`Failed to list competitors: ${error.message}`);
       process.exit(1);
     }
   });
 
-competitors
-  .command('add <url>')
+program
+  .command('competitors')
+  .addCommand('add <url>')
   .description('Add a competitor to track')
   .option('--platform <platform>', 'Platform: meta, google, tiktok')
   .option('--name <name>', 'Competitor name')
-  .action(async (url, options) => {
+  .action(async (options, url, platform, name) => {
     try {
       const competitor = await adapter.addCompetitor({
         url,
-        platform: options.platform || 'all',
-        name: options.name || new URL(url).hostname,
+        platform: platform || 'all',
+        name: name || new URL(url).hostname,
       });
 
-      console.log(`✓ Competitor "${options.name || new URL(url).hostname}" added for tracking`);
+      console.log(`✓ Competitor "${name}" added for tracking`);
       console.log('Use: adforge competitors analyze <id> to get detailed analysis');
     } catch (error) {
       console.error(`Failed to add competitor: ${error.message}`);
@@ -302,15 +310,16 @@ competitors
     }
   });
 
-competitors
-  .command('analyze <id>')
+program
+  .command('competitors')
+  .addCommand('analyze <id>')
   .description('Analyze competitor strategy and performance')
   .option('--platform <platform>', 'Platform: all, meta, google, tiktok')
-  .action(async (id, options) => {
+  .action(async (options, id, platform) => {
     try {
-      const analysis = await adapter.getCompetitorAnalysis(id, options.platform || 'all');
+      const analysis = await adapter.getCompetitorAnalysis(id, platform || 'all');
 
-      displayCompetitorAnalysis(analysis, program.opts().verbose);
+      displayCompetitorAnalysis(analysis, options.verbose);
       console.log('Use: adforge competitors strategy <id> for strategy analysis');
     } catch (error) {
       console.error(`Analysis failed: ${error.message}`);
@@ -318,23 +327,25 @@ competitors
     }
   });
 
-competitors
-  .command('strategy <id>')
+program
+  .command('competitors')
+  .addCommand('strategy <id>')
   .description('Get detailed competitor strategy analysis')
   .option('--platform <platform>', 'Platform: all, meta, google, tiktok')
-  .action(async (id, options) => {
+  .action(async (options, id, platform) => {
     try {
-      const strategy = await adapter.analyzeCompetitorStrategy(id, options.platform || 'all');
+      const strategy = await adapter.analyzeCompetitorStrategy(id, platform || 'all');
 
-      displayCompetitorStrategy(strategy, program.opts().verbose);
+      displayCompetitorStrategy(strategy, options.verbose);
     } catch (error) {
       console.error(`Strategy analysis failed: ${error.message}`);
       process.exit(1);
     }
   });
 
-competitors
-  .command('refresh')
+program
+  .command('competitors')
+  .addCommand('refresh')
   .description('Refresh all tracked competitors with latest data')
   .action(async () => {
     try {
@@ -348,10 +359,11 @@ competitors
     }
   });
 
-competitors
-  .command('remove <url>')
+program
+  .command('competitors')
+  .addCommand('remove <url>')
   .description('Stop tracking a competitor')
-  .action(async (url) => {
+  .action(async (options, url) => {
     try {
       await adapter.removeCompetitor(url);
       console.log(`✓ Competitor removed: ${url}`);
@@ -367,19 +379,22 @@ competitors
 
 program
   .command('trending')
+  .description('Trending and market intelligence')
+  .addCommand('')
+  .argument('[options...]')
   .description('Get trending data (internal + external)')
   .option('--industry <industry>', 'Filter by industry')
   .option('--region <region>', 'Filter by region')
   .option('--source <source>', 'Source: internal, external, all (default: all)')
-  .action(async (options) => {
+  .action(async (options, industry, region, source) => {
     try {
       const result = await adapter.getTrending({
-        industry: options.industry,
-        region: options.region,
-        source: options.source,
+        industry,
+        region,
+        source,
       });
 
-      displayTrendingData(result, program.opts().format, program.opts().verbose);
+      displayTrendingData(result, options.format, options.verbose);
       console.log(`\nFound ${result.total} trending items`);
     } catch (error) {
       console.error(`Failed to get trending: ${error.message}`);
@@ -391,35 +406,36 @@ program
 // CREATIVES COMMANDS
 // ================================
 
-const creatives = program.command('creatives').description('Creative management');
-
-creatives
-  .command('list')
+program
+  .command('creatives')
+  .description('Creative management')
+  .addCommand('list')
   .argument('[filters...]')
   .description('List all ad creatives (alias for "ads list")')
-  .action(async (filters) => {
+  .action(async (options, filters) => {
     const parsedFilters = parseFilters(filters);
 
     try {
-      const creativesResult = await adapter.listCreatives(parsedFilters);
+      const creatives = await adapter.listCreatives(parsedFilters);
 
-      displayCreativesTable(creativesResult, program.opts().format, program.opts().verbose);
+      displayCreativesTable(creatives, options.format, options.verbose);
     } catch (error) {
       console.error(`Failed to list creatives: ${error.message}`);
       process.exit(1);
     }
   });
 
-creatives
-  .command('update <id>')
+program
+  .command('creatives')
+  .addCommand('update <id>')
   .description('Update creative')
   .option('--name <name>', 'New name')
   .option('--status <status>', 'New status')
-  .action(async (id, options) => {
+  .action(async (options, id, name, status) => {
     try {
       const updates = {};
-      if (options.name) updates.name = options.name;
-      if (options.status) updates.status = options.status;
+      if (name) updates.name = name;
+      if (status) updates.status = status;
 
       const creative = await adapter.updateCreative(id, updates);
       console.log(`✓ Creative updated: ${creative.name}`);

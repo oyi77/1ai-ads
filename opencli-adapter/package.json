@@ -2,7 +2,7 @@
   "name": "adforge-cli",
   "version": "1.0.0",
   "description": "AdForge CLI - Universal command-line interface for ad management, competitor spy, and analytics",
-  "type": "commonjs",
+  "type": "module",
   "main": "index.cjs",
   "bin": {
     "adforge": "./index.js"
@@ -38,7 +38,7 @@
     "competitor spy",
     "trending",
     "analytics",
-    "marketing"
+    "marketing",
     "meta ads",
     "google ads",
     "tiktok ads"

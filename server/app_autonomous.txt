@@ -1,0 +1,10 @@
+app.use('/api/autonomous', requireAuth, autonomousRouter);
+
+  // Start autonomous campaign monitor (auto-runs)
+  import('./server/services/autonomous-agent.js').then(autonomousModule => {
+    const autonomous = new autonomousModule.AutonomousAgent(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo);
+    autonomous.runAutonomousMode();
+    console.log("Autonomous Campaign Monitor started");
+  }).catch(err => console.error("Autonomous init failed:", err.message));
+
+  // Frontend routes (SPA)

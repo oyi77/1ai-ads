@@ -692,5 +692,4 @@ export class AdForgeAdapter {
   }
 }
 
-// Export for use in OpenCLI
-export { AdForgeAdapter };
+

@@ -2,6 +2,8 @@ import { createDatabase } from './db/index.js';
 import { createApp } from './server/app.js';
 import { LLMClient } from './server/services/llm-client.js';
 import { MCPClientManager } from './server/services/mcp-client.js';
+import { AutonomousAgent } from './server/services/autonomous-agent.js';
+import { DailyReporter } from './server/services/daily-reporter.js';
 import { seedDemoData } from './db/seed.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
