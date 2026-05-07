@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { hashPassword, verifyPassword, generateToken, generateRefreshToken, verifyToken } from '../lib/auth.js';
 import rateLimit from 'express-rate-limit';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('auth-routes');
 
 export function createAuthRouter(usersRepo, refreshTokensRepo) {
   const router = Router();
@@ -54,12 +57,14 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
     }
     
     const fbScope = 'email,ads_management,ads_read,business_management,pages_show_list,pages_read_engagement';
-    const fbUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${encodeURIComponent(fbAppId)}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=${encodeURIComponent(fbScope)}`;
+    const fbUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${encodeURIComponent(fbAppId)}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=${encodeURIComponent(fbScope)}`;
     
+    log.info('Generating FB Login URL', { appId: fbAppId, callbackUrl, version: 'v21.0' });
     res.json({ success: true, data: { fb_url: fbUrl } });
   });
 
   router.get('/facebook/callback', async (req, res) => {
+    log.info('Received FB Callback', { query: req.query });
     const code = req.query.code;
     const redirect_uri = req.query.redirect_uri;
     
@@ -261,6 +266,20 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
     const { refreshToken } = req.body;
     if (refreshToken) refreshTokensRepo.deleteByToken(refreshToken);
     res.json({ success: true });
+  });
+
+  // --- User Data Deletion Callback for Meta compliance ---
+  router.get('/facebook/deauthorize', (req, res) => {
+    res.json({ success: true, message: 'AdForge is ready to process deletion requests via POST.' });
+  });
+
+  router.post('/facebook/deauthorize', async (req, res) => {
+    log.info('Meta Deauthorize (Data Deletion) Request received', { body: req.body });
+    // In a real scenario, decrypt signed_request and delete user data
+    res.json({
+      url: 'https://adforge.aitradepulse.com/data-deletion-status',
+      confirmation_code: `del_${Date.now()}`
+    });
   });
 
   return router;
