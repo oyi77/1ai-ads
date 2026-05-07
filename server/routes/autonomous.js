@@ -152,12 +152,13 @@ router.post('/toggle-autonomy', async (req, res) => {
   }
 });
 
-export function createAutonomousRouter(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo) {
+export function createAutonomousRouter(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, autonomousAgent) {
   // Store repos for use in routes
   router.settingsRepo = settingsRepo;
   router.platformAccountsRepo = platformAccountsRepo;
   router.campaignsRepo = campaignsRepo;
   router.rulesRepo = rulesRepo;
+  router.autonomousAgent = autonomousAgent;
   
   return router;
 }

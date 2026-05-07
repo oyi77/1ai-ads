@@ -38,6 +38,7 @@ import { CompetitorSpyService } from './services/competitor-spy.js';
 import { LearningService } from './services/learning.js';
 import { PaymentService } from './services/payments.js';
 import { BigQueryExportService } from './services/bigquery-export.js';
+import { AutonomousAgent } from './services/autonomous-agent.js';
 
 
 
@@ -140,7 +141,10 @@ export function createApp(db) {
 
 
   // Autonomous campaign monitor
-  const autonomousRouter = createAutonomousRouter(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo);
+  const autonomousAgent = new AutonomousAgent(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, llmClient);
+  autonomousAgent.runAutonomousMode();
+
+  const autonomousRouter = createAutonomousRouter(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, autonomousAgent);
   app.use('/api/autonomous', requireAuth, autonomousRouter);
   // Frontend routes (SPA)
   app.get('/', publicRateLimit, (req, res) => {
