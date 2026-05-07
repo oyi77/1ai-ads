@@ -10,6 +10,8 @@ import { createAdspirerRouter } from './routes/adspirer.js';
 import { createScheduleRouter } from './routes/schedule.js';
 import { createMetaAccountsRouter } from './routes/meta-accounts.js';
 import { createAutonomousRouter } from './routes/autonomous.js';
+import { createAiAgentRouter } from './routes/ai-agent.js';
+import { AiAgent } from './services/ai-agent.js';
 import rateLimit from 'express-rate-limit';
 import express from 'express';
 import cors from 'cors';
@@ -39,6 +41,14 @@ import { LearningService } from './services/learning.js';
 import { PaymentService } from './services/payments.js';
 import { BigQueryExportService } from './services/bigquery-export.js';
 import { AutonomousAgent } from './services/autonomous-agent.js';
+import { CampaignOrchestrator } from './services/campaign-orchestrator.js';
+import { CreativeStudio } from './services/creative-studio.js';
+import { MetaAdsAPI } from './services/meta-api.js';
+
+import { createCampaignsRouter } from './routes/campaigns.js';
+import { createAdsRouter } from './routes/ads.js';
+import { createLandingRouter } from './routes/landing.js';
+import { createSettingsRouter } from './routes/settings.js';
 
 
 
@@ -77,6 +87,13 @@ export function createApp(db) {
   const paymentService = new PaymentService(db);
   const learningService = new LearningService(campaignsRepo, adsRepo, landingRepo);
   
+  const metaApi = new MetaAdsAPI(settingsRepo);
+  const creativeStudio = new CreativeStudio(llmClient);
+  const orchestrator = new CampaignOrchestrator(metaApi, creativeStudio);
+  
+  const suggestionsRepo = new AiSuggestionsRepository(db);
+  const aiAgent = new AiAgent(settingsRepo, adsRepo, campaignsRepo, llmClient, suggestionsRepo, landingRepo);
+
   // Create BigQuery export service (for Looker Studio)
   const bigQueryExport = new BigQueryExportService();
 
@@ -113,9 +130,13 @@ export function createApp(db) {
     legacyHeaders: false,
   });
 
-  // API routers
   const authRouter = createAuthRouter(usersRepo, refreshTokensRepo);
   const trendingRouter = createTrendingRouter(trendingService);
+  const campaignsRouter = createCampaignsRouter(orchestrator, metaApi, creativeStudio, campaignsRepo);
+  const adsRouter = createAdsRouter(adsRepo, creativeStudio);
+  const landingRouter = createLandingRouter(landingRepo, llmClient);
+  const settingsRouter = createSettingsRouter(settingsRepo, llmClient, db);
+  const aiAgentRouter = createAiAgentRouter(aiAgent, settingsRepo);
   const competitorSpyRouter = createCompetitorSpyRouter(competitorsRepo);
   const paymentsRouter = createPaymentsRouter(paymentService);
   const templatesRouter = createTemplatesRouter(templatesRepo);
@@ -129,12 +150,17 @@ export function createApp(db) {
   // Mount routers
   app.use('/api/auth', publicRateLimit, authRouter);
   app.use('/api/trending', publicRateLimit, trendingRouter);
+  app.use('/api/campaigns', requireAuth, campaignsRouter);
+  app.use('/api/ads', requireAuth, adsRouter);
+  app.use('/api/landing', requireAuth, landingRouter);
+  app.use('/api/settings', requireAuth, settingsRouter);
   app.use('/api/competitor-spy', requireAuth, competitorSpyRouter);
   app.use('/api/payments', requireAuth, paymentsRouter);
   app.use('/api/templates', requireAuth, templatesRouter);
   app.use('/api/learning', requireAuth, learningRouter);
   app.use('/api/ads-library', publicRateLimit, adsLibraryRouter);
   app.use('/api/adspirer', requireAuth, adspirerRouter);
+  app.use('/api/ai-agent', requireAuth, aiAgentRouter);
 
   app.use('/api/schedule', requireAuth, scheduleRouter);
   app.use('/api/meta', requireAuth, metaAccountsRouter);

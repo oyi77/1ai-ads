@@ -56,4 +56,25 @@ export class PlatformAccountsRepository {
     this.db.prepare('UPDATE platform_accounts SET is_active = 0 WHERE id = ?').run(id);
     return true;
   }
+
+  getUsersWithAutoMode() {
+    // For now, return users who have at least one active platform account
+    return this.db.prepare(`
+      SELECT DISTINCT u.* FROM users u
+      JOIN platform_accounts pa ON u.id = pa.user_id
+      WHERE pa.is_active = 1
+    `).all();
+  }
+
+  getByPlatform(userId, platform) {
+    const row = this.db.prepare(
+      'SELECT * FROM platform_accounts WHERE user_id = ? AND platform = ? AND is_active = 1 LIMIT 1'
+    ).get(userId, platform);
+    if (!row) return null;
+    try {
+      return { ...row, access_token: JSON.parse(row.credentials).access_token };
+    } catch (e) {
+      return { ...row, access_token: row.credentials }; // Fallback for raw token
+    }
+  }
 }

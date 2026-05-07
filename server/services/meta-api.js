@@ -48,6 +48,18 @@ export class MetaAdsAPI {
     return await res.json();
   }
 
+  // Aliases for better code compatibility with orchestrator/agent
+  async apiGet(path, params) { return this._get(path, params); }
+  async apiPost(path, body) { return this._post(path, body); }
+  async apiUpdate(path, body) { return this._post(path, body); }
+  async apiDelete(path) {
+    const token = this._getToken();
+    const url = new URL(`${BASE}${path}`);
+    url.searchParams.set('access_token', token);
+    const res = await safeFetch('meta', url.toString(), { method: 'DELETE' });
+    return await res.json();
+  }
+
   // --- Account Management ---
 
   async getMe() {
@@ -156,6 +168,7 @@ export class MetaAdsAPI {
       objective,
       status,
       special_ad_categories: specialAdCategories,
+      is_adset_budget_sharing_enabled: !!dailyBudget
     };
     if (dailyBudget) body.daily_budget = Math.round(dailyBudget * 100); // Meta expects cents
     const data = await this._post(`/${accountId}/campaigns`, body);
