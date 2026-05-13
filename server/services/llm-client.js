@@ -3,6 +3,31 @@ import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('llm');
 
+let _AIPipelineClass = null;
+let _pipelineInstance = null;
+
+async function getAIPipeline() {
+  if (_pipelineInstance) return _pipelineInstance;
+  if (_AIPipelineClass === null) {
+    try {
+      const mod = await import('@1ai/ai-pipeline');
+      _AIPipelineClass = mod.AIPipeline;
+    } catch {
+      _AIPipelineClass = undefined;
+    }
+  }
+  if (!_AIPipelineClass) return null;
+
+  _pipelineInstance = new _AIPipelineClass({
+    mode: 'direct',
+    directUrl: process.env.AI_PIPELINE_DIRECT_URL || config.llm.url,
+    directApiKey: process.env.AI_PIPELINE_DIRECT_API_KEY || config.llm.apiKey,
+    defaultModel: process.env.AI_PIPELINE_DEFAULT_MODEL || config.llm.model,
+    timeout: (config.llm.timeout || 30000),
+  });
+  return _pipelineInstance;
+}
+
 export class LLMClient {
   constructor({ url, model, apiKey, timeout } = {}) {
     this.url = url || config.llm.url;
@@ -16,6 +41,7 @@ export class LLMClient {
     if (model) this.model = model;
     if (apiKey !== undefined) this.apiKey = apiKey;
     if (timeout) this.timeout = timeout;
+    _pipelineInstance = null;
   }
 
   buildPayload(systemContent, userContent, options = {}) {
@@ -36,6 +62,27 @@ export class LLMClient {
   }
 
   async call(systemContent, userContent, options = {}) {
+    const pipeline = await getAIPipeline();
+    if (pipeline) {
+      try {
+        const prompt = userContent;
+        const pipelineOpts = {
+          model: options.model || this.model,
+          temperature: options.temperature || 0.8,
+          maxTokens: options.max_tokens || 4000,
+          systemPrompt: systemContent,
+        };
+        const result = await pipeline.generate(prompt, pipelineOpts);
+        if (result?.content) return result.content;
+      } catch (err) {
+        log.warn('AIPipeline failed, falling back to direct fetch', { error: err.message });
+      }
+    }
+
+    return this._directFetch(systemContent, userContent, options);
+  }
+
+  async _directFetch(systemContent, userContent, options = {}) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeout);
 
