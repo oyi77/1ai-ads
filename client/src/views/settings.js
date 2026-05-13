@@ -422,7 +422,7 @@ export async function renderSettings(el) {
     el.querySelectorAll('[data-upgrade-plan]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const planId = btn.dataset.upgradePlan;
-        const token = localStorage.getItem('adforge_token');
+        const token = localStorage.getItem('1ai-ads_token');
 
         if (!token) {
           if (errorEl) {
@@ -499,7 +499,7 @@ export async function renderSettings(el) {
               }
             </div>
             ${enabled ? `
-              <p class="text-xs text-slate-500">Adspirer connects via OAuth 2.1 and allows AdForge's AI to manage campaigns across platforms using the MCP protocol.</p>
+              <p class="text-xs text-slate-500">Adspirer connects via OAuth 2.1 and allows 1ai-ads's AI to manage campaigns across platforms using the MCP protocol.</p>
               <div class="flex items-center gap-3 pt-2">
                 ${connected
                   ? `<button id="adspirer-disconnect" class="text-xs bg-red-900/20 text-red-400 border border-red-500/30 px-4 py-2 rounded-lg font-medium hover:bg-red-900/40 transition-colors">Disconnect</button>`

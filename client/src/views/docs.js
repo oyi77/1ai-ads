@@ -2,14 +2,14 @@ import { esc } from '../lib/escape.js';
 
 export async function renderDocs(el) {
   const mcpUrl = `${window.location.origin}/api/mcp/sse`;
-  const localPath = '/home/openclaw/projects/adforge/mcp.js';
+  const localPath = '/home/openclaw/projects/1ai-ads/mcp.js';
 
   el.innerHTML = `
     <div class="bg-[#0d1117] min-h-screen text-[#c9d1d9] font-sans pb-20">
       <div class="max-w-4xl mx-auto px-4 py-12">
         <header class="mb-12 border-b border-[#30363d] pb-8">
           <h1 class="text-4xl font-extrabold text-white mb-4 text-sky-400">Documentation</h1>
-          <p class="text-xl text-slate-400">Learn how to automate AdForge using AI agents and OpenClaw.</p>
+          <p class="text-xl text-slate-400">Learn how to automate 1ai-ads using AI agents and OpenClaw.</p>
         </header>
 
         <section class="mb-16">
@@ -18,13 +18,13 @@ export async function renderDocs(el) {
             Integrating with OpenClaw
           </h2>
           <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6 mb-6">
-            <p class="mb-4">AdForge is fully compatible with the <strong>Model Context Protocol (MCP)</strong>. You can connect it to OpenClaw, Claude Code, or any MCP-enabled agent to manage your ads via natural language.</p>
+            <p class="mb-4">1ai-ads is fully compatible with the <strong>Model Context Protocol (MCP)</strong>. You can connect it to OpenClaw, Claude Code, or any MCP-enabled agent to manage your ads via natural language.</p>
             
             <h3 class="text-lg font-bold text-white mb-3">Setup Instructions</h3>
             <ol class="space-y-4 text-slate-400 list-decimal list-inside ml-2">
               <li>Ensure you have <strong>OpenClaw</strong> or <strong>Claude Code</strong> installed.</li>
               <li>Open your MCP configuration file.</li>
-              <li>Add the AdForge configuration provided below.</li>
+              <li>Add the 1ai-ads configuration provided below.</li>
             </ol>
           </div>
 
@@ -39,7 +39,7 @@ export async function renderDocs(el) {
                 </div>
                 <pre class="p-6 overflow-x-auto text-sm font-mono text-emerald-400"><code>{
   "mcpServers": {
-    "adforge": {
+    "1ai-ads": {
       "url": "${mcpUrl}"
     }
   }
@@ -56,10 +56,10 @@ export async function renderDocs(el) {
                 </div>
                 <pre class="p-6 overflow-x-auto text-sm font-mono text-slate-400"><code>{
   "mcpServers": {
-    "adforge": {
+    "1ai-ads": {
       "command": "node",
       "args": ["${localPath}"],
-      "env": { "DB_PATH": "/home/openclaw/projects/adforge/db/adforge.db" }
+      "env": { "DB_PATH": "/home/openclaw/projects/1ai-ads/db/1ai-ads.db" }
     }
   }
 }</code></pre>
@@ -78,19 +78,19 @@ export async function renderDocs(el) {
           
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="bg-[#161b22] border border-[#30363d] p-5 rounded-xl">
-              <h4 class="font-bold text-white mb-2 text-emerald-400">adforge_list_campaigns</h4>
+              <h4 class="font-bold text-white mb-2 text-emerald-400">1ai-ads_list_campaigns</h4>
               <p class="text-sm text-slate-400">Fetch all active campaigns and their performance data (Spend, Revenue, ROAS) across Meta, Google, and TikTok.</p>
             </div>
             <div class="bg-[#161b22] border border-[#30363d] p-5 rounded-xl">
-              <h4 class="font-bold text-white mb-2 text-emerald-400">adforge_get_analytics</h4>
+              <h4 class="font-bold text-white mb-2 text-emerald-400">1ai-ads_get_analytics</h4>
               <p class="text-sm text-slate-400">Deep-dive into a specific campaign's metrics to identify scaling opportunities or budget leaks.</p>
             </div>
             <div class="bg-[#161b22] border border-[#30363d] p-5 rounded-xl">
-              <h4 class="font-bold text-white mb-2 text-emerald-400">adforge_list_landing_pages</h4>
+              <h4 class="font-bold text-white mb-2 text-emerald-400">1ai-ads_list_landing_pages</h4>
               <p class="text-sm text-slate-400">Review all generated landing pages, their status, and their assigned themes/slugs.</p>
             </div>
             <div class="bg-[#161b22] border border-[#30363d] p-5 rounded-xl">
-              <h4 class="font-bold text-white mb-2 text-emerald-400">adforge_list_creatives</h4>
+              <h4 class="font-bold text-white mb-2 text-emerald-400">1ai-ads_list_creatives</h4>
               <p class="text-sm text-slate-400">Retrieve all AI-generated ad copy variations and creative assets stored in the platform.</p>
             </div>
           </div>
@@ -99,7 +99,7 @@ export async function renderDocs(el) {
         <section>
           <div class="bg-gradient-to-br from-[#161b22] to-[#0d1117] border border-[#58a6ff]/30 rounded-2xl p-8 text-center">
             <h2 class="text-2xl font-bold text-white mb-4">Need help?</h2>
-            <p class="text-slate-400 mb-6 max-w-xl mx-auto">If you're having trouble connecting AdForge to your AI agent, check the server logs in PM2 or reach out to our technical support team.</p>
+            <p class="text-slate-400 mb-6 max-w-xl mx-auto">If you're having trouble connecting 1ai-ads to your AI agent, check the server logs in PM2 or reach out to our technical support team.</p>
             <div class="flex justify-center gap-4">
                <a href="#/" class="bg-[#21262d] hover:bg-[#30363d] text-white px-6 py-3 rounded-lg font-bold transition-all border border-[#30363d]">Back to Dashboard</a>
             </div>

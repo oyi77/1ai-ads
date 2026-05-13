@@ -4,7 +4,7 @@
 # lib
 
 ## Purpose
-Core utility library for the Adforge backend. Contains platform API adapters, AI/LLM clients, generators, and shared helpers. This is the largest server directory with 20 modules.
+Core utility library for the 1ai-ads backend. Contains platform API adapters, AI/LLM clients, generators, and shared helpers. This is the largest server directory with 20 modules.
 
 ## Key Files
 | File | Description |
@@ -13,7 +13,7 @@ Core utility library for the Adforge backend. Contains platform API adapters, AI
 | `google-ads-api.js` | Google Ads API adapter — campaign management, reporting |
 | `tiktok-api.js` | TikTok Ads API adapter — campaign and ad operations |
 | `mcp-client.js` | MCP client — connects to external MCP servers for tool use |
-| `mcp-server.js` | MCP server — exposes Adforge capabilities to MCP clients |
+| `mcp-server.js` | MCP server — exposes 1ai-ads capabilities to MCP clients |
 | `llm-client.js` | LLM client abstraction — manages AI model API calls |
 | `ad-generator.js` | Ad copy generation using LLM (hooks, body, CTA) |
 | `ad-research.js` | Market and competitor research via APIs |

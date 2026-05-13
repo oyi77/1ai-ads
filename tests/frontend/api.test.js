@@ -37,8 +37,8 @@ describe('API Service', () => {
 
   it('retries request on 401 using refresh token', async () => {
     localStorage.getItem.mockImplementation(key => {
-      if (key === 'adforge_token') return 'old-token';
-      if (key === 'adforge_refresh_token') return 'refresh-token';
+      if (key === '1ai-ads_token') return 'old-token';
+      if (key === '1ai-ads_refresh_token') return 'refresh-token';
       return null;
     });
 
@@ -63,14 +63,14 @@ describe('API Service', () => {
     const result = await api.get('/secure');
 
     expect(result.data.ok).toBe(true);
-    expect(localStorage.setItem).toHaveBeenCalledWith('adforge_token', 'new-token');
+    expect(localStorage.setItem).toHaveBeenCalledWith('1ai-ads_token', 'new-token');
     expect(fetch).toHaveBeenCalledTimes(3);
   });
 
   it('logs out if refresh token fails', async () => {
     localStorage.getItem.mockImplementation(key => {
-      if (key === 'adforge_token') return 'old-token';
-      if (key === 'adforge_refresh_token') return 'refresh-token';
+      if (key === '1ai-ads_token') return 'old-token';
+      if (key === '1ai-ads_refresh_token') return 'refresh-token';
       return null;
     });
 
@@ -85,6 +85,6 @@ describe('API Service', () => {
     });
 
     await expect(api.get('/secure')).rejects.toThrow('Unauthorized');
-    expect(localStorage.removeItem).toHaveBeenCalledWith('adforge_token');
+    expect(localStorage.removeItem).toHaveBeenCalledWith('1ai-ads_token');
   });
 });

@@ -1,6 +1,6 @@
 const configFactory = () => ({
   port: parseInt(process.env.PORT || '3001', 10),
-  dbPath: process.env.DB_PATH || './db/adforge.db',
+  dbPath: process.env.DB_PATH || './db/1ai-ads.db',
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   jwtSecret: process.env.JWT_SECRET || '',
   nodeEnv: process.env.NODE_ENV || 'development',

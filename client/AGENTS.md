@@ -4,7 +4,7 @@
 # client
 
 ## Purpose
-Frontend SPA for Adforge. Vanilla JavaScript with Vite build tooling. The build output goes to `dist/` and is served by the Express backend.
+Frontend SPA for 1ai-ads. Vanilla JavaScript with Vite build tooling. The build output goes to `dist/` and is served by the Express backend.
 
 ## Key Files
 | File | Description |

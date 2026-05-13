@@ -20,7 +20,7 @@ export async function safeFetch(platformName, apiUrl, fetchOptions = {}) {
     const fetchResponse = await fetch(apiUrl, {
       ...fetchOptions,
       headers: {
-        'User-Agent': 'AdForge/1.0.0 (+https://adforge.ai)',
+        'User-Agent': '1ai-ads/1.0.0 (+https://1ai-ads.ai)',
         ...fetchOptions.headers,
       }
     });

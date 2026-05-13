@@ -1,7 +1,7 @@
 /**
- * AdForge OpenCLI Adapter
+ * 1ai-ads OpenCLI Adapter
  *
- * Transforms AdForge web application into a universal CLI interface.
+ * Transforms 1ai-ads web application into a universal CLI interface.
  * Features:
  * - Campaign management (create, list, sync)
  * - Ads library search across multiple platforms (Meta, Google, TikTok, etc.)
@@ -18,14 +18,14 @@ import { dirname, join } from 'node:path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// AdForge API Configuration
+// 1ai-ads API Configuration
 const API_BASE = process.env.ADFORGE_CLI_API_URL || 'http://localhost:3001/api';
 
 /**
- * AdForge OpenCLI Adapter
- * Exposes all AdForge functionality as CLI commands
+ * 1ai-ads OpenCLI Adapter
+ * Exposes all 1ai-ads functionality as CLI commands
  */
-export class AdForgeAdapter {
+export class 1ai-adsAdapter {
   constructor(apiUrl = API_BASE, auth = {}) {
     this.apiUrl = apiUrl;
     this.auth = {
@@ -85,7 +85,7 @@ export class AdForgeAdapter {
   // ================================
 
   /**
-   * Login and authenticate with AdForge
+   * Login and authenticate with 1ai-ads
    */
   async login(credentials) {
     const { username, password } = credentials;
@@ -692,4 +692,5 @@ export class AdForgeAdapter {
   }
 }
 
-
+// Export for use in OpenCLI
+export { 1aiAdsAdapter };

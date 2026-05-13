@@ -9,7 +9,7 @@
 
 ## Requirements Summary
 
-Integrate AdForge with Adspire.ai's multi-brand content operations platform to unlock:
+Integrate 1ai-ads with Adspire.ai's multi-brand content operations platform to unlock:
 1. **Ad Intelligence** -- trending ads and creative intelligence across 8 channels (1B+ ads database)
 2. **AI Content Generation** -- generate ad copy/creatives using Adspire's AI engine
 3. **Multi-Channel Publishing** -- publish ads to Facebook, Instagram, TikTok, LinkedIn, Google Ads, Bing Ads

@@ -216,7 +216,7 @@ export class AdIntelligenceService {
         ...options,
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'AdForge/1.0.0 (+https://adforge.ai)',
+          'User-Agent': '1ai-ads/1.0.0 (+https://1ai-ads.ai)',
           ...options.headers,
         },
       });

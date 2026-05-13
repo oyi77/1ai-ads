@@ -1,30 +1,30 @@
 #!/usr/bin/env node
 
 /**
- * AdForge CLI Entry Point
+ * 1ai-ads CLI Entry Point
  *
- * Universal command-line interface for AdForge functionality.
+ * Universal command-line interface for 1ai-ads functionality.
  * Powered by OpenCLI - https://github.com/jackwener/opencli
  */
 
 import { program } from 'commander';
-import { AdForgeAdapter } from './adapter.js';
+import { 1ai-adsAdapter } from './adapter.js';
 
-// Parse AdForge API URL from arguments
+// Parse 1ai-ads API URL from arguments
 const apiBase = process.argv.find(arg => arg.startsWith('--api-url='))?.split('=')[1] || process.env.ADFORGE_CLI_API_URL || 'http://localhost:3001/api';
 
 // Initialize adapter with API URL
-const adapter = new AdForgeAdapter(apiBase);
+const adapter = new 1ai-adsAdapter(apiBase);
 
 // ================================
 // COMMAND DEFINITIONS
 // ================================
 
 program
-  .name('adforge')
-  .description('AdForge CLI - Universal ad management, competitor spy, and analytics')
+  .name('1ai-ads')
+  .description('1ai-ads CLI - Universal ad management, competitor spy, and analytics')
   .version('1.0.0')
-  .option('--api-url <url>', 'AdForge API URL (default: http://localhost:3001/api)')
+  .option('--api-url <url>', '1ai-ads API URL (default: http://localhost:3001/api)')
   .option('--format <format>', 'Output format: json, table, csv (default: table)')
   .option('--verbose', 'Verbose output');
 
@@ -34,7 +34,7 @@ program
 
 program
   .command('login')
-  .description('Login to AdForge')
+  .description('Login to 1ai-ads')
   .action(async (options) => {
     const { username, password } = options;
 
@@ -50,10 +50,10 @@ program
       console.log(`Plan: ${result.plan.toUpperCase()}`);
       console.log('');
       console.log('Useful commands:');
-      console.log('  adforge campaigns list      List all campaigns');
-      console.log('  adforge ads search         Search ad library');
-      console.log('  adforge trending           Get market trends');
-      console.log('  adforge competitors add      Add competitor to track');
+      console.log('  1ai-ads campaigns list      List all campaigns');
+      console.log('  1ai-ads ads search         Search ad library');
+      console.log('  1ai-ads trending           Get market trends');
+      console.log('  1ai-ads competitors add      Add competitor to track');
     } catch (error) {
       console.error(`Login failed: ${error.message}`);
       process.exit(1);
@@ -72,7 +72,7 @@ program
     } else {
       console.log('Not authenticated');
       console.log('');
-      console.log('Login with: adforge login --username <user> --password <pass>');
+      console.log('Login with: 1ai-ads login --username <user> --password <pass>');
     }
   });
 
@@ -270,7 +270,7 @@ competitors
 
       if (competitorsResult.length === 0) {
         console.log('No competitors tracked yet.');
-        console.log('Use: adforge competitors add <url>');
+        console.log('Use: 1ai-ads competitors add <url>');
         return;
       }
 
@@ -295,7 +295,7 @@ competitors
       });
 
       console.log(`✓ Competitor "${options.name || new URL(url).hostname}" added for tracking`);
-      console.log('Use: adforge competitors analyze <id> to get detailed analysis');
+      console.log('Use: 1ai-ads competitors analyze <id> to get detailed analysis');
     } catch (error) {
       console.error(`Failed to add competitor: ${error.message}`);
       process.exit(1);
@@ -310,8 +310,8 @@ competitors
     try {
       const analysis = await adapter.getCompetitorAnalysis(id, options.platform || 'all');
 
-      displayCompetitorAnalysis(analysis, program.opts().verbose);
-      console.log('Use: adforge competitors strategy <id> for strategy analysis');
+      displayCompetitorAnalysis(analysis, options.verbose);
+      console.log('Use: 1ai-ads competitors strategy <id> for strategy analysis');
     } catch (error) {
       console.error(`Analysis failed: ${error.message}`);
       process.exit(1);
@@ -509,7 +509,7 @@ program
 
       if (accounts.length === 0) {
         console.log('No accounts connected.');
-        console.log('Use: adforge accounts connect <platform> to add an account');
+        console.log('Use: 1ai-ads accounts connect <platform> to add an account');
         return;
       }
 

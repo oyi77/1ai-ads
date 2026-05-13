@@ -1,4 +1,4 @@
-# AdForge OpenCLI Adapter - Complete Implementation
+# 1ai-ads OpenCLI Adapter - Complete Implementation
 
 **Date**: 2026-04-09
 
@@ -15,12 +15,12 @@ Added missing navigation tabs to `client/index.html`:
 
 ### 2. OpenCLI Adapter Created ✅
 
-Full-featured CLI adapter for AdForge with the following components:
+Full-featured CLI adapter for 1ai-ads with the following components:
 
 #### Core Files
 - `opencli-adapter/package.json` - Package definition with scripts
 - `opencli-adapter/index.js` - Main CLI entry point with all commands
-- `opencli-adapter/adapter.js` - AdForge API adapter class
+- `opencli-adapter/adapter.js` - 1ai-ads API adapter class
 - `opencli-adapter/README.md` - Comprehensive documentation
 
 #### Commands Available
@@ -76,16 +76,16 @@ export ADFORGE_CLI_API_URL=http://localhost:3001/api
 npm link
 
 # Use commands
-adforge campaigns list
-adforge ads search "running shoes" --platform meta
-adforge competitors add https://competitor.com
+1ai-ads campaigns list
+1ai-ads ads search "running shoes" --platform meta
+1ai-ads competitors add https://competitor.com
 ```
 
 ### 6. Architecture
 
 ```
 ┌─────────────────────────────────────────────┐
-│                    AdForge Web App                     │
+│                    1ai-ads Web App                     │
 │                     (localhost:3001/api)                 │
 │                                                           │
 └─────────────────────────────────────────────────────┘
@@ -125,7 +125,7 @@ node index.js --help
 
 ---
 
-**This implementation transforms AdForge into a production-ready CLI tool while:**
+**This implementation transforms 1ai-ads into a production-ready CLI tool while:**
 - ✅ Maintaining all existing web API functionality
 - ✅ Adding new CLI-only features (ads library search, competitor spy)
 - ✅ Using proven CLI framework (Commander)

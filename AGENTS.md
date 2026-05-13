@@ -1,6 +1,6 @@
 <!-- Generated: 2026-04-08 | Updated: 2026-04-08 -->
 
-# Adforge
+# 1ai-ads
 
 ## Purpose
 Full-stack ad management platform. Express backend with SQLite persistence, Vite/React SPA frontend, and integrations with Meta, Google, and TikTok ad APIs. Includes AI-powered ad generation, campaign orchestration, landing page builder, and competitor monitoring.

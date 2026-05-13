@@ -19,14 +19,14 @@ test.describe('Authentication', () => {
 test('unauthenticated user sees marketing landing page', async ({ page }) => {
   await page.goto(`${BASE}/#/`);
   await page.waitForTimeout(500);
-  // Wait for the marketing page h1 to appear and verify it contains 'AdForge'
+  // Wait for the marketing page h1 to appear and verify it contains '1ai-ads'
   await page.waitForSelector('h1');
-  await expect(page.locator('h1')).toContainText('AdForge');
+  await expect(page.locator('h1')).toContainText('1ai-ads');
 });
 
   test('login page renders correctly', async ({ page }) => {
     await page.goto(`${BASE}/#/login`);
-    await expect(page.locator('h1')).toContainText('Login to AdForge');
+    await expect(page.locator('h1')).toContainText('Login to 1ai-ads');
     await expect(page.locator('input[name="username"]')).toBeVisible();
     await expect(page.locator('input[name="password"]')).toBeVisible();
     await expect(page.locator('button[type="submit"]')).toBeVisible();

@@ -291,20 +291,20 @@ curl -X DELETE "http://localhost:3000/api/ads-library/cache?platform=meta"
 
 ## CLI Usage
 
-The `adforge-cli.js` script at the project root exposes the same library.
+The `1ai-ads-cli.js` script at the project root exposes the same library.
 
 ```bash
 # Search across all platforms
-node adforge-cli.js ads-search --query "nike" --platform all --limit 20
+node 1ai-ads-cli.js ads-search --query "nike" --platform all --limit 20
 
 # Search a specific platform with scraping forced
-node adforge-cli.js ads-search --query "coca cola" --platform meta --source scrape
+node 1ai-ads-cli.js ads-search --query "coca cola" --platform meta --source scrape
 
 # Get sources status
-node adforge-cli.js ads-sources
+node 1ai-ads-cli.js ads-sources
 
 # Clear cache
-node adforge-cli.js ads-cache-clear --platform google
+node 1ai-ads-cli.js ads-cache-clear --platform google
 ```
 
 ---
@@ -397,7 +397,7 @@ No environment variables are required to run with scraping only. API credentials
 | `GOOGLE_OAUTH_TOKEN` | Google adapter (optional override) | Google Ads OAuth access token |
 | `TIKTOK_ACCESS_TOKEN` | TikTok adapter (optional override) | TikTok Business API token (for own campaigns only) |
 
-To add credentials via the settings repository instead of env vars, use the Settings page in the AdForge UI or insert directly:
+To add credentials via the settings repository instead of env vars, use the Settings page in the 1ai-ads UI or insert directly:
 
 ```js
 settingsRepo.setCredentials('meta', { access_token: 'EAAx...' });

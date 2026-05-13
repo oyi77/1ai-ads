@@ -4,7 +4,7 @@ export function renderLogin(el) {
   el.innerHTML = `
     <div class="min-h-[80vh] flex items-center justify-center px-4">
       <div class="bg-slate-800 p-8 rounded-lg border border-slate-700 w-full max-w-sm">
-        <h1 class="text-2xl font-bold mb-6 text-center">Login to AdForge</h1>
+        <h1 class="text-2xl font-bold mb-6 text-center">Login to 1ai-ads</h1>
         <form id="login-form" class="space-y-4">
           <div>
             <label class="block text-sm text-slate-400 mb-1">Username or Email</label>

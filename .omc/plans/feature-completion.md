@@ -1,4 +1,4 @@
-# AdForge Feature Completion Improvement Plan
+# 1ai-ads Feature Completion Improvement Plan
 
 **Date**: 2026-04-09
 **Priority**: Feature Completion

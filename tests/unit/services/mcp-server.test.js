@@ -13,8 +13,8 @@ vi.mock('@modelcontextprotocol/sdk/types.js', () => ({
   ListToolsRequestSchema: {},
 }));
 
-describe('MCP Server (createAdForgeMCPServer)', () => {
-  let createAdForgeMCPServer;
+describe('MCP Server (create1ai-adsMCPServer)', () => {
+  let create1ai-adsMCPServer;
   let mockCampaignsRepo;
   let mockLandingRepo;
   let mockAdsRepo;
@@ -39,18 +39,18 @@ describe('MCP Server (createAdForgeMCPServer)', () => {
 
     // Import the function
     const module = await import('../../../server/services/mcp-server.js');
-    createAdForgeMCPServer = module.createAdForgeMCPServer;
+    create1ai-adsMCPServer = module.create1ai-adsMCPServer;
   });
 
   describe('server creation', () => {
     it('can create an MCP server instance', () => {
-      const server = createAdForgeMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
+      const server = create1ai-adsMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
       expect(server).toBeDefined();
       expect(server.setRequestHandler).toHaveBeenCalled();
     });
 
     it('registers ListToolsRequestSchema handler', () => {
-      const server = createAdForgeMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
+      const server = create1ai-adsMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
 
       // Should have registered handlers
       expect(server.setRequestHandler).toHaveBeenCalled();
@@ -58,7 +58,7 @@ describe('MCP Server (createAdForgeMCPServer)', () => {
     });
 
     it('registers CallToolRequestSchema handler', () => {
-      const server = createAdForgeMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
+      const server = create1ai-adsMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
 
       // Should have registered two handlers (list tools and call tool)
       expect(server.setRequestHandler).toHaveBeenCalledTimes(2);
@@ -66,32 +66,32 @@ describe('MCP Server (createAdForgeMCPServer)', () => {
   });
 
   describe('tool registration', () => {
-    it('registers adforge_list_campaigns tool', () => {
-      const server = createAdForgeMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
+    it('registers 1ai-ads_list_campaigns tool', () => {
+      const server = create1ai-adsMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
 
       // Verify server was created and handlers were registered
       expect(server).toBeDefined();
       expect(server.setRequestHandler).toHaveBeenCalled();
     });
 
-    it('registers adforge_get_analytics tool', () => {
-      const server = createAdForgeMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
+    it('registers 1ai-ads_get_analytics tool', () => {
+      const server = create1ai-adsMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
 
       // Verify server was created and handlers were registered
       expect(server).toBeDefined();
       expect(server.setRequestHandler).toHaveBeenCalled();
     });
 
-    it('registers adforge_list_landing_pages tool', () => {
-      const server = createAdForgeMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
+    it('registers 1ai-ads_list_landing_pages tool', () => {
+      const server = create1ai-adsMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
 
       // Verify server was created and handlers were registered
       expect(server).toBeDefined();
       expect(server.setRequestHandler).toHaveBeenCalled();
     });
 
-    it('registers adforge_list_creatives tool', () => {
-      const server = createAdForgeMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
+    it('registers 1ai-ads_list_creatives tool', () => {
+      const server = create1ai-adsMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
 
       // Verify server was created and handlers were registered
       expect(server).toBeDefined();
@@ -101,7 +101,7 @@ describe('MCP Server (createAdForgeMCPServer)', () => {
 
   describe('server behavior', () => {
     it('passes repos to server instance', () => {
-      const server = createAdForgeMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
+      const server = create1ai-adsMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
 
       expect(server).toBeDefined();
       // The server should have the repos accessible internally
@@ -109,8 +109,8 @@ describe('MCP Server (createAdForgeMCPServer)', () => {
     });
 
     it('can create multiple server instances', () => {
-      const server1 = createAdForgeMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
-      const server2 = createAdForgeMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
+      const server1 = create1ai-adsMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
+      const server2 = create1ai-adsMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo);
 
       expect(server1).toBeDefined();
       expect(server2).toBeDefined();
@@ -119,7 +119,7 @@ describe('MCP Server (createAdForgeMCPServer)', () => {
 
     it('handles missing repos gracefully', () => {
       expect(() => {
-        createAdForgeMCPServer(null, null, null);
+        create1ai-adsMCPServer(null, null, null);
       }).not.toThrow();
     });
   });

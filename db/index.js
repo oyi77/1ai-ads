@@ -38,7 +38,7 @@ export function createDatabase(dbPath) {
      try { db.exec('ALTER TABLE users ADD COLUMN plan TEXT DEFAULT "free";'); } catch (e) { console.warn('Migration warning (plan):', e.message); }
    }
    // Backfill null emails for existing users
-   try { db.exec("UPDATE users SET email = username || '@adforge.local' WHERE email IS NULL OR email = ''"); } catch (e) { console.warn('Backfill warning (email):', e.message); }
+   try { db.exec("UPDATE users SET email = username || '@1ai-ads.local' WHERE email IS NULL OR email = ''"); } catch (e) { console.warn('Backfill warning (email):', e.message); }
     // Backfill confirmed for admin
     try { db.exec("UPDATE users SET confirmed = 1 WHERE username = 'admin' AND confirmed = 0"); } catch (e) { console.warn('Backfill warning (confirmed):', e.message); }
 

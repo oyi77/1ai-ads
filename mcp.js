@@ -3,10 +3,10 @@ import { createDatabase } from './db/index.js';
 import { CampaignsRepository } from './server/repositories/campaigns.js';
 import { LandingRepository } from './server/repositories/landing.js';
 import { AdsRepository } from './server/repositories/ads.js';
-import { createAdForgeMCPServer } from './server/services/mcp-server.js';
+import { create1ai-adsMCPServer } from './server/services/mcp-server.js';
 
-const db = createDatabase(process.env.DB_PATH || './db/adforge.db');
-const server = createAdForgeMCPServer(
+const db = createDatabase(process.env.DB_PATH || './db/1ai-ads.db');
+const server = create1ai-adsMCPServer(
   new CampaignsRepository(db),
   new LandingRepository(db),
   new AdsRepository(db)
@@ -15,7 +15,7 @@ const server = createAdForgeMCPServer(
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("AdForge MCP Server running on stdio");
+  console.error("1ai-ads MCP Server running on stdio");
 }
 
 main().catch((error) => {

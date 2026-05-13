@@ -1,8 +1,8 @@
-# AdForge OpenCLI Adapter - Installation Guide
+# 1ai-ads OpenCLI Adapter - Installation Guide
 
 ## Quick Start (Simple Method)
 
-The OpenCLI adapter uses `commander` which is already installed in AdForge. You can use it directly without additional installation.
+The OpenCLI adapter uses `commander` which is already installed in 1ai-ads. You can use it directly without additional installation.
 
 ### Step 1: Configure API URL
 
@@ -33,7 +33,7 @@ If you want to run the CLI as a standalone tool without using the web app's comm
 const API_BASE = process.env.ADFORGE_CLI_API_URL || 'http://localhost:3001/api';
 
 async function main() {
-  const adapter = new AdForgeAdapter(API_BASE);
+  const adapter = new 1ai-adsAdapter(API_BASE);
   const [command, ...args] = process.argv.slice(2);
 
   if (command === 'campaigns' && args[0] === 'list') {
@@ -51,7 +51,7 @@ main();
 
 ## Architecture Note
 
-The adapter communicates with the existing AdForge REST API at `/api/*` endpoints. All features are already implemented in the web application - the CLI simply provides command-line access to them.
+The adapter communicates with the existing 1ai-ads REST API at `/api/*` endpoints. All features are already implemented in the web application - the CLI simply provides command-line access to them.
 
 ## All Commands Available
 

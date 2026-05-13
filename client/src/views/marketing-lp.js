@@ -5,7 +5,7 @@ export async function renderMarketingLP(el) {
       <header class="relative py-16 sm:py-24 px-4 overflow-hidden border-b border-[#161b22]">
         <div class="max-w-7xl mx-auto text-center relative z-10">
           <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight mb-6 text-white leading-tight">
-            AdForge: Scale Your Ads with <span class="text-[#58a6ff]">AI Precision</span>
+            1ai-ads: Scale Your Ads with <span class="text-[#58a6ff]">AI Precision</span>
           </h1>
           <p class="text-xl sm:text-2xl text-slate-400 mb-10 max-w-3xl mx-auto">
             Generate high-converting landing pages and manage cross-platform ad accounts in one integrated powerhouse.

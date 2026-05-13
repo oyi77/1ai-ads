@@ -1,10 +1,10 @@
-# AdForge OpenCLI Adapter - Implementation Summary
+# 1ai-ads OpenCLI Adapter - Implementation Summary
 
 **Date**: 2026-04-09
 
 ## Overview
 
-Complete OpenCLI adapter for AdForge that transforms the web application into a universal command-line interface. Powered by OpenCLI framework for AI-native runtime and seamless automation.
+Complete OpenCLI adapter for 1ai-ads that transforms the web application into a universal command-line interface. Powered by OpenCLI framework for AI-native runtime and seamless automation.
 
 ## Files Created
 
@@ -93,20 +93,20 @@ Complete OpenCLI adapter for AdForge that transforms the web application into a 
 
 ```bash
 # Install OpenCLI adapter
-cd /path/to/adforge/opencli-adapter
+cd /path/to/1ai-ads/opencli-adapter
 npm install
 
-# Use AdForge commands
+# Use 1ai-ads commands
 export ADFORGE_CLI_API_URL=http://localhost:3001/api
-adforge campaigns list
-adforge ads search "running shoes" --platform meta
+1ai-ads campaigns list
+1ai-ads ads search "running shoes" --platform meta
 ```
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    AdForge Web App                     │
+│                    1ai-ads Web App                     │
 │                     (localhost:3001/api)                 │
 │                                                           │
 │                                                           │
@@ -143,33 +143,33 @@ adforge ads search "running shoes" --platform meta
 npm install -g @jackwener/opencli
 
 # 2. Login
-adforge login --username admin --password secret
+1ai-ads login --username admin --password secret
 
 # 3. List campaigns
-adforge campaigns list
+1ai-ads campaigns list
 
 # 4. Search ads library (free, no API key needed!)
-adforge ads search "fitness" --platform meta --limit 50
+1ai-ads ads search "fitness" --platform meta --limit 50
 
 # 5. Track competitor (free, uses public data!)
-adforge competitors add https://competitor.com --name "Brand X"
+1ai-ads competitors add https://competitor.com --name "Brand X"
 
 # 6. Get trends (internal from your campaigns, free!)
-adforge trending --source internal
+1ai-ads trending --source internal
 ```
 
 ### Advanced Workflow
 ```bash
 # Sync all platforms daily
-adforge accounts sync
+1ai-ads accounts sync
 
 # Export performance report
-adforge reports type --campaign --format csv > performance.csv
+1ai-ads reports type --campaign --format csv > performance.csv
 ```
 
 ## Configuration
 
-Set `ADFORGE_CLI_API_URL` environment variable to point to your AdForge instance:
+Set `ADFORGE_CLI_API_URL` environment variable to point to your 1ai-ads instance:
 
 ```bash
 # Default (local)
@@ -182,7 +182,7 @@ export ADFORGE_CLI_API_URL=https://your-domain.com/api
 ## Next Steps
 
 1. ✅ **Navigation links added** to index.html for all features
-2. ✅ **OpenCLI adapter created** with full AdForge API integration
+2. ✅ **OpenCLI adapter created** with full 1ai-ads API integration
 3. ✅ **Multi-platform support** for ads search across Meta, Google, TikTok
 4. ✅ **Free research capabilities** using public ad libraries and competitor data
 5. **Comprehensive CLI** with campaign, competitor, trending, analytics, accounts management
@@ -211,4 +211,4 @@ export ADFORGE_CLI_API_URL=https://your-domain.com/api
 
 ---
 
-**This transforms AdForge into a powerful CLI tool while maintaining all functionality.**
+**This transforms 1ai-ads into a powerful CLI tool while maintaining all functionality.**

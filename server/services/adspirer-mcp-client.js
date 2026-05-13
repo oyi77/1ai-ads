@@ -65,7 +65,7 @@ export class AdspirerMcpClient {
         headers: { Authorization: `Bearer ${creds.access_token}` },
       },
     });
-    const client = new Client({ name: 'adforge-backend', version: '1.0.0' }, { capabilities: { tools: {} } });
+    const client = new Client({ name: '1ai-ads-backend', version: '1.0.0' }, { capabilities: { tools: {} } });
     await client.connect(transport);
     this._clients.set(userId, { client, transport });
     return client;

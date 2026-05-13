@@ -2,7 +2,7 @@
 
 **Target**: [adspirer.com](https://www.adspirer.com)  
 **Date**: 2026-04-10  
-**Scope**: AdForge web app backend + Claude Code AI assistant layer
+**Scope**: 1ai-ads web app backend + Claude Code AI assistant layer
 
 ---
 
@@ -24,11 +24,11 @@ Adspirer is a **Model Context Protocol (MCP) server** that bridges AI assistants
 ## Requirements Summary
 
 ### Functional Requirements
-- FR-1: AdForge users can initiate OAuth 2.1 PKCE flow to connect their Adspirer account
+- FR-1: 1ai-ads users can initiate OAuth 2.1 PKCE flow to connect their Adspirer account
 - FR-2: Access tokens stored per-user in `platform_accounts` table (`platform = 'adspirer'`)
-- FR-3: AdForge backend can call any Adspirer tool on behalf of an authenticated user
+- FR-3: 1ai-ads backend can call any Adspirer tool on behalf of an authenticated user
 - FR-4: Token refresh happens automatically on 401 responses
-- FR-5: AdForge campaign data syncs with Adspirer (list, create, analyze campaigns)
+- FR-5: 1ai-ads campaign data syncs with Adspirer (list, create, analyze campaigns)
 - FR-6: Claude Code AI assistant can use all 130+ Adspirer tools directly (separate layer)
 
 ### Non-Functional Requirements
@@ -57,7 +57,7 @@ Adspirer is a **Model Context Protocol (MCP) server** that bridges AI assistants
 ## Architecture
 
 ```
-AdForge Frontend
+1ai-ads Frontend
       │
       ▼
 server/routes/adspirer.js   ◄── OAuth callback, tool proxy endpoints
@@ -142,7 +142,7 @@ export class AdspirerMcpClient {
         headers: { Authorization: `Bearer ${creds.access_token}` },
       },
     });
-    const client = new Client({ name: 'adforge-backend', version: '1.0.0' }, { capabilities: { tools: {} } });
+    const client = new Client({ name: '1ai-ads-backend', version: '1.0.0' }, { capabilities: { tools: {} } });
     await client.connect(transport);
     this._clients.set(userId, { client, transport });
     return client;
@@ -412,9 +412,9 @@ Add "Connect Adspirer" section to Settings page:
 
 ---
 
-## Tool Categories for AdForge Feature Mapping
+## Tool Categories for 1ai-ads Feature Mapping
 
-| AdForge Feature | Adspirer Tools |
+| 1ai-ads Feature | Adspirer Tools |
 |-----------------|----------------|
 | Campaign overview | `list_campaigns`, `get_campaign_performance` (per platform) |
 | Analytics dashboard | `get_meta_campaign_performance`, `get_campaign_performance`, `get_tiktok_campaign_performance` |
@@ -471,22 +471,22 @@ Add "Connect Adspirer" section to Settings page:
 
 ## ADR — Architecture Decision Record
 
-**Decision**: Integrate Adspirer via HTTP MCP client in the AdForge backend, not via REST API adapter.
+**Decision**: Integrate Adspirer via HTTP MCP client in the 1ai-ads backend, not via REST API adapter.
 
 **Drivers**:
 1. Adspirer exposes 130+ tools via MCP, not a REST API — no alternative transport
 2. OAuth 2.1 PKCE is required; cannot be bypassed with API keys
-3. AdForge already ships `@modelcontextprotocol/sdk` for its own MCP server
+3. 1ai-ads already ships `@modelcontextprotocol/sdk` for its own MCP server
 
 **Alternatives considered**:
 - *REST API wrapper*: Not viable — Adspirer has no public REST API, only MCP
 - *Browser-side MCP calls*: Not viable — OAuth tokens must stay server-side; CORS would block direct browser calls to `mcp.adspirer.com`
-- *Proxy via Claude Code tools*: Not viable for web app users — Claude Code tools are only available in AI assistant sessions, not in AdForge's Express backend
+- *Proxy via Claude Code tools*: Not viable for web app users — Claude Code tools are only available in AI assistant sessions, not in 1ai-ads's Express backend
 
-**Why chosen**: HTTP MCP client matches the actual protocol; reuses existing `@modelcontextprotocol/sdk`; keeps tokens server-side; follows AdForge's existing per-user platform_accounts credential pattern.
+**Why chosen**: HTTP MCP client matches the actual protocol; reuses existing `@modelcontextprotocol/sdk`; keeps tokens server-side; follows 1ai-ads's existing per-user platform_accounts credential pattern.
 
 **Consequences**:
-- +All 130+ Adspirer tools available to AdForge via single `/api/adspirer/tools/:toolName` proxy endpoint
+- +All 130+ Adspirer tools available to 1ai-ads via single `/api/adspirer/tools/:toolName` proxy endpoint
 - +No new external dependencies beyond SDK version bump
 - −OAuth client registration with Adspirer required (need `ADSPIRER_CLIENT_ID`)
 - −Token refresh logic adds complexity; must be tested carefully

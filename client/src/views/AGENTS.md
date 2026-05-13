@@ -4,7 +4,7 @@
 # views
 
 ## Purpose
-Page-level view components for the Adforge SPA. Each file represents a complete page rendered by the client-side router. Views handle their own UI rendering and state management.
+Page-level view components for the 1ai-ads SPA. Each file represents a complete page rendered by the client-side router. Views handle their own UI rendering and state management.
 
 ## Key Files
 | File | Description |

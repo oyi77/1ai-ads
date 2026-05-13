@@ -1,7 +1,7 @@
 # Payment Gateway Integration Backlog
 
 ## Overview
-This document outlines the strategy for integrating direct payment gateways into AdForge, replacing the current Scalev-dependent checkout flow.
+This document outlines the strategy for integrating direct payment gateways into 1ai-ads, replacing the current Scalev-dependent checkout flow.
 
 ## Current State
 - **Checkout**: Currently relies on Scalev embed/links for payment processing
@@ -10,7 +10,7 @@ This document outlines the strategy for integrating direct payment gateways into
 ## Target State
 - **Direct Integration**: Support Midtrans, Stripe, or other Indonesian payment gateways
 - **Flexibility**: Ability to use Scalev OR direct PG based on user preference
-- **Revenue Tracking**: All payment data flows back to AdForge analytics
+- **Revenue Tracking**: All payment data flows back to 1ai-ads analytics
 
 ---
 
@@ -133,4 +133,4 @@ CREATE TABLE payments (
 ---
 
 *Last Updated: 2026-04-03*
-*Owner: AdForge Development Team*
+*Owner: 1ai-ads Development Team*

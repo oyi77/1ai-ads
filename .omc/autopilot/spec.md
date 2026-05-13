@@ -1,4 +1,4 @@
-# AdForge Autopilot Spec - Fix Critical User Feedback
+# 1ai-ads Autopilot Spec - Fix Critical User Feedback
 
 ## Problem Statement
 User reports: "Currently it seems nothing is working"
@@ -10,7 +10,7 @@ User reports: "Currently it seems nothing is working"
 ## Requirements
 
 ### R1: Authentication & Landing Page
-- Public landing page at `/` describing AdForge
+- Public landing page at `/` describing 1ai-ads
 - Login page at `#/login` with username/password
 - JWT-based session (stored in localStorage)
 - Protected routes redirect to login if no token

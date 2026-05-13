@@ -284,7 +284,7 @@ export async function renderLandingList(el) {
     el.querySelectorAll('[data-export]').forEach(btn => {
       btn.addEventListener('click', async () => {
         try {
-          const token = localStorage.getItem('adforge_token');
+          const token = localStorage.getItem('1ai-ads_token');
           const res = await fetch(`/api/landing/${btn.dataset.export}/export`, {
             headers: { Authorization: `Bearer ${token}` }
           });

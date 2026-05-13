@@ -4,7 +4,7 @@
 # server
 
 ## Purpose
-Express 5 backend providing REST API for Adforge. Follows a layered architecture: routes → services → repositories → db. Handles auth, ad CRUD, campaign management, AI generation, and third-party API integrations.
+Express 5 backend providing REST API for 1ai-ads. Follows a layered architecture: routes → services → repositories → db. Handles auth, ad CRUD, campaign management, AI generation, and third-party API integrations.
 
 ## Key Files
 | File | Description |

@@ -40,7 +40,7 @@ export class MCPClientManager {
     });
 
     const client = new Client(
-      { name: 'adforge-backend', version: '1.0.0' },
+      { name: '1ai-ads-backend', version: '1.0.0' },
       { capabilities: { tools: {} } }
     );
 

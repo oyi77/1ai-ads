@@ -4,7 +4,7 @@
 # design
 
 ## Purpose
-Design tokens for Adforge — centralized color palette and CSS custom properties used throughout the frontend. Ensures visual consistency across all views.
+Design tokens for 1ai-ads — centralized color palette and CSS custom properties used throughout the frontend. Ensures visual consistency across all views.
 
 ## Key Files
 | File | Description |

@@ -1,4 +1,4 @@
-# AdForge
+# 1ai-ads
 
 Ads Management & Optimization Platform.
 
@@ -19,14 +19,14 @@ npm start
 
 ## MCP Integration
 
-AdForge provides an MCP server for integration with OpenClaw, Claude Code, and other AI agents.
+1ai-ads provides an MCP server for integration with OpenClaw, Claude Code, and other AI agents.
 
 **MCP Server Command**: `node mcp.js`
 
 **Available Tools**:
-- `adforge_list_campaigns`
-- `adforge_get_analytics`
-- `adforge_list_landing_pages`
-- `adforge_list_creatives`
+- `1ai-ads_list_campaigns`
+- `1ai-ads_get_analytics`
+- `1ai-ads_list_landing_pages`
+- `1ai-ads_list_creatives`
 
 Refer to [SKILL.md](./SKILL.md) for detailed integration instructions.

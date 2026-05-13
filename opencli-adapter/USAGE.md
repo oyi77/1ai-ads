@@ -1,4 +1,4 @@
-# AdForge CLI Adapter - Quick Start Guide
+# 1ai-ads CLI Adapter - Quick Start Guide
 
 ## Installation & Setup
 
@@ -17,16 +17,16 @@ node index.js --help
 
 ```bash
 # Test authentication (will prompt for credentials)
-adforge login --username admin --password admin123
+1ai-ads login --username admin --password admin123
 
 # List campaigns
-adforge campaigns list
+1ai-ads campaigns list
 
 # Search ads library (free, no API key needed!)
-adforge ads search "running shoes" --platform meta
+1ai-ads ads search "running shoes" --platform meta
 
 # Get trending data
-adforge trending --source internal
+1ai-ads trending --source internal
 ```
 
 ## What You Can Do
@@ -34,50 +34,50 @@ adforge trending --source internal
 ### Campaign Management
 ```bash
 # Create a campaign
-adforge campaigns create --platform meta --name "Summer Sale" --objective conversions --budget 100
+1ai-ads campaigns create --platform meta --name "Summer Sale" --objective conversions --budget 100
 
 # Sync all platforms
-adforge campaigns sync
+1ai-ads campaigns sync
 ```
 
 ### Ads Library Search
 ```bash
 # Meta ads
-adforge ads search "fitness app" --platform meta
+1ai-ads ads search "fitness app" --platform meta
 
 # Google ads
-adforge ads search "software tools" --platform google
+1ai-ads ads search "software tools" --platform google
 
 # TikTok ads
-adforge ads search "dance tutorial" --platform tiktok
+1ai-ads ads search "dance tutorial" --platform tiktok
 ```
 
 ### Competitor Tracking
 ```bash
 # Add competitor
-adforge competitors add https://example.com --name "Brand X"
+1ai-ads competitors add https://example.com --name "Brand X"
 
 # Get analysis
-adforge competitors analyze <id> --platform all
+1ai-ads competitors analyze <id> --platform all
 
 # Refresh all
-adforge competitors refresh
+1ai-ads competitors refresh
 ```
 
 ### Trending
 ```bash
 # Get both internal and external
-adforge trending
+1ai-ads trending
 
 # Internal only
-adforge trending --source internal
+1ai-ads trending --source internal
 ```
 
 ## Export & Reporting
 
 ```bash
 # Export campaigns to CSV
-adforge export campaigns --format csv > campaigns.csv
+1ai-ads export campaigns --format csv > campaigns.csv
 ```
 
 ## Key Features
@@ -87,22 +87,22 @@ adforge export campaigns --format csv > campaigns.csv
 ✅ **Competitor Spy** - Real-time monitoring with Similarweb API integration
 ✅ **No API keys required** - Basic features work without configuration
 ✅ **Universal CLI** - Works on Linux, macOS, Windows
-✅ **Full AdForge API** - All web features accessible via CLI
+✅ **Full 1ai-ads API** - All web features accessible via CLI
 
 ## Getting Help
 
 ```bash
 # See all available commands
-adforge --help
+1ai-ads --help
 
 # See details for a specific command
-adforge campaigns --help
-adforge ads --help
+1ai-ads campaigns --help
+1ai-ads ads --help
 ```
 
 ## Architecture
 
-The CLI adapter uses the existing AdForge REST API to provide full functionality. No need to rebuild or modify the web application - all features are already there!
+The CLI adapter uses the existing 1ai-ads REST API to provide full functionality. No need to rebuild or modify the web application - all features are already there!
 
 ## License
 

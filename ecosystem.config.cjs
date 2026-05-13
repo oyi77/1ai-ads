@@ -1,6 +1,6 @@
 module.exports = {
   apps: [{
-    name: 'adforge',
+    name: '1ai-ads',
     script: 'server.js',
     cwd: __dirname,
     env: {

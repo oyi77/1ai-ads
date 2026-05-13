@@ -1,6 +1,6 @@
-# AdForge CLI Adapter
+# 1ai-ads CLI Adapter
 
-Universal command-line interface for AdForge, powered by [OpenCLI](https://github.com/jackwener/opencli).
+Universal command-line interface for 1ai-ads, powered by [OpenCLI](https://github.com/jackwener/opencli).
 
 ## Features
 
@@ -42,8 +42,8 @@ Universal command-line interface for AdForge, powered by [OpenCLI](https://githu
 
 ```bash
 # Clone or download this repository
-git clone https://github.com/your-repo/adforge
-cd adforge/opencli-adapter
+git clone https://github.com/your-repo/1ai-ads
+cd 1ai-ads/opencli-adapter
 
 # Install dependencies
 npm install
@@ -54,71 +54,71 @@ npm link
 
 ## Configuration
 
-The CLI uses the AdForge API URL. Set it via:
+The CLI uses the 1ai-ads API URL. Set it via:
 
 ```bash
 # Option 1: Environment variable
 export ADFORGE_CLI_API_URL=http://localhost:3001/api
 
 # Option 2: Command line flag
-adforge --api-url http://localhost:3001/api campaigns list
+1ai-ads --api-url http://localhost:3001/api campaigns list
 ```
 
 ## Usage
 
 ```bash
 # Authentication
-adforge login --username <user> --password <pass>
-adforge status
+1ai-ads login --username <user> --password <pass>
+1ai-ads status
 
 # Campaigns
-adforge campaigns list                          List all campaigns
-adforge campaigns get <id>                      Get campaign details
-adforge campaigns create --name "Summer Sale" --platform meta --budget 100
-adforge campaigns update <id> --status active --budget 150
-adforge campaigns sync --platform meta           Sync Meta campaigns
+1ai-ads campaigns list                          List all campaigns
+1ai-ads campaigns get <id>                      Get campaign details
+1ai-ads campaigns create --name "Summer Sale" --platform meta --budget 100
+1ai-ads campaigns update <id> --status active --budget 150
+1ai-ads campaigns sync --platform meta           Sync Meta campaigns
 
 # Ads Library
-adforge ads search "running shoes" --platform meta
-adforge ads search "fitness app" --platform google --limit 50
-adforge ads search "makeup tutorial" --platform tiktok --country US
+1ai-ads ads search "running shoes" --platform meta
+1ai-ads ads search "fitness app" --platform google --limit 50
+1ai-ads ads search "makeup tutorial" --platform tiktok --country US
 
 # Competitors
-adforge competitors list                         List all competitors
-adforge competitors add https://competitor.com --platform meta
-adforge competitors add https://another.com --name "Brand X"
-adforge competitors analyze <id> --platform all          Get detailed analysis
-adforge competitors analyze <id> --strategy              Get strategy analysis
-adforge competitors refresh                            Refresh all tracked competitors
-adforge competitors remove https://competitor.com          Stop tracking
+1ai-ads competitors list                         List all competitors
+1ai-ads competitors add https://competitor.com --platform meta
+1ai-ads competitors add https://another.com --name "Brand X"
+1ai-ads competitors analyze <id> --platform all          Get detailed analysis
+1ai-ads competitors analyze <id> --strategy              Get strategy analysis
+1ai-ads competitors refresh                            Refresh all tracked competitors
+1ai-ads competitors remove https://competitor.com          Stop tracking
 
 # Trending
-adforge trending                                   Get internal + external trends
-adforge trending --industry ecommerce --region US
-adforge trending --source internal                Internal campaigns only
-adforge trending --source external                 External market data only
+1ai-ads trending                                   Get internal + external trends
+1ai-ads trending --industry ecommerce --region US
+1ai-ads trending --source internal                Internal campaigns only
+1ai-ads trending --source external                 External market data only
 
 # Analytics
-adforge analytics --campaign <id> --platform meta     Get campaign analytics
-adforge analytics performance <id> --platform meta   Get performance metrics
-adforge analytics campaign <id> --days 30 --platform meta
+1ai-ads analytics --campaign <id> --platform meta     Get campaign analytics
+1ai-ads analytics performance <id> --platform meta   Get performance metrics
+1ai-ads analytics campaign <id> --days 30 --platform meta
 
 # Accounts
-adforge accounts list --platform meta                List connected accounts
-adforge accounts connect --platform meta              Connect platform account
-adforge accounts sync                                Sync all accounts
-adforge accounts health --platform meta              Check account health
+1ai-ads accounts list --platform meta                List connected accounts
+1ai-ads accounts connect --platform meta              Connect platform account
+1ai-ads accounts sync                                Sync all accounts
+1ai-ads accounts health --platform meta              Check account health
 
 # Settings
-adforge settings get                                  View user settings
-adforge settings set --key llm_model --value gpt-4
-adforge settings credentials                         Check API credential status
+1ai-ads settings get                                  View user settings
+1ai-ads settings set --key llm_model --value gpt-4
+1ai-ads settings credentials                         Check API credential status
 
 # Export
-adforge export campaigns --format csv              Export campaigns to CSV
-adforge export campaigns --file report.csv     Save to file
-adforge reports type --campaign --format json   Generate campaign report
-adforge reports type --competitor --platform all   Generate competitor report
+1ai-ads export campaigns --format csv              Export campaigns to CSV
+1ai-ads export campaigns --file report.csv     Save to file
+1ai-ads reports type --campaign --format json   Generate campaign report
+1ai-ads reports type --competitor --platform all   Generate competitor report
 ```
 
 ## Output Formats
@@ -131,41 +131,41 @@ adforge reports type --competitor --platform all   Generate competitor report
 
 ### Login and list campaigns
 ```bash
-adforge login --username myuser --password mypass
-adforge campaigns list
+1ai-ads login --username myuser --password mypass
+1ai-ads campaigns list
 ```
 
 ### Search ads library
 ```bash
 # Search Meta ads library
-adforge ads search "summer sale" --platform meta
+1ai-ads ads search "summer sale" --platform meta
 
 # Search Google ads library
-adforge ads search "software tools" --platform google
+1ai-ads ads search "software tools" --platform google
 
 # Search TikTok ads library
-adforge ads search "dance tutorial" --platform tiktok
+1ai-ads ads search "dance tutorial" --platform tiktok
 ```
 
 ### Competitor tracking
 ```bash
 # Add a competitor
-adforge competitors add https://example.com --name "Brand X"
+1ai-ads competitors add https://example.com --name "Brand X"
 
 # Get analysis
-adforge competitors analyze abc123 --platform all
+1ai-ads competitors analyze abc123 --platform all
 
 # Analyze strategy
-adforge competitors strategy abc123 --platform meta
+1ai-ads competitors strategy abc123 --platform meta
 ```
 
 ### Generate reports
 ```bash
 # Export campaigns to CSV
-adforge export campaigns --format csv > campaigns.csv
+1ai-ads export campaigns --format csv > campaigns.csv
 
 # Generate performance report
-adforge reports type --campaign --format json
+1ai-ads reports type --campaign --format json
 ```
 
 ## Features Explained
@@ -186,6 +186,6 @@ MIT License - Free for personal and commercial use
 
 ## Contributing
 
-This is an OpenCLI adapter for AdForge. For the main OpenCLI project:
+This is an OpenCLI adapter for 1ai-ads. For the main OpenCLI project:
 - https://github.com/jackwener/opencli
 - Issues: https://github.com/jackwener/opencli/issues

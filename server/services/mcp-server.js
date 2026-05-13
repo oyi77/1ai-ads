@@ -7,10 +7,10 @@ import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('mcp-server');
 
-export function createAdForgeMCPServer(campaignsRepo, landingRepo, adsRepo) {
+export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo) {
   const server = new Server(
     {
-      name: "adforge-server",
+      name: "1ai-ads-server",
       version: "1.0.0",
     },
     {
@@ -24,7 +24,7 @@ export function createAdForgeMCPServer(campaignsRepo, landingRepo, adsRepo) {
     return {
       tools: [
         {
-          name: "adforge_list_campaigns",
+          name: "1ai-ads_list_campaigns",
           description: "List all advertising campaigns and their performance metrics",
           inputSchema: {
             type: "object",
@@ -34,7 +34,7 @@ export function createAdForgeMCPServer(campaignsRepo, landingRepo, adsRepo) {
           },
         },
         {
-          name: "adforge_get_analytics",
+          name: "1ai-ads_get_analytics",
           description: "Get performance analytics for a specific campaign",
           inputSchema: {
             type: "object",
@@ -45,12 +45,12 @@ export function createAdForgeMCPServer(campaignsRepo, landingRepo, adsRepo) {
           },
         },
         {
-          name: "adforge_list_landing_pages",
+          name: "1ai-ads_list_landing_pages",
           description: "List all generated landing pages",
           inputSchema: { type: "object", properties: {} },
         },
         {
-          name: "adforge_list_creatives",
+          name: "1ai-ads_list_creatives",
           description: "List all generated ad creatives/copy",
           inputSchema: { type: "object", properties: {} },
         }
@@ -63,7 +63,7 @@ export function createAdForgeMCPServer(campaignsRepo, landingRepo, adsRepo) {
 
     try {
       switch (name) {
-        case "adforge_list_campaigns": {
+        case "1ai-ads_list_campaigns": {
           const campaigns = campaignsRepo.getAll();
           const filtered = args?.platform ? campaigns.filter(c => c.platform === args.platform) : campaigns;
           return {
@@ -71,7 +71,7 @@ export function createAdForgeMCPServer(campaignsRepo, landingRepo, adsRepo) {
           };
         }
 
-        case "adforge_get_analytics": {
+        case "1ai-ads_get_analytics": {
           const campaign = campaignsRepo.getById(args.campaign_id);
           if (!campaign) throw new Error("Campaign not found");
           return {
@@ -79,14 +79,14 @@ export function createAdForgeMCPServer(campaignsRepo, landingRepo, adsRepo) {
           };
         }
 
-        case "adforge_list_landing_pages": {
+        case "1ai-ads_list_landing_pages": {
           const pages = landingRepo.getAll();
           return {
             content: [{ type: "text", text: JSON.stringify(pages, null, 2) }],
           };
         }
 
-        case "adforge_list_creatives": {
+        case "1ai-ads_list_creatives": {
           const ads = adsRepo.getAll();
           return {
             content: [{ type: "text", text: JSON.stringify(ads, null, 2) }],

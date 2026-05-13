@@ -1,9 +1,30 @@
+// LocalStorage key migration: support old 'adforge_*' keys for existing sessions
+function migrateLSKey(oldKey, newKey) {
+  const val = localStorage.getItem(oldKey);
+  if (val) {
+    localStorage.setItem(newKey, val);
+    localStorage.removeItem(oldKey);
+  }
+  return localStorage.getItem(newKey);
+}
+
+const LS = {
+  TOKEN: '1ai-ads_token',
+  REFRESH: '1ai-ads_refresh_token',
+  USER: '1ai-ads_user',
+};
+
+// One-time migration on load
+migrateLSKey('adforge_token', LS.TOKEN);
+migrateLSKey('adforge_refresh_token', LS.REFRESH);
+migrateLSKey('adforge_user', LS.USER);
+
 const BASE = '/api';
 
 async function request(method, path, body, isRetry = false) {
   const headers = { 'Content-Type': 'application/json' };
 
-  const token = localStorage.getItem('adforge_token');
+  const token = localStorage.getItem(LS.TOKEN);
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const opts = { method, headers };
@@ -31,24 +52,24 @@ export const api = {
 
   async login(username, password) {
     const res = await request('POST', '/auth/login', { username, password });
-    localStorage.setItem('adforge_token', res.data.accessToken);
-    localStorage.setItem('adforge_refresh_token', res.data.refreshToken);
-    localStorage.setItem('adforge_user', res.data.user.username);
+    localStorage.setItem(LS.TOKEN, res.data.accessToken);
+    localStorage.setItem(LS.REFRESH, res.data.refreshToken);
+    localStorage.setItem(LS.USER, res.data.user.username);
     window.dispatchEvent(new CustomEvent('auth-change'));
     return res;
   },
 
   async register(username, password, email) {
     const res = await request('POST', '/auth/register', { username, password, email });
-    localStorage.setItem('adforge_token', res.data.accessToken);
-    localStorage.setItem('adforge_refresh_token', res.data.refreshToken);
-    localStorage.setItem('adforge_user', res.data.user.username);
+    localStorage.setItem(LS.TOKEN, res.data.accessToken);
+    localStorage.setItem(LS.REFRESH, res.data.refreshToken);
+    localStorage.setItem(LS.USER, res.data.user.username);
     window.dispatchEvent(new CustomEvent('auth-change'));
     return res;
   },
 
   async refreshToken() {
-    const refreshToken = localStorage.getItem('adforge_refresh_token');
+    const refreshToken = localStorage.getItem(LS.REFRESH);
     if (!refreshToken) {
       this.logout();
       return false;
@@ -62,8 +83,8 @@ export const api = {
       });
       const data = await res.json();
       if (data.success) {
-        localStorage.setItem('adforge_token', data.data.accessToken);
-        localStorage.setItem('adforge_refresh_token', data.data.refreshToken);
+        localStorage.setItem(LS.TOKEN, data.data.accessToken);
+        localStorage.setItem(LS.REFRESH, data.data.refreshToken);
         return true;
       }
     } catch (e) {
@@ -75,13 +96,13 @@ export const api = {
   },
 
   logout() {
-    localStorage.removeItem('adforge_token');
-    localStorage.removeItem('adforge_refresh_token');
-    localStorage.removeItem('adforge_user');
+    localStorage.removeItem(LS.TOKEN);
+    localStorage.removeItem(LS.REFRESH);
+    localStorage.removeItem(LS.USER);
     window.dispatchEvent(new CustomEvent('auth-change'));
   },
 
   isAuthenticated() {
-    return !!localStorage.getItem('adforge_token');
+    return !!localStorage.getItem(LS.TOKEN);
   },
 };

@@ -140,7 +140,7 @@ Implement truly free multi-platform ads library research that works on Meta, Goo
 - Cache keys: `ads:${platform}:${query}`
 
 #### Step 1.5: Update CLI with New Commands
-- **File**: `adforge-cli.js` (update)
+- **File**: `1ai-ads-cli.js` (update)
 - Add commands:
   - `ads-search <query> --platform <platform> --source <api|scrape>` - Search with source preference
   - `ads-sources --list` - List available data sources for each platform
@@ -276,7 +276,7 @@ Implement truly free multi-platform ads library research that works on Meta, Goo
 - [ ] Error messages are clear and actionable
 
 ### Compatibility
-- [ ] Works with existing AdForge database schema
+- [ ] Works with existing 1ai-ads database schema
 - [ ] Compatible with existing authentication (no auth needed for public data)
 - [ ] CLI maintains backward compatibility with existing commands
 
@@ -407,7 +407,7 @@ Implement truly free multi-platform ads library research that works on Meta, Goo
 
 ### Step 5: Update CLI with New Commands (15 min)
 **Files to modify**:
-- `adforge-cli.js` (modify)
+- `1ai-ads-cli.js` (modify)
 
 **Actions**:
 1. Add `--source <api|scrape>` parameter to relevant commands
@@ -558,4 +558,4 @@ Option A provides the cleanest separation of concerns with platform-specific ada
 
 ---
 
-**This plan implements a production-ready, truly free multi-platform ads library research system while maintaining all existing AdForge functionality.**
+**This plan implements a production-ready, truly free multi-platform ads library research system while maintaining all existing 1ai-ads functionality.**

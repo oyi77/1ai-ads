@@ -49,16 +49,17 @@ const config = {
 
 // Start server
 const db = createDatabase(config.dbPath);
-const app = createApp(db);
-const server = app.listen(config.port, '0.0.0.0', () => {
-  console.log(`Server running on port ${config.port}`);
-  console.log(`Environment: ${config.nodeEnv}`);
-  
-  // Seed demo data if in development
-  if (config.nodeEnv === 'development') {
-    seedDemoData(db);
-  }
-});
+if (process.env.NODE_ENV !== 'production' && process.env.SEED_DEMO_DATA === 'true') {
+  seedDemoData(db);
+}
+
+const llmClient = new LLMClient();
+const mcpClient = new MCPClientManager();
+
+const app = createApp({ db, llmClient, mcpClient });
+const PORT = config.port;
+
+const server = app.listen(PORT, () => console.log(`1ai-ads running on ${PORT}`));
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

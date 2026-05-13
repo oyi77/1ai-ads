@@ -4,7 +4,7 @@
 # services
 
 ## Purpose
-Business logic layer for the Adforge backend. Services orchestrate between repositories, external APIs, and AI/LLM integrations. Contains the core domain logic for ad generation, campaign management, and platform integrations.
+Business logic layer for the 1ai-ads backend. Services orchestrate between repositories, external APIs, and AI/LLM integrations. Contains the core domain logic for ad generation, campaign management, and platform integrations.
 
 ## Key Files
 | File | Description |
@@ -21,7 +21,7 @@ Business logic layer for the Adforge backend. Services orchestrate between repos
 | `learning.js` | Learning/feedback loop — improves ad performance over time |
 | `llm-client.js` | LLM provider client — abstracts AI model calls |
 | `mcp-client.js` | MCP (Model Context Protocol) client for external tool integration |
-| `mcp-server.js` | MCP server implementation — exposes Adforge tools to external clients |
+| `mcp-server.js` | MCP server implementation — exposes 1ai-ads tools to external clients |
 | `meta-api.js` | Meta/Facebook Ads API client — campaign, ad set, creative management |
 | `scalev.js` | Scalev integration service |
 | `templates.js` | Ad and landing page template management |

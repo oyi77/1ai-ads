@@ -1,14 +1,14 @@
 {
-  "name": "adforge-cli",
+  "name": "1ai-ads-cli",
   "version": "1.0.0",
-  "description": "AdForge CLI - Universal command-line interface for ad management, competitor spy, and analytics",
-  "type": "module",
+  "description": "1ai-ads CLI - Universal command-line interface for ad management, competitor spy, and analytics",
+  "type": "commonjs",
   "main": "index.cjs",
   "bin": {
-    "adforge": "./index.js"
+    "1ai-ads": "./index.js"
   },
   "scripts": {
-    "install": "echo 'Installation complete. Run with: adforge --help' && echo ''",
+    "install": "echo 'Installation complete. Run with: 1ai-ads --help' && echo ''",
     "list-campaigns": "node index.js campaigns list",
     "get-campaign": "node index.js campaigns get <id>",
     "create-campaign": "node index.js campaigns create",
@@ -28,10 +28,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/openclaw/adforge"
+    "url": "https://github.com/openclaw/1ai-ads"
   },
   "keywords": [
-    "adforge",
+    "1ai-ads",
     "cli",
     "ads",
     "campaigns",
@@ -43,7 +43,7 @@
     "google ads",
     "tiktok ads"
   ],
-  "author": "AdForge",
+  "author": "1ai-ads",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"

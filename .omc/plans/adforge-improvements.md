@@ -1,7 +1,7 @@
-# AdForge Improvement Plan
+# 1ai-ads Improvement Plan
 
 **Overview**
-Comprehensive enhancement of the AdForge AI ads management platform with focus on improving ad creation workflow, expanding template variety, and adding better preview/editing capabilities.
+Comprehensive enhancement of the 1ai-ads AI ads management platform with focus on improving ad creation workflow, expanding template variety, and adding better preview/editing capabilities.
 
 **Created**: 2026-04-09
 

@@ -76,7 +76,7 @@ function updateNav() {
   }
   if (logoutBtn) {
     logoutBtn.classList.toggle('hidden', !api.isAuthenticated());
-    const username = localStorage.getItem('adforge_user');
+    const username = localStorage.getItem('1ai-ads_user');
     logoutBtn.textContent = api.isAuthenticated() && username ? `Logout (${username})` : 'Logout';
   }
 }

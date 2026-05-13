@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "lastScanned": 1776073959577,
-  "projectRoot": "/home/openclaw/projects/adforge",
+  "projectRoot": "/home/openclaw/projects/1ai-ads",
   "techStack": {
     "languages": [
       {
@@ -96,7 +96,7 @@
       "lastAccessed": 1776073959557,
       "keyFiles": [
         "AGENTS.md",
-        "adforge.db",
+        "1ai-ads.db",
         "index.js",
         "schema.sql",
         "seed.js"

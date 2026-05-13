@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * AdForge CLI - Simple Command-Line Interface
+ * 1ai-ads CLI - Simple Command-Line Interface
  *
- * Access AdForge API features directly from command line
+ * Access 1ai-ads API features directly from command line
  */
 
 import { program } from 'commander';
@@ -18,7 +18,7 @@ async function ensureAuth() {
     if (token) {
       AUTH_TOKEN = token;
     } else {
-      console.error('Authentication required. Set ADFORGE_CLI_TOKEN environment variable or run: adforge login');
+      console.error('Authentication required. Set ADFORGE_CLI_TOKEN environment variable or run: 1ai-ads login');
       process.exit(1);
     }
   }
@@ -71,8 +71,8 @@ async function apiRequest(endpoint, options = {}) {
 // ================================
 
 program
-  .name('adforge')
-  .description('AdForge CLI - Command-line interface')
+  .name('1ai-ads')
+  .description('1ai-ads CLI - Command-line interface')
   .version('1.0.0');
 
 // ================================
@@ -81,7 +81,7 @@ program
 
 program
   .command('login')
-  .description('Login to AdForge')
+  .description('Login to 1ai-ads')
   .option('--username <user>', 'Username')
   .option('--password <pass>', 'Password')
   .action(async (options) => {
@@ -236,7 +236,7 @@ program
 
     if (!response.data || response.data.length === 0) {
       console.log('No competitors tracked yet.');
-      console.log('Use: adforge competitor-add <url>');
+      console.log('Use: 1ai-ads competitor-add <url>');
       return;
     }
 
@@ -307,57 +307,57 @@ program
   .command('help')
   .description('Show help information')
   .action(() => {
-    console.log('AdForge CLI - Command-Line Interface');
+    console.log('1ai-ads CLI - Command-Line Interface');
     console.log('');
-    console.log('Usage: adforge <command> [options]');
+    console.log('Usage: 1ai-ads <command> [options]');
     console.log('');
     console.log('Authentication:');
-    console.log('  adforge login --username <user> --password <pass>');
-    console.log('  adforge status');
+    console.log('  1ai-ads login --username <user> --password <pass>');
+    console.log('  1ai-ads status');
     console.log('');
     console.log('Campaigns:');
-    console.log('  adforge campaigns [--platform <platform>]');
-    console.log('  adforge campaign-get <id>');
-    console.log('  adforge campaign-sync --platform <platform>');
+    console.log('  1ai-ads campaigns [--platform <platform>]');
+    console.log('  1ai-ads campaign-get <id>');
+    console.log('  1ai-ads campaign-sync --platform <platform>');
     console.log('');
     console.log('Ads Library:');
-    console.log('  adforge ads-search <query> [--platform <platform>] [--source api|scrape|auto]');
-    console.log('  adforge ads-sources [--platform <platform>]');
+    console.log('  1ai-ads ads-search <query> [--platform <platform>] [--source api|scrape|auto]');
+    console.log('  1ai-ads ads-sources [--platform <platform>]');
     console.log('');
     console.log('Competitors:');
-    console.log('  adforge competitors');
-    console.log('  adforge competitor-add <url> [--platform <platform>]');
-    console.log('  adforge competitor-analyze <id>');
+    console.log('  1ai-ads competitors');
+    console.log('  1ai-ads competitor-add <url> [--platform <platform>]');
+    console.log('  1ai-ads competitor-analyze <id>');
     console.log('');
     console.log('Trending:');
-    console.log('  adforge trending [--source <source>]');
+    console.log('  1ai-ads trending [--source <source>]');
     console.log('');
     console.log('Options:');
     console.log('  --api-url <url>    Set API URL (default: http://localhost:3001/api)');
     console.log('');
     console.log('Environment Variables:');
     console.log('  ADFORGE_CLI_API_URL    API endpoint (required for commands)');
-    console.log('  ADFORGE_CLI_TOKEN        Auth token (set with adforge login)');
+    console.log('  ADFORGE_CLI_TOKEN        Auth token (set with 1ai-ads login)');
     console.log('');
     console.log('Examples:');
     console.log('  # Login');
-    console.log('  adforge login --username admin --password secret');
+    console.log('  1ai-ads login --username admin --password secret');
     console.log('');
     console.log('  # List campaigns');
-    console.log('  adforge campaigns');
+    console.log('  1ai-ads campaigns');
     console.log('');
     console.log('  # Search ads library');
-    console.log('  adforge ads-search "running shoes" --platform meta');
+    console.log('  1ai-ads ads-search "running shoes" --platform meta');
     console.log('');
     console.log('  # List available data sources');
-    console.log('  adforge ads-sources');
-    console.log('  adforge ads-sources --platform meta');
+    console.log('  1ai-ads ads-sources');
+    console.log('  1ai-ads ads-sources --platform meta');
     console.log('');
     console.log('  # Search with specific source');
-    console.log('  adforge ads-search "running shoes" --platform all --source auto');
+    console.log('  1ai-ads ads-search "running shoes" --platform all --source auto');
     console.log('');
     console.log('  # Get trending');
-    console.log('  adforge trending --source internal');
+    console.log('  1ai-ads trending --source internal');
   });
 
 program.parse(process.argv);

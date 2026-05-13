@@ -201,14 +201,14 @@ export function seedUsers(db) {
   db.prepare(`
     INSERT OR IGNORE INTO users (id, username, email, password_hash, role, plan, confirmed, created_at)
     VALUES (?, ?, ?, ?, 'admin', 'pro', 1, CURRENT_TIMESTAMP)
-  `).run(adminId, 'admin', 'admin@adforge.test', passwordHash);
+  `).run(adminId, 'admin', 'admin@1ai-ads.test', passwordHash);
 
   // Create demo user
   const demoId = uuid();
   db.prepare(`
     INSERT OR IGNORE INTO users (id, username, email, password_hash, role, plan, confirmed, created_at)
     VALUES (?, ?, ?, ?, 'user', 'free', 1, CURRENT_TIMESTAMP)
-  `).run(demoId, 'demo', 'demo@adforge.test', passwordHash);
+  `).run(demoId, 'demo', 'demo@1ai-ads.test', passwordHash);
 
   console.log('Seeded demo users');
 }

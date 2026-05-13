@@ -4,7 +4,7 @@
 # e2e
 
 ## Purpose
-End-to-end browser tests using Playwright. These tests start the full server, open a real browser, and verify complete user workflows across the Adforge UI.
+End-to-end browser tests using Playwright. These tests start the full server, open a real browser, and verify complete user workflows across the 1ai-ads UI.
 
 ## Key Files
 | File | Description |

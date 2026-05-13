@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
-import { createAdForgeMCPServer } from '../services/mcp-server.js';
+import { create1aiAdsMCPServer } from '../services/mcp-server.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('mcp');
@@ -8,7 +8,7 @@ const log = createLogger('mcp');
 export function createMcpRouter(mcpClient, settingsRepo, campaignsRepo, adsRepo, landingRepo) {
   const router = Router();
 
-  const mcpServer = createAdForgeMCPServer(campaignsRepo, landingRepo, adsRepo);
+  const mcpServer = create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo);
   // Per-user transport map prevents concurrent connections from overwriting each other
   const sseTransports = new Map();
 
