@@ -1,3 +1,4 @@
+<!-- Parent: ../AGENTS.md -->
 <!-- Generated: 2026-04-08 | Updated: 2026-04-08 -->
 
 # 1ai-ads
