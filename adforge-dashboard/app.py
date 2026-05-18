@@ -182,9 +182,16 @@ def api_get(path, token=None):
 
 # ============ DASHBOARD ROUTES ============
 @app.route('/')
+def index():
+    """Landing page (no auth required)."""
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+    return render_template('landing.html')
+
+@app.route('/app')
 @login_required
 def dashboard():
-    """Main dashboard."""
+    """Main dashboard (requires auth)."""
     conn = get_db()
     c = conn.cursor()
     
