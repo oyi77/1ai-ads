@@ -158,10 +158,16 @@
                     <span class="badge rounded-pill bg-danger" style="font-size: 0.6rem; position: absolute; top: 2px; right: -4px;">{{ pending_count }}</span>
                     {% endif %}
                 </a>
+                <a href="/users" class="nav-link"><i class="bi bi-people"></i>Users</a>
+                {% if username %}
                 <span class="text-muted" style="font-size: 0.75rem; opacity: 0.5;">|</span>
-                <span style="font-size: 0.75rem; color: var(--text-muted);">
-                    <i class="bi bi-cpu"></i> v2.0
+                <span style="font-size: 0.8rem; color: #6366f1; font-weight: 500;">
+                    <i class="bi bi-person-circle"></i> {{ username }}
                 </span>
+                <a href="/logout" class="nav-link" style="color: #ef4444 !important;">
+                    <i class="bi bi-box-arrow-right"></i>
+                </a>
+                {% endif %}
             </div>
         </div>
     </nav>

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<div class="py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-people"></i> User Management</h2>
+            <p class="text-muted mb-0">Manage AdForge dashboard users</p>
+        </div>
+        <a href="/register" class="btn btn-success btn-sm">
+            <i class="bi bi-person-plus"></i> Add User
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Last Login</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td><strong>{{ user.username }}</strong></td>
+                        <td>{{ user.email or '-' }}</td>
+                        <td>
+                            {% if user.role == 'admin' %}
+                            <span class="badge bg-warning badge-status">Admin</span>
+                            {% else %}
+                            <span class="badge bg-info badge-status">User</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                            <span class="badge bg-success badge-status">Active</span>
+                            {% else %}
+                            <span class="badge bg-danger badge-status">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td><small>{{ user.created_at[:10] }}</small></td>
+                        <td><small>{{ user.last_login or 'Never' }}</small></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">No users found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="card mt-3">
+        <div class="card-body">
+            <h6><i class="bi bi-shield-check"></i> Access Levels</h6>
+            <div class="row g-3 mt-2">
+                <div class="col-md-6">
+                    <div class="p-3 rounded" style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.2);">
+                        <strong style="color: #eab308;">🛡️ Admin</strong>
+                        <p class="text-muted small mb-0 mt-1">Full access: manage users, approve drafts, configure settings, view all campaigns.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2);">
+                        <strong style="color: #6366f1;">👤 User</strong>
+                        <p class="text-muted small mb-0 mt-1">Standard access: view campaigns, review drafts, manage own settings.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
