@@ -17,7 +17,7 @@ import secrets
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = 'adforge-secret-2026-berkahkarya'
 
-DB_PATH = "/home/openclaw/.openclaw/workspace/adforge/adforge.db"
+DB_PATH = "/home/openclaw/.openclaw/workspace/adforge/db/adforge.db"
 API_URL = "http://127.0.0.1:3001"
 API_USER = "admin"
 API_PASS = "admin123"
