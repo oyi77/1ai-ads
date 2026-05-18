@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1" style="font-weight: 700;">AdForge Dashboard</h1>
+            <p class="text-muted mb-0">AI-Powered Ads Management &amp; Automation</p>
+        </div>
+        <div>
+            <span class="badge bg-success badge-status"><i class="bi bi-check-circle"></i> System Online</span>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-label">Total Campaigns</div>
+                        <div class="stat-value">{{ campaigns_count }}</div>
+                    </div>
+                    <div style="color: var(--primary);"><i class="bi bi-megaphone fs-3"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-label">Pending Drafts</div>
+                        <div class="stat-value">{{ pending_drafts }}</div>
+                    </div>
+                    <div style="color: var(--warning);"><i class="bi bi-hourglass-split fs-3"></i></div>
+                </div>
+                {% if pending_drafts > 0 %}
+                <a href="/drafts" class="btn btn-sm btn-warning mt-2 w-100">Review Now</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-label">Automation Rules</div>
+                        <div class="stat-value">{{ rules|length }}</div>
+                    </div>
+                    <div style="color: var(--success);"><i class="bi bi-gear fs-3"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-label">Platform Accounts</div>
+                        <div class="stat-value">9</div>
+                    </div>
+                    <div style="color: #8b5cf6;"><i class="bi bi-layers fs-3"></i></div>
+                </div>
+                <small class="text-muted">Meta (8) + Google (1)</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaigns Table -->
+    <div class="row g-3">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-megaphone"></i> Active Campaigns</h6>
+                    <a href="/campaigns" class="btn btn-sm btn-outline-light">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Campaign</th>
+                                    <th>Platform</th>
+                                    <th>Status</th>
+                                    <th>Spend</th>
+                                    <th>Revenue</th>
+                                    <th>Impressions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for campaign in campaigns %}
+                                <tr>
+                                    <td><strong>{{ campaign.name }}</strong></td>
+                                    <td>{{ campaign.platform }}</td>
+                                    <td>
+                                        {% if campaign.status == 'ACTIVE' %}
+                                        <span class="badge bg-success badge-status">Active</span>
+                                        {% elif campaign.status == 'PAUSED' %}
+                                        <span class="badge bg-warning badge-status">Paused</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary badge-status">{{ campaign.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>Rp{{ "{:,.0f}".format(campaign.spend|default(0)) }}</td>
+                                    <td>Rp{{ "{:,.0f}".format(campaign.revenue|default(0)) }}</td>
+                                    <td>{{ "{:,.0f}".format(campaign.impressions|default(0)) }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">No campaigns found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-gear"></i> Automation Rules</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Rule</th>
+                                    <th>Trigger</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rule in rules %}
+                                <tr>
+                                    <td><small>{{ rule.name }}</small></td>
+                                    <td><small><code>{{ rule.trigger_metric }}</code></small></td>
+                                    <td>
+                                        {% if rule.is_active %}
+                                        <span class="badge bg-success" style="font-size: 0.6rem;">ON</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary" style="font-size: 0.6rem;">OFF</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-3">No rules configured</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer text-center border-top-0">
+                    <a href="/automation" class="btn btn-sm btn-outline-light w-100">Manage Rules</a>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-lightning"></i> Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="/drafts" class="btn btn-primary btn-sm">
+                            <i class="bi bi-check-circle"></i> Review Drafts
+                            {% if pending_drafts > 0 %}
+                            <span class="badge bg-light text-dark ms-1">{{ pending_drafts }}</span>
+                            {% endif %}
+                        </a>
+                        <a href="/campaigns" class="btn btn-outline-light btn-sm">
+                            <i class="bi bi-plus-circle"></i> View Campaigns
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

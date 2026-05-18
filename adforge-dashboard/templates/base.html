@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AdForge{% endblock %} — AdForge</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --success: #22c55e;
+            --warning: #eab308;
+            --danger: #ef4444;
+            --bg-dark: #0a0a0f;
+            --bg-card: #14141f;
+            --bg-card-hover: #1a1a2e;
+            --border: #1e1e32;
+            --text-primary: #f1f1f7;
+            --text-secondary: #9494b8;
+            --text-muted: #6b6b8d;
+        }
+        body {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%) !important;
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 1.5rem;
+        }
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.4rem;
+            letter-spacing: -0.5px;
+            color: var(--text-primary) !important;
+        }
+        .navbar-brand span {
+            color: var(--primary);
+        }
+        .nav-link {
+            color: var(--text-secondary) !important;
+            font-weight: 500;
+            padding: 0.5rem 1rem !important;
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: var(--text-primary) !important;
+            background: rgba(99, 102, 241, 0.1);
+        }
+        .nav-link i { margin-right: 6px; }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+        .card:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 1.25rem;
+        }
+        .badge-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .btn-primary {
+            background: var(--primary);
+            border: none;
+            font-weight: 600;
+            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+        }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-outline-light {
+            border-color: var(--border);
+            color: var(--text-primary);
+        }
+        .btn-outline-light:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--primary);
+        }
+        .table {
+            color: var(--text-primary);
+            margin-bottom: 0;
+        }
+        .table th {
+            border-color: var(--border);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .table td { border-color: var(--border); }
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .badge-status {
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+        code {
+            background: rgba(99, 102, 241, 0.1);
+            color: #a5b4fc;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #2a2a4e; }
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+        .empty-state i { font-size: 3rem; margin-bottom: 1rem; }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <span>✦</span> AdForge
+            </a>
+            <div class="d-flex align-items-center gap-2">
+                <a href="/" class="nav-link"><i class="bi bi-speedometer2"></i>Dashboard</a>
+                <a href="/campaigns" class="nav-link"><i class="bi bi-megaphone"></i>Campaigns</a>
+                <a href="/automation" class="nav-link"><i class="bi bi-gear"></i>Automation</a>
+                <a href="/drafts" class="nav-link position-relative">
+                    <i class="bi bi-check-circle"></i>Drafts
+                    {% if pending_count is defined and pending_count > 0 %}
+                    <span class="badge rounded-pill bg-danger" style="font-size: 0.6rem; position: absolute; top: 2px; right: -4px;">{{ pending_count }}</span>
+                    {% endif %}
+                </a>
+                <span class="text-muted" style="font-size: 0.75rem; opacity: 0.5;">|</span>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">
+                    <i class="bi bi-cpu"></i> v2.0
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid px-4 py-3">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

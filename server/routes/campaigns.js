@@ -115,6 +115,24 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     }
   });
 
+  // GET /api/campaigns/list - Simple campaign list for external dashboard
+  router.get('/list', async (req, res) => {
+    try {
+      const { db } = req.app.locals;
+      if (!db) {
+        const { default: Database } = await import('better-sqlite3');
+        const db2 = new Database(process.env.DB_PATH || './db/adforge.db');
+        const camps = db2.prepare('SELECT * FROM campaigns ORDER BY created_at DESC LIMIT 50').all();
+        db2.close();
+        return res.json({ success: true, data: camps, total: camps.length });
+      }
+      const camps = db.prepare('SELECT * FROM campaigns ORDER BY created_at DESC LIMIT 50').all();
+      res.json({ success: true, data: camps, total: camps.length });
+    } catch (e) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
   // Get campaign detail with insights
   router.get('/:id', async (req, res) => {
     try {

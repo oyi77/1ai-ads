@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Automation{% endblock %}
+{% block content %}
+<div class="py-3">
+    <h2 class="mb-4"><i class="bi bi-gear"></i> Automation Rules</h2>
+
+    <div class="alert alert-info border-0" style="background: rgba(99,102,241,0.1); color: #a5b4fc;">
+        <i class="bi bi-info-circle"></i> Automation rules create drafts for your approval.
+        No action is taken automatically — you review and approve/reject all changes.
+    </div>
+
+    {% if rules %}
+    <div class="row g-3">
+        {% for rule in rules %}
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="mb-0">{{ rule.name }}</h6>
+                        {% if rule.is_active %}
+                        <span class="badge bg-success badge-status">Active</span>
+                        {% else %}
+                        <span class="badge bg-secondary badge-status">Inactive</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-muted small mb-2">{{ rule.description }}</p>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <span class="badge bg-dark">
+                            <i class="bi bi-activity"></i> 
+                            {{ rule.trigger_metric }} {{ rule.trigger_operator }} {{ rule.trigger_threshold }}
+                        </span>
+                        <span class="badge bg-dark">
+                            <i class="bi bi-lightning"></i> 
+                            {{ rule.action_type }}
+                        </span>
+                    </div>
+                    {% if rule.cooldown_hours %}
+                    <small class="text-muted d-block mt-2">Cooldown: {{ rule.cooldown_hours }}h</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center text-muted py-5">
+            <i class="bi bi-gear fs-1 d-block mb-3"></i>
+            <p>No automation rules configured.</p>
+            <p class="small">Rules will appear here when created via API or seed script.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

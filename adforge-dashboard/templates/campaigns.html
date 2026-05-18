@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Campaigns{% endblock %}
+{% block content %}
+<div class="py-3">
+    <h2 class="mb-4"><i class="bi bi-megaphone"></i> Campaigns</h2>
+    
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Platform</th>
+                            <th>Status</th>
+                            <th>Spend</th>
+                            <th>Revenue</th>
+                            <th>Impressions</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for camp in campaigns %}
+                        <tr>
+                            <td><code>{{ camp.id[:8] }}...</code></td>
+                            <td><strong>{{ camp.name }}</strong></td>
+                            <td>{{ camp.platform }}</td>
+                            <td>
+                                {% if camp.status == 'ACTIVE' %}
+                                <span class="badge bg-success">Active</span>
+                                {% elif camp.status == 'PAUSED' %}
+                                <span class="badge bg-warning">Paused</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ camp.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>Rp{{ "{:,.0f}".format(camp.spend) }}</td>
+                            <td>Rp{{ "{:,.0f}".format(camp.revenue) }}</td>
+                            <td>{{ "{:,.0f}".format(camp.impressions) }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-warning" disabled><i class="bi bi-pause"></i></button>
+                                <button class="btn btn-sm btn-outline-info" disabled><i class="bi bi-bar-chart"></i></button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-5">
+                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                No campaigns yet. Campaigns will appear here when synced from Meta/Google/TikTok.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
