@@ -8,6 +8,7 @@ Ads Management & Optimization Platform.
 - **AI Creative**: Generate ad copy and landing pages with AI.
 - **Auto-Optimization**: Automated rules to manage campaign spend.
 - **MCP Enabled**: Integrated Model Context Protocol (MCP) for seamless AI agent automation.
+- **Shopee Ads Optimizer**: Autonomous FB Ads spend governor and Shopee affiliate ROI optimizer. See [`shopee-ads-optimizer/`](./shopee-ads-optimizer/).
 
 ## Quick Start
 

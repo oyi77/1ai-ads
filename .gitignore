@@ -12,3 +12,4 @@ db/*.db-wal
 .playwright-mcp/
 e2e-*.png
 dashboard-check.png
+__pycache__/
