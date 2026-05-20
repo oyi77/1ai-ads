@@ -1,4 +1,10 @@
+import fs from 'fs';
 import { createAuthRouter } from './routes/auth.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { createTrendingRouter } from './routes/trending.js';
 import { createCompetitorSpyRouter } from './routes/competitor-spy.js';
 import { createPaymentsRouter } from './routes/payments.js';
@@ -120,7 +126,7 @@ export function createApp(params) {
   app.use(express.json());
   
   // Serve frontend static files (SPA)
-  const clientPath = '/home/openclaw/projects/adforge/dist';
+  const clientPath = '/home/openclaw/.openclaw/workspace/adforge/dist';
   app.use(express.static(clientPath));
   
 
@@ -175,20 +181,26 @@ export function createApp(params) {
 
   const autonomousRouter = createAutonomousRouter(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, autonomousAgent);
   app.use('/api/autonomous', requireAuth, autonomousRouter);
-  // Frontend routes (SPA)
-  app.get('/', publicRateLimit, (req, res) => {
-    res.sendFile(path.join(clientPath, 'index.html'));
-  });
-  app.get('/login', publicRateLimit, (req, res) => {
-    res.sendFile(path.join(clientPath, 'index.html'));
-  });
-
-  app.get('/dashboard', requireAuth, (req, res) => {
-    res.sendFile(path.join(clientPath, 'index.html'));
-  });
-
   app.get('/health', publicRateLimit, (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // Frontend routes (SPA) - Catch-all for SPA routing
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api') || 
+        req.path.startsWith('/assets') || 
+        req.path.startsWith('/favicon.ico')) {
+      return next();
+    }
+    const indexPath = path.join(clientPath, 'index.html');
+    fs.readFile(indexPath, 'utf8', (err, data) => {
+      if (err) {
+        console.error('Failed to read index.html:', err);
+        return res.status(500).send('Interior Engine Error');
+      }
+      res.set('Content-Type', 'text/html');
+      res.send(data);
+    });
   });
 
   return app;

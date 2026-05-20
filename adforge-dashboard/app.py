@@ -22,6 +22,24 @@ API_URL = "http://127.0.0.1:3001"
 API_USER = "admin"
 API_PASS = "admin123"
 
+# Load FB config from .env
+ENV_PATH = "/home/openclaw/.openclaw/workspace/adforge/.env"
+FB_SYSTEM_TOKEN = ""
+FB_APP_ID = ""
+def load_fb_config():
+    global FB_SYSTEM_TOKEN, FB_APP_ID
+    try:
+        with open(ENV_PATH) as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("FB_SYSTEM_TOKEN="):
+                    FB_SYSTEM_TOKEN = line.split("=", 1)[1].strip().strip("'\"")
+                elif line.startswith("FB_APP_ID="):
+                    FB_APP_ID = line.split("=", 1)[1].strip().strip("'\"")
+    except:
+        pass
+load_fb_config()
+
 # ============ INIT DB ============
 def init_db():
     """Initialize dashboard users table."""
@@ -42,6 +60,24 @@ def init_db():
         )
     """)
     
+    # Platform accounts table
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS platform_accounts (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            platform TEXT NOT NULL DEFAULT 'meta',
+            account_name TEXT NOT NULL,
+            credentials TEXT NOT NULL,
+            platform_account_id TEXT,
+            account_type TEXT DEFAULT 'ad_account',
+            is_active BOOLEAN DEFAULT 1,
+            health_status TEXT DEFAULT 'ok',
+            last_error TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
     # Create default admin if not exists
     admin = c.execute("SELECT id FROM dashboard_users WHERE username = 'admin'").fetchone()
     if not admin:
@@ -59,6 +95,16 @@ def init_db():
             INSERT INTO dashboard_users (id, username, password_hash, email, role)
             VALUES (?, ?, ?, ?, 'user')
         """, (demo_id, 'demo', demo_hash, 'demo@adforge.local'))
+    
+    # Migrate: add new columns if they don't exist
+    try:
+        c.execute("ALTER TABLE platform_accounts ADD COLUMN platform_account_id TEXT")
+    except:
+        pass  # Already exists
+    try:
+        c.execute("ALTER TABLE platform_accounts ADD COLUMN account_type TEXT DEFAULT 'ad_account'")
+    except:
+        pass
     
     conn.commit()
     conn.close()
@@ -268,6 +314,65 @@ def drafts_page():
                          pending_count=len(pending),
                          username=session.get('username'))
 
+@app.route('/accounts')
+@login_required
+def accounts_page():
+    """List and manage Meta/Platform accounts."""
+    conn = get_db()
+    accounts = conn.execute("SELECT * FROM platform_accounts ORDER BY created_at DESC").fetchall()
+    # Get connected platform account IDs for JS (handle missing key for old rows)
+    connected_ids = []
+    for a in accounts:
+        try:
+            pid = a['platform_account_id']
+            if pid:
+                connected_ids.append(pid)
+        except (IndexError, KeyError):
+            pass
+    conn.close()
+    return render_template('accounts.html', accounts=accounts, connected_ids=connected_ids)
+
+@app.route('/api/accounts/add', methods=['POST'])
+@login_required
+def add_account():
+    """Add a new platform account."""
+    data = request.json
+    name = data.get('name')
+    platform = data.get('platform', 'meta')
+    token = data.get('token')
+    platform_account_id = data.get('platform_account_id', '')
+    account_type = data.get('account_type', 'ad_account')
+    
+    if not name or not token:
+        return jsonify({'success': False, 'error': 'Name and Token are required'}), 400
+        
+    conn = get_db()
+    acc_id = str(uuid.uuid4())[:12]
+    user_id = session['user_id']
+    
+    # Check if already connected by platform_account_id
+    if platform_account_id:
+        existing = conn.execute(
+            "SELECT id FROM platform_accounts WHERE platform_account_id = ? AND user_id = ?",
+            (platform_account_id, user_id)
+        ).fetchone()
+        if existing:
+            conn.close()
+            return jsonify({'success': True, 'message': 'Already connected', 'id': existing['id']})
+    
+    try:
+        conn.execute("""
+            INSERT INTO platform_accounts (id, user_id, platform, account_name, credentials, platform_account_id, account_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (acc_id, user_id, platform, name, token, platform_account_id, account_type))
+        conn.commit()
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        conn.close()
+        
+    return jsonify({'success': True, 'message': 'Account added successfully'})
+
 @app.route('/users')
 @login_required
 def users_page():
@@ -281,8 +386,189 @@ def users_page():
     
     return render_template('users.html', users=users, username=session.get('username'))
 
-# ============ API ENDPOINTS ============
-@app.route('/api/stats')
+@app.route('/api/auth/facebook/login')
+@login_required
+def flask_fb_login():
+    """Proxy Facebook Login call to Node.js API."""
+    try:
+        r = requests.get(f"{API_URL}/api/auth/facebook/login", timeout=5)
+        return jsonify(r.json())
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ============ SYSTEM USER API ============
+@app.route('/api/system-user/accounts')
+@login_required
+def system_user_accounts():
+    """List all accounts accessible by the System User token."""
+    if not FB_SYSTEM_TOKEN:
+        return jsonify({'success': False, 'error': 'System User token not configured'}), 400
+    
+    try:
+        results = []
+        
+        # 1. Get Ad Accounts (via /me/adaccounts)
+        try:
+            r = requests.get(
+                'https://graph.facebook.com/v22.0/me/adaccounts',
+                params={'access_token': FB_SYSTEM_TOKEN, 'fields': 'id,name,account_status,currency,amount_spent', 'limit': 100},
+                timeout=10
+            )
+            data = r.json()
+            if 'data' in data:
+                for acc in data['data']:
+                    results.append({
+                        'id': acc['id'],
+                        'name': acc.get('name', f"Ad Account {acc['id']}"),
+                        'account_type': 'ad_account',
+                        'status': acc.get('account_status', 0),
+                        'currency': acc.get('currency', ''),
+                    })
+        except Exception as e:
+            print(f"[sys-user] Failed to fetch adaccounts: {e}")
+        
+        # 2. Get Pages
+        try:
+            r = requests.get(
+                'https://graph.facebook.com/v22.0/me/accounts',
+                params={'access_token': FB_SYSTEM_TOKEN, 'fields': 'id,name,category,access_token', 'limit': 100},
+                timeout=10
+            )
+            data = r.json()
+            if 'data' in data:
+                for page in data['data']:
+                    results.append({
+                        'id': page['id'],
+                        'name': page.get('name', f"Page {page['id']}"),
+                        'account_type': 'page',
+                        'category': page.get('category', ''),
+                        'access_token': page.get('access_token', ''),
+                    })
+        except Exception as e:
+            print(f"[sys-user] Failed to fetch pages: {e}")
+        
+        # 3. Get Business Managers
+        try:
+            r = requests.get(
+                'https://graph.facebook.com/v22.0/me/businesses',
+                params={'access_token': FB_SYSTEM_TOKEN, 'fields': 'id,name,created_time', 'limit': 10},
+                timeout=10
+            )
+            data = r.json()
+            if 'data' in data:
+                for biz in data['data']:
+                    results.append({
+                        'id': biz['id'],
+                        'name': biz.get('name', f"BM {biz['id']}"),
+                        'account_type': 'business',
+                    })
+        except Exception as e:
+            print(f"[sys-user] Failed to fetch businesses: {e}")
+        
+        return jsonify({'success': True, 'accounts': results})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/system-user/connect', methods=['POST'])
+@login_required
+def system_user_connect():
+    """Connect a specific account via System User token."""
+    if not FB_SYSTEM_TOKEN:
+        return jsonify({'success': False, 'error': 'System User token not configured'}), 400
+    
+    data = request.json
+    account_id = data.get('account_id')
+    account_name = data.get('account_name', '')
+    account_type = data.get('account_type', '')
+    
+    if not account_id:
+        return jsonify({'success': False, 'error': 'account_id required'}), 400
+    
+    conn = get_db()
+    user_id = session['user_id']
+    
+    # Check if already connected
+    existing = conn.execute(
+        "SELECT id FROM platform_accounts WHERE platform_account_id = ? AND user_id = ?",
+        (account_id, user_id)
+    ).fetchone()
+    
+    if existing:
+        conn.close()
+        return jsonify({'success': True, 'message': 'Already connected', 'id': existing['id']})
+    
+    # If ad account type, try to get name from FB
+    if not account_name or not account_type:
+        try:
+            r = requests.get(
+                f'https://graph.facebook.com/v22.0/{account_id}',
+                params={'access_token': FB_SYSTEM_TOKEN, 'fields': 'id,name'},
+                timeout=5
+            )
+            info = r.json()
+            if 'name' in info:
+                account_name = info['name']
+        except:
+            pass
+        
+        if 'act_' in account_id or account_id.startswith('10'):
+            account_type = 'ad_account'
+    
+    acc_id = str(uuid.uuid4())[:12]
+    try:
+        conn.execute("""
+            INSERT INTO platform_accounts (id, user_id, platform, account_name, credentials, platform_account_id, account_type)
+            VALUES (?, ?, 'meta', ?, ?, ?, ?)
+        """, (acc_id, user_id, account_name, FB_SYSTEM_TOKEN, account_id, account_type or 'ad_account'))
+        conn.commit()
+        return jsonify({'success': True, 'id': acc_id, 'name': account_name})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/system-user/connect-all', methods=['POST'])
+@login_required
+def system_user_connect_all():
+    """Connect all available accounts from System User at once."""
+    if not FB_SYSTEM_TOKEN:
+        return jsonify({'success': False, 'error': 'System User token not configured'}), 400
+    
+    try:
+        # Fetch ad accounts
+        results = []
+        conn = get_db()
+        user_id = session['user_id']
+        
+        r = requests.get(
+            'https://graph.facebook.com/v22.0/me/adaccounts',
+            params={'access_token': FB_SYSTEM_TOKEN, 'fields': 'id,name,account_status,currency', 'limit': 100},
+            timeout=10
+        )
+        data = r.json()
+        if 'data' in data:
+            for acc in data['data']:
+                existing = conn.execute(
+                    "SELECT id FROM platform_accounts WHERE platform_account_id = ? AND user_id = ?",
+                    (acc['id'], user_id)
+                ).fetchone()
+                if not existing:
+                    acc_id = str(uuid.uuid4())[:12]
+                    conn.execute("""
+                        INSERT INTO platform_accounts (id, user_id, platform, account_name, credentials, platform_account_id, account_type)
+                        VALUES (?, ?, 'meta', ?, ?, ?, 'ad_account')
+                    """, (acc_id, user_id, acc.get('name', acc['id']), FB_SYSTEM_TOKEN, acc['id']))
+                    results.append(acc_id)
+        
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'connected': len(results), 'ids': results})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 def api_stats():
     pending = 0
     try:

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,18 +10,18 @@
     <style>
         * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
         :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --success: #22c55e;
-            --warning: #eab308;
-            --danger: #ef4444;
-            --bg-dark: #0a0a0f;
-            --bg-card: #14141f;
-            --bg-card-hover: #1a1a2e;
-            --border: #1e1e32;
-            --text-primary: #f1f1f7;
-            --text-secondary: #9494b8;
-            --text-muted: #6b6b8d;
+            --primary: #0d6efd;
+            --primary-dark: #0a58ca;
+            --success: #198754;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --bg-dark: #f8f9fa;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f1f3f5;
+            --border: #dee2e6;
+            --text-primary: #212529;
+            --text-secondary: #495057;
+            --text-muted: #6c757d;
         }
         body {
             background: var(--bg-dark);
@@ -29,7 +29,7 @@
             min-height: 100vh;
         }
         .navbar {
-            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%) !important;
+            background: #0d6efd !important;
             border-bottom: 1px solid var(--border);
             padding: 0.75rem 1.5rem;
         }
@@ -37,13 +37,13 @@
             font-weight: 800;
             font-size: 1.4rem;
             letter-spacing: -0.5px;
-            color: var(--text-primary) !important;
+            color: #ffffff !important;
         }
         .navbar-brand span {
-            color: var(--primary);
+            color: #ffffff;
         }
         .nav-link {
-            color: var(--text-secondary) !important;
+            color: rgba(255,255,255,0.8) !important;
             font-weight: 500;
             padding: 0.5rem 1rem !important;
             border-radius: 8px;
@@ -51,8 +51,8 @@
             font-size: 0.875rem;
         }
         .nav-link:hover, .nav-link.active {
-            color: var(--text-primary) !important;
-            background: rgba(99, 102, 241, 0.1);
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.1);
         }
         .nav-link i { margin-right: 6px; }
         .card {
@@ -98,7 +98,7 @@
         }
         .table th {
             border-color: var(--border);
-            color: var(--text-secondary);
+            color: var(--text-muted);
             font-weight: 600;
             font-size: 0.75rem;
             text-transform: uppercase;
@@ -109,6 +109,7 @@
             font-size: 1.75rem;
             font-weight: 700;
             line-height: 1.2;
+            color: var(--primary);
         }
         .stat-label {
             font-size: 0.8rem;
@@ -122,16 +123,16 @@
             font-size: 0.75rem;
         }
         code {
-            background: rgba(99, 102, 241, 0.1);
-            color: #a5b4fc;
+            background: rgba(13, 110, 253, 0.05);
+            color: var(--primary);
             padding: 2px 6px;
             border-radius: 4px;
             font-size: 0.85em;
         }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-dark); }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #2a2a4e; }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #bbb; }
         .empty-state {
             text-align: center;
             padding: 3rem 1rem;
@@ -151,6 +152,7 @@
             <div class="d-flex align-items-center gap-2">
                 <a href="/" class="nav-link"><i class="bi bi-speedometer2"></i>Dashboard</a>
                 <a href="/campaigns" class="nav-link"><i class="bi bi-megaphone"></i>Campaigns</a>
+                <a href="/accounts" class="nav-link"><i class="bi bi-facebook"></i>Meta Accounts</a>
                 <a href="/automation" class="nav-link"><i class="bi bi-gear"></i>Automation</a>
                 <a href="/drafts" class="nav-link position-relative">
                     <i class="bi bi-check-circle"></i>Drafts

@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+{% block title %}Meta Accounts{% endblock %}
+{% block content %}
+<style>
+.oauth-section {
+    background: linear-gradient(135deg, var(--bg-card) 0%, #1877f2 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 30px;
+    margin-bottom: 24px;
+    text-align: center;
+}
+.oauth-section h3 { color: #fff; margin-bottom: 8px; }
+.oauth-section p { color: rgba(255,255,255,0.8); font-size: 0.9rem; margin-bottom: 20px; }
+.system-user-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+.system-user-section h4 { font-size: 0.95rem; margin-bottom: 8px; }
+.system-user-section p { font-size: 0.85rem; color: var(--text-muted); }
+.manual-section {
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 16px;
+}
+.manual-section summary {
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    padding: 8px;
+    border-radius: 8px;
+    user-select: none;
+}
+.manual-section summary:hover { background: rgba(255,255,255,0.05); }
+.system-user-loading { text-align: center; padding: 20px; }
+.system-user-loading .spinner { animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.account-list { max-height: 400px; overflow-y: auto; }
+.account-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    transition: all 0.2s;
+}
+.account-item:hover { background: rgba(255,255,255,0.03); border-color: #1877f2; }
+.account-item .acc-info { display: flex; align-items: center; gap: 10px; }
+.account-item .acc-info .type-badge {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(24,119,242,0.15);
+    color: #1877f2;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+.account-item .acc-info .acc-name { font-weight: 500; font-size: 0.9rem; }
+.account-item .acc-info .acc-id { font-size: 0.75rem; color: var(--text-muted); }
+.btn-connect-bulk {
+    margin-top: 12px;
+    width: 100%;
+}
+.oauth-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: #1877f2;
+    color: #fff !important;
+    border: none;
+    padding: 14px 32px;
+    border-radius: 50px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+.oauth-btn:hover { background: #166fe5; transform: translateY(-1px); box-shadow: 0 4px 15px rgba(24,119,242,0.4); }
+.oauth-btn i { font-size: 1.2rem; }
+.system-user-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid #1877f2;
+    color: #1877f2;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.system-user-btn:hover { background: rgba(24,119,242,0.1); }
+.connected-badge {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(40,167,69,0.15);
+    color: #28a745;
+    font-weight: 600;
+}
+</style>
+
+<div class="container-fluid py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1" style="font-weight: 700;">Meta Accounts</h1>
+            <p class="text-muted mb-0">Connect and manage your Facebook accounts, pages, and ad accounts</p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAccountModal">
+            <i class="bi bi-plus-circle me-2"></i>Connect Account
+        </button>
+    </div>
+
+    <!-- Connected Accounts Grid -->
+    <div class="row g-4">
+        {% for acc in accounts %}
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                                <i class="bi bi-{{ 'facebook' if acc.platform == 'meta' else 'google' }} text-primary fs-3"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0 fw-bold">{{ acc.account_name }}</h5>
+                                <span class="badge bg-{{ 'success' if acc.health_status == 'ok' else 'danger' }} badge-status mt-1">
+                                    {{ acc.health_status|upper }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-muted small mb-3">
+                        <i class="bi bi-shield-lock me-1"></i> Token: <code>{{ acc.credentials[:10] }}...{{ acc.credentials[-10:] }}</code>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-light btn-sm w-100">Check Sync</button>
+                        <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="empty-state">
+                <i class="bi bi-layers"></i>
+                <h3>No Accounts Connected</h3>
+                <p>Connect your first Meta Ad Account or Facebook Page to start autoposting.</p>
+                <button class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addAccountModal">
+                    Connect Now
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="addAccountModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border);">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title">Connect Meta Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+
+                <!-- METHOD 1: OAuth - Connect with Facebook -->
+                <div class="oauth-section">
+                    <h3>Connect with Facebook</h3>
+                    <p>Login dengan Facebook kamu — otomatis connect, tanpa perlu copy-paste token manual.</p>
+                    <button class="oauth-btn" onclick="startOAuth()">
+                        <i class="bi bi-facebook"></i> Connect with Facebook
+                    </button>
+                    <div style="margin-top: 12px; font-size: 0.8rem; color: rgba(255,255,255,0.6);">
+                        ✅ Facebook App sudah approved · Bisa connect ke banyak akun
+                    </div>
+                </div>
+
+                <!-- METHOD 2: System User Auto-Detect -->
+                <div class="system-user-section">
+                    <h4>⚡ Auto-Detect dari System User</h4>
+                    <p>Gunakan System User Token yang sudah terkonfigurasi untuk auto-detect semua akun yang bisa diakses.</p>
+                    <button class="system-user-btn" onclick="detectSystemUserAccounts()">
+                        <i class="bi bi-magic"></i> Detect Available Accounts
+                    </button>
+                    <div id="sysUserResult" style="display:none;"></div>
+                </div>
+
+                <!-- METHOD 3: Manual Token (Collapsible) -->
+                <details class="manual-section">
+                    <summary>🔧 Manual Token Entry <span style="font-size:0.8rem;">(Hanya jika OAuth tidak bisa dipakai)</span></summary>
+                    <div style="padding-top: 16px;">
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">ACCOUNT NAME</label>
+                            <input type="text" id="accName" class="form-control border-secondary" placeholder="e.g. nor haenah">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">PLATFORM</label>
+                            <select id="accPlatform" class="form-select border-secondary">
+                                <option value="meta">Meta (Facebook/Instagram)</option>
+                                <option value="google">Google Ads</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">ACCESS TOKEN</label>
+                            <textarea id="accToken" class="form-control border-secondary" rows="3" placeholder="Paste your Long-lived User Access Token or System User Token here"></textarea>
+                            <div class="form-text text-muted mt-2">
+                                Token bisa didapat dari <a href="https://developers.facebook.com" target="_blank">Meta Developers Portal</a>.
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary" onclick="submitManualAccount()">
+                            Connect with Token
+                        </button>
+                    </div>
+                </details>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// =============== METHOD 1: OAuth ===============
+function startOAuth() {
+    // Show loading
+    const btn = event.currentTarget;
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Redirecting...';
+    
+    fetch('/api/auth/facebook/login')
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                window.location.href = d.data.fb_url;
+            } else {
+                alert('OAuth Error: ' + (d.error || 'Unknown error'));
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        })
+        .catch(e => {
+            alert('Failed to start OAuth: ' + e.message);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+}
+
+// =============== METHOD 2: System User Auto-Detect ===============
+async function detectSystemUserAccounts() {
+    const resultDiv = document.getElementById('sysUserResult');
+    const btn = event.currentTarget;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Scanning...';
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `
+        <div class="system-user-loading">
+            <div class="spinner">&#9881;</div>
+            <p class="mt-2" style="font-size:0.85rem; color:var(--text-muted);">Fetching accounts from System User...</p>
+        </div>
+    `;
+    
+    try {
+        const res = await fetch('/api/system-user/accounts');
+        const data = await res.json();
+        
+        if (!data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger py-2 px-3 mt-2 mb-0" style="font-size:0.85rem;">
+                    ❌ ${data.error || 'Failed to detect accounts'}
+                </div>
+            `;
+            return;
+        }
+        
+        if (!data.accounts || data.accounts.length === 0) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-warning py-2 px-3 mt-2 mb-0" style="font-size:0.85rem;">
+                    ⚠️ No accounts found. Make sure the System User has been assigned to Business Manager / Ad Accounts.
+                </div>
+            `;
+            return;
+        }
+        
+        const connectedIds = {{ connected_ids | tojson }};
+        
+        let html = '<div class="account-list mt-2">';
+        html += '<div class="d-flex justify-content-between align-items-center mb-2">';
+        html += `<span style="font-size:0.85rem; font-weight:500;">Found ${data.accounts.length} accounts</span>`;
+        html += '</div>';
+        
+        for (const acc of data.accounts) {
+            const isConnected = connectedIds.includes(acc.id);
+            const typeLabel = acc.account_type === 'ad_account' ? 'Ad Account' : 
+                             acc.account_type === 'page' ? 'Page' : 
+                             acc.account_type === 'business' ? 'BM' : acc.account_type;
+            
+            html += `<div class="account-item" data-acc-id="${acc.id}">`;
+            html += `<div class="acc-info">`;
+            html += `<span class="type-badge">${typeLabel}</span>`;
+            html += `<div>`;
+            html += `<div class="acc-name">${acc.name}</div>`;
+            html += `<div class="acc-id">${acc.id}</div>`;
+            html += `</div></div>`;
+            
+            if (isConnected) {
+                html += `<span class="connected-badge">✅ Connected</span>`;
+            } else {
+                html += `<button class="btn btn-sm btn-outline-primary" onclick="connectSystemUserAccount('${acc.id}', '${acc.name.replace(/'/g, "\\'")}')">Connect</button>`;
+            }
+            html += `</div>`;
+        }
+        html += '</div>';
+        
+        // Bulk connect button
+        const unconnected = data.accounts.filter(a => !connectedIds.includes(a.id));
+        if (unconnected.length > 0) {
+            html += `<button class="btn btn-primary btn-connect-bulk" onclick="connectAllSystemUserAccounts()">
+                <i class="bi bi-link-45deg me-1"></i> Connect All (${unconnected.length} accounts)
+            </button>`;
+        }
+        
+        resultDiv.innerHTML = html;
+    } catch (e) {
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger py-2 px-3 mt-2 mb-0" style="font-size:0.85rem;">
+                ❌ Error: ${e.message}
+            </div>
+        `;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-magic"></i> Detect Available Accounts';
+    }
+}
+
+async function connectSystemUserAccount(accId, accName) {
+    const btn = event.currentTarget;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    
+    try {
+        const res = await fetch('/api/system-user/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ account_id: accId, account_name: accName })
+        });
+        const data = await res.json();
+        if (data.success) {
+            // Update button to show connected
+            btn.outerHTML = '<span class="connected-badge">✅ Connected</span>';
+        } else {
+            alert('Failed: ' + (data.error || 'Unknown error'));
+            btn.disabled = false;
+            btn.innerHTML = 'Connect';
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = 'Connect';
+    }
+}
+
+async function connectAllSystemUserAccounts() {
+    const btn = event.currentTarget;
+    const connectedIds = {{ connected_ids | tojson }};
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Connecting all...';
+    
+    try {
+        const res = await fetch('/api/system-user/connect-all', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.success) {
+            // Reload to show all connected
+            location.reload();
+        } else {
+            alert('Failed: ' + (data.error || 'Unknown error'));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-link-45deg me-1"></i> Connect All';
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-link-45deg me-1"></i> Connect All';
+    }
+}
+
+// =============== METHOD 3: Manual Token ===============
+async function submitManualAccount() {
+    const name = document.getElementById('accName').value;
+    const platform = document.getElementById('accPlatform').value;
+    const token = document.getElementById('accToken').value;
+
+    if (!name || !token) {
+        alert('Please fill all fields');
+        return;
+    }
+
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Connecting...';
+
+    try {
+        const res = await fetch('/api/accounts/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, platform, token })
+        });
+        const data = await res.json();
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Failed: ' + (data.error || 'Unknown error'));
+        }
+    } catch (e) {
+        alert('Failed to connect: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Connect with Token';
+    }
+}
+</script>
+{% endblock %}

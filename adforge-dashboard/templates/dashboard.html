@@ -60,6 +60,7 @@
                     <div style="color: #8b5cf6;"><i class="bi bi-layers fs-3"></i></div>
                 </div>
                 <small class="text-muted">Meta (8) + Google (1)</small>
+                <a href="/accounts" class="btn btn-sm btn-outline-primary mt-2 w-100">Manage Accounts</a>
             </div>
         </div>
     </div>
@@ -99,9 +100,9 @@
                                         <span class="badge bg-secondary badge-status">{{ campaign.status }}</span>
                                         {% endif %}
                                     </td>
-                                    <td>Rp{{ "{:,.0f}".format(campaign.spend|default(0)) }}</td>
-                                    <td>Rp{{ "{:,.0f}".format(campaign.revenue|default(0)) }}</td>
-                                    <td>{{ "{:,.0f}".format(campaign.impressions|default(0)) }}</td>
+                                    <td>Rp{{ "{:,.0f}".format(campaign.spend or 0) }}</td>
+                                    <td>Rp{{ "{:,.0f}".format(campaign.revenue or 0) }}</td>
+                                    <td>{{ "{:,.0f}".format(campaign.impressions or 0) }}</td>
                                 </tr>
                                 {% else %}
                                 <tr>
