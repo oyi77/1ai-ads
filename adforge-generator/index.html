@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AdForge AI - Generate Ads</title>
+
+  <!-- Google Analytics 4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-V9C14XZ9SG"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-V9C14XZ9SG');
+  </script>
+
+  <!-- Meta (Facebook) Pixel -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '771021905629860');
+    fbq('track', 'PageView');
+  </script>
+  <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=771021905629860&ev=PageView&noscript=1"/></noscript>
+
+  <!-- TikTok Pixel -->
+  <script>
+    !function (w, d, t) {
+      w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var o=document.createElement("script");o.type="text/javascript",o.async=!0,o.src=i+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};
+      ttq.load('D6IA84RC77UCTB9KG9OG');
+      ttq.page();
+    }(window, document, 'ttq');
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 40px;
+    }
+
+    .header h1 {
+      font-size: 48px;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .header p {
+      font-size: 18px;
+      opacity: 0.9;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #333;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 16px 32px;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      display: none;
+    }
+
+    .loading.active {
+      display: block;
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .results {
+      display: none;
+    }
+
+    .results.active {
+      display: block;
+    }
+
+    .ad-card {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      border-left: 4px solid #667eea;
+    }
+
+    .ad-card h3 {
+      color: #667eea;
+      margin-bottom: 16px;
+      font-size: 24px;
+    }
+
+    .ad-card .model-badge {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .ad-section {
+      margin-bottom: 16px;
+    }
+
+    .ad-section strong {
+      display: block;
+      color: #333;
+      margin-bottom: 8px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .ad-section p {
+      color: #555;
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    .json-viewer {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      margin-top: 12px;
+    }
+
+    .copy-btn {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .copy-btn:hover {
+      background: #218838;
+    }
+
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid #f5c6cb;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .error.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎯 AdForge AI</h1>
+      <p>Generate Ads dengan BerkahKarya Ads Framework</p>
+    </div>
+
+    <div class="card">
+      <form id="generateForm">
+        <div class="form-group">
+          <label for="produk">Produk / Layanan *</label>
+          <input type="text" id="produk" placeholder="Contoh: Kursus Digital Marketing" required>
+        </div>
+
+        <div class="form-group">
+          <label for="target">Target Audience *</label>
+          <input type="text" id="target" placeholder="Contoh: Pemilik UMKM usia 25-45 tahun" required>
+        </div>
+
+        <div class="form-group">
+          <label for="keunggulan">Keunggulan Produk *</label>
+          <textarea id="keunggulan" placeholder="Contoh: Materi praktis, mentor berpengalaman, hasil dalam 30 hari" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="platform">Platform</label>
+          <select id="platform">
+            <option value="Meta Ads">Meta Ads (Facebook/Instagram)</option>
+            <option value="TikTok">TikTok Ads</option>
+            <option value="Google Ads">Google Ads</option>
+            <option value="YouTube">YouTube Ads</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="format">Format Output</label>
+          <select id="format">
+            <option value="single_image">Single Image (1080x1080)</option>
+            <option value="carousel">Carousel (3-10 slides)</option>
+            <option value="video">Video Script (15-60s)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="tone">Tone</label>
+          <select id="tone">
+            <option value="santai">Santai & Friendly</option>
+            <option value="urgent">Urgent & Action-Driven</option>
+            <option value="educational">Educational & Informative</option>
+            <option value="emotional">Emotional & Inspiring</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn" id="generateBtn">
+          🚀 Generate 4 Iklan Sekarang
+        </button>
+      </form>
+    </div>
+
+    <div class="error" id="errorBox"></div>
+
+    <div class="loading" id="loadingBox">
+      <div class="spinner"></div>
+      <p>Generating ads dengan BerkahKarya Ads Framework...</p>
+    </div>
+
+    <div class="results" id="resultsBox"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById('generateForm');
+    const generateBtn = document.getElementById('generateBtn');
+    const loadingBox = document.getElementById('loadingBox');
+    const resultsBox = document.getElementById('resultsBox');
+    const errorBox = document.getElementById('errorBox');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Get form values
+      const produk = document.getElementById('produk').value;
+      const target = document.getElementById('target').value;
+      const keunggulan = document.getElementById('keunggulan').value;
+      const platform = document.getElementById('platform').value;
+      const format = document.getElementById('format').value;
+      const tone = document.getElementById('tone').value;
+
+      // Show loading
+      generateBtn.disabled = true;
+      loadingBox.classList.add('active');
+      resultsBox.classList.remove('active');
+      errorBox.classList.remove('active');
+
+      try {
+        const response = await fetch('/api/generate-ads', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            produk,
+            target,
+            keunggulan,
+            platform,
+            format,
+            tone
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Hide loading
+        loadingBox.classList.remove('active');
+
+        // Show results
+        renderResults(data);
+
+      } catch (error) {
+        console.error('Error:', error);
+        loadingBox.classList.remove('active');
+        errorBox.textContent = `Error: ${error.message}`;
+        errorBox.classList.add('active');
+      } finally {
+        generateBtn.disabled = false;
+      }
+    });
+
+    function renderResults(data) {
+      if (!data.ads || data.ads.length === 0) {
+        errorBox.textContent = 'No ads generated. Please try again.';
+        errorBox.classList.add('active');
+        return;
+      }
+
+      let html = '';
+
+      data.ads.forEach((ad, index) => {
+        html += `
+          <div class="ad-card">
+            <span class="model-badge">Model ${ad.model}: ${ad.model_name}</span>
+            <h3>Iklan ${index + 1}</h3>
+
+            ${ad.angle ? `
+              <div class="ad-section">
+                <strong>Angle</strong>
+                <p>${ad.angle}</p>
+              </div>
+            ` : ''}
+
+            <div class="ad-section">
+              <strong>Hook</strong>
+              <p>${ad.hook}</p>
+            </div>
+
+            <div class="ad-section">
+              <strong>Body Copy</strong>
+              <p>${ad.body}</p>
+            </div>
+
+            <div class="ad-section">
+              <strong>CTA</strong>
+              <p>${ad.cta}</p>
+            </div>
+
+            ${ad.media_spec ? `
+              <div class="ad-section">
+                <strong>Media Spec</strong>
+                <p>Format: ${ad.media_spec.format} | Dimensions: ${ad.media_spec.dimensions} | Ratio: ${ad.media_spec.aspect_ratio}</p>
+              </div>
+            ` : ''}
+
+            ${ad.design_json ? `
+              <div class="ad-section">
+                <strong>Design JSON (Copy untuk Canva/Designer)</strong>
+                <div class="json-viewer">${JSON.stringify(ad.design_json, null, 2)}</div>
+                <button class="copy-btn" onclick="copyJSON(${index})">📋 Copy JSON</button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      });
+
+      resultsBox.innerHTML = html;
+      resultsBox.classList.add('active');
+
+      // Store data for copy function
+      window.adsData = data.ads;
+    }
+
+    function copyJSON(index) {
+      const ad = window.adsData[index];
+      const json = JSON.stringify(ad.design_json, null, 2);
+      
+      navigator.clipboard.writeText(json).then(() => {
+        alert('✅ JSON copied to clipboard!');
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('❌ Failed to copy JSON');
+      });
+    }
+  </script>
+</body>
+</html>

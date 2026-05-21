@@ -1,0 +1,20 @@
+{
+  "name": "adforge-aitradepulse",
+  "version": "1.0.0",
+  "description": "AdForge AI Pro - Complete Ads Marketing Toolkit",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'No build needed'"
+  },
+  "keywords": [
+    "ads",
+    "marketing",
+    "ai"
+  ],
+  "author": "BerkahKarya",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  }
+}
