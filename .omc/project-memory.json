@@ -274,9 +274,15 @@
   "hotPaths": [
     {
       "path": "server/app.js",
-      "accessCount": 92,
-      "lastAccessed": 1775813032978,
+      "accessCount": 112,
+      "lastAccessed": 1779916721420,
       "type": "file"
+    },
+    {
+      "path": "server",
+      "accessCount": 52,
+      "lastAccessed": 1779903852778,
+      "type": "directory"
     },
     {
       "path": "tests/integration/competitor-spy.test.js",
@@ -285,21 +291,15 @@
       "type": "file"
     },
     {
-      "path": "server",
-      "accessCount": 49,
-      "lastAccessed": 1775812527066,
-      "type": "directory"
+      "path": "server/config/index.js",
+      "accessCount": 47,
+      "lastAccessed": 1779916140399,
+      "type": "file"
     },
     {
       "path": "client/src/views/settings.js",
       "accessCount": 46,
       "lastAccessed": 1775814240251,
-      "type": "file"
-    },
-    {
-      "path": "server/config/index.js",
-      "accessCount": 42,
-      "lastAccessed": 1775807048623,
       "type": "file"
     },
     {
@@ -309,16 +309,16 @@
       "type": "file"
     },
     {
-      "path": "server/services/payments.js",
-      "accessCount": 36,
-      "lastAccessed": 1775783402153,
-      "type": "file"
+      "path": "",
+      "accessCount": 38,
+      "lastAccessed": 1779903943339,
+      "type": "directory"
     },
     {
-      "path": "",
-      "accessCount": 36,
-      "lastAccessed": 1775812531716,
-      "type": "directory"
+      "path": "server/services/payments.js",
+      "accessCount": 38,
+      "lastAccessed": 1779917628483,
+      "type": "file"
     },
     {
       "path": "db/schema.sql",
@@ -346,8 +346,8 @@
     },
     {
       "path": "server/routes/payments.js",
-      "accessCount": 22,
-      "lastAccessed": 1775782762341,
+      "accessCount": 23,
+      "lastAccessed": 1779917366636,
       "type": "file"
     },
     {
@@ -357,15 +357,15 @@
       "type": "file"
     },
     {
-      "path": "server/services/trending.js",
-      "accessCount": 16,
-      "lastAccessed": 1775783621610,
+      "path": "server/repositories/payments.js",
+      "accessCount": 18,
+      "lastAccessed": 1779917004357,
       "type": "file"
     },
     {
-      "path": "server/repositories/payments.js",
+      "path": "server/services/trending.js",
       "accessCount": 16,
-      "lastAccessed": 1775806690971,
+      "lastAccessed": 1775783621610,
       "type": "file"
     },
     {
@@ -441,6 +441,12 @@
       "type": "file"
     },
     {
+      "path": "server.js",
+      "accessCount": 8,
+      "lastAccessed": 1779915970303,
+      "type": "file"
+    },
+    {
       "path": "server/lib/plan-check.js",
       "accessCount": 7,
       "lastAccessed": 1775782771910,
@@ -459,22 +465,16 @@
       "type": "file"
     },
     {
-      "path": "server.js",
+      "path": "server/routes",
       "accessCount": 6,
-      "lastAccessed": 1775783276526,
-      "type": "file"
+      "lastAccessed": 1779902263878,
+      "type": "directory"
     },
     {
       "path": "client/src/views/competitor-spy.js",
       "accessCount": 5,
       "lastAccessed": 1775744153314,
       "type": "file"
-    },
-    {
-      "path": "server/routes",
-      "accessCount": 5,
-      "lastAccessed": 1775780556177,
-      "type": "directory"
     },
     {
       "path": "server/routes/templates.js",

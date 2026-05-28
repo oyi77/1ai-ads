@@ -4,6 +4,10 @@ import config from '../config/index.js';
 export function createLearningRouter(learningService) {
   const router = Router();
 
+  router.get('/', (req, res) => {
+    res.json({ service: 'learning', endpoints: ['GET /status', 'POST /sync', 'POST /sync/campaign', 'POST /sync/landing', 'GET /inspire/creative'] });
+  });
+
   router.get('/status', async (req, res) => {
     try {
       const response = await fetch(`${config.bkHubUrl}/kb/status`);

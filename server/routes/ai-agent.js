@@ -7,6 +7,10 @@ export function createAiAgentRouter(aiAgent, settingsRepo) {
     return { autonomy_level: aiAgent.getAutonomyLevel() };
   }
 
+  router.get('/', (req, res) => {
+    res.json({ service: 'ai-agent', endpoints: ['GET /status', 'POST /autonomy', 'GET /suggestions', 'POST /suggestions/:id/apply', 'POST /suggestions/:id/dismiss'] });
+  });
+
   // GET /status — returns current autonomy level
   router.get('/status', (req, res) => {
     res.json({ success: true, data: getStatus() });

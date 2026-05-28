@@ -4,23 +4,55 @@ import { createLogger } from '../lib/logger.js';
 import { ConfigurationError, PlatformError } from '../lib/errors.js';
 
 const log = createLogger('meta-api');
-const API_VERSION = 'v21.0';
-const BASE = `https://graph.facebook.com/${API_VERSION}`;
+const BASE = `https://graph.facebook.com/${config.metaApiVersion}`;
 
 export class MetaAdsAPI {
-  constructor(settingsRepo) {
-    this.settingsRepo = settingsRepo;
+  constructor(settingsRepoOrToken) {
+    // Support both: new MetaAdsAPI(settingsRepo) AND new MetaAdsAPI('token-string')
+    if (typeof settingsRepoOrToken === 'string') {
+      this._explicitToken = settingsRepoOrToken;
+      this.settingsRepo = null;
+    } else {
+      this.settingsRepo = settingsRepoOrToken;
+      this._explicitToken = null;
+    }
+    this._activeAccountId = null; // For multi-account context
+  }
+
+  /**
+   * Set active account context for multi-Facebook-account support.
+   * After calling this, all subsequent API calls use that account's token.
+   */
+  setActiveAccount(accountId, accessToken) {
+    this._activeAccountId = accountId;
+    this._explicitToken = accessToken;
+  }
+
+  /**
+   * Clear active account, fall back to default resolution.
+   */
+  clearActiveAccount() {
+    this._activeAccountId = null;
+    this._explicitToken = null;
   }
 
   _getToken() {
+    // 1. Explicit token (set via constructor or setActiveAccount)
+    if (this._explicitToken) {
+      return this._explicitToken;
+    }
+    // 2. System token from .env (backward compat)
     if (config.fbSystemToken) {
       return config.fbSystemToken;
     }
-    const creds = this.settingsRepo.getCredentials('meta');
-    if (!creds?.access_token) {
-      throw new ConfigurationError('Meta access token not configured. Go to Settings to add it.');
+    // 3. Active platform account from platform_accounts table
+    if (this.settingsRepo) {
+      const creds = this.settingsRepo.getCredentials('meta');
+      if (creds?.access_token) {
+        return creds.access_token;
+      }
     }
-    return creds.access_token;
+    throw new ConfigurationError('Meta access token not configured. Connect a Facebook account in Settings.');
   }
 
   async _get(path, params = {}) {

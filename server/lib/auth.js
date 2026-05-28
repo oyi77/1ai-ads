@@ -1,7 +1,12 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
-const secret = process.env.JWT_SECRET || '';
+// Generate random secret if none provided, but warn loudly
+const secret = process.env.JWT_SECRET || (() => {
+  console.error('[CRITICAL] JWT_SECRET not set! Using random fallback. Tokens will be invalid on restart. Set JWT_SECRET environment variable!');
+  return crypto.randomBytes(64).toString('hex');
+})();
 const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '30d';
 
@@ -22,5 +27,12 @@ export function generateRefreshToken(payload) {
 }
 
 export function verifyToken(token) {
-  return jwt.verify(token, secret);
+  try {
+    return jwt.verify(token, secret);
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      throw new Error('Token expired');
+    }
+    throw new Error('Invalid token');
+  }
 }

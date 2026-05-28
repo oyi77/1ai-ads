@@ -190,6 +190,32 @@ CREATE TABLE IF NOT EXISTS competitor_snapshots (
 
 CREATE INDEX IF NOT EXISTS idx_competitor_snapshots_url ON competitor_snapshots(url, captured_at);
 
+-- Content queue for scheduled video posting (ported from content-generator)
+CREATE TABLE IF NOT EXISTS content_queue (
+  id TEXT PRIMARY KEY,
+  page_id TEXT NOT NULL,
+  platform TEXT DEFAULT 'facebook',
+  file_path TEXT NOT NULL,
+  caption TEXT DEFAULT '',
+  hashtags TEXT DEFAULT '[]',
+  hook TEXT DEFAULT '',
+  cta TEXT DEFAULT '',
+  category TEXT DEFAULT '',
+  style TEXT DEFAULT '',
+  product_desc TEXT DEFAULT '',
+  video_id TEXT,
+  permalink_url TEXT,
+  status TEXT DEFAULT 'pending',
+  scheduled_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  posted_at INTEGER,
+  updated_at INTEGER,
+  error TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_content_queue_status ON content_queue(status);
+CREATE INDEX IF NOT EXISTS idx_content_queue_page ON content_queue(page_id, scheduled_at);
+
 CREATE TABLE IF NOT EXISTS templates (
   id TEXT PRIMARY KEY,
   category TEXT NOT NULL DEFAULT 'general',

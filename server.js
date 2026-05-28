@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { createDatabase } from './db/index.js';
 import { createApp } from './server/app.js';
 import { LLMClient } from './server/services/llm-client.js';
@@ -8,7 +9,6 @@ import { seedDemoData } from './db/seed.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
-import 'dotenv/config';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

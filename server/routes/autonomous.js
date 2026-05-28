@@ -1,9 +1,15 @@
 import { Router } from 'express';
 import { createLogger } from '../lib/logger.js';
 import { MetaAdsAPI } from '../services/meta-api.js';
+import config from '../config/index.js';
 
 const log = createLogger('autonomous-routes');
 const router = Router();
+const API_VERSION = config.metaApiVersion;
+
+router.get('/', (req, res) => {
+  res.json({ service: 'autonomous', endpoints: ['POST /connect-facebook', 'GET /facebook-accounts', 'POST /link-account', 'POST /check-campaigns', 'POST /rules'] });
+});
 
 // POST /api/autonomous/connect-facebook - Exchange OAuth code for access token
 router.post('/connect-facebook', async (req, res) => {
@@ -14,7 +20,7 @@ router.post('/connect-facebook', async (req, res) => {
       return res.status(400).json({ error: 'Auth code is required' });
     }
 
-    const tokenResponse = await fetch(`https://graph.facebook.com/v19.0/oauth/access_token?client_id=${encodeURIComponent(process.env.FB_APP_ID)}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${encodeURIComponent(process.env.FB_APP_SECRET)}&code=${code}`);
+    const tokenResponse = await fetch(`https://graph.facebook.com/${API_VERSION}/oauth/access_token?client_id=${encodeURIComponent(process.env.FB_APP_ID)}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${encodeURIComponent(process.env.FB_APP_SECRET)}&code=${code}`);
     const tokenData = await tokenResponse.json();
 
     if (tokenData.error) {
@@ -22,7 +28,7 @@ router.post('/connect-facebook', async (req, res) => {
     }
 
     // Exchange for long-lived token
-    const longResponse = await fetch(`https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(process.env.FB_APP_ID)}&client_secret=${encodeURIComponent(process.env.FB_APP_SECRET)}&access_token=${tokenData.access_token}`);
+    const longResponse = await fetch(`https://graph.facebook.com/${API_VERSION}/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(process.env.FB_APP_ID)}&client_secret=${encodeURIComponent(process.env.FB_APP_SECRET)}&access_token=${tokenData.access_token}`);
     const longData = await longResponse.json();
 
     res.json({

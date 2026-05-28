@@ -1,8 +1,10 @@
 import { createLogger } from '../lib/logger.js';
 import { MetaAdsAPI } from './meta-api.js';
 import { GoogleAdsAPI } from './google-ads-api.js';
+import config from '../config/index.js';
 
 const log = createLogger('autonomous-agent');
+const API_VERSION = config.metaApiVersion;
 
 // Rule types: if <condition> then <action>
 // Conditions: budget > X, spend > Y, ROAS < Z, etc.
@@ -28,14 +30,14 @@ export class AutonomousAgent {
   // ============================================
 
   async connectFacebook(authCode, redirectUri) {
-    // Exchange auth code for access token
-    const response = await fetch(`https://graph.facebook.com/v19.0/oauth/access_token?client_id=${process.env.FB_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${process.env.FB_APP_SECRET}&code=${authCode}`);
+    // Exchange auth code for access token (use centralized version)
+    const response = await fetch(`https://graph.facebook.com/${API_VERSION}/oauth/access_token?client_id=${process.env.FB_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${process.env.FB_APP_SECRET}&code=${authCode}`);
     const data = await response.json();
     
     if (data.error) throw new Error(data.error.message);
     
     // Get long-lived token
-    const longLived = await fetch(`https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token&client_id=${process.env.FB_APP_ID}&client_secret=${process.env.FB_APP_SECRET}&access_token=${data.access_token}`);
+    const longLived = await fetch(`https://graph.facebook.com/${API_VERSION}/oauth/access_token?grant_type=fb_exchange_token&client_id=${process.env.FB_APP_ID}&client_secret=${process.env.FB_APP_SECRET}&access_token=${data.access_token}`);
     const longData = await longLived.json();
     
     return { accessToken: longData.access_token || data.access_token, expires: longData.expires_in || 0 };

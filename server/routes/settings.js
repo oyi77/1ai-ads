@@ -181,7 +181,7 @@ export function createSettingsRouter(settingsRepo, llmClient, db) {
     }
 
     try {
-      const url = `https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(appId)}&client_secret=${encodeURIComponent(appSecret)}&fb_exchange_token=${encodeURIComponent(shortToken)}`;
+      const url = `https://graph.facebook.com/${config.metaApiVersion}/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(appId)}&client_secret=${encodeURIComponent(appSecret)}&fb_exchange_token=${encodeURIComponent(shortToken)}`;
       const response = await fetch(url);
       const data = await response.json();
 
@@ -191,7 +191,7 @@ export function createSettingsRouter(settingsRepo, llmClient, db) {
 
       const longToken = data.access_token;
       
-      const tokenInfoUrl = `https://graph.facebook.com/v21.0/debug_token?input_token=${encodeURIComponent(longToken)}&access_token=${encodeURIComponent(appId)}|${encodeURIComponent(appSecret)}`;
+      const tokenInfoUrl = `https://graph.facebook.com/${config.metaApiVersion}/debug_token?input_token=${encodeURIComponent(longToken)}&access_token=${encodeURIComponent(appId)}|${encodeURIComponent(appSecret)}`;
       const tokenInfoRes = await fetch(tokenInfoUrl);
       const tokenInfo = await tokenInfoRes.json();
       

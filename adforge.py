@@ -4,7 +4,7 @@ AdForge - Meta Ads Management Platform
 Facebook Graph API Integration + Campaign Management
 """
 
-from flask import Flask, request, redirect, session, jsonify, render_template
+from flask import Flask, request, redirect, session, jsonify, render_template, url_for
 from urllib.parse import urlencode
 import requests
 import json
@@ -16,10 +16,11 @@ from pathlib import Path
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # Configuration
-app.secret_key = os.getenv('ADFORGE_SECRET_KEY', 'adforge-secret-key-2026')
+app.secret_key = os.getenv('ADFORGE_SECRET_KEY', os.urandom(32).hex())
 FB_APP_ID = os.getenv('FB_APP_ID', '')
 FB_APP_SECRET = os.getenv('FB_APP_SECRET', '')
 FB_REDIRECT_URI = os.getenv('FB_REDIRECT_URI', 'https://adforge.aitradepulse.com/auth/facebook/callback')
+FB_API_VERSION = 'v21.0'  # v18.0 deprecated April 2025
 
 # User data storage
 USERS_DIR = Path('/home/openclaw/.openclaw/workspace/adforge_users')
@@ -27,9 +28,32 @@ USERS_DIR.mkdir(parents=True, exist_ok=True)
 
 @app.route('/')
 def index():
-    """Dashboard home - frictionless access, no login required"""
+    """Dashboard home - requires authentication"""
     user = session.get('user')
+    if not user:
+        return redirect(url_for('login_page'))
     return render_template('dashboard.html', user=user)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login_page():
+    """Login page"""
+    if request.method == 'GET':
+        return render_template('login.html', error=None)
+    username = request.form.get('username', '')
+    password = request.form.get('password', '')
+    # Delegate to Node.js API for auth
+    try:
+        r = requests.post(f"http://127.0.0.1:3001/api/auth/login", json={
+            "username": username, "password": password
+        }, timeout=5)
+        data = r.json()
+        if data.get("success"):
+            session['user'] = data["data"]["user"]
+            session['access_token'] = data["data"]["accessToken"]
+            return redirect(url_for('index'))
+    except Exception as e:
+        pass
+    return render_template('login.html', error='Invalid credentials')
 
 
 def get_facebook_auth_url():
@@ -40,7 +64,7 @@ def get_facebook_auth_url():
         'response_type': 'code',
         'scope': 'ads_management,ads_read,pages_show_list,pages_read_engagement'
     }
-    return f"https://www.facebook.com/v18.0/dialog/oauth?{urlencode(params)}"
+    return f"https://www.facebook.com/{FB_API_VERSION}/dialog/oauth?{urlencode(params)}"
 
 
 @app.route('/auth/facebook')
@@ -58,7 +82,7 @@ def callback_facebook():
     
     try:
         # Exchange code for access token
-        token_url = f"https://graph.facebook.com/oauth/access_token"
+        token_url = f"https://graph.facebook.com/{FB_API_VERSION}/oauth/access_token"
         params = {
             'client_id': FB_APP_ID,
             'client_secret': FB_APP_SECRET,
@@ -67,7 +91,10 @@ def callback_facebook():
         }
         
         response = requests.get(token_url, params=params)
-        token_data = response.json()
+        try:
+            token_data = response.json()
+        except ValueError:
+            return f"Token exchange failed: invalid JSON response", 400
         
         if 'error' in token_data:
             return f"Token exchange failed: {token_data['error']}", 400
@@ -77,7 +104,7 @@ def callback_facebook():
         
         # Get user info
         user_info = requests.get(
-            'https://graph.facebook.com/me',
+            f'https://graph.facebook.com/{FB_API_VERSION}/me',
             params={'access_token': access_token, 'fields': 'id,name,email'}
         ).json()
         
@@ -103,18 +130,18 @@ def callback_facebook():
 @app.route('/logout')
 def logout():
     """User logout"""
-    session.pop('user', None)
-    return redirect('/')
+    session.clear()
+    return redirect(url_for('login_page'))
 
 
 # Facebook Graph API helper
 def fb_api_request(endpoint, method='GET', params=None):
-    """Make Facebook Graph API request"""
+    """Make Facebook Graph API request. Returns dict always, never tuple."""
     user = session.get('user')
     if not user:
-        return {'error': 'Not authenticated'}, 401
+        return {'error': 'Not authenticated', 'status': 401}
     
-    base_url = f'https://graph.facebook.com/v18.0/{endpoint}'
+    base_url = f'https://graph.facebook.com/{FB_API_VERSION}/{endpoint}'
     all_params = {'access_token': user['access_token']}
     if params:
         all_params.update(params)
@@ -125,11 +152,13 @@ def fb_api_request(endpoint, method='GET', params=None):
         elif method == 'POST':
             response = requests.post(base_url, data=all_params, timeout=30)
         else:
-            return {'error': 'Unsupported method'}, 400
+            return {'error': 'Unsupported method'}
         
         return response.json()
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         return {'error': f'Facebook API request failed: {str(e)}'}
+    except ValueError as e:
+        return {'error': f'Invalid JSON response: {str(e)}'}
 
 
 # API Endpoints
@@ -137,9 +166,10 @@ def fb_api_request(endpoint, method='GET', params=None):
 @app.route('/api/accounts')
 def get_ads_accounts():
     """Get all ad accounts for logged-in user"""
-    accounts = []
+    if not session.get('user'):
+        return jsonify({'error': 'Not authenticated'}), 401
     
-    # Get user's ad accounts
+    accounts = []
     response = fb_api_request('me/adaccounts')
     if 'data' in response:
         accounts.extend(response['data'])
@@ -150,6 +180,8 @@ def get_ads_accounts():
 @app.route('/api/campaigns')
 def get_campaigns():
     """Get campaigns for selected ad account"""
+    if not session.get('user'):
+        return jsonify({'error': 'Not authenticated'}), 401
     account_id = request.args.get('account_id')
     
     if not account_id:
@@ -166,6 +198,8 @@ def get_campaigns():
 @app.route('/api/campaigns/<campaign_id>')
 def get_campaign_details(campaign_id):
     """Get campaign details"""
+    if not session.get('user'):
+        return jsonify({'error': 'Not authenticated'}), 401
     fields = 'id,name,status,objective,configured_status,created_time,updated_time,budget_type,budget_reformatted,start_time,end_time,insights{spend,impressions,clicks,ctr,cpc,cpm}'
     
     response = fb_api_request(f'{campaign_id}', params={'fields': fields})
@@ -179,6 +213,8 @@ def get_campaign_details(campaign_id):
 @app.route('/api/campaigns/<campaign_id>/pause')
 def pause_campaign(campaign_id):
     """Pause a campaign"""
+    if not session.get('user'):
+        return jsonify({'error': 'Not authenticated'}), 401
     response = fb_api_request(f'{campaign_id}', method='POST', params={'status': 'PAUSED'})
     
     if 'error' in response:
@@ -190,6 +226,8 @@ def pause_campaign(campaign_id):
 @app.route('/api/campaigns/<campaign_id>/activate')
 def activate_campaign(campaign_id):
     """Activate a paused campaign"""
+    if not session.get('user'):
+        return jsonify({'error': 'Not authenticated'}), 401
     response = fb_api_request(f'{campaign_id}', method='POST', params={'status': 'ACTIVE'})
     
     if 'error' in response:
@@ -201,6 +239,8 @@ def activate_campaign(campaign_id):
 @app.route('/api/ads')
 def get_ads():
     """Get ads for selected campaign"""
+    if not session.get('user'):
+        return jsonify({'error': 'Not authenticated'}), 401
     campaign_id = request.args.get('campaign_id')
     
     if not campaign_id:
@@ -219,6 +259,8 @@ def get_ads():
 @app.route('/api/adsets')
 def get_adsets():
     """Get ad sets for selected campaign"""
+    if not session.get('user'):
+        return jsonify({'error': 'Not authenticated'}), 401
     campaign_id = request.args.get('campaign_id')
     
     if not campaign_id:
@@ -237,6 +279,8 @@ def get_adsets():
 @app.route('/api/insights')
 def get_insights():
     """Get campaign insights"""
+    if not session.get('user'):
+        return jsonify({'error': 'Not authenticated'}), 401
     campaign_id = request.args.get('campaign_id')
     date_preset = request.args.get('date_preset', 'last_7_days')
     

@@ -8,6 +8,7 @@ const __dirname = path.dirname(__filename);
 import { createTrendingRouter } from './routes/trending.js';
 import { createCompetitorSpyRouter } from './routes/competitor-spy.js';
 import { createPaymentsRouter } from './routes/payments.js';
+import { PaymentsRepository } from './repositories/payments.js';
 import { createTemplatesRouter } from './routes/templates.js';
 import { createLearningRouter } from './routes/learning.js';
 import { createAdsLibraryRoutes } from './routes/ads-library.js';
@@ -15,9 +16,19 @@ import { createAdspirerRouter } from './routes/adspirer.js';
 
 import { createScheduleRouter } from './routes/schedule.js';
 import { createMetaAccountsRouter } from './routes/meta-accounts.js';
+import { createMetaContentRouter } from './routes/meta-content.js';
 import { createAutonomousRouter } from './routes/autonomous.js';
 import { createAiAgentRouter } from './routes/ai-agent.js';
+import createAudienceRouter from './routes/audiences.js';
+import createPixelRouter from './routes/pixels.js';
+import createBatchRouter from './routes/batch.js';
+import createTokenRouter from './routes/tokens.js';
+import createWebhookRouter from './routes/webhooks.js';
+import { createABTestsRouter } from './routes/ab-tests.js';
 import { AiAgent } from './services/ai-agent.js';
+import { MetaVideoService } from './services/meta-video-service.js';
+import { ContentScheduler } from './services/content-scheduler.js';
+import { AdResearchService } from './services/ad-research-service.js';
 import rateLimit from 'express-rate-limit';
 import express from 'express';
 import cors from 'cors';
@@ -92,11 +103,15 @@ export function createApp(params) {
   
   const adspirerClient = new AdspirerMcpClient(platformAccountsRepo);
   const trendingService = new TrendingService(campaignsRepo);
-  const paymentService = new PaymentService(db);
+  const paymentsRepo = new PaymentsRepository(db);
+  const paymentService = new PaymentService(paymentsRepo);
   const learningService = new LearningService(campaignsRepo, adsRepo, landingRepo);
   
   const metaApi = new MetaAdsAPI(settingsRepo);
   const creativeStudio = new CreativeStudio(llmClient);
+  const videoService = new MetaVideoService(metaApi);
+  const contentScheduler = new ContentScheduler({ videoService, llmClient, db });
+  const adResearchService = new AdResearchService({ metaApi, db });
   const orchestrator = new CampaignOrchestrator(metaApi, creativeStudio);
   
   const suggestionsRepo = new AiSuggestionsRepository(db);
@@ -114,6 +129,7 @@ export function createApp(params) {
   app.locals.campaignsRepo = campaignsRepo;
   app.locals.rulesRepo = rulesRepo;
   app.locals.platformAccountsRepo = platformAccountsRepo;
+  app.locals.adResearchService = adResearchService;
   app.locals.db = db;
   
   // Set up JSON body parser
@@ -155,6 +171,7 @@ export function createApp(params) {
 
   const scheduleRouter = createScheduleRouter();
   const metaAccountsRouter = createMetaAccountsRouter(settingsRepo);
+  const metaContentRouter = createMetaContentRouter(videoService, contentScheduler);
 
   // Mount routers
   app.use('/api/auth', publicRateLimit, authRouter);
@@ -173,6 +190,7 @@ export function createApp(params) {
 
   app.use('/api/schedule', requireAuth, scheduleRouter);
   app.use('/api/meta', requireAuth, metaAccountsRouter);
+  app.use('/api/meta/content', requireAuth, metaContentRouter);
 
 
   // Autonomous campaign monitor
@@ -181,6 +199,19 @@ export function createApp(params) {
 
   const autonomousRouter = createAutonomousRouter(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, autonomousAgent);
   app.use('/api/autonomous', requireAuth, autonomousRouter);
+
+  // New consolidated services
+  app.use('/api/audiences', requireAuth, createAudienceRouter(metaApi));
+  app.use('/api/pixels', requireAuth, createPixelRouter(metaApi));
+  app.use('/api/batch', requireAuth, createBatchRouter(metaApi));
+  app.use('/api/tokens', requireAuth, createTokenRouter());
+  app.use('/api/webhooks', createWebhookRouter());
+  app.use('/api/ab-tests', requireAuth, createABTestsRouter(metaApi));
+
+  app.get('/api/cf-health', publicRateLimit, (req, res) => {
+    res.json({ status: 'ok', service: 'adforge', timestamp: new Date().toISOString() });
+  });
+
   app.get('/health', publicRateLimit, (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
@@ -196,7 +227,7 @@ export function createApp(params) {
     fs.readFile(indexPath, 'utf8', (err, data) => {
       if (err) {
         console.error('Failed to read index.html:', err);
-        return res.status(500).send('Interior Engine Error');
+        return res.status(500).send('Internal Server Error');
       }
       res.set('Content-Type', 'text/html');
       res.send(data);

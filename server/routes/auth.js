@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { hashPassword, verifyPassword, generateToken, generateRefreshToken, verifyToken } from '../lib/auth.js';
 import rateLimit from 'express-rate-limit';
 import { createLogger } from '../lib/logger.js';
+import config from '../config/index.js';
+import { v4 as uuid } from 'uuid';
 
 const log = createLogger('auth-routes');
 
@@ -56,10 +58,10 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
       return res.status(500).json({ success: false, error: 'FB_APP_ID or FB_APP_SECRET not configured' });
     }
     
-    const fbScope = 'email,ads_management,ads_read,business_management,pages_show_list,pages_read_engagement';
-    const fbUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${encodeURIComponent(fbAppId)}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=${encodeURIComponent(fbScope)}`;
+    const fbScope = 'email,ads_management,ads_read,business_management,pages_show_list,pages_read_engagement,pages_manage_ads,pages_manage_metadata,pages_manage_posts';
+    const fbUrl = `https://www.facebook.com/${config.metaApiVersion}/dialog/oauth?client_id=${encodeURIComponent(fbAppId)}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=${encodeURIComponent(fbScope)}`;
     
-    log.info('Generating FB Login URL', { appId: fbAppId, callbackUrl, version: 'v21.0' });
+    log.info('Generating FB Login URL', { appId: fbAppId, callbackUrl, version: config.metaApiVersion });
     res.json({ success: true, data: { fb_url: fbUrl } });
   });
 
@@ -81,8 +83,8 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
     }
     
     try {
-      // Exchange code for access token
-      const tokenUrl = `https://graph.facebook.com/v18.0/oauth/access_token`;
+      // Exchange code for access token (use centralized version)
+      const tokenUrl = `https://graph.facebook.com/${config.metaApiVersion}/oauth/access_token`;
       const tokenResponse = await fetch(`${tokenUrl}?client_id=${fbAppId}&redirect_uri=${encodeURIComponent(callbackUrl)}&client_secret=${fbSecret}&code=${code}`);
       const tokenData = await tokenResponse.json();
       
@@ -113,13 +115,33 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
         user = usersRepo.findById(userId);
       }
       
-      // Update user settings with Meta info
+      // Save token to platform_accounts table (unified storage — NOT settings table)
       const settingsRepo = req.app.locals.settingsRepo;
       if (settingsRepo) {
-        settingsRepo.set(`meta_${user.id}_access_token`, accessToken);
-        settingsRepo.set(`meta_${user.id}_expires`, new Date(Date.now() + tokenExpires * 1000).toISOString());
+        const existingAccounts = settingsRepo.getAccounts('meta');
+        const fbAccountName = `Meta - ${userData.name}`;
+        const existing = existingAccounts.find(a => a.account_name === fbAccountName);
+        
+        if (existing) {
+          settingsRepo.updateAccount(existing.id, { credentials: { access_token: accessToken } });
+          log.info('Updated Meta account token in platform_accounts', { accountId: existing.id });
+        } else {
+          const isFirstAccount = existingAccounts.length === 0;
+          settingsRepo.addAccount({
+            id: uuid(),
+            user_id: user.id,
+            platform: 'meta',
+            account_name: fbAccountName,
+            credentials: { access_token: accessToken },
+            is_active: isFirstAccount ? 1 : 0
+          });
+          log.info('Created Meta platform account for user', { userName: userData.name });
+        }
+        
+        // Also store FB metadata in settings for quick lookup
         settingsRepo.set(`meta_${user.id}_fb_id`, userData.id);
         settingsRepo.set(`meta_${user.id}_fb_name`, userData.name);
+        settingsRepo.set(`meta_${user.id}_expires`, new Date(Date.now() + tokenExpires * 1000).toISOString());
       }
       
       // Generate JWT tokens
@@ -157,6 +179,10 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
 
       if (usersRepo.findByUsername(username)) {
         return res.status(409).json({ success: false, error: 'Username already exists' });
+      }
+
+      if (usersRepo.findByEmail(email)) {
+        return res.status(409).json({ success: false, error: 'Email already registered' });
       }
 
       const userId = usersRepo.create({

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-gear-fill"></i> System Settings & Integration</h5>
+                </div>
+                <div class="card-body">
+                    {% if success %}
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <strong>Success!</strong> Your settings have been saved.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endif %}
+
+                    <form method="POST">
+                        <h6 class="border-bottom pb-2 mb-3"><i class="bi bi-telegram"></i> Telegram Bot Integration</h6>
+                        <p class="text-muted small">
+                            Register your bot with <a href="https://t.me/BotFather" target="_blank">@BotFather</a> to get a token. 
+                            This allows AdForge to send you real-time Meta Ads alerts and performance updates.
+                        </p>
+                        
+                        <div class="mb-3">
+                            <label for="telegram_bot_token" class="form-label font-weight-bold">Telegram Bot Token</label>
+                            <input type="password" class="form-control" id="telegram_bot_token" name="telegram_bot_token" 
+                                   value="{{ user.telegram_bot_token or '' }}" placeholder="123456789:ABCdefGhIjkLmNoPqRsTuVwXyZ">
+                            <div class="form-text">Your bot token from BotFather.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="telegram_chat_id" class="form-label font-weight-bold">Telegram Chat ID / User ID</label>
+                            <input type="text" class="form-control" id="telegram_chat_id" name="telegram_chat_id" 
+                                   value="{{ user.telegram_chat_id or '' }}" placeholder="157228659">
+                            <div class="form-text">Find your ID using <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a>.</div>
+                        </div>
+
+                        <hr>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">Profile Information</h6>
+                                <p class="text-muted small mb-0">Username: <strong>{{ user.username }}</strong></p>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Save Settings
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-4 shadow-sm border-info">
+                <div class="card-body">
+                    <h6><i class="bi bi-info-circle text-info"></i> How it works</h6>
+                    <p class="small mb-0">
+                        Once linked, the <strong>AdForge Autonomous Agent</strong> will monitor your campaigns every 2 hours 
+                        and send snapshots directly to your Telegram. You can also trigger reports by chatting with your bot.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

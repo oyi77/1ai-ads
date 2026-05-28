@@ -1,0 +1,1 @@
+/home/openclaw/.openclaw/workspace/scripts/meta_client.py

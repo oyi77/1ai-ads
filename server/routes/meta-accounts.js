@@ -1,34 +1,51 @@
 import { Router } from 'express';
+import config from '../config/index.js';
 
 export function createMetaAccountsRouter(settingsRepo) {
   const router = Router();
+  const API_VERSION = config.metaApiVersion;
+
+  /**
+   * Get Meta access token for the authenticated user.
+   * Checks platform_accounts table first (unified storage), 
+   * then falls back to legacy settings table.
+   */
+  function getMetaToken(settingsRepo, userId) {
+    // 1. Try platform_accounts table (new unified storage)
+    const accounts = settingsRepo.getAccounts('meta');
+    const active = accounts.find(a => a.is_active);
+    if (active?.credentials?.access_token) {
+      return active.credentials.access_token;
+    }
+    // 2. Fallback to legacy settings table
+    const legacyToken = settingsRepo.get(`meta_${userId}_access_token`);
+    if (legacyToken) {
+      // Migrate to platform_accounts for next time
+      settingsRepo.addAccount({
+        id: require('uuid').v4(),
+        user_id: userId,
+        platform: 'meta',
+        account_name: 'Meta - Legacy Migration',
+        credentials: { access_token: legacyToken },
+        is_active: 1
+      });
+      settingsRepo.delete(`meta_${userId}_access_token`);
+      return legacyToken;
+    }
+    return null;
+  }
 
   // GET /api/meta/accounts - Fetch all Ad Accounts for current user
   router.get('/', async (req, res) => {
     try {
-      // Get user's Meta access token
-      const token = req.headers.authorization?.replace('Bearer ', '');
-      if (!token) {
-        return res.status(401).json({ success: false, error: 'Authentication required' });
-      }
-
-      // Verify token and get user ID
-      let decoded;
-      try {
-        const jwt = require('jsonwebtoken');
-        decoded = jwt.verify(token, process.env.JWT_SECRET || 'very-secret-data-2026');
-      } catch (e) {
-        return res.status(401).json({ success: false, error: 'Invalid token' });
-      }
-
-      // Get user's Meta access token from settings
-      const metaToken = settingsRepo.get(`meta_${decoded.id}_access_token`);
+      const userId = req.user?.id || req.user?.sub || 'default';
+      
+      const metaToken = getMetaToken(settingsRepo, userId);
       if (!metaToken) {
         return res.status(400).json({ success: false, error: 'Meta account not connected. Please connect your Facebook account first.' });
       }
 
-      // Fetch Ad Accounts via Graph API
-      const accountsUrl = `https://graph.facebook.com/v19.0/me/adaccounts?fields=name,account_id,account_status,currency,business_name,business_id,budget_restriction_amount&access_token=${metaToken}`;
+      const accountsUrl = `https://graph.facebook.com/${API_VERSION}/me/adaccounts?fields=name,account_id,account_status,currency,business_name,business_id,budget_restriction_amount&access_token=${metaToken}`;
       
       const accountsResponse = await fetch(accountsUrl);
       const accountsData = await accountsResponse.json();
@@ -37,7 +54,6 @@ export function createMetaAccountsRouter(settingsRepo) {
         return res.status(400).json({ success: false, error: accountsData.error.message });
       }
 
-      // Filter and format accounts
       const filteredAccounts = (accountsData.data || []).map(acc => ({
         id: acc.account_id,
         name: acc.name,
@@ -61,7 +77,7 @@ export function createMetaAccountsRouter(settingsRepo) {
     }
   });
 
-  // GET /api/meta/business-manager - Fetch Business Managers
+  // GET /api/meta/business-managers - Fetch Business Managers
   router.get('/business-managers', async (req, res) => {
     try {
       const token = req.headers.authorization?.replace('Bearer ', '');
@@ -72,18 +88,17 @@ export function createMetaAccountsRouter(settingsRepo) {
       let decoded;
       try {
         const jwt = require('jsonwebtoken');
-        decoded = jwt.verify(token, process.env.JWT_SECRET || 'very-secret-data-2026');
+        decoded = jwt.verify(token, process.env.JWT_SECRET || (() => { throw new Error('JWT_SECRET not configured'); })());
       } catch (e) {
         return res.status(401).json({ success: false, error: 'Invalid token' });
       }
 
-      const metaToken = settingsRepo.get(`meta_${decoded.id}_access_token`);
+      const metaToken = getMetaToken(settingsRepo, decoded.id);
       if (!metaToken) {
         return res.status(400).json({ success: false, error: 'Meta account not connected' });
       }
 
-      // Fetch Business Managers via Graph API
-      const bizManagersUrl = `https://graph.facebook.com/v19.0/me/businesses?fields=id,name,username,platform_type&access_token=${metaToken}`;
+      const bizManagersUrl = `https://graph.facebook.com/${API_VERSION}/me/businesses?fields=id,name,username,platform_type&access_token=${metaToken}`;
       
       const bizResponse = await fetch(bizManagersUrl);
       const bizData = await bizResponse.json();
@@ -112,7 +127,7 @@ export function createMetaAccountsRouter(settingsRepo) {
     }
   });
 
-  // GET /api/meta/business-manager/:id/ad-accounts - Fetch Ad Accounts for specific Business Manager
+  // GET /api/meta/business-manager/:id/ad-accounts
   router.get('/business-manager/:id/ad-accounts', async (req, res) => {
     try {
       const businessManagerId = req.params.id;
@@ -125,18 +140,17 @@ export function createMetaAccountsRouter(settingsRepo) {
       let decoded;
       try {
         const jwt = require('jsonwebtoken');
-        decoded = jwt.verify(token, process.env.JWT_SECRET || 'very-secret-data-2026');
+        decoded = jwt.verify(token, process.env.JWT_SECRET || (() => { throw new Error('JWT_SECRET not configured'); })());
       } catch (e) {
         return res.status(401).json({ success: false, error: 'Invalid token' });
       }
 
-      const metaToken = settingsRepo.get(`meta_${decoded.id}_access_token`);
+      const metaToken = getMetaToken(settingsRepo, decoded.id);
       if (!metaToken) {
         return res.status(400).json({ success: false, error: 'Meta account not connected' });
       }
 
-      // Fetch Ad Accounts for specific Business Manager
-      const accountsUrl = `https://graph.facebook.com/v19.0/${businessManagerId}/adaccounts?fields=name,account_id,account_status,currency,business_name,budget_restriction_amount&access_token=${metaToken}`;
+      const accountsUrl = `https://graph.facebook.com/${API_VERSION}/${businessManagerId}/adaccounts?fields=name,account_id,account_status,currency,business_name,budget_restriction_amount&access_token=${metaToken}`;
       
       const accountsResponse = await fetch(accountsUrl);
       const accountsData = await accountsResponse.json();
@@ -166,6 +180,51 @@ export function createMetaAccountsRouter(settingsRepo) {
     } catch (err) {
       console.error('Fetch business manager ad accounts failed', { error: err.message });
       res.status(500).json({ success: false, error: 'Failed to fetch accounts: ' + err.message });
+    }
+  });
+
+  // GET /api/meta/pages — Fetch Facebook Pages (fanpages) for connected account
+  router.get('/pages', async (req, res) => {
+    try {
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      if (!token) {
+        return res.status(401).json({ success: false, error: 'Authentication required' });
+      }
+
+      let decoded;
+      try {
+        const jwt = require('jsonwebtoken');
+        decoded = jwt.verify(token, process.env.JWT_SECRET || (() => { throw new Error('JWT_SECRET not configured'); })());
+      } catch (e) {
+        return res.status(401).json({ success: false, error: 'Invalid token' });
+      }
+
+      const metaToken = getMetaToken(settingsRepo, decoded.id);
+      if (!metaToken) {
+        return res.status(400).json({ success: false, error: 'Meta account not connected' });
+      }
+
+      const pagesUrl = `https://graph.facebook.com/${API_VERSION}/me/accounts?fields=id,name,category,access_token,perms,tasks&access_token=${metaToken}`;
+      const pagesResponse = await fetch(pagesUrl);
+      const pagesData = await pagesResponse.json();
+
+      if (pagesData.error) {
+        return res.status(400).json({ success: false, error: pagesData.error.message });
+      }
+
+      const pages = (pagesData.data || []).map(p => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        perms: p.perms || [],
+        tasks: p.tasks || [],
+        hasAdAccess: (p.tasks || []).includes('ADVERTISE') || (p.tasks || []).includes('ANALYZE'),
+      }));
+
+      res.json({ success: true, data: { pages, total: pages.length } });
+    } catch (err) {
+      console.error('Fetch Meta pages failed', { error: err.message });
+      res.status(500).json({ success: false, error: 'Failed to fetch pages: ' + err.message });
     }
   });
 

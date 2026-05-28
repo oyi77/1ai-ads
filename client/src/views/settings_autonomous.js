@@ -38,7 +38,7 @@ export function renderAutonomousSection() {
                 <div class="flex flex-col md:flex-row gap-4 items-center">
                   <div class="flex-1">
                     <p class="text-sm text-slate-300 leading-relaxed font-medium">Your AdForge instance is successfully connected to BerkahKarya's Meta Technology Provider profile.</p>
-                    <p class="text-xs text-slate-500 mt-1">Using System User Token: EAAKA2...ZDZD</p>
+                    <p class="text-xs text-slate-500 mt-1">Using System User Token: ***CONFIGURED***...ZDZD</p>
                   </div>
                   <button id="fb-reconnect-btn" class="px-6 py-2.5 bg-[#161b22] hover:bg-[#1c2128] border border-[#30363d] text-white rounded-xl text-sm font-bold transition-all">🔄 Rotate Token</button>
                 </div>

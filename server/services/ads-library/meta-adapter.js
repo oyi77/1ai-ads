@@ -13,10 +13,10 @@
 import { BasePlatformAdapter } from './base-adapter.js';
 import { createLogger } from '../../lib/logger.js';
 import { PlatformError, ConfigurationError } from '../../lib/errors.js';
+import config from '../../config/index.js';
 
 const log = createLogger('meta-adapter');
-const GRAPH_API_VERSION = 'v21.0';
-const GRAPH_API_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
+const GRAPH_API_BASE = `https://graph.facebook.com/${config.metaApiVersion}`;
 
 const DEFAULT_FIELDS = [
   'id', 'page_name', 'page_id',

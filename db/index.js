@@ -96,6 +96,31 @@ export function createDatabase(dbPath) {
       )
     `);
 
+    // Content queue table (ported from content-generator)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS content_queue (
+        id TEXT PRIMARY KEY,
+        page_id TEXT NOT NULL,
+        platform TEXT DEFAULT 'facebook',
+        file_path TEXT NOT NULL,
+        caption TEXT DEFAULT '',
+        hashtags TEXT DEFAULT '[]',
+        hook TEXT DEFAULT '',
+        cta TEXT DEFAULT '',
+        category TEXT DEFAULT '',
+        style TEXT DEFAULT '',
+        product_desc TEXT DEFAULT '',
+        video_id TEXT,
+        permalink_url TEXT,
+        status TEXT DEFAULT 'pending',
+        scheduled_at INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        posted_at INTEGER,
+        updated_at INTEGER,
+        error TEXT
+      )
+    `);
+
     // Ensure campaigns have a unique constraint on campaign_id
     const campIndices = db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='campaigns'").all().map(i => i.name);
     if (!campIndices.includes('idx_campaigns_platform_external_id')) {
