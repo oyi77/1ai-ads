@@ -1,4 +1,6 @@
 import { createLogger } from '../lib/logger.js';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 const log = createLogger('shopee-adapter');
 
@@ -9,14 +11,36 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 const RETRY_COUNT = 2;
 
 export class ShopeeAdapter {
-  constructor(baseUrl = 'http://localhost:8200') {
+  constructor(baseUrl = 'http://localhost:8200', sellerCookiesPath = null) {
     this.baseUrl = baseUrl;
-    this._state = 'closed'; // closed | open | half-open
+    this.sellerCookiesPath = sellerCookiesPath || join(process.cwd(), 'config', 'shopee_seller_cookies.json');
+    this._sellerCookies = this._loadSellerCookies();
+    this._csrfToken = this._extractCsrf(this._sellerCookies);
+    this._state = 'closed';
     this._failures = 0;
     this._successes = 0;
     this._openedAt = null;
     this._cache = null;
     this._cacheTs = 0;
+  }
+
+  _loadSellerCookies() {
+    try {
+      const raw = readFileSync(this.sellerCookiesPath, 'utf-8');
+      const data = JSON.parse(raw);
+      return data.cookies || [];
+    } catch {
+      return [];
+    }
+  }
+
+  _extractCsrf(cookies) {
+    const csrf = cookies.find(c => c.name === 'csrftoken');
+    return csrf ? csrf.value : '';
+  }
+
+  _cookieHeader() {
+    return this._sellerCookies.map(c => `${c.name}=${c.value}`).join('; ');
   }
 
   getCircuitState() {
@@ -57,48 +81,101 @@ export class ShopeeAdapter {
     }
   }
 
+  async fetchOrdersDirect(params = {}) {
+    if (!this._sellerCookies.length) return null;
+
+    try {
+      const body = {
+        page_number: params.page || 1,
+        page_size: params.limit || 50,
+      };
+
+      const res = await fetch('https://seller.shopee.co.id/api/v3/order/search_order_list', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Referer': 'https://seller.shopee.co.id/portal/sale',
+          'X-CSRFToken': this._csrfToken,
+          'X-Requested-With': 'XMLHttpRequest',
+          'Cookie': this._cookieHeader(),
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15_000),
+      });
+
+      if (!res.ok) throw new Error(`Seller API ${res.status}`);
+      const data = await res.json();
+      if (data.errcode) throw new Error(`Seller API error: ${data.message}`);
+
+      const orders = (data.data?.order_list || []).map(o => ({
+        order_id: o.order_sn,
+        status: o.order_status,
+        total: o.total_amount,
+        currency: 'IDR',
+        created_at: o.create_time ? new Date(o.create_time * 1000).toISOString() : null,
+        items: (o.item_list || []).map(i => ({
+          product_id: i.item_id?.toString(),
+          name: i.model_name,
+          quantity: i.model_quantity_purchased,
+          price: i.model_original_price,
+        })),
+      }));
+
+      log.info('Fetched orders from seller API', { count: orders.length });
+      return orders;
+    } catch (err) {
+      log.warn('Seller API fetch failed', { error: err.message });
+      return null;
+    }
+  }
+
   async fetchOrders(params = {}) {
     const state = this.getCircuitState();
-    if (state === 'open') {
+    if (state === 'open' && !params.force) {
       log.warn('Circuit open, returning cached data');
       return this._cache || [];
     }
 
     if (this._cache && Date.now() - this._cacheTs < CACHE_TTL_MS && !params.force) {
-      log.debug('Returning cached orders');
       return this._cache;
     }
 
+    // Try direct seller API first
+    const directOrders = await this.fetchOrdersDirect(params);
+    if (directOrders && directOrders.length > 0) {
+      this._recordSuccess();
+      this._cache = directOrders;
+      this._cacheTs = Date.now();
+      return directOrders;
+    }
+
+    // Fallback to 1ai-social API
     let lastError;
     for (let attempt = 0; attempt <= RETRY_COUNT; attempt++) {
       try {
         const qs = new URLSearchParams(params).toString();
         const url = `${this.baseUrl}/api/shopee/orders${qs ? `?${qs}` : ''}`;
-        log.info('Fetching Shopee orders', { url, attempt });
-
         const res = await fetch(url, {
           headers: { 'Accept': 'application/json' },
           signal: AbortSignal.timeout(15_000),
         });
-
-        if (!res.ok) throw new Error(`Shopee API ${res.status}`);
-
+        if (!res.ok) throw new Error(`1ai-social API ${res.status}`);
         const data = await res.json();
         const orders = data.orders || data.data || data || [];
-
         this._recordSuccess();
         this._cache = orders;
         this._cacheTs = Date.now();
-        log.info('Fetched Shopee orders', { count: orders.length });
+        log.info('Fetched orders from 1ai-social', { count: orders.length });
         return orders;
       } catch (err) {
         lastError = err;
-        log.warn('Fetch attempt failed', { attempt, error: err.message });
+        log.warn('1ai-social fetch failed', { attempt, error: err.message });
       }
     }
 
     this._recordFailure();
-    log.error('All fetch attempts failed', { error: lastError.message });
+    log.error('All fetch attempts failed', { error: lastError?.message });
     return this._cache || [];
   }
 }
