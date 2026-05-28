@@ -40,6 +40,8 @@ router.on('/trending', renderTrending);
 router.on('/competitor-spy', renderCompetitorSpy);
 router.on('/global-ads', renderGlobalAds);
 router.on('/ai-suggestions', renderAiSuggestions);
+router.on('/realtime', () => import('./views/realtime.js').then(m => document.getElementById('app').innerHTML = '<realtime-dashboard></realtime-dashboard>'));
+router.on('/attribution', () => import('./views/attribution.js').then(m => document.getElementById('app').innerHTML = '<attribution-dashboard></attribution-dashboard>'));
 
 // Nav visibility - ALL links visible without auth
 function updateNav() {
@@ -62,7 +64,9 @@ function updateNav() {
       'a[href="#/ai-suggestions"]',
       'a[href="#/research"]',
       'a[href="#/creator"]',
-      'a[href="#/settings"]'
+      'a[href="#/settings"]',
+      'a[href="#/realtime"]',
+      'a[href="#/attribution"]'
     ];
     allSelectors.forEach(sel => {
       const el = navLinks.querySelector(sel);
