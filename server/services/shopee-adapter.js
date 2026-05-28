@@ -10,9 +10,24 @@ const SUCCESS_TO_CLOSE = 3;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const RETRY_COUNT = 2;
 
+const SHOPEE_DOMAINS = {
+  id: { seller: 'seller.shopee.co.id', affiliate: 'affiliate.shopee.co.id', main: 'shopee.co.id' },
+  my: { seller: 'seller.shopee.com.my', affiliate: 'affiliate.shopee.com.my', main: 'shopee.com.my' },
+  th: { seller: 'seller.shopee.co.th', affiliate: 'affiliate.shopee.co.th', main: 'shopee.co.th' },
+  vn: { seller: 'seller.shopee.vn', affiliate: 'affiliate.shopee.vn', main: 'shopee.vn' },
+  ph: { seller: 'seller.shopee.ph', affiliate: 'affiliate.shopee.ph', main: 'shopee.ph' },
+  sg: { seller: 'seller.shopee.sg', affiliate: 'affiliate.shopee.sg', main: 'shopee.sg' },
+  br: { seller: 'seller.shopee.com.br', affiliate: 'affiliate.shopee.com.br', main: 'shopee.com.br' },
+  mx: { seller: 'seller.shopee.com.mx', affiliate: 'affiliate.shopee.com.mx', main: 'shopee.com.mx' },
+  co: { seller: 'seller.shopee.com.co', affiliate: 'affiliate.shopee.com.co', main: 'shopee.com.co' },
+  cl: { seller: 'seller.shopee.cl', affiliate: 'affiliate.shopee.cl', main: 'shopee.cl' },
+};
+
 export class ShopeeAdapter {
-  constructor(baseUrl = 'http://localhost:8200', sellerCookiesPath = null) {
+  constructor(baseUrl = 'http://localhost:8200', sellerCookiesPath = null, country = 'id') {
     this.baseUrl = baseUrl;
+    this.country = country;
+    this.domain = SHOPEE_DOMAINS[country] || SHOPEE_DOMAINS.id;
     this.sellerCookiesPath = sellerCookiesPath || join(process.cwd(), 'config', 'shopee_seller_cookies.json');
     this._sellerCookies = this._loadSellerCookies();
     this._csrfToken = this._extractCsrf(this._sellerCookies);
@@ -90,12 +105,12 @@ export class ShopeeAdapter {
         page_size: params.limit || 50,
       };
 
-      const res = await fetch('https://seller.shopee.co.id/api/v3/order/search_order_list', {
+      const res = await fetch(`https://${this.domain.seller}/api/v3/order/search_order_list`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Referer': 'https://seller.shopee.co.id/portal/sale',
+          'Referer': `https://${this.domain.seller}/portal/sale`,
           'X-CSRFToken': this._csrfToken,
           'X-Requested-With': 'XMLHttpRequest',
           'Cookie': this._cookieHeader(),
