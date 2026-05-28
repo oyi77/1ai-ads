@@ -77,6 +77,7 @@ import { createMcpRouter } from './routes/mcp.js';
 import { ScalevService } from './services/scalev.js';
 import { ShopeeAdapter } from './services/shopee-adapter.js';
 import { AttributionService } from './services/attribution-service.js';
+import { NotificationService } from './services/notification-service.js';
 import { AttributionRepository } from './repositories/attribution.js';
 import createAttributionRouter from './routes/attribution.js';
 
@@ -141,6 +142,7 @@ export function createApp(params) {
   const attributionRepo = new AttributionRepository(db);
   const shopeeAdapter = new ShopeeAdapter();
   const attributionService = new AttributionService(attributionRepo, shopeeAdapter, campaignsRepo, adsRepo);
+  const notificationService = new NotificationService();
 
   // Create app
   const app = express();
