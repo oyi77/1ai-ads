@@ -4,7 +4,7 @@ import json
 import os
 from datetime import datetime, timedelta
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 AD_ACCOUNT_ID = 'act_380721031313330'
 
 def send_telegram(message):

@@ -4,7 +4,7 @@ import time
 import os
 from datetime import datetime
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 AD_ACCOUNT_ID = 'act_380721031313330'
 LOG_FILE = 'logs/vilona_bid_cap_monitor.log'
 

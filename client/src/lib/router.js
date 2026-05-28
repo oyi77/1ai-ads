@@ -20,8 +20,11 @@ export class Router {
   resolve() {
     const hash = window.location.hash.slice(1) || '/';
 
-    // NO AUTH GUARD - Frictionless onboarding!
-    // Users can access all routes without login
+    // Auth guard: redirect unauthenticated users away from protected routes
+    if (!api.isAuthenticated() && !PUBLIC_ROUTES.has(hash)) {
+      window.location.hash = '#/login';
+      return;
+    }
 
     // If authenticated and on login, redirect to dashboard
     if (api.isAuthenticated() && hash === '/login') {

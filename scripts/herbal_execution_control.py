@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 import os
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 AD_ACCOUNT_ID = 'act_1439536310038458'
 
 def set_campaign_status(campaign_id, status):

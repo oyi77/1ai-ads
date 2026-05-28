@@ -17,15 +17,17 @@ const mockMCP = {
 // Mock LLM client
 const mockLLM = {
   async call(systemPrompt) {
-    if (systemPrompt.includes('Ads Copywriter')) {
+    if (systemPrompt.includes('Ads Copywriter') || systemPrompt.includes('copy')) {
       return JSON.stringify({
         format: 'single_image',
-        ads: [
-          { model: '1', model_name: 'P.A.S', hook: 'Test', body: 'Body', cta: 'CTA' },
-          { model: '2', model_name: 'Efek Gravitasi', hook: 'H2', body: 'B2', cta: 'C2' },
-          { model: '3', model_name: 'Hasil x3', hook: 'H3', body: 'B3', cta: 'C3' },
-          { model: '4', model_name: 'P2P', hook: 'H4', body: 'B4', cta: 'C4' },
-        ]
+        copies: [
+          { model: 'P.A.S', hook: 'Test hook', body: 'Body text', cta: 'Buy Now' },
+          { model: 'Efek Gravitasi', hook: 'H2', body: 'B2', cta: 'CTA' },
+          { model: 'Hasil x3', hook: 'H3', body: 'B3', cta: 'CTA' },
+          { model: 'P2P', hook: 'H4', body: 'B4', cta: 'CTA' },
+        ],
+        imageDirections: ['Lifestyle photo with product'],
+        targetingSuggestions: { interests: ['shopping'], ageRange: { min: 25, max: 55 }, locations: ['Indonesia'] }
       });
     }
     return '```html\n<h1>Generated LP</h1>\n```';
@@ -205,7 +207,7 @@ describe('App Integration', () => {
         keunggulan: 'Praktis',
       });
       expect(res.status).toBe(200);
-      expect(res.body.data.ads).toHaveLength(4);
+      expect(res.body.data.copies).toHaveLength(4);
     });
 
     it('POST /api/ads/generate with missing product returns 400', async () => {

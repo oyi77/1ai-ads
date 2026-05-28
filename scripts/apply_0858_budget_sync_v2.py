@@ -2,7 +2,7 @@ import requests
 import os
 
 # Hardcoded token from the scan script which is known to work
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 
 CHANGES = {
     "120248436652100416": 300000, # Winning Scale -> UP

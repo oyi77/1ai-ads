@@ -1,7 +1,7 @@
 import requests
 import os
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 AD_ACCOUNT_ID = 'act_1439536310038458'
 
 def get_history():

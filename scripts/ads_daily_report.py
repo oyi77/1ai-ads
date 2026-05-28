@@ -11,7 +11,7 @@ import requests, json, os, sys
 from datetime import datetime, timedelta
 import os
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 API_BASE = 'https://graph.facebook.com/v19.0'
 
 ACCOUNTS = [

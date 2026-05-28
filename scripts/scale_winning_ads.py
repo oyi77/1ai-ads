@@ -2,7 +2,7 @@ import requests
 import json
 import os
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 ACCOUNT_ID = 'act_1439536310038458'
 WINNING_CAMPAIGN_ID = '120245035630550444' # SCALE_CBO_Purwoceng 2_Prospek (CTR 15%)
 

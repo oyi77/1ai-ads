@@ -1,7 +1,7 @@
 import requests
 import os
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 ACCOUNTS = ['act_380721031313330', 'act_435670549443081']
 
 def check_active_budgets():

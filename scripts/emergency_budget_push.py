@@ -1,7 +1,7 @@
 import requests
 import os
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 ACCOUNT_NYAMI = 'act_380721031313330'
 ACCOUNT_KAKRIPUT = 'act_435670549443081'
 

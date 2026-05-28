@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta
 
 # CONFIG KAKRIPUT ONLY
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 AD_ACCOUNT_ID = 'act_435670549443081'
 
 def fetch_kakriput_ads_history():

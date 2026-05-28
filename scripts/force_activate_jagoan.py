@@ -1,7 +1,7 @@
 import requests
 import os
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 
 def reactivate():
     # Rak Dapur 2 (120244776291840121) & Rak Dapur 3 (120244919716960121)

@@ -2,7 +2,7 @@ import requests
 import json
 import os
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 NEW_CAMPAIGN_ID = '120245619456560121'
 
 def setup_clean_bidcap():

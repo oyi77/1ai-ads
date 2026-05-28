@@ -1,9 +1,10 @@
 import { Router } from 'express';
+import { requireAuth } from '../middleware/auth.js';
 
 export function createTrendingRouter(trendingService) {
   const router = Router();
 
-  router.get('/internal', async (_req, res) => {
+  router.get('/internal', requireAuth, async (_req, res) => {
     try {
       const trends = await trendingService.getInternalTrends();
       res.json({ success: true, data: trends });
@@ -12,7 +13,7 @@ export function createTrendingRouter(trendingService) {
     }
   });
 
-  router.get('/external', async (req, res) => {
+  router.get('/external', requireAuth, async (req, res) => {
     try {
       const { industry, region, source = 'api' } = req.query;
       const trends = await trendingService.getExternalTrends(industry, region);
@@ -22,7 +23,7 @@ export function createTrendingRouter(trendingService) {
     }
   });
 
-  router.get('/all', async (req, res) => {
+  router.get('/all', requireAuth, async (req, res) => {
     try {
       const { industry, region, source = 'api' } = req.query;
       const trends = await trendingService.getAllTrends(industry, region);

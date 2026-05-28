@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 
 # CONFIGURATION
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 ACCOUNTS = ['act_380721031313330', 'act_435670549443081', 'act_1439536310038458']
 LOG_FILE = 'logs/vilona_autonomous_scaling.log'
 

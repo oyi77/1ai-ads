@@ -2,7 +2,7 @@ import requests
 import json
 import os
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 CAMPAIGN_PURWOCENG_ID = '120245846355810444'
 
 def restrict_to_men():

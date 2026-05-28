@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 
 # CONFIGURATION
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 AD_ACCOUNT_ID = 'act_380721031313330'
 CHECK_INTERVAL = 300  # 5 minutes
 LOG_FILE = 'logs/vilona_3807_monitor.log'

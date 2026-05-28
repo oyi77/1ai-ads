@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 
 # CONFIGURATION - PERMANENT SYSTEM TOKEN
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 AD_ACCOUNT_ID = 'act_380721031313330'
 
 def monitor_and_execute():

@@ -2,7 +2,7 @@ import requests
 import json
 import os
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 ACCOUNT_ID = 'act_1439536310038458'
 
 def get_full_insights(level_id):

@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 # ── CONFIGURATION ──────────────────────────────────────────────
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 AD_ACCOUNT_ID = 'act_1439536310038458'
 AD_ACCOUNT_NUM = '1439536310038458'
 WAHA_BASE = os.environ.get('WAHA_BASE', 'http://localhost:3003')

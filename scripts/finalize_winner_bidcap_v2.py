@@ -2,7 +2,7 @@ import requests
 import json
 import os
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 AD_ACCOUNT_ID = 'act_380721031313330'
 WINNING_POST_ID = '122109158625125943'
 PAGE_ID = '110360638531778'

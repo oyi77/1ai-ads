@@ -153,7 +153,7 @@ export function createAdsRouter(adsRepo, adGenerator) {
     if (!v.valid) return res.status(400).json({ success: false, error: v.error });
 
     try {
-      const result = await adGenerator.generateAds(req.body.product, req.body.target, req.body.keunggulan);
+      const result = await adGenerator.generateAdPackage(req.body.product, req.body.target, req.body.keunggulan);
       res.json({ success: true, data: result });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });

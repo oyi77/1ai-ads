@@ -1,7 +1,7 @@
 """Quick check: yesterday's total spend for 1041"""
 import json, requests, os, sys
 with open(os.path.join(os.path.dirname(__file__), 'list_ad_accounts.py')) as f:
-    TOKEN = ***"ACCESS_TOKEN = '")[1].split("'")[0]
+    TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 
 # Total spend yesterday
 r = requests.get('https://graph.facebook.com/v19.0/act_380721031313330/insights',
@@ -47,4 +47,7 @@ if 'data' in data2:
         spend = int(float(d.get('spend',0)))
         cpc = float(d.get('cpc',0))
         ctr = float(d.get('ctr',0))
-        print(f'{d[\"campaign_name\"]:50s} {spend:>10,} {cpc:>8.0f} {ctr:>7.2f}% {int(float(d.get(\"impressions\",0))):>8,} {int(float(d.get(\"clicks\",0))):>8,}')
+        name = d['campaign_name']
+        imp = int(float(d.get('impressions', 0)))
+        clk = int(float(d.get('clicks', 0)))
+        print(f'{name:50s} {spend:>10,} {cpc:>8.0f} {ctr:>7.2f}% {imp:>8,} {clk:>8,}')

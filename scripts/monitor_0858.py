@@ -15,7 +15,7 @@ import urllib.request, urllib.error, json, os, sys, time, signal
 from datetime import datetime
 import os
 
-TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 ACCOUNT = "act_435670549443081"
 LOG_FILE = "/home/openclaw/.openclaw/workspace/logs/ads_0858_monitor.log"
 

@@ -186,7 +186,7 @@ def main():
             break
         log(f"⏳ Attempt {attempt}: rate limited, attempt {attempt}/{max_attempts}, waiting {wait}s...")
         wait = min(BASE_WAIT * (2 ** attempt), MAX_WAIT)
-            time.sleep(wait)
+        time.sleep(wait)
     else:
         log("❌ Gave up after 60 attempts")
         sys.exit(1)

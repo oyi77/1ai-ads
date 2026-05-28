@@ -6,7 +6,7 @@ export class PaymentService {
   constructor(paymentsRepo, usersRepo, scalevService) {
     this.paymentsRepo = paymentsRepo;
     this.usersRepo = usersRepo;
-    this.scalevService = scalevService;
+    this.scalevService = scalevService || { createOrder: () => Promise.resolve({ checkout_url: '', order_id: '' }) };
   }
 
   async initiatePayment({ userId, amount, currency, provider, metadata }) {

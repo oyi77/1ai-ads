@@ -2,7 +2,7 @@ import requests
 import json
 import os
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 ACCOUNT_ID = 'act_380721031313330'
 
 url = f'https://graph.facebook.com/v19.0/{ACCOUNT_ID}/insights'

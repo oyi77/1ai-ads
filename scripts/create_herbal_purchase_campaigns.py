@@ -3,7 +3,7 @@ import json
 import time
 import os
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 AD_ACCOUNT_ID = 'act_1439536310038458'
 PIXEL_ID = '771021905629860'
 

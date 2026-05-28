@@ -2,7 +2,7 @@ import requests
 from datetime import datetime
 import os
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 AD_ACCOUNT_ID = 'act_435670549443081'
 
 def quick_audit():

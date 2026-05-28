@@ -100,6 +100,20 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     }
   });
 
+  // List all campaigns
+  router.get('/', async (req, res) => {
+    try {
+      const { db } = req.app.locals;
+      if (!db) {
+        return res.json({ success: true, data: [], total: 0 });
+      }
+      const camps = db.prepare('SELECT * FROM campaigns ORDER BY created_at DESC LIMIT 50').all();
+      res.json({ success: true, data: camps, total: camps.length });
+    } catch (e) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
   // Generate AI creative package (without creating campaign)
   router.post('/creative', async (req, res) => {
     const { product, target, keunggulan, platform, format } = req.body;

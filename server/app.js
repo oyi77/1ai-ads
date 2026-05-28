@@ -28,7 +28,7 @@ import { createABTestsRouter } from './routes/ab-tests.js';
 import { AiAgent } from './services/ai-agent.js';
 import { MetaVideoService } from './services/meta-video-service.js';
 import { ContentScheduler } from './services/content-scheduler.js';
-import { AdResearchService } from './services/ad-research-service.js';
+import { AdResearchService } from './services/ad-research.js';
 import rateLimit from 'express-rate-limit';
 import express from 'express';
 import cors from 'cors';
@@ -66,6 +66,10 @@ import { createCampaignsRouter } from './routes/campaigns.js';
 import { createAdsRouter } from './routes/ads.js';
 import { createLandingRouter } from './routes/landing.js';
 import { createSettingsRouter } from './routes/settings.js';
+import { createAnalyticsRouter } from './routes/analytics.js';
+import { createResearchRouter } from './routes/research.js';
+import { createMcpRouter } from './routes/mcp.js';
+import { ScalevService } from './services/scalev.js';
 
 
 
@@ -94,17 +98,18 @@ export function createApp(params) {
   const webhookEventsRepo = new WebhookEventsRepository(db);
 
   // Create services
-  const llmClient = new LLMClient({
+  const llmClient = (params && params.llmClient) || new LLMClient({
     url: config.llm.url,
     model: config.llm.model,
     apiKey: config.llm.apiKey,
     timeout: config.llm.timeout,
   });
-  
+
   const adspirerClient = new AdspirerMcpClient(platformAccountsRepo);
   const trendingService = new TrendingService(campaignsRepo);
   const paymentsRepo = new PaymentsRepository(db);
-  const paymentService = new PaymentService(paymentsRepo);
+  const scalevService = (params && params.scalevService) || new ScalevService(settingsRepo);
+  const paymentService = new PaymentService(paymentsRepo, usersRepo, scalevService);
   const learningService = new LearningService(campaignsRepo, adsRepo, landingRepo);
   
   const metaApi = new MetaAdsAPI(settingsRepo);
@@ -207,6 +212,11 @@ export function createApp(params) {
   app.use('/api/tokens', requireAuth, createTokenRouter());
   app.use('/api/webhooks', createWebhookRouter());
   app.use('/api/ab-tests', requireAuth, createABTestsRouter(metaApi));
+
+  const mcpClient = (params && params.mcpClient) || { getStatus: () => ({}), connect: () => ({}), disconnect: () => ({}), callTool: () => ({}), getTools: () => [] };
+  app.use('/api/analytics', requireAuth, createAnalyticsRouter(campaignsRepo));
+  app.use('/api/research', requireAuth, createResearchRouter(adResearchService));
+  app.use('/api/mcp', requireAuth, createMcpRouter(mcpClient, settingsRepo, campaignsRepo, adsRepo, landingRepo));
 
   app.get('/api/cf-health', publicRateLimit, (req, res) => {
     res.json({ status: 'ok', service: 'adforge', timestamp: new Date().toISOString() });

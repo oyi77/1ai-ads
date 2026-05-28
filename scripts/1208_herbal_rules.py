@@ -22,7 +22,7 @@ import requests, json, time, os
 from datetime import datetime
 import os
 
-TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 BASE = 'https://graph.facebook.com/v19.0'
 ACT = 'act_1439536310038458'  # 1208
 

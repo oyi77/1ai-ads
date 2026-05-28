@@ -2,7 +2,7 @@ import requests
 import json
 import os
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 AD_ACCOUNT_ID = 'act_435670549443081' # Kakriput
 WINNING_POST_URL = 'https://www.facebook.com/61583778313869/posts/122112585633125943/'
 POST_ID = '122112585633125943'

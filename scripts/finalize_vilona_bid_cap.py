@@ -3,7 +3,7 @@ import json
 import os
 
 # TARGET: SELOW ID 1041
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 AD_ACCOUNT_ID = 'act_380721031313330'
 NEW_CAMPAIGN_ID = '120245619456560121' # ID dari campaign yang barusan dibuat
 

@@ -3,7 +3,7 @@ import json
 import os
 
 # Config
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 AD_ACCOUNT_ID = 'act_435670549443081'
 
 # Selected Winners for May 15, 04:00 AM

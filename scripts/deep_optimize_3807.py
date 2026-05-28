@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime
 import os
 
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 ACCOUNT_ID = 'act_380721031313330'
 
 # 1. SHOPEE DATA (28 Apr - 10 Mei) - Refined from user provide CSV

@@ -5,7 +5,7 @@ from datetime import datetime
 import os
 
 # CONFIGURATION
-ACCESS_TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+ACCESS_TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 ACCOUNTS = ['act_380721031313330', 'act_1439536310038458']
 
 def log_action(message):

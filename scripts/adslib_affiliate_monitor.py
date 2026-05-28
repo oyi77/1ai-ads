@@ -24,7 +24,7 @@ LOG_PATH = 'logs/adslib_aff_monitor.log'
 
 # Meta Ad Library API endpoint
 API = 'https://graph.facebook.com/v19.0/ads_archive'
-ACCESS_TOKEN = os.getenv('META_ADLIB_ACCESS_TOKEN', 'os.getenv('META_ACCESS_TOKEN', '')')
+ACCESS_TOKEN = os.getenv('META_ADLIB_ACCESS_TOKEN', os.getenv('META_ACCESS_TOKEN', ''))
 
 FIELDS = [
     'ad_creative_body', 'ad_creative_link_caption', 'ad_creative_link_description',
