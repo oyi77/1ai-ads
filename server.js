@@ -61,6 +61,9 @@ const PORT = config.port;
 
 const server = app.listen(PORT, () => console.log(`1ai-ads running on ${PORT}`));
 
+// Attach WebSocket realtime service
+app.locals.realtimeService.attach(server);
+
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');

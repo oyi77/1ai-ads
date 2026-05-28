@@ -241,6 +241,21 @@ CREATE INDEX IF NOT EXISTS idx_campaigns_platform ON campaigns(platform);
 CREATE INDEX IF NOT EXISTS idx_automation_rules_campaign ON automation_rules(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_perf_history_campaign ON performance_history(campaign_id, snapshot_date);
 
+CREATE TABLE IF NOT EXISTS ad_utm_map (
+  id TEXT PRIMARY KEY,
+  ad_id TEXT NOT NULL UNIQUE,
+  campaign_id TEXT NOT NULL,
+  destination_url TEXT NOT NULL,
+  utm_source TEXT DEFAULT 'meta',
+  utm_medium TEXT DEFAULT 'paid',
+  utm_campaign TEXT,
+  utm_content TEXT,
+  click_count INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_ad_utm_map_ad_id ON ad_utm_map(ad_id);
+
 -- Triggers for updated_at
 CREATE TRIGGER IF NOT EXISTS ads_updated_at AFTER UPDATE ON ads
 BEGIN UPDATE ads SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
@@ -252,3 +267,20 @@ BEGIN UPDATE landing_pages SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
 
 CREATE TRIGGER IF NOT EXISTS payments_updated_at AFTER UPDATE ON payments
 BEGIN UPDATE payments SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
+
+-- Attribution table for Shopee order matching
+CREATE TABLE IF NOT EXISTS attributions (
+  id TEXT PRIMARY KEY,
+  ad_id TEXT NOT NULL,
+  campaign_id TEXT NOT NULL,
+  shopee_order_id TEXT NOT NULL,
+  shopee_revenue REAL DEFAULT 0,
+  ad_spend REAL DEFAULT 0,
+  match_method TEXT DEFAULT 'taglink',
+  matched_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(shopee_order_id, campaign_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_attributions_campaign ON attributions(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_attributions_ad ON attributions(ad_id);
+CREATE INDEX IF NOT EXISTS idx_attributions_matched_at ON attributions(matched_at);

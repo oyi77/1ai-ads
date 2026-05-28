@@ -25,6 +25,11 @@ import createBatchRouter from './routes/batch.js';
 import createTokenRouter from './routes/tokens.js';
 import createWebhookRouter from './routes/webhooks.js';
 import { createABTestsRouter } from './routes/ab-tests.js';
+import createTrackRouter from './routes/track.js';
+import { AdUtmMapRepository } from './repositories/ad-utm-map.js';
+import { UtmTaggerService } from './services/utm-tagger.js';
+import { createRealtimeRouter } from './routes/realtime.js';
+import { RealtimeService } from './services/realtime-service.js';
 import { AiAgent } from './services/ai-agent.js';
 import { MetaVideoService } from './services/meta-video-service.js';
 import { ContentScheduler } from './services/content-scheduler.js';
@@ -70,6 +75,10 @@ import { createAnalyticsRouter } from './routes/analytics.js';
 import { createResearchRouter } from './routes/research.js';
 import { createMcpRouter } from './routes/mcp.js';
 import { ScalevService } from './services/scalev.js';
+import { ShopeeAdapter } from './services/shopee-adapter.js';
+import { AttributionService } from './services/attribution-service.js';
+import { AttributionRepository } from './repositories/attribution.js';
+import createAttributionRouter from './routes/attribution.js';
 
 
 
@@ -96,6 +105,8 @@ export function createApp(params) {
   // Rules repository for autonomous campaign manager
   const rulesRepo = new RulesRepository(db);
   const webhookEventsRepo = new WebhookEventsRepository(db);
+  const adUtmMapRepo = new AdUtmMapRepository(db);
+  const utmTagger = new UtmTaggerService(adUtmMapRepo);
 
   // Create services
   const llmClient = (params && params.llmClient) || new LLMClient({
@@ -118,12 +129,18 @@ export function createApp(params) {
   const contentScheduler = new ContentScheduler({ videoService, llmClient, db });
   const adResearchService = new AdResearchService({ metaApi, db });
   const orchestrator = new CampaignOrchestrator(metaApi, creativeStudio);
-  
+  const realtimeService = new RealtimeService(metaApi, campaignsRepo);
+
   const suggestionsRepo = new AiSuggestionsRepository(db);
   const aiAgent = new AiAgent(settingsRepo, adsRepo, campaignsRepo, llmClient, suggestionsRepo, landingRepo);
 
   // Create BigQuery export service (for Looker Studio)
   const bigQueryExport = new BigQueryExportService();
+
+  // Attribution service for Shopee order matching
+  const attributionRepo = new AttributionRepository(db);
+  const shopeeAdapter = new ShopeeAdapter();
+  const attributionService = new AttributionService(attributionRepo, shopeeAdapter, campaignsRepo, adsRepo);
 
   // Create app
   const app = express();
@@ -213,6 +230,10 @@ export function createApp(params) {
   app.use('/api/webhooks', createWebhookRouter());
   app.use('/api/ab-tests', requireAuth, createABTestsRouter(metaApi));
 
+  app.use('/api/attribution', requireAuth, createAttributionRouter(attributionService, attributionRepo));
+  app.use('/api/realtime', requireAuth, createRealtimeRouter(realtimeService));
+  app.locals.realtimeService = realtimeService;
+
   const mcpClient = (params && params.mcpClient) || { getStatus: () => ({}), connect: () => ({}), disconnect: () => ({}), callTool: () => ({}), getTools: () => [] };
   app.use('/api/analytics', requireAuth, createAnalyticsRouter(campaignsRepo));
   app.use('/api/research', requireAuth, createResearchRouter(adResearchService));
@@ -226,10 +247,14 @@ export function createApp(params) {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  // Public tracking redirect (no auth — click tracking for ads)
+  app.use('/t', createTrackRouter(adUtmMapRepo, utmTagger));
+
   // Frontend routes (SPA) - Catch-all for SPA routing
   app.use((req, res, next) => {
-    if (req.path.startsWith('/api') || 
-        req.path.startsWith('/assets') || 
+    if (req.path.startsWith('/api') ||
+        req.path.startsWith('/assets') ||
+        req.path.startsWith('/t/') ||
         req.path.startsWith('/favicon.ico')) {
       return next();
     }
