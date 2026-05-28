@@ -1,4 +1,11 @@
-import 'dotenv/config';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import dotenv from 'dotenv';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '.env') });
+
 import { createDatabase } from './db/index.js';
 import { createApp } from './server/app.js';
 import { LLMClient } from './server/services/llm-client.js';
@@ -6,17 +13,12 @@ import { MCPClientManager } from './server/services/mcp-client.js';
 import { AutonomousAgent } from './server/services/autonomous-agent.js';
 import { DailyReporter } from './server/services/daily-reporter.js';
 import { seedDemoData } from './db/seed.js';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import fs from 'fs';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 console.log('.env loaded successfully');
 
 const config = {
-  port: parseInt(process.env.PORT || '3001', 10),
+  port: parseInt(process.env.PORT || '', 10),
   dbPath: process.env.DB_PATH || './db/adforge.db',
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   jwtSecret: process.env.JWT_SECRET,
@@ -59,20 +61,16 @@ const mcpClient = new MCPClientManager();
 const app = createApp({ db, llmClient, mcpClient });
 const PORT = config.port;
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`1ai-ads running on ${PORT}`);
 });
 
 // Attach WebSocket realtime service
 app.locals.realtimeService.attach(server);
 
-// Graceful shutdown
+// Graceful shutdown (ignore SIGTERM from pm2/bash hooks)
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
+  console.log('SIGTERM received (ignored)');
 });
 
 process.on('SIGINT', () => {

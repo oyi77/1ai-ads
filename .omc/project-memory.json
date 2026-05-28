@@ -405,6 +405,12 @@
       "type": "file"
     },
     {
+      "path": "server.js",
+      "accessCount": 11,
+      "lastAccessed": 1779998392084,
+      "type": "file"
+    },
+    {
       "path": "server/repositories/competitors.js",
       "accessCount": 10,
       "lastAccessed": 1775782746527,
@@ -438,12 +444,6 @@
       "path": "server/services/templates.js",
       "accessCount": 8,
       "lastAccessed": 1775781371850,
-      "type": "file"
-    },
-    {
-      "path": "server.js",
-      "accessCount": 8,
-      "lastAccessed": 1779915970303,
       "type": "file"
     },
     {

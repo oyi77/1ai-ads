@@ -18,7 +18,17 @@ export class RealtimeService {
    * Attach WebSocket server to an HTTP server
    */
   attach(server) {
-    this.wss = new WebSocketServer({ server, path: '/ws/realtime' });
+    this.wss = new WebSocketServer({ noServer: true });
+
+    server.on('upgrade', (req, socket, head) => {
+      if (req.url === '/ws/realtime') {
+        this.wss.handleUpgrade(req, socket, head, (ws) => {
+          this.wss.emit('connection', ws, req);
+        });
+      } else {
+        socket.destroy();
+      }
+    });
 
     this.wss.on('connection', (ws, req) => {
       log.info('Client connected', { ip: req.socket.remoteAddress });
