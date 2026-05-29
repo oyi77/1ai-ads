@@ -1,9 +1,10 @@
+import os
 import csv
 import json
 from collections import defaultdict
 
-click_file = '/home/openclaw/.openclaw/media/inbound/WebsiteClickReport202605132000---7849ff4b-b00b-4c2d-8df8-ce8cbe0755c8.csv'
-comm_file = '/home/openclaw/.openclaw/media/inbound/AffiliateCommissionReport202605132000---a9f17d60-d46a-40bb-b8fe-417cbe5bb1f8.csv'
+click_file = os.path.join(os.path.expanduser('~'), '.openclaw', 'media', 'inbound', 'WebsiteClickReport202605132000---7849ff4b-b00b-4c2d-8df8-ce8cbe0755c8.csv')
+comm_file = os.path.join(os.path.expanduser('~'), '.openclaw', 'media', 'inbound', 'AffiliateCommissionReport202605132000---a9f17d60-d46a-40bb-b8fe-417cbe5bb1f8.csv')
 
 def clean_tag(t):
     return t.replace('----', '').strip() if t else ''
@@ -36,7 +37,7 @@ def analyze():
             
             try:
                 comm = float(comm_raw)
-            except:
+            except Exception:
                 comm = 0.0
             
             if tag:

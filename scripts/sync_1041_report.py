@@ -7,13 +7,14 @@ Usage:
 This processes uploaded reports, updates governor thresholds,
 and logs recommendations.
 """
+import os
 import csv, json, os, sys
 from collections import defaultdict
 
 ACCOUNT = "act_380721031313330"
-GOVERNOR_SCRIPT = "/home/openclaw/.openclaw/workspace/scripts/spend_monitor_1041.py"
+GOVERNOR_SCRIPT = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "scripts", "spend_monitor_1041.py")
 STATE_FILE = "/tmp/ads_1041_governor_state.json"
-LOG_DIR = "/home/openclaw/.openclaw/workspace/logs/ads_1041_spend_sync.log"
+LOG_DIR = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "logs", "ads_1041_spend_sync.log")
 
 def log(msg):
     ts = __import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -132,7 +133,7 @@ if __name__ == '__main__':
         'commission': commission,
         'recommendations': {k: v for k, v in recs.items()}
     }
-    report_path = f"/home/openclaw/.openclaw/workspace/logs/ads_1041_sync_{__import__('datetime').datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    report_path = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "logs", f"ads_1041_sync_{__import__('datetime').datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
     with open(report_path, 'w') as f:
         json.dump(report, f, indent=2)
     log(f"✅ Report saved to {report_path}")

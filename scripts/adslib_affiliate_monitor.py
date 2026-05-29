@@ -58,7 +58,7 @@ def fetch_ads(after=None):
 def load_seen():
     if os.path.exists(SEEN_PATH):
         try: return json.load(open(SEEN_PATH))
-        except: pass
+        except Exception: pass
     return {}
 
 def save_seen(d):

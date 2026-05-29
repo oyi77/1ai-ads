@@ -194,7 +194,7 @@ export function seedTemplates(db) {
 }
 
 export function seedUsers(db) {
-  const passwordHash = hashPassword('admin123');
+  const passwordHash = hashPassword(process.env.ADMIN_PASSWORD || 'admin123');
 
   // Create admin user if not exists
   const adminId = uuid();

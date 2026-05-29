@@ -46,7 +46,6 @@ export function applyAiSuggestion(type) {
       })
       .catch(err => alert('Failed: ' + err.message));
   } else if (type === 'schedule') {
-    alert('Opening schedule modal...');
-    // TODO: Open schedule modal
+    window.location.hash = '#/schedule';
   }
 }

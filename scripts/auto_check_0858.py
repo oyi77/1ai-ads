@@ -88,7 +88,7 @@ def load_json(path, default=None):
     if os.path.exists(path):
         try:
             with open(path) as f: return json.load(f)
-        except: return default
+        except Exception: return default
     return default
 
 def save_json(path, data):
@@ -204,7 +204,7 @@ def check_0858():
             if first_seen:
                 try:
                     hours_active = (datetime.now() - datetime.fromisoformat(first_seen)).total_seconds() / 3600
-                except:
+                except Exception:
                     hours_active = 0
                 if hours_active > 24:
                     msg = f'⚠️ ZERO DELIVERY >24h: {cname[:50]} — active tapi gak tayang'
@@ -247,7 +247,7 @@ def check_0858():
                 try:
                     days_since = (datetime.now() - datetime.fromisoformat(last_scale)).days
                     can_scale = days_since >= 3
-                except:
+                except Exception:
                     can_scale = True
 
             if can_scale and budget > 0:

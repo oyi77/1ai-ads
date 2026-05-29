@@ -3,10 +3,11 @@
 Seed AdForge with real content: templates, automation rules, sample creatives.
 Closes the gap between marketing promises and system reality.
 """
+import os
 import sqlite3, json, uuid
 from datetime import datetime
 
-DB = '/home/openclaw/.openclaw/workspace/adforge/db/adforge.db'
+DB = os.path.join(os.path.expanduser('~'), '.openclaw', 'workspace', 'adforge', 'db', 'adforge.db')
 conn = sqlite3.connect(DB)
 c = conn.cursor()
 
@@ -131,7 +132,7 @@ print(f'✅ Seeded {len(pages)} landing pages')
 
 # ─── 5. COMPETITOR SNAPSHOTS (from existing monitor data) ───
 import glob, os
-log_dir = '/home/openclaw/.openclaw/workspace/logs'
+log_dir = os.path.join(os.path.expanduser('~'), '.openclaw', 'workspace', 'logs')
 for f in ['adslib_aff_monitor.log']:
     fp = os.path.join(log_dir, f)
     if os.path.exists(fp):

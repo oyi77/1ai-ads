@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-DB_PATH = "/home/openclaw/.openclaw/workspace/adforge/adforge.db"
+DB_PATH = os.environ.get("ADFORGE_DB_PATH", str(Path(__file__).resolve().parent.parent / "db" / "adforge.db"))
 
 def generate_id():
     return str(uuid.uuid4())[:8]

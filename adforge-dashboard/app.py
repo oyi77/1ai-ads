@@ -49,7 +49,7 @@ def rate_limit(max_attempts=10, window=300):
     return decorator
 
 # Paths
-BASE_DIR = Path("/home/openclaw/.openclaw/workspace/adforge/db")
+BASE_DIR = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "adforge", "db"))
 MASTER_DB = str(BASE_DIR / "adforge.db")
 USER_DB_DIR = str(BASE_DIR / "users")
 os.makedirs(USER_DB_DIR, exist_ok=True)
@@ -59,7 +59,7 @@ API_USER = "admin"
 API_PASS = "admin123"
 
 # Load FB config from .env
-ENV_PATH = "/home/openclaw/.openclaw/workspace/adforge/.env"
+ENV_PATH = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "adforge", ".env")
 FB_SYSTEM_TOKEN = ""
 FB_APP_ID = ""
 def load_fb_config():
@@ -72,7 +72,7 @@ def load_fb_config():
                     FB_SYSTEM_TOKEN = line.split("=", 1)[1].strip().strip("'\"")
                 elif line.startswith("FB_APP_ID="):
                     FB_APP_ID = line.split("=", 1)[1].strip().strip("'\"")
-    except:
+    except Exception:
         pass
 load_fb_config()
 
@@ -457,7 +457,7 @@ def settings_page():
                 msg = "✅ Your AdForge dashboard is connected! You'll receive real-time FB ads alerts here."
                 requests.post(f"https://api.telegram.org/bot{token}/sendMessage", 
                              json={"chat_id": chat_id, "text": msg}, timeout=5)
-            except:
+            except Exception:
                 pass
                 
         conn.close()
@@ -622,7 +622,7 @@ def system_user_connect():
             info = r.json()
             if 'name' in info:
                 account_name = info['name']
-        except:
+        except Exception:
             pass
         if 'act_' in account_id or account_id.startswith('10'):
             account_type = 'ad_account'
@@ -804,12 +804,12 @@ def api_taglink_generate():
         '--adset', adset,
         '--ad', ad,
         '--account', account
-    ], capture_output=True, text=True, cwd='/home/openclaw/.openclaw/workspace')
+    ], capture_output=True, text=True, cwd=os.path.join(os.path.expanduser('~'), '.openclaw', 'workspace'))
     
     try:
         output = json.loads(result.stdout)
         return jsonify({'success': True, 'taglink': output})
-    except:
+    except Exception:
         return jsonify({'success': False, 'error': result.stderr or result.stdout}), 500
 
 @app.route('/api/taglink/report')
@@ -820,7 +820,7 @@ def api_taglink_report():
     result = subprocess.run([
         'python3', 'scripts/vilona_taglink_attribution.py', 'report',
         '--json'
-    ], capture_output=True, text=True, cwd='/home/openclaw/.openclaw/workspace')
+    ], capture_output=True, text=True, cwd=os.path.join(os.path.expanduser('~'), '.openclaw', 'workspace'))
     
     return jsonify({'success': True, 'report': result.stdout})
 
@@ -854,7 +854,7 @@ def send_telegram_alert(user_id, text):
                 json={"chat_id": user['telegram_chat_id'], "text": text, "parse_mode": "Markdown"},
                 timeout=5
             )
-        except:
+        except Exception:
             pass
 
 # ===================== INIT (lazy) =====================

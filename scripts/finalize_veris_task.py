@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Post all 6 videos to all 15 Facebook pages + Cross-comment on all recent posts."""
+import os
 import json, requests, time, sys, os
 
 # Setup paths
-BASE = "/home/openclaw/.openclaw/workspace"
+BASE = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace")
 TOKENS_FILE = f"{BASE}/data/fb_page_tokens.json"
 LOG_FILE = f"{BASE}/data/final_task_log.txt"
 
@@ -18,12 +19,12 @@ if not os.path.exists(TOKENS_FILE):
 
 TOKENS = json.loads(open(TOKENS_FILE).read())
 VIDEOS = [
-    "/home/openclaw/.openclaw/media/inbound/shellalie95_2026_01_01_0613_Rebusan_akar_alang_alang_Minuman---6343e3a9-be68-4ce3-b2d7-8afbbf7563e8.mp4",
-    "/home/openclaw/.openclaw/media/inbound/pandajawaanimate_2026_05_03_1229_Manfaat_akar_alang_alang_Im---8592515b-2ff0-492f-8506-44124cefed62.mp4",
-    "/home/openclaw/.openclaw/media/inbound/darialam04_2026_05_07_1601_Jangan_Remehkan_Akar_Liar_Ini_Kha---c406d0ef-80a0-4694-9f2f-579b2116667f.mp4",
-    "/home/openclaw/.openclaw/media/inbound/griyasarinadisehat_2024_11_22_1021_Manfaat_akar_alang_alang_---88311ace-7c3d-4f8f-a7db-d8c87b957492.mp4",
-    "/home/openclaw/.openclaw/media/inbound/ssstik.io_herbarara_1778775427451---a54ab63b-4f10-48b1-b0f1-ccb6d302f79d.mp4",
-    "/home/openclaw/.openclaw/media/inbound/ssstik.io_mas.wied_348_1778775400762---00ff0395-4f84-42ad-9149-8fd102624217.mp4",
+    os.path.join(os.path.expanduser("~"), ".openclaw", "media", "inbound", "shellalie95_2026_01_01_0613_Rebusan_akar_alang_alang_Minuman---6343e3a9-be68-4ce3-b2d7-8afbbf7563e8.mp4"),
+    os.path.join(os.path.expanduser("~"), ".openclaw", "media", "inbound", "pandajawaanimate_2026_05_03_1229_Manfaat_akar_alang_alang_Im---8592515b-2ff0-492f-8506-44124cefed62.mp4"),
+    os.path.join(os.path.expanduser("~"), ".openclaw", "media", "inbound", "darialam04_2026_05_07_1601_Jangan_Remehkan_Akar_Liar_Ini_Kha---c406d0ef-80a0-4694-9f2f-579b2116667f.mp4"),
+    os.path.join(os.path.expanduser("~"), ".openclaw", "media", "inbound", "griyasarinadisehat_2024_11_22_1021_Manfaat_akar_alang_alang_---88311ace-7c3d-4f8f-a7db-d8c87b957492.mp4"),
+    os.path.join(os.path.expanduser("~"), ".openclaw", "media", "inbound", "ssstik.io_herbarara_1778775427451---a54ab63b-4f10-48b1-b0f1-ccb6d302f79d.mp4"),
+    os.path.join(os.path.expanduser("~"), ".openclaw", "media", "inbound", "ssstik.io_mas.wied_348_1778775400762---00ff0395-4f84-42ad-9149-8fd102624217.mp4"),
 ]
 
 CAPTION = """🌿 AKAR ALANG-ALANG — Rahasia Kesehatan Alami!
@@ -76,7 +77,7 @@ def add_comment(post_id, token, message):
             timeout=30
         )
         return r.json().get('id')
-    except:
+    except Exception:
         return None
 
 def fetch_recent_posts(pid, token):
@@ -87,7 +88,7 @@ def fetch_recent_posts(pid, token):
             timeout=30
         )
         return r.json().get('data', [])
-    except:
+    except Exception:
         return []
 
 def run():

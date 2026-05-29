@@ -40,8 +40,14 @@ router.on('/trending', renderTrending);
 router.on('/competitor-spy', renderCompetitorSpy);
 router.on('/global-ads', renderGlobalAds);
 router.on('/ai-suggestions', renderAiSuggestions);
-router.on('/realtime', () => import('./views/realtime.js').then(m => document.getElementById('app').innerHTML = '<realtime-dashboard></realtime-dashboard>'));
-router.on('/attribution', () => import('./views/attribution.js').then(m => document.getElementById('app').innerHTML = '<attribution-dashboard></attribution-dashboard>'));
+router.on('/realtime', async () => {
+  const { renderRealtimeView } = await import('./views/realtime.js');
+  document.getElementById('app').replaceChildren(renderRealtimeView());
+});
+router.on('/attribution', async () => {
+  const { renderAttributionView } = await import('./views/attribution.js');
+  document.getElementById('app').replaceChildren(await renderAttributionView());
+});
 
 // Nav visibility - ALL links visible without auth
 function updateNav() {

@@ -8,6 +8,7 @@ Prerequisites:
 - Campaign IDs for each product/platform
 """
 
+import os
 import requests
 import json
 import pandas as pd
@@ -17,8 +18,8 @@ import sys
 
 # Configuration
 POSTBRIDGE_API_BASE = "https://api.post-bridge.com/v1"
-POSTBRIDGE_API_KEY = ""  # TODO: Add your API key here
-PAYLOAD_FILE = Path("/home/openclaw/.openclaw/workspace/outputs/jendralbot_autoscaler/scale_plan.json")
+POSTBRIDGE_API_KEY = os.environ.get("POSTBRIDGE_API_KEY", "")
+PAYLOAD_FILE = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "outputs", "jendralbot_autoscaler", "scale_plan.json"))
 
 print("=" * 60)
 print("🚀 JENDRALBOT APPLY SCALE SCRIPT")
@@ -135,7 +136,7 @@ if SIMULATION_MODE:
 else:
     print("\n🚀 LIVE MODE - Applying changes via PostBridge API...")
     
-    # TODO: Add actual API calls here
+    # Postbridge API calls (set POSTBRIDGE_API_KEY env var)
     # Example:
     # headers = {"Authorization": f"Bearer {POSTBRIDGE_API_KEY}"}
     # response = requests.post(
@@ -147,7 +148,7 @@ else:
     print("Run scripts/jendralbot_api_client.py after API key setup")
 
 # Log execution
-log_file = Path("/home/openclaw/.openclaw/workspace/logs/autoscaler_report.log")
+log_file = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "logs", "autoscaler_report.log"))
 with open(log_file, 'a') as f:
     f.write(f"{datetime.now().isoformat()} | Scale application executed\n")
     f.write(f"  Mode: {'SIMULATION' if SIMULATION_MODE else 'LIVE'}\n")

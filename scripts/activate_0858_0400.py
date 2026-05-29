@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Activate 0858 campaigns at 04:00 WIB — Fix budgets + Activate"""
+import os
 import urllib.request, json, time, sys
 from datetime import datetime
 
@@ -11,7 +12,7 @@ if not (3 <= hour <= 4):
     sys.exit(0)
 
 tok = None
-with open('/home/openclaw/.openclaw/workspace/scripts/ads_daily_report.py') as f:
+with open(os.path.join(os.path.expanduser('~'), '.openclaw', 'workspace', 'scripts', 'ads_daily_report.py')) as f:
     for line in f:
         if "ACCESS_TOKEN = " in line:
             tok = line.split("'")[1]

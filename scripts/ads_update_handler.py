@@ -19,7 +19,7 @@ def load_manual_data():
     if os.path.exists(MANUAL_DATA_FILE):
         try:
             return json.load(open(MANUAL_DATA_FILE))
-        except:
+        except Exception:
             pass
     return {'revenue_entries': [], 'notes': [], 'status_updates': []}
 
@@ -59,7 +59,7 @@ def add_note(campaign, note):
     notes_path = os.path.join(REPORTS_DIR, 'campaign_notes.json')
     try:
         notes = json.load(open(notes_path))
-    except:
+    except Exception:
         notes = {}
     if campaign not in notes:
         notes[campaign] = []
@@ -83,7 +83,7 @@ def add_status_update(account, message):
     status_path = os.path.join(REPORTS_DIR, 'account_status_updates.json')
     try:
         statuses = json.load(open(status_path))
-    except:
+    except Exception:
         statuses = {}
     if account not in statuses:
         statuses[account] = []

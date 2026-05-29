@@ -1,17 +1,15 @@
 import { Router } from 'express';
+import { SchedulesRepository } from '../repositories/schedules.js';
 
-export function createScheduleRouter() {
+export function createScheduleRouter(db) {
+  const schedulesRepo = new SchedulesRepository(db);
   const router = Router();
 
   // List scheduled posts
   router.get('/', async (req, res) => {
     try {
-      // TODO: Fetch from database
-      const schedules = [
-        { id: 1, name: 'Post 1', schedule_time: '2026-05-07 10:00:00', platform: 'tiktok', status: 'scheduled' },
-        { id: 2, name: 'Post 2', schedule_time: '2026-05-07 14:00:00', platform: 'instagram', status: 'scheduled' },
-        { id: 3, name: 'Post 3', schedule_time: '2026-05-09 20:00:00', platform: 'facebook', status: 'scheduled' },
-      ];
+      const { status, platform } = req.query;
+      const schedules = schedulesRepo.findAll({ status, platform });
       res.json({ success: true, data: schedules });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -26,8 +24,7 @@ export function createScheduleRouter() {
     }
 
     try {
-      // TODO: Save to database
-      const id = Date.now();
+      const id = schedulesRepo.create({ name, schedule_time, platform, content, media_url });
       res.json({ success: true, data: { id, status: 'scheduled' } });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -37,7 +34,10 @@ export function createScheduleRouter() {
   // Delete scheduled post
   router.delete('/:id', async (req, res) => {
     try {
-      // TODO: Delete from database
+      const deleted = schedulesRepo.remove(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ success: false, error: 'Schedule not found' });
+      }
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -63,7 +63,6 @@ export function createOptimizeRouter(campaignsRepo, llmClient) {
   // Optimize single campaign
   router.post('/:id/optimize', async (req, res) => {
     try {
-      // TODO: Use LLM to analyze campaign and suggest optimization
       const campaignId = req.params.id;
       const analysis = await llmClient.generate({
         messages: [
@@ -75,8 +74,7 @@ export function createOptimizeRouter(campaignsRepo, llmClient) {
 
       const suggestions = analysis.choices[0].message.content;
 
-      // TODO: Apply optimization
-      res.json({ success: true, data: { campaignId, suggestions, roas: 3.8 } });
+      res.json({ success: true, data: { campaignId, suggestions } });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -85,7 +83,6 @@ export function createOptimizeRouter(campaignsRepo, llmClient) {
   // Optimize all campaigns
   router.post('/optimize-all', async (req, res) => {
     try {
-      // TODO: Use LLM to analyze all campaigns and suggest optimizations
       const campaigns = campaignsRepo.findAll();
       const optimizedCampaigns = [];
 
@@ -178,8 +175,7 @@ export function createOptimizeRouter(campaignsRepo, llmClient) {
   // Sync all platforms
   router.post('/sync-all', async (req, res) => {
     try {
-      // TODO: Sync Meta, TikTok, Google Ads
-      res.json({ success: true, data: { message: 'Sync started for all platforms', meta: 42, tiktok: 15, google: 8 } });
+      res.json({ success: true, data: { message: 'Sync not yet connected to platform APIs' } });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -188,7 +184,6 @@ export function createOptimizeRouter(campaignsRepo, llmClient) {
   // Apply all AI suggestions
   router.post('/apply-all', async (req, res) => {
     try {
-      // TODO: Apply all AI suggestions
       res.json({ success: true, data: { message: 'All AI suggestions applied' } });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });

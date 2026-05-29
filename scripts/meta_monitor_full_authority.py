@@ -31,7 +31,7 @@ def get_insights(level_id, level='campaign'):
             ctr = float(ins.get('inline_link_click_ctr', 0))
             cpr = spend / clicks if clicks > 0 else 0
             return {'spend': spend, 'clicks': clicks, 'ctr': ctr, 'cpr': cpr}
-    except:
+    except Exception:
         pass
     return None
 

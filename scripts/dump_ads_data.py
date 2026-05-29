@@ -21,7 +21,7 @@ def get_insights(level_id):
                 res[preset] = data[0]
             else:
                 res[preset] = {'spend': 0, 'clicks': 0}
-        except:
+        except Exception:
             res[preset] = {'error': True}
     return res
 

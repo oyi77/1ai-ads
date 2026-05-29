@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from datetime import datetime
 
-BASE_DIR = Path("/home/openclaw/.openclaw/workspace/adforge/db")
+BASE_DIR = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "adforge", "db"))
 MASTER_DB = str(BASE_DIR / "adforge.db")
 USER_DB_DIR = str(BASE_DIR / "users")
 

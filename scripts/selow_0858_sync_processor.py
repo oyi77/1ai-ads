@@ -1,3 +1,4 @@
+import os
 import csv
 import json
 from collections import defaultdict
@@ -25,7 +26,7 @@ def analyze_shopee_data(click_file, commission_file):
             comm_raw = row['Komisi Bersih Affiliate (Rp)'].replace(',', '')
             try:
                 comm = float(comm_raw)
-            except:
+            except Exception:
                 comm = 0.0
                 
             order_data[tag]['count'] += 1
@@ -56,8 +57,8 @@ def analyze_shopee_data(click_file, commission_file):
     return report
 
 if __name__ == "__main__":
-    click_path = "/home/openclaw/.openclaw/media/inbound/WebsiteClickReport202605131858---ed14e909-f31c-4675-8575-3e1f8c6ce0ee.csv"
-    comm_path = "/home/openclaw/.openclaw/media/inbound/AffiliateCommissionReport202605131858---69945316-e83c-46a2-8685-6e72971399a3.csv"
+    click_path = os.path.join(os.path.expanduser("~"), ".openclaw", "media", "inbound", "WebsiteClickReport202605131858---ed14e909-f31c-4675-8575-3e1f8c6ce0ee.csv")
+    comm_path = os.path.join(os.path.expanduser("~"), ".openclaw", "media", "inbound", "AffiliateCommissionReport202605131858---69945316-e83c-46a2-8685-6e72971399a3.csv")
     results = analyze_shopee_data(click_path, comm_path)
     
     print("━━━━━━━━━━━━━━━━━━━━━━")

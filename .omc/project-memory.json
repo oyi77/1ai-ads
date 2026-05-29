@@ -274,14 +274,20 @@
   "hotPaths": [
     {
       "path": "server/app.js",
-      "accessCount": 112,
-      "lastAccessed": 1779916721420,
+      "accessCount": 166,
+      "lastAccessed": 1780083881755,
       "type": "file"
     },
     {
+      "path": "",
+      "accessCount": 72,
+      "lastAccessed": 1780084149190,
+      "type": "directory"
+    },
+    {
       "path": "server",
-      "accessCount": 52,
-      "lastAccessed": 1779903852778,
+      "accessCount": 53,
+      "lastAccessed": 1780082868052,
       "type": "directory"
     },
     {
@@ -303,16 +309,16 @@
       "type": "file"
     },
     {
+      "path": "db/schema.sql",
+      "accessCount": 41,
+      "lastAccessed": 1780083467509,
+      "type": "file"
+    },
+    {
       "path": "server/services/competitor-spy.js",
       "accessCount": 39,
       "lastAccessed": 1775803909627,
       "type": "file"
-    },
-    {
-      "path": "",
-      "accessCount": 38,
-      "lastAccessed": 1779903943339,
-      "type": "directory"
     },
     {
       "path": "server/services/payments.js",
@@ -321,9 +327,9 @@
       "type": "file"
     },
     {
-      "path": "db/schema.sql",
-      "accessCount": 34,
-      "lastAccessed": 1775812548322,
+      "path": "db/seed.js",
+      "accessCount": 33,
+      "lastAccessed": 1780083087638,
       "type": "file"
     },
     {
@@ -333,9 +339,9 @@
       "type": "file"
     },
     {
-      "path": "db/seed.js",
-      "accessCount": 30,
-      "lastAccessed": 1775782789467,
+      "path": "client/src/app.js",
+      "accessCount": 25,
+      "lastAccessed": 1780084820422,
       "type": "file"
     },
     {
@@ -351,12 +357,6 @@
       "type": "file"
     },
     {
-      "path": "client/src/app.js",
-      "accessCount": 19,
-      "lastAccessed": 1775812527288,
-      "type": "file"
-    },
-    {
       "path": "server/repositories/payments.js",
       "accessCount": 18,
       "lastAccessed": 1779917004357,
@@ -369,6 +369,12 @@
       "type": "file"
     },
     {
+      "path": "db/index.js",
+      "accessCount": 16,
+      "lastAccessed": 1780082829339,
+      "type": "file"
+    },
+    {
       "path": "server/routes/trending.js",
       "accessCount": 15,
       "lastAccessed": 1775783190614,
@@ -378,12 +384,6 @@
       "path": ".env.example",
       "accessCount": 14,
       "lastAccessed": 1775807048925,
-      "type": "file"
-    },
-    {
-      "path": "db/index.js",
-      "accessCount": 13,
-      "lastAccessed": 1775809121450,
       "type": "file"
     },
     {
@@ -406,8 +406,8 @@
     },
     {
       "path": "server.js",
-      "accessCount": 11,
-      "lastAccessed": 1779998392084,
+      "accessCount": 12,
+      "lastAccessed": 1780082706615,
       "type": "file"
     },
     {
@@ -421,6 +421,12 @@
       "accessCount": 10,
       "lastAccessed": 1775806877446,
       "type": "file"
+    },
+    {
+      "path": "client/src",
+      "accessCount": 9,
+      "lastAccessed": 1780083670711,
+      "type": "directory"
     },
     {
       "path": "client",
@@ -460,8 +466,8 @@
     },
     {
       "path": "server/repositories/templates.js",
-      "accessCount": 6,
-      "lastAccessed": 1775782769825,
+      "accessCount": 7,
+      "lastAccessed": 1780082823817,
       "type": "file"
     },
     {
@@ -469,6 +475,12 @@
       "accessCount": 6,
       "lastAccessed": 1779902263878,
       "type": "directory"
+    },
+    {
+      "path": "client/src/lib/api.js",
+      "accessCount": 6,
+      "lastAccessed": 1780082828993,
+      "type": "file"
     },
     {
       "path": "client/src/views/competitor-spy.js",
@@ -495,18 +507,6 @@
       "type": "file"
     },
     {
-      "path": "client/src",
-      "accessCount": 5,
-      "lastAccessed": 1775812526683,
-      "type": "directory"
-    },
-    {
-      "path": "client/src/lib/api.js",
-      "accessCount": 4,
-      "lastAccessed": 1775780630219,
-      "type": "file"
-    },
-    {
       "path": "server/middleware/auth.js",
       "accessCount": 4,
       "lastAccessed": 1775782760075,
@@ -519,6 +519,12 @@
       "type": "file"
     },
     {
+      "path": "server/repositories",
+      "accessCount": 4,
+      "lastAccessed": 1780083399894,
+      "type": "directory"
+    },
+    {
       "path": "tests/unit/services/trending.test.js",
       "accessCount": 3,
       "lastAccessed": 1775738095429,
@@ -529,12 +535,6 @@
       "accessCount": 3,
       "lastAccessed": 1775803927041,
       "type": "file"
-    },
-    {
-      "path": "server/repositories",
-      "accessCount": 2,
-      "lastAccessed": 1775734814489,
-      "type": "directory"
     },
     {
       "path": "client/src/views/dashboard.js",

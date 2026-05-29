@@ -108,7 +108,7 @@ def get_top_performers():
         cpc = float(camp.get('cpc', 0))
         try:
             ctr = float(camp.get('ctr', 0))
-        except:
+        except Exception:
             ctr = 0
         
         # Winner criteria
@@ -147,7 +147,7 @@ def get_winning_post_ids(winners):
                 ig_id = creative.get('effective_instagram_story_id', '')
                 if ig_id:
                     post_ids.append(ig_id)
-        except:
+        except Exception:
             pass
     return list(set(post_ids))[:5]  # Deduplicate
 

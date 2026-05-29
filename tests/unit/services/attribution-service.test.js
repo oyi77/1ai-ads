@@ -75,33 +75,42 @@ describe('ShopeeAdapter - circuit breaker', () => {
 
   beforeEach(() => {
     adapter = new ShopeeAdapter('http://localhost:99999');
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   it('opens circuit after 5 failures', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('connection refused'));
+
     for (let i = 0; i < 5; i++) {
       await adapter.fetchOrders({ force: true });
     }
     expect(adapter.getCircuitState()).toBe('open');
+
+    vi.restoreAllMocks();
   });
 
   it('transitions to half-open after timeout', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('connection refused'));
+
     for (let i = 0; i < 5; i++) {
       await adapter.fetchOrders({ force: true });
     }
     expect(adapter.getCircuitState()).toBe('open');
 
+    // Simulate timeout by advancing fake timers
     vi.advanceTimersByTime(61_000);
     expect(adapter.getCircuitState()).toBe('half-open');
+
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('returns cached data when circuit is open', async () => {
     adapter._cache = [{ order_id: 'cached' }];
     adapter._cacheTs = Date.now();
+
+    // Mock fetch to fail fast (circuit breaker needs real failures)
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('connection refused'));
 
     for (let i = 0; i < 5; i++) {
       await adapter.fetchOrders({ force: true });
@@ -110,6 +119,8 @@ describe('ShopeeAdapter - circuit breaker', () => {
 
     const result = await adapter.fetchOrders({ force: true });
     expect(result).toEqual([{ order_id: 'cached' }]);
+
+    vi.restoreAllMocks();
   });
 
   it('uses cache within TTL', async () => {

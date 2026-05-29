@@ -17,12 +17,12 @@ from datetime import datetime
 import os
 
 # Load data files
-mapping_file = Path("/home/openclaw/.openclaw/workspace/outputs/jendralbot_autoscaler/platform_mapping.json")
+mapping_file = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "outputs", "jendralbot_autoscaler", "platform_mapping.json"))
 with open(mapping_file, 'r') as f:
     platform_data = json.load(f)
 
 # Load top products from autoscaler output
-top_products_file = Path("/home/openclaw/.openclaw/workspace/outputs/jendralbot_autoscaler/top_products.csv")
+top_products_file = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "outputs", "jendralbot_autoscaler", "top_products.csv"))
 top_products = pd.read_csv(top_products_file)
 
 print("=" * 60)
@@ -30,7 +30,7 @@ print("🚀 JENDRALBOT AUTO-SCALE SCRIPT")
 print("=" * 60)
 
 # Calculate total commission from completed orders
-completed_orders = pd.read_csv('/home/openclaw/media/inbound/AffiliateCommissionReport202605061348---58f678eb-edec-40f5-b45c-f74476a21e49.csv')
+completed_orders = pd.read_csv(os.path.join(os.path.expanduser('~'), 'media', 'inbound', 'AffiliateCommissionReport202605061348---58f678eb-edec-40f5-b45c-f74476a21e49.csv'))
 completed_orders = completed_orders[completed_orders['Status Pesanan'] == 'Selesai']
 total_revenue = completed_orders['Total Komisi per Pesanan(Rp)'].sum()
 
@@ -99,14 +99,14 @@ scale_plan = {
     'timestamp': datetime.now().isoformat()
 }
 
-save_file = Path("/home/openclaw/.openclaw/workspace/outputs/jendralbot_autoscaler/scale_plan.json")
+save_file = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "outputs", "jendralbot_autoscaler", "scale_plan.json"))
 with open(save_file, 'w') as f:
     json.dump(scale_plan, f, indent=2)
 
 print(f"\nAuto-scale plan saved to: {save_file}")
 
 # Log action
-log_file = Path("/home/openclaw/.openclaw/workspace/logs/autoscaler_report.log")
+log_file = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "logs", "autoscaler_report.log"))
 with open(log_file, 'a') as f:
     f.write(f"{datetime.now().isoformat()} | Auto-scale script executed\n")
     f.write(f"  Top 5 Products: Rp {recommended_top5:,}\n")

@@ -1,16 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { api } from '../../client/src/lib/api.js';
 
+// Must stub globals BEFORE importing api.js (ESM hoisting)
 global.fetch = vi.fn();
-global.localStorage = {
+vi.stubGlobal('localStorage', {
   getItem: vi.fn(),
   setItem: vi.fn(),
   removeItem: vi.fn(),
-};
-global.window = {
+});
+vi.stubGlobal('window', {
   dispatchEvent: vi.fn(),
-};
-global.CustomEvent = class {};
+});
+vi.stubGlobal('CustomEvent', class {});
+
+const { api } = await import('../../client/src/lib/api.js');
 
 describe('API Service', () => {
   beforeEach(() => {

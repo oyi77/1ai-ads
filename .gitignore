@@ -13,3 +13,7 @@ db/*.db-wal
 e2e-*.png
 dashboard-check.png
 __pycache__/
+.omc/
+db/db/
+db/users/
+opencli-adapter/.omc/

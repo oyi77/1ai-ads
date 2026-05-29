@@ -110,7 +110,7 @@ def load_state() -> dict:
         try:
             with open(STATE_FILE) as f:
                 return json.load(f)
-        except:
+        except Exception:
             pass
     return {"topics_cache": {}, "iteration": 0, "last_report": None}
 
@@ -418,7 +418,7 @@ async def daemon_loop():
             log(f"⚠️ Loop error: {e}")
             try:
                 await client.disconnect()
-            except:
+            except Exception:
                 pass
             await asyncio.sleep(60)
 

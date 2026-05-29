@@ -23,7 +23,7 @@ FB_REDIRECT_URI = os.getenv('FB_REDIRECT_URI', 'https://adforge.aitradepulse.com
 FB_API_VERSION = 'v21.0'  # v18.0 deprecated April 2025
 
 # User data storage
-USERS_DIR = Path('/home/openclaw/.openclaw/workspace/adforge_users')
+USERS_DIR = Path(os.getenv("ADFORGE_USERS_DIR", str(Path(__file__).parent / "adforge_users")))
 USERS_DIR.mkdir(parents=True, exist_ok=True)
 
 @app.route('/')
@@ -43,7 +43,7 @@ def login_page():
     password = request.form.get('password', '')
     # Delegate to Node.js API for auth
     try:
-        r = requests.post(f"http://127.0.0.1:3001/api/auth/login", json={
+        r = requests.post(f"{os.getenv('ADFORGE_API_URL', 'http://127.0.0.1:3001')}/api/auth/login", json={
             "username": username, "password": password
         }, timeout=5)
         data = r.json()
@@ -52,7 +52,7 @@ def login_page():
             session['access_token'] = data["data"]["accessToken"]
             return redirect(url_for('index'))
     except Exception as e:
-        pass
+        print(f"Login error: {e}")
     return render_template('login.html', error='Invalid credentials')
 
 
@@ -416,6 +416,6 @@ if __name__ == '__main__':
     app.run(
         host='0.0.0.0',
         port=5000,
-        debug=True,
+        debug=os.getenv('FLASK_DEBUG', 'false').lower() == 'true',
         use_reloader=True
     )

@@ -16,7 +16,7 @@ from datetime import datetime
 import os
 
 # Load platform mapping
-mapping_file = Path("/home/openclaw/.openclaw/workspace/outputs/jendralbot_autoscaler/platform_mapping.json")
+mapping_file = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "outputs", "jendralbot_autoscaler", "platform_mapping.json"))
 with open(mapping_file, 'r') as f:
     platform_data = json.load(f)
 
@@ -81,14 +81,14 @@ for up in underperforming:
     })
 
 # Save pause plan
-pause_file = Path("/home/openclaw/.openclaw/workspace/outputs/jendralbot_autoscaler/pause_plan.json")
+pause_file = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "outputs", "jendralbot_autoscaler", "pause_plan.json"))
 with open(pause_file, 'w') as f:
     json.dump(pause_plan, f, indent=2)
 
 print(f"\nAuto-pause plan saved to: {pause_file}")
 
 # Log action
-log_file = Path("/home/openclaw/.openclaw/workspace/logs/autoscaler_report.log")
+log_file = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "logs", "autoscaler_report.log"))
 with open(log_file, 'a') as f:
     f.write(f"{datetime.now().isoformat()} | Auto-pause script executed\n")
     f.write(f"  Platforms to pause: {len(underperforming)}\n")

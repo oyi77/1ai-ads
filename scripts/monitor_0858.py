@@ -17,7 +17,7 @@ import os
 
 TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 ACCOUNT = "act_435670549443081"
-LOG_FILE = "/home/openclaw/.openclaw/workspace/logs/ads_0858_monitor.log"
+LOG_FILE = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "logs", "ads_0858_monitor.log")
 
 # ── VERIS RULES v5 ──
 MAX_CPC = 150
@@ -34,12 +34,12 @@ def log(msg):
 
 def api(url):
     try: return json.loads(urllib.request.urlopen(urllib.request.Request(url), timeout=15).read())
-    except: return {'error': True}
+    except Exception: return {'error': True}
 
 def api_post(url, data):
     req = urllib.request.Request(url, data=json.dumps(data).encode(), headers={'Content-Type': 'application/json'})
     try: return json.loads(urllib.request.urlopen(req, timeout=15).read())
-    except: return {'error': True}
+    except Exception: return {'error': True}
 
 def pause_hierarchy(cid, cname, reason):
     """Pause campaign → adsets → ads"""

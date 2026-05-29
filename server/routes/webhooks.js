@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import { WebhookHandler } from '../services/webhook-handler.js';
 import config from '../config/index.js';
 
@@ -26,7 +27,26 @@ export default function createWebhookRouter() {
       return res.status(401).send('Invalid signature');
     }
     const events = handler.processEvent(req.body);
-    // TODO: emit events to event bus / store in DB
+    // Store events in DB for audit trail
+    if (events.length > 0) {
+      try {
+        const db = req.app.locals.db;
+        const insert = db.prepare(
+          'INSERT INTO webhook_events (id, source, event_type, payload, processed, created_at) VALUES (?, ?, ?, ?, 0, CURRENT_TIMESTAMP)'
+        );
+        for (const event of events) {
+          insert.run(
+            crypto.randomUUID(),
+            event.field || 'meta',
+            event.entryId || '',
+            JSON.stringify(event.value || {})
+          );
+        }
+      } catch (err) {
+        // Log but don't fail the webhook response
+        console.error('Failed to store webhook events:', err.message);
+      }
+    }
     res.status(200).send('OK');
   });
 

@@ -83,7 +83,7 @@ def load_state():
     if STATE_FILE.exists():
         try:
             return json.loads(STATE_FILE.read_text())
-        except:
+        except Exception:
             pass
     return {
         'last_alert_time': {},

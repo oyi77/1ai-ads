@@ -127,7 +127,7 @@ def main():
             inp = input(f"  Komisi (exclude Belum Bayar): Rp ")
             try:
                 commission = int(inp.replace('.','').replace(',',''))
-            except:
+            except Exception:
                 print(f"  ⏸️ {act_label} skipped (no commission data)")
                 continue
         

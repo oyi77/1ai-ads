@@ -4,10 +4,11 @@ FB Ads 1041 — Smart Spend Governor (Rem-Stop-Rem)
 Auto-pause at spend threshold, auto-resume at peak hours,
 performance-ratio check, early stop when ROI is negative.
 """
+import os
 import urllib.request, json, os
 from datetime import datetime, timedelta
 
-TOKEN = "EAAKA2OT1FroBRRatI2ZCH1pwWh0QTgeIa9Wd4BzfW3zPVykmC8Hvzo1WPKaoSUihtoYWAMgiXQnZCAx4hgOrBG5ZAWZAtUhQSaZCirwj9i13Ljf4nWZAsxSsimZCFkiIFxvRqyqzDQL7YmcafeBZBBQ6fAJ7q2KaO5pZArQLkVFMIRaktTuJf7CGeGOPZAtrOKb6whwAZDZD"
+TOKEN = os.getenv("META_ACCESS_TOKEN", "")
 ACCOUNT = "act_380721031313330"
 
 # === THRESHOLDS (data-driven) ===
@@ -26,7 +27,7 @@ DEAD_TAGS = ['rakslidingkomen', 'katalog-rak', 'postbridge-rakpiringslider',
 
 # === STATE FILE ===
 STATE_FILE = "/tmp/ads_1041_governor_state.json"
-LOG_DIR = "/home/openclaw/.openclaw/workspace/logs/ads_1041_spend_monitor.log"
+LOG_DIR = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "logs", "ads_1041_spend_monitor.log")
 today = datetime.now().strftime('%Y-%m-%d')
 
 def log(msg):
@@ -41,7 +42,7 @@ def load_state():
     try:
         with open(STATE_FILE) as f:
             return json.load(f)
-    except:
+    except Exception:
         return {"paused": False, "today_spend": 0, "last_pause": None, "last_resume": None}
 
 def save_state(state):

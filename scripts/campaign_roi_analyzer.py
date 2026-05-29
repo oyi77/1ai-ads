@@ -25,7 +25,7 @@ try:
             if line.startswith('TOKEN = '):
                 TOKEN = line.split('"')[1]
                 break
-except:
+except Exception:
     pass
 
 if not TOKEN:
@@ -97,7 +97,7 @@ def get_campaign_data(days=1):
                     campaigns[cid]['cpc'] = float(ins.get('cpc', 0))
                 if ins.get('ctr'):
                     campaigns[cid]['ctr'] = float(ins.get('ctr', 0))
-            except:
+            except Exception:
                 pass
             time.sleep(0.15)
     

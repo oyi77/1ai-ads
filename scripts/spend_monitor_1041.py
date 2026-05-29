@@ -36,7 +36,7 @@ import os
 try:
     from vilona_telethon_notify import send_alert, send_batch_alerts
     TELETHON_READY = True
-except:
+except Exception:
     TELETHON_READY = False
     def send_alert(msg, **kw): pass
     def send_batch_alerts(msg, **kw): pass
@@ -71,8 +71,8 @@ DEAD_TAGS = ['soca-iklan-tt', 'BKlaundry1', 'BKlaundry2', 'BKlaundry3',
              'postbridge-rakpiringslider', 'rakstorage', 'sofaarabian',
              'mahar', 'rakkamarmandisiku']
 
-STATE_FILE = "/home/openclaw/.openclaw/workspace/state/ads_1041_governor_state.json"
-LOG_DIR = "/home/openclaw/.openclaw/workspace/logs/ads_1041_spend_monitor.log"
+STATE_FILE = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "state", "ads_1041_governor_state.json")
+LOG_DIR = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "logs", "ads_1041_spend_monitor.log")
 
 def log(msg):
     ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -86,7 +86,7 @@ def load_state():
     try:
         with open(STATE_FILE) as f:
             return json.load(f)
-    except:
+    except Exception:
         return {"daily_budget": 300000, "today_spend": 0, "paused_today": False, "resumed_today": False, "soft_paused": False}
 
 def save_state(state):
@@ -108,7 +108,7 @@ def get_active_campaigns():
     url = f"https://graph.facebook.com/v19.0/{ACCOUNT}/campaigns?fields=name,id,status,daily_budget&effective_status=[\"ACTIVE\"]&limit=50&access_token={TOKEN}"
     try:
         return api(url).get('data', [])
-    except:
+    except Exception:
         return []
 
 def get_all_active_campaigns():
@@ -116,7 +116,7 @@ def get_all_active_campaigns():
     url = f"https://graph.facebook.com/v19.0/{ACCOUNT}/campaigns?fields=name,id,status,insights.date_preset(today){{spend,clicks,cpc,impressions,ctr}}&effective_status=[\"ACTIVE\"]&limit=50&access_token={TOKEN}"
     try:
         return api(url).get('data', [])
-    except:
+    except Exception:
         return []
 
 def pause_campaign(cid, name):
@@ -125,7 +125,7 @@ def pause_campaign(cid, name):
         try:
             api_post(f"https://graph.facebook.com/v19.0/{cid}?access_token={TOKEN}", {"status": "PAUSED"})
             return True
-        except:
+        except Exception:
             if attempt < 2:
                 time.sleep(1)
     return False
@@ -165,7 +165,7 @@ def get_campaign_stats(c):
     # Parse CTR as float
     try:
         ctr_float = float(ins.get('ctr', 0) or 0)
-    except:
+    except Exception:
         ctr_float = 0.0
     
     # REAL CPC = spend / clicks
@@ -181,7 +181,7 @@ def resume_campaigns():
     url = f"https://graph.facebook.com/v19.0/{ACCOUNT}/campaigns?fields=name,id,status,insights.date_preset(today){{spend,clicks,cpc}}&effective_status=[\"PAUSED\"]&limit=100&access_token={TOKEN}"
     try:
         data = api(url)
-    except:
+    except Exception:
         return [], []
 
     resumed = []
@@ -224,7 +224,7 @@ def resume_campaigns():
             api_post(f"https://graph.facebook.com/v19.0/{cid}?access_token={TOKEN}", {"status": "ACTIVE"})
             log(f"  ▶️ RESUME: {name[:45]}")
             resumed.append(name)
-        except:
+        except Exception:
             skipped.append(f"{name[:20]} (err)")
     
     return resumed, skipped
@@ -355,7 +355,7 @@ def get_today_spend():
     try:
         data = api(url)
         return float(data.get('data', [{}])[0].get('spend', 0)) if data.get('data') else 0
-    except:
+    except Exception:
         return 0
 
 def get_yesterday_roi():
@@ -392,7 +392,7 @@ def get_yesterday_roi():
             log(f"⚠️ ROI fallback (FB only, no commission): assume 1.0x | Spend Rp{spend:,.0f}")
             return 1.0, spend
         return 1.0, 0
-    except:
+    except Exception:
         return 1.0, 0
 
 def calculate_budget(current_budget, yesterday_roi):
@@ -420,7 +420,7 @@ def apply_budget_to_active(budget):
             result = api_post(f"https://graph.facebook.com/v19.0/{cid}?access_token={TOKEN}", {"daily_budget": str(budget)})
             if result.get('success'):
                 count += 1
-        except:
+        except Exception:
             pass
     return count
 

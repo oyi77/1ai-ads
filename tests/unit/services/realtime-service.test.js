@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RealtimeService } from '../../../server/services/realtime-service.js';
 
 // Mock ws module
@@ -76,7 +76,7 @@ describe('RealtimeService', () => {
   });
 
   it('attach registers connection and close handlers', () => {
-    const mockServer = {};
+    const mockServer = { on: vi.fn() };
     service.attach(mockServer);
 
     // Simulate a connection

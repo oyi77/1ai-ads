@@ -1,8 +1,6 @@
-import { esc } from '../lib/escape.js';
-
 export async function renderDocs(el) {
   const mcpUrl = `${window.location.origin}/api/mcp/sse`;
-  const localPath = '/home/openclaw/projects/1ai-ads/mcp.js';
+  const localPath = 'path/to/1ai-ads/mcp.js';
 
   el.innerHTML = `
     <div class="bg-[#0d1117] min-h-screen text-[#c9d1d9] font-sans pb-20">
@@ -59,7 +57,7 @@ export async function renderDocs(el) {
     "1ai-ads": {
       "command": "node",
       "args": ["${localPath}"],
-      "env": { "DB_PATH": "/home/openclaw/projects/1ai-ads/db/1ai-ads.db" }
+      "env": { "DB_PATH": "path/to/1ai-ads/db/1ai-ads.db" }
     }
   }
 }</code></pre>
@@ -110,7 +108,7 @@ export async function renderDocs(el) {
   `;
 
   el.querySelectorAll('[data-copy-btn]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', () => {
       const code = btn.closest('.relative').querySelector('pre code')?.textContent;
       if (code) {
         navigator.clipboard.writeText(code);

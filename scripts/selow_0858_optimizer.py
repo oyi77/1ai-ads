@@ -21,7 +21,7 @@ def send_alert(message):
     # Simple direct message via OpenClaw's internal routing is preferred if used as a tool,
     # but for a background script we use a direct API call or just log it for the agent to report.
     # For now, we'll write to a specific 'alerts' file that Vilona monitors.
-    with open('/home/openclaw/.openclaw/workspace/logs/selow_0858_alerts.log', 'a') as f:
+    with open(os.path.join(os.path.expanduser('~'), '.openclaw', 'workspace', 'logs', 'selow_0858_alerts.log'), 'a') as f:
         f.write(f"[{get_now_wib().strftime('%Y-%m-%d %H:%M:%S')}] {message}\n")
 
 def run_optimizer():

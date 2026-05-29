@@ -17,7 +17,7 @@ now = datetime.now().strftime('%H:%M WIB')
 
 def api(url):
     try: return json.loads(requests.get(url, timeout=10).text)
-    except: return {}
+    except Exception: return {}
 
 def hdr(text):
     print(f"\n{'─'*45}")

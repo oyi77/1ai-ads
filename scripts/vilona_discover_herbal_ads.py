@@ -15,7 +15,7 @@ def discover():
             for c in campaigns:
                 if any(x in c['name'].lower() for x in ['purwoceng', 'wedang', 'herbal', 'bawang', 'soca']):
                     print(f"  FOUND: {c['name']} | Status: {c['status']} | ID: {c['id']} | Account: {acc}")
-        except:
+        except Exception:
             print(f"  Access Error to {acc}")
 
 if __name__ == "__main__":

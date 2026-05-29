@@ -5,7 +5,7 @@ import os
 config = {
     "shopee_affiliate": {
         "ads_account_id": "act_380721031313330",
-        "cookie_file": "/home/openclaw/.openclaw/workspace/config/shopee_affiliate_netscape_processed.json",
+        "cookie_file": os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "config", "shopee_affiliate_netscape_processed.json"),
         "products": ["Rak Dapur", "Prabotan"],
         "reporting_schedule": "14:00 - 23:50 WIB (H+1)"
     },
@@ -18,7 +18,7 @@ config = {
     }
 }
 
-path = "/home/openclaw/.openclaw/workspace/config/adforge_master_config.json"
+path = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "config", "adforge_master_config.json")
 os.makedirs(os.path.dirname(path), exist_ok=True)
 with open(path, "w") as f:
     json.dump(config, f, indent=2)

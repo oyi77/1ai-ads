@@ -1,93 +1,97 @@
-import { LitElement, html, css } from 'lit';
+import { api } from '../lib/api.js';
 
-export class AttributionDashboard extends LitElement {
-  static styles = css`
-    :host { display: block; padding: 20px; font-family: system-ui; }
-    table { width: 100%; border-collapse: collapse; background: #1a1a2e; border-radius: 12px; overflow: hidden; }
-    th { background: #16213e; color: #00d4ff; padding: 12px 16px; text-align: left; font-size: 12px; text-transform: uppercase; }
-    td { padding: 12px 16px; border-bottom: 1px solid #2a2a3e; color: #e0e0e0; }
-    tr:last-child td { border: none; }
-    .positive { color: #00e676; }
-    .negative { color: #ff5252; }
-    .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-    .summary-card { background: #1a1a2e; border-radius: 12px; padding: 20px; text-align: center; }
-    .summary-card .label { color: #888; font-size: 12px; text-transform: uppercase; }
-    .summary-card .value { color: #fff; font-size: 28px; font-weight: 700; margin-top: 8px; }
-    .sync-btn { background: #00d4ff; color: #000; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; margin-bottom: 20px; }
-    .sync-btn:hover { background: #00b8d4; }
+let _matches = [];
+let _dashboard = {};
+
+export async function renderAttributionView() {
+  const container = document.createElement('div');
+  container.style.cssText = 'padding:20px;font-family:system-ui;';
+
+  container.innerHTML = `
+    <h2 style="color:#00d4ff;margin:0 0 20px">Meta → Shopee Attribution</h2>
+    <button id="sync-btn" style="background:#00d4ff;color:#000;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;font-weight:600;margin-bottom:20px">Sync Orders</button>
+    <div id="summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px"></div>
+    <table style="width:100%;border-collapse:collapse;background:#1a1a2e;border-radius:12px;overflow:hidden">
+      <thead><tr style="background:#16213e">
+        <th style="color:#00d4ff;padding:12px 16px;text-align:left;font-size:12px;text-transform:uppercase">Ad</th>
+        <th style="color:#00d4ff;padding:12px 16px;text-align:left;font-size:12px;text-transform:uppercase">Campaign</th>
+        <th style="color:#00d4ff;padding:12px 16px;text-align:left;font-size:12px;text-transform:uppercase">Order</th>
+        <th style="color:#00d4ff;padding:12px 16px;text-align:left;font-size:12px;text-transform:uppercase">Revenue</th>
+        <th style="color:#00d4ff;padding:12px 16px;text-align:left;font-size:12px;text-transform:uppercase">Method</th>
+        <th style="color:#00d4ff;padding:12px 16px;text-align:left;font-size:12px;text-transform:uppercase">Date</th>
+      </tr></thead>
+      <tbody id="matches-body"></tbody>
+    </table>
   `;
 
-  static properties = {
-    dashboard: { type: Object },
-    matches: { type: Array },
-    loading: { type: Boolean },
-  };
-
-  constructor() {
-    super();
-    this.dashboard = {};
-    this.matches = [];
-    this.loading = false;
-    this._loadData();
-  }
-
-  async _loadData() {
-    const token = localStorage.getItem('token');
-    const headers = { 'Authorization': `Bearer ${token}` };
+  const syncBtn = container.querySelector('#sync-btn');
+  syncBtn.addEventListener('click', async () => {
+    syncBtn.disabled = true;
+    syncBtn.textContent = 'Syncing...';
     try {
-      const [dashRes, matchRes] = await Promise.all([
-        fetch('/api/attribution/dashboard', { headers }),
-        fetch('/api/attribution/matches', { headers }),
-      ]);
-      if (dashRes.ok) this.dashboard = await dashRes.json();
-      if (matchRes.ok) {
-        const data = await matchRes.json();
-        this.matches = data.matches || data.data || [];
-      }
-    } catch (e) { console.error('Load failed:', e); }
-  }
+      await api.post('/api/attribution/sync');
+      await loadData(container);
+    } catch (e) {
+      console.error('Sync failed:', e);
+    }
+    syncBtn.disabled = false;
+    syncBtn.textContent = 'Sync Orders';
+  });
 
-  async _sync() {
-    this.loading = true;
-    const token = localStorage.getItem('token');
-    try {
-      await fetch('/api/attribution/sync', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
-      await this._loadData();
-    } catch (e) { console.error('Sync failed:', e); }
-    this.loading = false;
-  }
-
-  render() {
-    const d = this.dashboard;
-    return html`
-      <h2 style="color:#00d4ff;margin:0 0 20px">Meta → Shopee Attribution</h2>
-      <button class="sync-btn" @click=${this._sync} ?disabled=${this.loading}>
-        ${this.loading ? 'Syncing...' : 'Sync Orders'}
-      </button>
-      <div class="summary">
-        <div class="summary-card"><div class="label">Total Spend</div><div class="value">$${(d.total_ad_spend || 0).toFixed(2)}</div></div>
-        <div class="summary-card"><div class="label">Shopee Revenue</div><div class="value">$${(d.total_revenue || 0).toFixed(2)}</div></div>
-        <div class="summary-card"><div class="label">ROAS</div><div class="value ${d.roas >= 1 ? 'positive' : 'negative'}">${(d.roas || 0).toFixed(2)}x</div></div>
-        <div class="summary-card"><div class="label">Attributions</div><div class="value">${d.total_attributions || 0}</div></div>
-      </div>
-      <table>
-        <thead><tr><th>Ad</th><th>Campaign</th><th>Order</th><th>Revenue</th><th>Method</th><th>Date</th></tr></thead>
-        <tbody>
-          ${this.matches.map(m => html`
-            <tr>
-              <td>${m.ad_id || '-'}</td>
-              <td>${m.campaign_id || '-'}</td>
-              <td>${m.shopee_order_id || '-'}</td>
-              <td class="${m.shopee_revenue >= 0 ? 'positive' : 'negative'}">$${(m.shopee_revenue || 0).toFixed(2)}</td>
-              <td>${m.match_method || '-'}</td>
-              <td>${m.matched_at ? new Date(m.matched_at).toLocaleDateString() : '-'}</td>
-            </tr>
-          `)}
-          ${this.matches.length === 0 ? html`<tr><td colspan="6" style="text-align:center;color:#888">No attributions yet. Click Sync Orders to fetch.</td></tr>` : ''}
-        </tbody>
-      </table>
-    `;
-  }
+  await loadData(container);
+  return container;
 }
 
-customElements.define('attribution-dashboard', AttributionDashboard);
+async function loadData(container) {
+  try {
+    const [dashRes, matchRes] = await Promise.all([
+      api.get('/api/attribution/dashboard').catch(() => ({ data: {} })),
+      api.get('/api/attribution/matches').catch(() => ({ data: { matches: [] } })),
+    ]);
+    _dashboard = dashRes.data || {};
+    _matches = matchRes.data?.matches || matchRes.data || [];
+  } catch (e) {
+    console.error('Load failed:', e);
+  }
+
+  const d = _dashboard;
+  const summary = container.querySelector('#summary');
+  if (summary) {
+    summary.innerHTML = `
+      <div style="background:#1a1a2e;border-radius:12px;padding:20px;text-align:center">
+        <div style="color:#888;font-size:12px;text-transform:uppercase">Total Spend</div>
+        <div style="color:#fff;font-size:28px;font-weight:700;margin-top:8px">$${(d.total_ad_spend || 0).toFixed(2)}</div>
+      </div>
+      <div style="background:#1a1a2e;border-radius:12px;padding:20px;text-align:center">
+        <div style="color:#888;font-size:12px;text-transform:uppercase">Shopee Revenue</div>
+        <div style="color:#fff;font-size:28px;font-weight:700;margin-top:8px">$${(d.total_revenue || 0).toFixed(2)}</div>
+      </div>
+      <div style="background:#1a1a2e;border-radius:12px;padding:20px;text-align:center">
+        <div style="color:#888;font-size:12px;text-transform:uppercase">ROAS</div>
+        <div style="color:${d.roas >= 1 ? '#00e676' : '#ff5252'};font-size:28px;font-weight:700;margin-top:8px">${(d.roas || 0).toFixed(2)}x</div>
+      </div>
+      <div style="background:#1a1a2e;border-radius:12px;padding:20px;text-align:center">
+        <div style="color:#888;font-size:12px;text-transform:uppercase">Attributions</div>
+        <div style="color:#fff;font-size:28px;font-weight:700;margin-top:8px">${d.total_attributions || 0}</div>
+      </div>
+    `;
+  }
+
+  const tbody = container.querySelector('#matches-body');
+  if (tbody) {
+    if (_matches.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:16px">No attributions yet. Click Sync Orders to fetch.</td></tr>';
+    } else {
+      tbody.innerHTML = _matches.map(m => `
+        <tr>
+          <td style="padding:12px 16px;border-bottom:1px solid #2a2a3e;color:#e0e0e0">${m.ad_id || '-'}</td>
+          <td style="padding:12px 16px;border-bottom:1px solid #2a2a3e;color:#e0e0e0">${m.campaign_id || '-'}</td>
+          <td style="padding:12px 16px;border-bottom:1px solid #2a2a3e;color:#e0e0e0">${m.shopee_order_id || '-'}</td>
+          <td style="padding:12px 16px;border-bottom:1px solid #2a2a3e;color:${m.shopee_revenue >= 0 ? '#00e676' : '#ff5252'}">$${(m.shopee_revenue || 0).toFixed(2)}</td>
+          <td style="padding:12px 16px;border-bottom:1px solid #2a2a3e;color:#e0e0e0">${m.match_method || '-'}</td>
+          <td style="padding:12px 16px;border-bottom:1px solid #2a2a3e;color:#e0e0e0">${m.matched_at ? new Date(m.matched_at).toLocaleDateString() : '-'}</td>
+        </tr>
+      `).join('');
+    }
+  }
+}

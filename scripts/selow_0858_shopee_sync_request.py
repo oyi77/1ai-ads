@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import sys
 import datetime
 
@@ -21,7 +22,7 @@ def trigger_request():
     print(msg)
     
     # For the actual Telegram notification, we'll append to an 'outbox' file
-    with open('/home/openclaw/.openclaw/workspace/logs/selow_0858_outbox.log', 'a') as f:
+    with open(os.path.join(os.path.expanduser('~'), '.openclaw', 'workspace', 'logs', 'selow_0858_outbox.log'), 'a') as f:
         f.write(f"[{now.strftime('%Y-%m-%d %H:%M:%S')}] TELEGRAM_SEND: {msg}\n")
 
 if __name__ == "__main__":

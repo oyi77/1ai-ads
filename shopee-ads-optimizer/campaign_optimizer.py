@@ -7,12 +7,13 @@ and stops unprofitable campaigns.
 Target: Minimum ROI 2x (200%)
 Data sources: Shopee commission CSV + Website click CSV
 """
+import os
 import csv, json, os
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-BASE = Path(os.environ.get("OPTIMIZER_BASE_DIR", "/home/openclaw/.openclaw/workspace"))
+BASE = Path(os.environ.get("OPTIMIZER_BASE_DIR", os.path.join(os.path.expanduser("~"), ".openclaw", "workspace")))
 LOG_DIR = BASE / "logs"
 CONFIG_DIR = BASE / "autopilot_affiliate_engine" / "data"
 

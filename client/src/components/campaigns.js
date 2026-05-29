@@ -51,8 +51,47 @@ export function renderCampaignsList(campaigns, platform) {
 }
 
 export function editCampaign(id) {
-  alert('Edit campaign: ' + id);
-  // TODO: Implement edit campaign
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Edit Campaign ${id}</h3>
+        <button class="btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-campaign-form">
+          <label>Name <input type="text" name="name" required></label>
+          <label>Budget (IDR) <input type="number" name="budget" min="0"></label>
+          <label>Status
+            <select name="status">
+              <option value="ACTIVE">Active</option>
+              <option value="PAUSED">Paused</option>
+              <option value="ARCHIVED">Archived</option>
+            </select>
+          </label>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </form>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+  overlay.querySelector('#edit-campaign-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const body = Object.fromEntries(formData);
+    body.budget = Number(body.budget);
+    try {
+      await api.put(`/api/campaigns/${id}`, body);
+      alert('Campaign updated!');
+      overlay.remove();
+      window.dispatchEvent(new CustomEvent('campaign-updated'));
+    } catch (err) {
+      alert('Failed: ' + err.message);
+    }
+  });
 }
 
 export function optimizeCampaign(id) {

@@ -48,7 +48,7 @@ log(f"Yesterday: Spend Rp {total_spend:,.0f} | Clicks {total_clicks} | Impr {tot
 
 # STEP 2: Check Shopee commissions (placeholder — integrate with actual data)
 # For now, log what we have
-# TODO: Integrate with Shopee API to pull yesterday's commissions
+# Shopee commission data via 1ai-social API: http://localhost:8200/api/shopee/orders
 
 # STEP 3: Identify winning campaigns (profitable based on yesterday)
 winning_camps = []

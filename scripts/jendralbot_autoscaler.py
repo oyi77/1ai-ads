@@ -21,9 +21,9 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Configuration
-DATA_DIR = Path("/home/openclaw/.openclaw/media/inbound")
-OUTPUT_DIR = Path("/home/openclaw/.openclaw/workspace/outputs/jendralbot_autoscaler")
-REPORTS_LOG = Path("/home/openclaw/.openclaw/workspace/logs/autoscaler_report.log")
+DATA_DIR = Path(os.environ.get("ADFORGE_MEDIA_DIR", str(Path(__file__).resolve().parent.parent / "media" / "inbound")))
+OUTPUT_DIR = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "outputs", "jendralbot_autoscaler"))
+REPORTS_LOG = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "logs", "autoscaler_report.log"))
 
 # Create output directories
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

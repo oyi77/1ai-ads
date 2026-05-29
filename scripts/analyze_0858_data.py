@@ -1,10 +1,11 @@
+import os
 import pandas as pd
 import json
 
 # File paths
-EXCEL_ADS = '/home/openclaw/.openclaw/media/inbound/Selow-ID-0858-Kampanye-13-Mei-2026-13-Mei-2026_1---5be73abf-d775-4970-8ff9-725908cc8ed6.xlsx'
-CLICK_CSV = '/home/openclaw/.openclaw/media/inbound/WebsiteClickReport202605141242---e98a09e4-6966-49f1-9519-fd16fefe37c2.csv'
-COMMISSION_CSV = '/home/openclaw/.openclaw/media/inbound/AffiliateCommissionReport202605141242---ee139e64-585f-4131-8065-49faf7dc98ba.csv'
+EXCEL_ADS = os.path.join(os.path.expanduser('~'), '.openclaw', 'media', 'inbound', 'Selow-ID-0858-Kampanye-13-Mei-2026-13-Mei-2026_1---5be73abf-d775-4970-8ff9-725908cc8ed6.xlsx')
+CLICK_CSV = os.path.join(os.path.expanduser('~'), '.openclaw', 'media', 'inbound', 'WebsiteClickReport202605141242---e98a09e4-6966-49f1-9519-fd16fefe37c2.csv')
+COMMISSION_CSV = os.path.join(os.path.expanduser('~'), '.openclaw', 'media', 'inbound', 'AffiliateCommissionReport202605141242---ee139e64-585f-4131-8065-49faf7dc98ba.csv')
 
 def analyze_0858():
     # 1. Load Ads Data (Cost)

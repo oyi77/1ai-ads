@@ -61,7 +61,7 @@ def get_performance_history():
             lp = oss.get('link_data', {}).get('link') or \
                  oss.get('video_data', {}).get('call_to_action', {}).get('value', {}).get('link') or \
                  "N/A"
-        except:
+        except Exception:
             pass
 
         results.append({

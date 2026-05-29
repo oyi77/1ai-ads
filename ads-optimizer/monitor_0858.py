@@ -4,13 +4,14 @@ FB Ads 0858 — Campaign Monitor & Auto-Optimizer
 Runs every 5 min, auto-pauses underperformers based on Shopee data.
 Target: Min ROI 2x. CBO_* campaigns are kill candidates.
 """
+import os
 import urllib.request, json, os, sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-TOKEN = "EAAKA2OT1FroBRRatI2ZCH1pwWh0QTgeIa9Wd4BzfW3zPVykmC8Hvzo1WPKaoSUihtoYWAMgiXQnZCAx4hgOrBG5ZAWZAtUhQSaZCirwj9i13Ljf4nWZAsxSsimZCFkiIFxvRqyqzDQL7YmcafeBZBBQ6fAJ7q2KaO5pZArQLkVFMIRaktTuJf7CGeGOPZAtrOKb6whwAZDZD"
+TOKEN = os.getenv("META_ACCESS_TOKEN", "")
 ACCOUNT = "act_435670549443081"
-LOG_DIR = "/home/openclaw/.openclaw/workspace/logs/ads_0858_monitor.log"
+LOG_DIR = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "logs", "ads_0858_monitor.log")
 
 # Tags with their ROI from last analysis
 TAG_ROI = {

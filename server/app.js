@@ -15,6 +15,7 @@ import { createAdsLibraryRoutes } from './routes/ads-library.js';
 import { createAdspirerRouter } from './routes/adspirer.js';
 
 import { createScheduleRouter } from './routes/schedule.js';
+import { ScheduleRepository } from './repositories/schedule.js';
 import { createMetaAccountsRouter } from './routes/meta-accounts.js';
 import { createMetaContentRouter } from './routes/meta-content.js';
 import { createAutonomousRouter } from './routes/autonomous.js';
@@ -37,7 +38,6 @@ import { AdResearchService } from './services/ad-research.js';
 import rateLimit from 'express-rate-limit';
 import express from 'express';
 import cors from 'cors';
-import { validateConfig } from './config/index.js';
 import config from './config/index.js';
 
 // Import repositories
@@ -58,10 +58,9 @@ import { RulesRepository } from './repositories/rules.js';
 import { LLMClient } from './services/llm-client.js';
 import { AdspirerMcpClient } from './services/adspirer-mcp-client.js';
 import { TrendingService } from './services/trending.js';
-import { CompetitorSpyService } from './services/competitor-spy.js';
 import { LearningService } from './services/learning.js';
 import { PaymentService } from './services/payments.js';
-import { BigQueryExportService } from './services/bigquery-export.js';
+
 import { AutonomousAgent } from './services/autonomous-agent.js';
 import { CampaignOrchestrator } from './services/campaign-orchestrator.js';
 import { CreativeStudio } from './services/creative-studio.js';
@@ -77,7 +76,7 @@ import { createMcpRouter } from './routes/mcp.js';
 import { ScalevService } from './services/scalev.js';
 import { ShopeeAdapter } from './services/shopee-adapter.js';
 import { AttributionService } from './services/attribution-service.js';
-import { NotificationService } from './services/notification-service.js';
+
 import { AttributionRepository } from './repositories/attribution.js';
 import createAttributionRouter from './routes/attribution.js';
 
@@ -86,8 +85,6 @@ import createAttributionRouter from './routes/attribution.js';
 // Import middleware
 import { requireAuth } from './middleware/auth.js';
 
-// Import database
-import { createDatabase } from '../db/index.js';
 
 export function createApp(params) {
   // Support both direct db and { db, llmClient, mcpClient } pattern
@@ -108,6 +105,8 @@ export function createApp(params) {
   const webhookEventsRepo = new WebhookEventsRepository(db);
   const adUtmMapRepo = new AdUtmMapRepository(db);
   const utmTagger = new UtmTaggerService(adUtmMapRepo);
+  const scheduleRepo = new ScheduleRepository(db);
+  scheduleRepo.ensureTable();
 
   // Create services
   const llmClient = (params && params.llmClient) || new LLMClient({
@@ -135,14 +134,10 @@ export function createApp(params) {
   const suggestionsRepo = new AiSuggestionsRepository(db);
   const aiAgent = new AiAgent(settingsRepo, adsRepo, campaignsRepo, llmClient, suggestionsRepo, landingRepo);
 
-  // Create BigQuery export service (for Looker Studio)
-  const bigQueryExport = new BigQueryExportService();
-
   // Attribution service for Shopee order matching
   const attributionRepo = new AttributionRepository(db);
   const shopeeAdapter = new ShopeeAdapter();
   const attributionService = new AttributionService(attributionRepo, shopeeAdapter, campaignsRepo, adsRepo);
-  const notificationService = new NotificationService();
 
   // Create app
   const app = express();
@@ -166,7 +161,7 @@ export function createApp(params) {
   app.use(express.json());
   
   // Serve frontend static files (SPA)
-  const clientPath = '/home/openclaw/.openclaw/workspace/adforge/dist';
+  const clientPath = path.join(process.cwd(), 'dist');
   app.use(express.static(clientPath));
   
 
@@ -193,7 +188,7 @@ export function createApp(params) {
   const adsLibraryRouter = createAdsLibraryRoutes();
   const adspirerRouter = createAdspirerRouter(adspirerClient, platformAccountsRepo, settingsRepo);
 
-  const scheduleRouter = createScheduleRouter();
+  const scheduleRouter = createScheduleRouter(db);
   const metaAccountsRouter = createMetaAccountsRouter(settingsRepo);
   const metaContentRouter = createMetaContentRouter(videoService, contentScheduler);
 
@@ -229,7 +224,7 @@ export function createApp(params) {
   app.use('/api/pixels', requireAuth, createPixelRouter(metaApi));
   app.use('/api/batch', requireAuth, createBatchRouter(metaApi));
   app.use('/api/tokens', requireAuth, createTokenRouter());
-  app.use('/api/webhooks', createWebhookRouter());
+  app.use('/api/webhooks', createWebhookRouter(webhookEventsRepo));
   app.use('/api/ab-tests', requireAuth, createABTestsRouter(metaApi));
 
   app.use('/api/attribution', requireAuth, createAttributionRouter(attributionService, attributionRepo));
@@ -241,11 +236,11 @@ export function createApp(params) {
   app.use('/api/research', requireAuth, createResearchRouter(adResearchService));
   app.use('/api/mcp', requireAuth, createMcpRouter(mcpClient, settingsRepo, campaignsRepo, adsRepo, landingRepo));
 
-  app.get('/api/cf-health', publicRateLimit, (req, res) => {
+  app.get('/api/cf-health', publicRateLimit, (_req, res) => {
     res.json({ status: 'ok', service: 'adforge', timestamp: new Date().toISOString() });
   });
 
-  app.get('/health', publicRateLimit, (req, res) => {
+  app.get('/health', publicRateLimit, (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 

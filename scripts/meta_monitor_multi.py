@@ -30,7 +30,7 @@ def get_insights(level_id):
             clicks = int(ins.get('inline_link_clicks', 0))
             ctr = float(ins.get('inline_link_click_ctr', 0))
             return {'spend': spend, 'clicks': clicks, 'ctr': ctr}
-    except:
+    except Exception:
         pass
     return None
 

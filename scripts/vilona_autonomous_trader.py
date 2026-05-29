@@ -176,7 +176,7 @@ class VilonaTrader:
                 data = json.loads(DAILY_LOG.read_text())
                 if data.get('date') == self.today:
                     return data.get('pnl', 0.0)
-            except:
+            except Exception:
                 pass
         return 0.0
     
@@ -716,7 +716,7 @@ class VilonaTrader:
                             'impact': e['impact'],
                             'days_until': days_until,
                         })
-                except:
+                except Exception:
                     pass
             
             # Determine trading mode
@@ -818,7 +818,7 @@ class VilonaTrader:
                 if hold_hours > 24:
                     print(f"  ⏰ {position['symbol']} held {hold_hours:.1f}h > 24h limit")
                     return True
-        except:
+        except Exception:
             pass
         return False
 
@@ -879,7 +879,7 @@ class VilonaTrader:
                     remaining = int((expires - time.time()) / 60)
                     print(f"     ⏳ Cooldown: {remaining} min remaining for {symbol}")
                     return True
-        except:
+        except Exception:
             pass
         return False
     
@@ -892,7 +892,7 @@ class VilonaTrader:
                 data = json.loads(cooldown_file.read_text())
             data[symbol] = time.time() + (hours * 3600)
             cooldown_file.write_text(json.dumps(data))
-        except:
+        except Exception:
             pass
     
     def run_screening_cycle(self):
@@ -912,7 +912,7 @@ class VilonaTrader:
                 pid_still_running = False
                 try:
                     pid_still_running = os.path.exists(f'/proc/{pid_in_file}')
-                except:
+                except Exception:
                     pass
                 
                 if lock_age < 120 and pid_still_running:
@@ -924,7 +924,7 @@ class VilonaTrader:
                 else:
                     print(f"  ⚠️ Old lock ({lock_age:.0f}s). Removing...")
                     lock_file.unlink()
-            except:
+            except Exception:
                 pass
         lock_file.write_text(str(os.getpid()))
         
@@ -1092,7 +1092,7 @@ class VilonaTrader:
             try:
                 if lock_file.exists():
                     lock_file.unlink()
-            except:
+            except Exception:
                 pass
 
 def main():

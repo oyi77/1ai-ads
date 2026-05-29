@@ -12,7 +12,7 @@ import os
 import sys
 from pathlib import Path
 
-BASE_DIR = Path("/home/openclaw/.openclaw/workspace/adforge/db")
+BASE_DIR = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "adforge", "db"))
 MASTER_DB = str(BASE_DIR / "adforge.db")
 USER_DB_DIR = str(BASE_DIR / "users")
 os.makedirs(USER_DB_DIR, exist_ok=True)
@@ -146,7 +146,7 @@ def migrate_user(user_id, username):
                           draft['reviewed_at'], draft['reviewed_by'], draft['rejection_reason'],
                           draft['execution_result']))
                     migrated.append(f"  ✓ Draft: {draft.get('summary', '')[:30]}")
-                except:
+                except Exception:
                     pass
         user_db.commit()
     except Exception as e:

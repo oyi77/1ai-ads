@@ -284,3 +284,22 @@ CREATE TABLE IF NOT EXISTS attributions (
 CREATE INDEX IF NOT EXISTS idx_attributions_campaign ON attributions(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_attributions_ad ON attributions(ad_id);
 CREATE INDEX IF NOT EXISTS idx_attributions_matched_at ON attributions(matched_at);
+
+CREATE TABLE IF NOT EXISTS schedules (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  schedule_time TEXT NOT NULL,
+  platform TEXT NOT NULL,
+  content TEXT,
+  media_url TEXT,
+  status TEXT DEFAULT 'scheduled',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_schedules_status ON schedules(status);
+CREATE INDEX IF NOT EXISTS idx_schedules_platform ON schedules(platform);
+CREATE INDEX IF NOT EXISTS idx_schedules_time ON schedules(schedule_time);
+
+CREATE TRIGGER IF NOT EXISTS schedules_updated_at AFTER UPDATE ON schedules
+BEGIN UPDATE schedules SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id; END;

@@ -19,7 +19,7 @@ ADSET_IDS = [
     "120248835533980416",  # DongkrakElektrik_BelanjaOnline_IGonly_23-55
     "120248835539130416",  # DongkrakElektrik_Tersembunyi_IGonly_23-55
 ]
-LOG_DIR = "/home/openclaw/.openclaw/workspace/logs/dongkrak_scaletest.log"
+LOG_DIR = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "logs", "dongkrak_scaletest.log")
 
 # ─── DATA GATES (HOLD thresholds — MUST be met before evaluating) ─────────
 GATE = {
@@ -44,7 +44,7 @@ SCALE = {
 }
 
 # Keep track of today's scale actions (resets each day by T-1 data injection)
-SCALE_HISTORY_FILE = "/home/openclaw/.openclaw/workspace/logs/dongkrak_scaletest_scale_history.json"
+SCALE_HISTORY_FILE = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "logs", "dongkrak_scaletest_scale_history.json")
 
 # ─── HELPERS ──────────────────────────────────────────────────────────────
 
