@@ -124,9 +124,6 @@ export class CampaignOrchestrator {
     }
   }
 
-  /**
-   * Activate a paused campaign (and its adsets/ads).
-   */
   async activateCampaign(campaignId) {
     return this.meta.updateCampaign(campaignId, { status: 'ACTIVE' });
   }
