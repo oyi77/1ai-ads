@@ -20,6 +20,7 @@ import { createMetaAccountsRouter } from './routes/meta-accounts.js';
 import { createMetaContentRouter } from './routes/meta-content.js';
 import { createGoogleAdsRouter } from './routes/google-ads.js';
 import { createTikTokAdsRouter } from './routes/tiktok-ads.js';
+import { createOptimizerRouter } from './routes/optimizer.js';
 import { createAutonomousRouter } from './routes/autonomous.js';
 import { createAiAgentRouter } from './routes/ai-agent.js';
 import createAudienceRouter from './routes/audiences.js';
@@ -238,6 +239,8 @@ export function createApp(params) {
   // Auto-optimizer: evaluates rules every 6 hours
   const autoOptimizer = new AutoOptimizer(metaApi, rulesRepo, campaignsRepo);
   autoOptimizer.start();
+
+  app.use('/api/optimizer', requireAuth, createOptimizerRouter(rulesRepo, autoOptimizer));
 
   // AI agent scheduler: generates suggestions every 5 minutes
   aiAgent.startScheduler(() => usersRepo.findAll().map(u => u.id));
