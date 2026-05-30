@@ -113,4 +113,47 @@ export class TikTokAdsAPI {
       fields: ['ad_id', 'ad_name', 'status', 'ad_text', 'image_ids', 'video_id', 'call_to_action'],
     });
   }
+
+  async _post(path, body = {}) {
+    const token = this._getToken();
+    const res = await safeFetch('tiktok', `${BASE}${path}`, {
+      method: 'POST',
+      headers: {
+        'Access-Token': token,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (data.code !== 0) {
+      throw new PlatformError(`TikTok API error: ${data.message}`, 'tiktok');
+    }
+    return data.data;
+  }
+
+  async createCampaign(advertiserId, { name, objectiveType = 'CONVERSIONS', budget, status = 'DISABLE' }) {
+    log.info('Creating TikTok campaign', { advertiserId, name });
+    const data = await this._post('/campaign/create/', {
+      advertiser_id: advertiserId,
+      campaign_name: name,
+      objective_type: objectiveType,
+      budget: budget || 0,
+      budget_mode: budget ? 'BUDGET_MODE_DAY' : 'BUDGET_MODE_INFINITE',
+      status,
+    });
+    log.info('TikTok campaign created', { campaignId: data.campaign_id });
+    return { campaignId: data.campaign_id };
+  }
+
+  async updateCampaign(advertiserId, campaignId, { name, status, budget }) {
+    log.info('Updating TikTok campaign', { advertiserId, campaignId });
+    const updateFields = { advertiser_id: advertiserId, campaign_ids: [campaignId] };
+    if (name) updateFields.campaign_name = name;
+    if (status) updateFields.status = status;
+    if (budget !== undefined) updateFields.budget = budget;
+
+    await this._post('/campaign/update/', updateFields);
+    log.info('TikTok campaign updated', { campaignId });
+    return { campaignId };
+  }
 }

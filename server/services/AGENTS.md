@@ -25,7 +25,7 @@ Business logic layer for the 1ai-ads backend. Services orchestrate between repos
 | `meta-api.js` | Meta/Facebook Ads API client — campaign, ad set, creative management |
 | `scalev.js` | Scalev integration service |
 | `templates.js` | Ad and landing page template management |
-| `tiktok-api.js` | TikTok Ads API client — campaign and ad management |
+| `tiktok-api.js` | TikTok Ads API client — campaign CRUD, insights, ads management |
 | `trending.js` | Trending ads service — internal metrics vs. external market data |
 
 ## For AI Agents

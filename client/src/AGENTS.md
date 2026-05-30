@@ -20,6 +20,29 @@ Frontend application source code. Contains the SPA entry point, page-level view 
 | `pages/` | Page components (currently empty — views serve as pages) |
 | `styles/` | CSS/style files (currently empty — inline styles used) |
 
+## Reusable Components (client/src/components/)
+| Component | Description |
+|-----------|-------------|
+| `button.js` | Reusable button with variant (primary/secondary/danger/ghost) and size |
+| `modal.js` | Modal dialog with title, content, confirm/cancel |
+| `table.js` | Data table with columns, sorting, row click |
+| `badge.js` | Status badge with color-coded variants |
+| `toast.js` | Toast notification system |
+| `spinner.js` | Loading spinner with message |
+| `error-boundary.js` | Error boundary, showSpinner, showError, showEmpty helpers |
+| `form.js` | Form builder with validation |
+
+## State Management (client/src/lib/stores/)
+| Store | Description |
+|-------|-------------|
+| `user-store.js` | Auth state — user, login, logout |
+| `campaign-store.js` | Campaigns list, CRUD, selection |
+| `ad-store.js` | Ads list, CRUD, selection |
+| `ui-store.js` | UI state — toasts, modals, sidebar |
+| `store.js` | Pub/sub store factory |
+| `connect-store.js` | Connect store to view rendering |
+| `validation.js` | Form validation utilities (required, email, minLength, etc.) |
+
 ## For AI Agents
 
 ### Working In This Directory

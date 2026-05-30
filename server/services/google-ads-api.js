@@ -131,4 +131,51 @@ export class GoogleAdsAPI {
       LIMIT 50
     `);
   }
+
+  async _mutate(customerId, resource, operations) {
+    const creds = this._getConfig();
+    const res = await safeFetch('google', `${BASE}/customers/${customerId}/${resource}:mutate`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${creds.oauth_token}`,
+        'developer-token': creds.developer_token,
+        'Content-Type': 'application/json',
+        ...(creds.login_customer_id && { 'login-customer-id': creds.login_customer_id }),
+      },
+      body: JSON.stringify({ operations }),
+    });
+    return await res.json();
+  }
+
+  async createCampaign(customerId, { name, status = 'PAUSED', dailyBudgetMicros, advertisingChannelType = 'SEARCH' }) {
+    log.info('Creating Google Ads campaign', { customerId, name });
+    const result = await this._mutate(customerId, 'campaigns', [{
+      create: {
+        name,
+        status,
+        advertisingChannelType,
+        campaignBudget: `customers/${customerId}/campaignBudgets/-1`,
+      },
+    }]);
+    log.info('Google Ads campaign created', { campaignId: result.results?.[0]?.resourceName });
+    return { resourceName: result.results?.[0]?.resourceName };
+  }
+
+  async updateCampaign(customerId, campaignId, { name, status }) {
+    log.info('Updating Google Ads campaign', { customerId, campaignId });
+    const updateMask = [];
+    const updateFields = {};
+    if (name) { updateFields.name = name; updateMask.push('name'); }
+    if (status) { updateFields.status = status; updateMask.push('status'); }
+
+    const result = await this._mutate(customerId, 'campaigns', [{
+      update: {
+        resourceName: `customers/${customerId}/campaigns/${campaignId}`,
+        ...updateFields,
+      },
+      updateMask: updateMask.join(','),
+    }]);
+    log.info('Google Ads campaign updated', { campaignId });
+    return { resourceName: result.results?.[0]?.resourceName };
+  }
 }

@@ -233,8 +233,11 @@ CREATE TABLE IF NOT EXISTS templates (
 
 CREATE INDEX IF NOT EXISTS idx_templates_category ON templates(category);
 CREATE INDEX IF NOT EXISTS idx_templates_industry ON templates(industry);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status);
+CREATE INDEX IF NOT EXISTS idx_campaigns_created ON campaigns(created_at);
+CREATE INDEX IF NOT EXISTS idx_ads_campaign ON ads(platform, status);
 
--- Indexes
 CREATE INDEX IF NOT EXISTS idx_ads_platform ON ads(platform);
 CREATE INDEX IF NOT EXISTS idx_ads_status ON ads(status);
 CREATE INDEX IF NOT EXISTS idx_campaigns_platform ON campaigns(platform);

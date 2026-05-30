@@ -18,6 +18,8 @@ import { createScheduleRouter } from './routes/schedule.js';
 import { ScheduleRepository } from './repositories/schedule.js';
 import { createMetaAccountsRouter } from './routes/meta-accounts.js';
 import { createMetaContentRouter } from './routes/meta-content.js';
+import { createGoogleAdsRouter } from './routes/google-ads.js';
+import { createTikTokAdsRouter } from './routes/tiktok-ads.js';
 import { createAutonomousRouter } from './routes/autonomous.js';
 import { createAiAgentRouter } from './routes/ai-agent.js';
 import createAudienceRouter from './routes/audiences.js';
@@ -151,6 +153,18 @@ export function createApp(params) {
   app.locals.adResearchService = adResearchService;
   app.locals.db = db;
   
+  // Security headers
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    if (config.nodeEnv === 'production') {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
+  });
+
   // Set up JSON body parser
   app.use(cors({
     origin: config.corsOrigin,
@@ -210,6 +224,8 @@ export function createApp(params) {
   app.use('/api/schedule', requireAuth, scheduleRouter);
   app.use('/api/meta', requireAuth, metaAccountsRouter);
   app.use('/api/meta/content', requireAuth, metaContentRouter);
+  app.use('/api/google-ads', requireAuth, createGoogleAdsRouter(settingsRepo));
+  app.use('/api/tiktok-ads', requireAuth, createTikTokAdsRouter(settingsRepo));
 
 
   // Autonomous campaign monitor
@@ -263,6 +279,30 @@ export function createApp(params) {
       }
       res.set('Content-Type', 'text/html');
       res.send(data);
+    });
+  });
+
+  // Global error handler with logging
+  app.use((err, req, res, _next) => {
+    const timestamp = new Date().toISOString();
+    const status = err.status || err.statusCode || 500;
+    const logEntry = {
+      timestamp,
+      method: req.method,
+      path: req.path,
+      status,
+      error: err.message,
+      ...(config.nodeEnv === 'development' && { stack: err.stack }),
+    };
+    console.error('[ERROR]', JSON.stringify(logEntry));
+
+    if (status >= 500) {
+      console.error('[ERROR_STACK]', err.stack);
+    }
+
+    res.status(status).json({
+      success: false,
+      error: config.nodeEnv === 'production' ? 'Internal Server Error' : err.message,
     });
   });
 
