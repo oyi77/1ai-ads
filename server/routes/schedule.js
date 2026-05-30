@@ -34,144 +34,65 @@ export function createScheduleRouter(db) {
 export function createOptimizeRouter(campaignsRepo, llmClient) {
   const router = Router();
 
-  // Get all campaigns for optimization
   router.get('/all', async (req, res) => {
-    try {
-      const campaigns = campaignsRepo.findAll();
-      res.json({ success: true, data: campaigns });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
+    res.json({ success: true, data: campaignsRepo.findAll() });
   });
 
-  // Optimize single campaign
   router.post('/:id/optimize', async (req, res) => {
-    try {
-      const campaignId = req.params.id;
-      const analysis = await llmClient.generate({
-        messages: [
-          { role: 'system', content: 'You are an ad optimization expert. Analyze campaign performance and suggest improvements.' },
-          { role: 'user', content: `Analyze this campaign for optimization:\nCampaign ID: ${campaignId}\nBudget: IDR 500,000\nSpend: IDR 200,000\nRevenue: IDR 700,000\nROAS: 3.5` },
-        ],
-        temperature: 0.7,
-      });
-
-      const suggestions = analysis.choices[0].message.content;
-
-      res.json({ success: true, data: { campaignId, suggestions } });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
+    const campaignId = req.params.id;
+    const analysis = await llmClient.generate({
+      messages: [
+        { role: 'system', content: 'You are an ad optimization expert. Analyze campaign performance and suggest improvements.' },
+        { role: 'user', content: `Analyze this campaign for optimization:\nCampaign ID: ${campaignId}\nBudget: IDR 500,000\nSpend: IDR 200,000\nRevenue: IDR 700,000\nROAS: 3.5` },
+      ],
+      temperature: 0.7,
+    });
+    res.json({ success: true, data: { campaignId, suggestions: analysis.choices[0].message.content } });
   });
 
-  // Optimize all campaigns
   router.post('/optimize-all', async (req, res) => {
-    try {
-      const campaigns = campaignsRepo.findAll();
-      const optimizedCampaigns = [];
-
-      for (const campaign of campaigns) {
-        if (campaign.roas < 2.5) {
-          // Low ROAS - optimize
-          optimizedCampaigns.push({
-            id: campaign.id,
-            platform: campaign.platform,
-            originalRoas: campaign.roas,
-            optimizedRoas: campaign.roas * 1.5,
-            action: 'optimize',
-          });
-        } else if (campaign.roas >= 3.0) {
-          // High ROAS - increase budget
-          optimizedCampaigns.push({
-            id: campaign.id,
-            platform: campaign.platform,
-            originalRoas: campaign.roas,
-            optimizedRoas: campaign.roas,
-            action: 'increase_budget',
-            increasePercent: 30,
-          });
-        }
-      }
-
-      res.json({ success: true, data: { campaigns: optimizedCampaigns, message: `${optimizedCampaigns.length} campaigns processed` } });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
+    const campaigns = campaignsRepo.findAll();
+    const optimized = campaigns
+      .filter(c => c.roas < 2.5 || c.roas >= 3.0)
+      .map(c => ({
+        id: c.id,
+        platform: c.platform,
+        originalRoas: c.roas,
+        optimizedRoas: c.roas < 2.5 ? c.roas * 1.5 : c.roas,
+        action: c.roas < 2.5 ? 'optimize' : 'increase_budget',
+        ...(c.roas >= 3.0 && { increasePercent: 30 }),
+      }));
+    res.json({ success: true, data: { campaigns: optimized, message: `${optimized.length} campaigns processed` } });
   });
 
-  // Optimize low ROAS campaigns
   router.post('/optimize-low-roas', async (req, res) => {
-    try {
-      const campaigns = campaignsRepo.findAll();
-      const lowRoasCampaigns = campaigns.filter(c => c.roas < 2.0);
-
-      if (lowRoasCampaigns.length === 0) {
-        return res.json({ success: true, data: { message: 'No campaigns with low ROAS found' } });
-      }
-
-      // Optimize each campaign
-      const results = [];
-      for (const campaign of lowRoasCampaigns) {
-        results.push({
-          id: campaign.id,
-          platform: campaign.platform,
-          originalRoas: campaign.roas,
-          optimizedRoas: campaign.roas * 1.5,
-          action: 'optimize',
-        });
-      }
-
-      res.json({ success: true, data: { campaigns: results, message: `${results.length} campaigns optimized` } });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+    const lowRoas = campaignsRepo.findAll().filter(c => c.roas < 2.0);
+    if (lowRoas.length === 0) {
+      return res.json({ success: true, data: { message: 'No campaigns with low ROAS found' } });
     }
+    const results = lowRoas.map(c => ({
+      id: c.id, platform: c.platform, originalRoas: c.roas, optimizedRoas: c.roas * 1.5, action: 'optimize',
+    }));
+    res.json({ success: true, data: { campaigns: results, message: `${results.length} campaigns optimized` } });
   });
 
-  // Increase budget for high-performing campaigns
   router.post('/increase-budget', async (req, res) => {
-    try {
-      const campaigns = campaignsRepo.findAll();
-      const highPerformingCampaigns = campaigns.filter(c => c.roas >= 3.0);
-
-      if (highPerformingCampaigns.length === 0) {
-        return res.json({ success: true, data: { message: 'No high-performing campaigns found' } });
-      }
-
-      // Increase budget by 30%
-      const results = [];
-      for (const campaign of highPerformingCampaigns) {
-        const newBudget = campaign.budget * 1.3;
-        results.push({
-          id: campaign.id,
-          platform: campaign.platform,
-          originalBudget: campaign.budget,
-          newBudget: newBudget,
-          action: 'increase_budget',
-        });
-      }
-
-      res.json({ success: true, data: { campaigns: results, message: `${results.length} campaigns budget increased` } });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+    const highPerforming = campaignsRepo.findAll().filter(c => c.roas >= 3.0);
+    if (highPerforming.length === 0) {
+      return res.json({ success: true, data: { message: 'No high-performing campaigns found' } });
     }
+    const results = highPerforming.map(c => ({
+      id: c.id, platform: c.platform, originalBudget: c.budget, newBudget: c.budget * 1.3, action: 'increase_budget',
+    }));
+    res.json({ success: true, data: { campaigns: results, message: `${results.length} campaigns budget increased` } });
   });
 
-  // Sync all platforms
   router.post('/sync-all', async (req, res) => {
-    try {
-      res.json({ success: true, data: { message: 'Sync not yet connected to platform APIs' } });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
+    res.json({ success: true, data: { message: 'Sync not yet connected to platform APIs' } });
   });
 
-  // Apply all AI suggestions
   router.post('/apply-all', async (req, res) => {
-    try {
-      res.json({ success: true, data: { message: 'All AI suggestions applied' } });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
+    res.json({ success: true, data: { message: 'All AI suggestions applied' } });
   });
 
   return router;

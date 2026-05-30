@@ -10,30 +10,21 @@ export default function createTokenRouter() {
   });
 
   router.post('/exchange', async (req, res) => {
-    try {
-      const { short_token } = req.body;
-      if (!short_token) return res.status(400).json({ error: 'short_token required' });
-      const result = await svc.exchangeForLongLived(short_token);
-      res.json(result);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    const { short_token } = req.body;
+    if (!short_token) return res.status(400).json({ error: 'short_token required' });
+    res.json(await svc.exchangeForLongLived(short_token));
   });
 
   router.post('/debug', async (req, res) => {
-    try {
-      const { token } = req.body;
-      if (!token) return res.status(400).json({ error: 'token required' });
-      const result = await svc.debugToken(token);
-      res.json(result);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'token required' });
+    res.json(await svc.debugToken(token));
   });
 
   router.post('/info', async (req, res) => {
-    try {
-      const { token } = req.body;
-      if (!token) return res.status(400).json({ error: 'token required' });
-      const result = await svc.getTokenInfo(token);
-      res.json(result);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'token required' });
+    res.json(await svc.getTokenInfo(token));
   });
 
   return router;

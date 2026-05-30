@@ -6,47 +6,29 @@ export function createABTestsRouter(metaApi) {
   const svc = new ABTestService(metaApi);
 
   router.post('/', async (req, res) => {
-    try {
-      const result = await svc.createTest(req.body);
-      res.json(result);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    res.json(await svc.createTest(req.body));
   });
 
   router.get('/', async (_req, res) => {
-    try {
-      const result = await svc.getTests();
-      res.json(result);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    res.json(await svc.getTests());
   });
 
   router.get('/:id', async (req, res) => {
-    try {
-      const result = await svc.getTest(req.params.id);
-      res.json(result);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    res.json(await svc.getTest(req.params.id));
   });
 
   router.post('/:id/start', async (req, res) => {
-    try {
-      const result = await svc.startTest(req.params.id);
-      res.json(result);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    res.json(await svc.startTest(req.params.id));
   });
 
   router.post('/:id/stop', async (req, res) => {
-    try {
-      const result = await svc.stopTest(req.params.id);
-      res.json(result);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    res.json(await svc.stopTest(req.params.id));
   });
 
   router.post('/:id/winner', async (req, res) => {
-    try {
-      const { winner_id } = req.body;
-      if (!winner_id) return res.status(400).json({ error: 'winner_id required' });
-      const result = await svc.updateWinner(req.params.id, winner_id);
-      res.json(result);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    const { winner_id } = req.body;
+    if (!winner_id) return res.status(400).json({ error: 'winner_id required' });
+    res.json(await svc.updateWinner(req.params.id, winner_id));
   });
 
   return router;
