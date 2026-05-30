@@ -186,18 +186,30 @@ export class DailyReporter {
 
   // Start scheduled daily reports
   startDailyScheduler() {
-    // Run at 9 AM daily (Jakarta time)
-    // This would integrate with cron or setTimeout
-    log.info('Daily reporter started');
+    log.info('Daily reporter started (runs at 09:00 WIB daily)');
     
-    // Example: Every day at 9 AM
-    // const cron = require('node-cron');
-    // cron.schedule('0 9 * * *', () => this.sendDailyReportsToAllUsers());
+    const checkAndSend = () => {
+      const now = new Date();
+      const jakartaHour = (now.getUTCHours() + 7) % 24;
+      if (jakartaHour === 9 && now.getMinutes() < 5) {
+        this.sendDailyReportsToAllUsers().catch(err => 
+          log.error('Daily report batch failed', { error: err.message })
+        );
+      }
+    };
     
+    this._interval = setInterval(checkAndSend, 5 * 60 * 1000);
     return () => {
-      // Stop function
+      clearInterval(this._interval);
       log.info('Daily reporter stopped');
     };
+  }
+
+  stopDailyScheduler() {
+    if (this._interval) {
+      clearInterval(this._interval);
+      this._interval = null;
+    }
   }
 
   // Send reports to all users with enabled auto-mode

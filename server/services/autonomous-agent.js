@@ -1,6 +1,7 @@
 import { createLogger } from '../lib/logger.js';
 import { MetaAdsAPI } from './meta-api.js';
 import { GoogleAdsAPI } from './google-ads-api.js';
+import { TikTokAdsAPI } from './tiktok-api.js';
 import config from '../config/index.js';
 
 const log = createLogger('autonomous-agent');
@@ -20,9 +21,18 @@ export class AutonomousAgent {
     this.aiAgent = aiAgent;
     this.metaAdsAPI = new MetaAdsAPI(''); // Will be populated on connect
     this.googleAdsAPI = new GoogleAdsAPI();
+    this.tiktokAdsAPI = new TikTokAdsAPI(settingsRepo);
     
     this.scheduler = null;
     this.runningRules = new Set(); // Track currently running rules to prevent overlap
+  }
+
+  _getPlatformApi(platform) {
+    switch (platform) {
+      case 'google': return this.googleAdsAPI;
+      case 'tiktok': return this.tiktokAdsAPI;
+      default: return this.metaAdsAPI;
+    }
   }
 
   // ============================================
@@ -184,41 +194,60 @@ export class AutonomousAgent {
     const campaign = await this.campaignsRepo.getById(campaignId);
     if (!campaign) return { error: 'Campaign not found' };
 
-    // Apply via Meta API or Google API
     const platform = campaign.platform || 'meta';
+    const api = this._getPlatformApi(platform);
+    const currentBudget = campaign.budget || 100;
+    const newBudget = direction === 'increase' ? currentBudget * multiplier : currentBudget / multiplier;
+    const minBudget = 100;
+    const safeBudget = Math.max(minBudget, newBudget);
     
     if (platform === 'meta') {
-      const currentBudget = campaign.budget || 100;
-      const newBudget = direction === 'increase' ? currentBudget * multiplier : currentBudget / multiplier;
-      
-      // Ensure minimum budget
-      const minBudget = 100;
-      const safeBudget = Math.max(minBudget, newBudget);
-      
-      await this.metaAdsAPI.apiUpdate(`/campaign_${campaignId}`, {
+      await api.apiUpdate(`/campaign_${campaignId}`, {
         budget: Math.round(safeBudget * 100) / 100
       });
-
-      return { campaign_id: campaignId, action: 'scale', direction, from: currentBudget, to: safeBudget };
+    } else if (platform === 'google') {
+      await api.updateCampaign(campaign.customer_id, campaign.platform_campaign_id, { budget: safeBudget });
+    } else if (platform === 'tiktok') {
+      await api.updateCampaign(campaign.advertiser_id, campaign.platform_campaign_id, { budget: safeBudget });
     }
-    
-    return { error: 'Unsupported platform', platform };
+
+    return { campaign_id: campaignId, action: 'scale', direction, from: currentBudget, to: safeBudget, platform };
   }
 
   async _pauseCampaign(campaignId) {
     const campaign = await this.campaignsRepo.getById(campaignId);
     if (!campaign) return { error: 'Campaign not found' };
 
-    await this.metaAdsAPI.apiUpdate(`/campaign_${campaignId}`, { status: 'PAUSED' });
-    return { campaign_id: campaignId, action: 'pause', status: 'PAUSED' };
+    const platform = campaign.platform || 'meta';
+    const api = this._getPlatformApi(platform);
+    
+    if (platform === 'meta') {
+      await api.apiUpdate(`/campaign_${campaignId}`, { status: 'PAUSED' });
+    } else if (platform === 'google') {
+      await api.updateCampaign(campaign.customer_id, campaign.platform_campaign_id, { status: 'PAUSED' });
+    } else if (platform === 'tiktok') {
+      await api.updateCampaign(campaign.advertiser_id, campaign.platform_campaign_id, { status: 'DISABLE' });
+    }
+    
+    return { campaign_id: campaignId, action: 'pause', status: 'PAUSED', platform };
   }
 
   async _resumeCampaign(campaignId) {
     const campaign = await this.campaignsRepo.getById(campaignId);
     if (!campaign) return { error: 'Campaign not found' };
 
-    await this.metaAdsAPI.apiUpdate(`/campaign_${campaignId}`, { status: 'ACTIVE' });
-    return { campaign_id: campaignId, action: 'resume', status: 'ACTIVE' };
+    const platform = campaign.platform || 'meta';
+    const api = this._getPlatformApi(platform);
+    
+    if (platform === 'meta') {
+      await api.apiUpdate(`/campaign_${campaignId}`, { status: 'ACTIVE' });
+    } else if (platform === 'google') {
+      await api.updateCampaign(campaign.customer_id, campaign.platform_campaign_id, { status: 'ENABLED' });
+    } else if (platform === 'tiktok') {
+      await api.updateCampaign(campaign.advertiser_id, campaign.platform_campaign_id, { status: 'ENABLE' });
+    }
+    
+    return { campaign_id: campaignId, action: 'resume', status: 'ACTIVE', platform };
   }
 
   async _optimizeCreative(campaignId) {
@@ -328,35 +357,32 @@ export class AutonomousAgent {
 
     this.scheduler = setInterval(async () => {
       try {
-        // Get all active users with autonomous mode enabled
         const users = await this.platformAccountsRepo.getUsersWithAutoMode();
         
         for (const user of users) {
-          // Check if user has rules
           const rulesCount = await this.rulesRepo.countEnabled(user.id);
           if (rulesCount === 0) continue;
 
-          // Connect to user's Meta account
-          const account = await this.platformAccountsRepo.getByPlatform(user.id, 'meta');
-          if (!account || !account.access_token) continue;
+          const platforms = ['meta', 'google', 'tiktok'];
+          for (const platform of platforms) {
+            const account = await this.platformAccountsRepo.getByPlatform(user.id, platform);
+            if (!account || !account.access_token) continue;
 
-          this.metaAdsAPI = new MetaAdsAPI(account.access_token);
+            const api = this._getPlatformApi(platform);
+            if (platform === 'meta') {
+              this.metaAdsAPI = new MetaAdsAPI(account.access_token);
+            }
 
-          // Check campaigns and execute rules
-          const results = await this.checkCampaigns(user.id);
-          
-          if (results.length > 0) {
-            log.info('Autonomous actions executed', {
-              userId: user.id,
-              actions: results.length,
-              results
-            });
+            const results = await this.checkCampaigns(user.id);
+            if (results.length > 0) {
+              log.info('Autonomous actions executed', { userId: user.id, platform, actions: results.length, results });
+            }
           }
         }
       } catch (err) {
         log.error('Autonomous mode error', { error: err.message });
       }
-    }, 5 * 60 * 1000); // Check every 5 minutes
+    }, 5 * 60 * 1000);
 
     return () => {
       clearInterval(this.scheduler);

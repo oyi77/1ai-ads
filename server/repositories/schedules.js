@@ -43,4 +43,19 @@ export class SchedulesRepository {
     const result = this.db.prepare('DELETE FROM schedules WHERE id = ?').run(id);
     return result.changes > 0;
   }
+
+  findDue() {
+    const now = new Date().toISOString();
+    return this.db.prepare(
+      "SELECT * FROM schedules WHERE status = 'scheduled' AND schedule_time <= ? ORDER BY schedule_time ASC"
+    ).all(now);
+  }
+
+  markExecuted(id) {
+    this.db.prepare("UPDATE schedules SET status = 'executed', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
+  }
+
+  markFailed(id, error) {
+    this.db.prepare("UPDATE schedules SET status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
+  }
 }

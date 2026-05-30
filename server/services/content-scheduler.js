@@ -51,6 +51,23 @@ export class ContentScheduler {
     this.llmClient = llmClient;
     this.db = db;
     this._processing = false;
+    this._interval = null;
+  }
+
+  start(intervalMs = 60 * 1000) {
+    log.info(`ContentScheduler started (check every ${intervalMs / 1000}s)`);
+    this._interval = setInterval(() => {
+      this.processQueue().catch(err => 
+        log.error('Queue processing failed', { error: err.message })
+      );
+    }, intervalMs);
+  }
+
+  stop() {
+    if (this._interval) {
+      clearInterval(this._interval);
+      this._interval = null;
+    }
   }
 
   /**

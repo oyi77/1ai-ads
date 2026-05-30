@@ -64,6 +64,7 @@ import { LearningService } from './services/learning.js';
 import { PaymentService } from './services/payments.js';
 
 import { AutonomousAgent } from './services/autonomous-agent.js';
+import { AutoOptimizer } from './services/auto-optimizer.js';
 import { CampaignOrchestrator } from './services/campaign-orchestrator.js';
 import { CreativeStudio } from './services/creative-studio.js';
 import { MetaAdsAPI } from './services/meta-api.js';
@@ -231,6 +232,13 @@ export function createApp(params) {
   // Autonomous campaign monitor
   const autonomousAgent = new AutonomousAgent(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, llmClient);
   autonomousAgent.runAutonomousMode();
+
+  // Auto-optimizer: evaluates rules every 6 hours
+  const autoOptimizer = new AutoOptimizer(metaApi, rulesRepo, campaignsRepo);
+  autoOptimizer.start();
+
+  // AI agent scheduler: generates suggestions every 5 minutes
+  aiAgent.startScheduler(() => usersRepo.findAll().map(u => u.id));
 
   const autonomousRouter = createAutonomousRouter(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, autonomousAgent);
   app.use('/api/autonomous', requireAuth, autonomousRouter);

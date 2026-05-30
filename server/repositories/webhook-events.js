@@ -18,6 +18,10 @@ export class WebhookEventsRepository {
     return this.db.prepare('SELECT * FROM webhook_events WHERE source = ? ORDER BY created_at DESC').all(source);
   }
 
+  findUnprocessed(limit = 100) {
+    return this.db.prepare('SELECT * FROM webhook_events WHERE processed = 0 ORDER BY created_at ASC LIMIT ?').all(limit);
+  }
+
   markProcessed(id) {
     return this.db.prepare('UPDATE webhook_events SET processed = 1 WHERE id = ?').run(id);
   }

@@ -17,6 +17,10 @@ export class UsersRepository {
     return this.db.prepare('SELECT * FROM users WHERE id = ?').get(id) || null;
   }
 
+  findAll() {
+    return this.db.prepare('SELECT id, username, email, role, plan FROM users').all();
+  }
+
   create({ username, email, password_hash, confirmed = 0 }) {
     const id = uuid();
     this.db.prepare('INSERT INTO users (id, username, email, password_hash, confirmed) VALUES (?, ?, ?, ?, ?)').run(id, username, email, password_hash, confirmed);
