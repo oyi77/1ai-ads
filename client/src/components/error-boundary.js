@@ -26,9 +26,6 @@ export function errorBoundary(renderFn) {
   };
 }
 
-/**
- * Show a loading spinner.
- */
 export function showSpinner(message = 'Loading...') {
   return `
     <div class="flex items-center justify-center p-8">
@@ -38,9 +35,6 @@ export function showSpinner(message = 'Loading...') {
   `;
 }
 
-/**
- * Show an error message with retry button.
- */
 export function showError(message, onRetry) {
   const retryId = `retry-${Date.now()}`;
   setTimeout(() => {
@@ -58,9 +52,6 @@ export function showError(message, onRetry) {
   `;
 }
 
-/**
- * Show an empty state with a call-to-action.
- */
 export function showEmpty(title = 'No data found', description = '', ctaText = '', ctaHref = '') {
   return `
     <div class="p-8 text-center text-slate-400">
