@@ -131,6 +131,31 @@ export class CampaignOrchestrator {
     return this.meta.updateCampaign(campaignId, { status: 'ACTIVE' });
   }
 
+  async pauseCampaign(campaignId) {
+    return this.meta.updateCampaign(campaignId, { status: 'PAUSED' });
+  }
+
+  async createAndActivate(params, { autoActivate = false, delayMs = 5 * 60 * 1000 } = {}) {
+    const result = await this.createFullCampaign(params);
+    
+    if (autoActivate && result.status === 'created' && result.campaignId) {
+      log.info('Auto-activation scheduled', { campaignId: result.campaignId, delayMs });
+      result.autoActivateScheduled = true;
+      result.autoActivateAt = new Date(Date.now() + delayMs).toISOString();
+      
+      setTimeout(async () => {
+        try {
+          await this.activateCampaign(result.campaignId);
+          log.info('Campaign auto-activated', { campaignId: result.campaignId });
+        } catch (err) {
+          log.error('Auto-activation failed', { campaignId: result.campaignId, error: err.message });
+        }
+      }, delayMs);
+    }
+    
+    return result;
+  }
+
   /**
    * Pause a running campaign.
    */

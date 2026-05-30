@@ -123,4 +123,49 @@ describe('CampaignOrchestrator', () => {
     expect(result.error).toBeTruthy();
     expect(mockMetaApi.updateCampaign).toHaveBeenCalledWith('camp_123', { status: 'DELETED' });
   });
+
+  it('should create and activate with delay', async () => {
+    vi.useFakeTimers();
+    mockCreativeStudio.generateAdPackage.mockResolvedValue({
+      copies: [{ hook: 'Test', body: 'Test', cta: 'Test' }],
+      targetingSuggestions: {},
+    });
+    mockMetaApi.createCampaign.mockResolvedValue({ id: 'camp_123' });
+    mockMetaApi.createAdSet.mockResolvedValue({ id: 'adset_456' });
+    mockMetaApi.createAdCreative.mockResolvedValue({ id: 'creative_789' });
+    mockMetaApi.createAd.mockResolvedValue({ id: 'ad_999' });
+    mockMetaApi.updateCampaign.mockResolvedValue({});
+
+    const result = await orchestrator.createAndActivate(
+      { accountId: 'act_123', pageId: 'page_456', product: 'Test', target: 'Test', keunggulan: 'Test', dailyBudget: 50000 },
+      { autoActivate: true, delayMs: 1000 }
+    );
+
+    expect(result.status).toBe('created');
+    expect(result.autoActivateScheduled).toBe(true);
+    expect(result.autoActivateAt).toBeTruthy();
+
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(mockMetaApi.updateCampaign).toHaveBeenCalledWith('camp_123', { status: 'ACTIVE' });
+    vi.useRealTimers();
+  });
+
+  it('should not auto-activate if autoActivate is false', async () => {
+    mockCreativeStudio.generateAdPackage.mockResolvedValue({
+      copies: [{ hook: 'Test', body: 'Test', cta: 'Test' }],
+      targetingSuggestions: {},
+    });
+    mockMetaApi.createCampaign.mockResolvedValue({ id: 'camp_123' });
+    mockMetaApi.createAdSet.mockResolvedValue({ id: 'adset_456' });
+    mockMetaApi.createAdCreative.mockResolvedValue({ id: 'creative_789' });
+    mockMetaApi.createAd.mockResolvedValue({ id: 'ad_999' });
+
+    const result = await orchestrator.createAndActivate(
+      { accountId: 'act_123', pageId: 'page_456', product: 'Test', target: 'Test', keunggulan: 'Test', dailyBudget: 50000 },
+      { autoActivate: false }
+    );
+
+    expect(result.status).toBe('created');
+    expect(result.autoActivateScheduled).toBeUndefined();
+  });
 });

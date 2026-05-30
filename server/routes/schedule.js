@@ -5,43 +5,27 @@ export function createScheduleRouter(db) {
   const schedulesRepo = new SchedulesRepository(db);
   const router = Router();
 
-  // List scheduled posts
   router.get('/', async (req, res) => {
-    try {
-      const { status, platform } = req.query;
-      const schedules = schedulesRepo.findAll({ status, platform });
-      res.json({ success: true, data: schedules });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
+    const { status, platform } = req.query;
+    const schedules = schedulesRepo.findAll({ status, platform });
+    res.json({ success: true, data: schedules });
   });
 
-  // Create scheduled post
   router.post('/', async (req, res) => {
     const { name, schedule_time, platform, content, media_url } = req.body;
     if (!name || !schedule_time || !platform) {
       return res.status(400).json({ success: false, error: 'name, schedule_time, and platform are required' });
     }
-
-    try {
-      const id = schedulesRepo.create({ name, schedule_time, platform, content, media_url });
-      res.json({ success: true, data: { id, status: 'scheduled' } });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
+    const id = schedulesRepo.create({ name, schedule_time, platform, content, media_url });
+    res.json({ success: true, data: { id, status: 'scheduled' } });
   });
 
-  // Delete scheduled post
   router.delete('/:id', async (req, res) => {
-    try {
-      const deleted = schedulesRepo.remove(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ success: false, error: 'Schedule not found' });
-      }
-      res.json({ success: true });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+    const deleted = schedulesRepo.remove(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Schedule not found' });
     }
+    res.json({ success: true });
   });
 
   return router;

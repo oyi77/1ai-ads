@@ -68,6 +68,8 @@ import { AutoOptimizer } from './services/auto-optimizer.js';
 import { CampaignOrchestrator } from './services/campaign-orchestrator.js';
 import { CreativeStudio } from './services/creative-studio.js';
 import { MetaAdsAPI } from './services/meta-api.js';
+import { WebhookProcessor } from './services/webhook-processor.js';
+import { DataCleanup } from './services/data-cleanup.js';
 
 import { createCampaignsRouter } from './routes/campaigns.js';
 import { createAdsRouter } from './routes/ads.js';
@@ -239,6 +241,14 @@ export function createApp(params) {
 
   // AI agent scheduler: generates suggestions every 5 minutes
   aiAgent.startScheduler(() => usersRepo.findAll().map(u => u.id));
+
+  // Webhook event processor: processes unprocessed events every 60s
+  const webhookProcessor = new WebhookProcessor(webhookEventsRepo, campaignsRepo);
+  webhookProcessor.start();
+
+  // Data cleanup: removes old records weekly
+  const dataCleanup = new DataCleanup(db);
+  dataCleanup.start();
 
   const autonomousRouter = createAutonomousRouter(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, autonomousAgent);
   app.use('/api/autonomous', requireAuth, autonomousRouter);
