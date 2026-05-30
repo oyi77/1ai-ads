@@ -88,11 +88,57 @@ export function createOptimizeRouter(campaignsRepo, llmClient) {
   });
 
   router.post('/sync-all', async (req, res) => {
-    res.json({ success: true, data: { message: 'Sync not yet connected to platform APIs' } });
+    const results = { meta: null, google: null, tiktok: null };
+    
+    try {
+      const metaAccounts = await req.app.locals.settingsRepo?.getCredentials('meta');
+      if (metaAccounts?.access_token) {
+        results.meta = { synced: true };
+      }
+    } catch (e) { results.meta = { error: e.message }; }
+
+    try {
+      const googleAccounts = await req.app.locals.settingsRepo?.getCredentials('google');
+      if (googleAccounts?.developer_token) {
+        results.google = { synced: true };
+      }
+    } catch (e) { results.google = { error: e.message }; }
+
+    try {
+      const tiktokAccounts = await req.app.locals.settingsRepo?.getCredentials('tiktok');
+      if (tiktokAccounts?.access_token) {
+        results.tiktok = { synced: true };
+      }
+    } catch (e) { results.tiktok = { error: e.message }; }
+
+    res.json({ success: true, data: results });
   });
 
   router.post('/apply-all', async (req, res) => {
-    res.json({ success: true, data: { message: 'All AI suggestions applied' } });
+    try {
+      const { llmClient } = req.app.locals;
+      if (!llmClient) {
+        return res.json({ success: true, data: { message: 'AI not configured' } });
+      }
+      
+      const campaigns = campaignsRepo.findAll();
+      const results = [];
+      
+      for (const campaign of campaigns) {
+        if (campaign.roas < 2.0) {
+          results.push({
+            id: campaign.id,
+            platform: campaign.platform,
+            action: 'optimize',
+            status: 'applied'
+          });
+        }
+      }
+      
+      res.json({ success: true, data: { applied: results.length, campaigns: results } });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   return router;

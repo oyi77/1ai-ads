@@ -58,7 +58,6 @@ export class PlatformAccountsRepository {
   }
 
   getUsersWithAutoMode() {
-    // For now, return users who have at least one active platform account
     return this.db.prepare(`
       SELECT DISTINCT u.* FROM users u
       JOIN platform_accounts pa ON u.id = pa.user_id

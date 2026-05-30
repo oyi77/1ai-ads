@@ -80,8 +80,7 @@ router.post('/link-account', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // This would integrate with platformAccountsRepo
-    // For now, just return success
+    await router.autonomousAgent.linkFacebookAccount(userId, accountId, accountName, accessToken);
     res.json({
       success: true,
       message: 'Account linked successfully'
@@ -101,12 +100,11 @@ router.post('/check-campaigns', async (req, res) => {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    // This would integrate with AutonomousAgent.checkCampaigns()
-    // For now, mock response
+    const results = await router.autonomousAgent.checkCampaigns(userId);
     res.json({
       success: true,
-      message: 'Campaign check started',
-      autoApply: true
+      data: results,
+      message: `Checked ${results.length} campaigns, ${results.filter(r => r.result).length} actions taken`
     });
   } catch (err) {
     log.error('Check campaigns error', { error: err.message });
@@ -147,7 +145,7 @@ router.post('/toggle-autonomy', async (req, res) => {
   try {
     const { enabled } = req.body;
 
-    // This would integrate with settingsRepo
+    await router.settingsRepo.set('autonomy_enabled', enabled ? 'true' : 'false');
     res.json({
       success: true,
       message: enabled ? 'Autonomy mode enabled' : 'Autonomy mode disabled'

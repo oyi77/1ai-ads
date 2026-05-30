@@ -1,4 +1,5 @@
 import { createLogger } from '../lib/logger.js';
+import { NotificationService } from './notification-service.js';
 
 const log = createLogger('daily-reporter');
 
@@ -7,6 +8,7 @@ export class DailyReporter {
     this.settingsRepo = settingsRepo;
     this.campaignsRepo = campaignsRepo;
     this.platformAccountsRepo = platformAccountsRepo;
+    this.notificationService = new NotificationService();
   }
 
   // Send daily report to user
@@ -166,22 +168,29 @@ export class DailyReporter {
 
   // Send report via user's preferred channel
   async _sendReport(userId, report) {
-    // For now, log the report
-    // In production, integrate with:
-    // - Telegram bot
-    // - Email (Nodemailer)
-    // - Slack webhook
-    // - WhatsApp Cloud API
+    log.info('Sending daily report', { userId, date: report.date });
     
-    log.info('Report ready to send', { userId, date: report.date });
+    const message = this._formatReport(report);
     
-    // Example: Send to Telegram
-    // await telegram.sendReport(userId, report);
-    
-    // Example: Schedule via cron
-    // await cron.schedule('0 9 * * *', () => this.sendScheduledReport(userId));
+    try {
+      await this.notificationService.sendTelegram(message);
+      await this.notificationService.sendWebhook('daily_report', { userId, report });
+      log.info('Daily report sent', { userId });
+    } catch (err) {
+      log.error('Failed to send daily report', { userId, error: err.message });
+    }
     
     return true;
+  }
+
+  _formatReport(report) {
+    return `📊 Daily Report ${report.date}
+    
+Campaigns: ${report.totalCampaigns} (${report.activeCampaigns} active)
+Spend: IDR ${report.totalSpend?.toLocaleString() || 0}
+ROAS: ${report.totalROAS?.toFixed(2) || 'N/A'}x
+
+${report.newRecommendations?.length ? '💡 ' + report.newRecommendations.length + ' new recommendations' : '✅ No new recommendations'}`;
   }
 
   // Start scheduled daily reports
