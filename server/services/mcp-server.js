@@ -7,11 +7,13 @@ import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('mcp-server');
 
-export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo) {
+export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, services = {}) {
+  const { adGenerator, creativeStudio, aiAgent, competitorSpy, autoOptimizer, llmClient } = services;
+
   const server = new Server(
     {
       name: "1ai-ads-server",
-      version: "1.0.0",
+      version: "2.0.0",
     },
     {
       capabilities: {
@@ -53,7 +55,105 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo) {
           name: "1ai-ads_list_creatives",
           description: "List all generated ad creatives/copy",
           inputSchema: { type: "object", properties: {} },
-        }
+        },
+        {
+          name: "1ai-ads_generate_ad_copy",
+          description: "Generate 4 ad copy variations using P.A.S, Efek Gravitasi, Hasil x3, Prospects-to-Prospects models",
+          inputSchema: {
+            type: "object",
+            properties: {
+              product: { type: "string", description: "Product name and description" },
+              target: { type: "string", description: "Target audience" },
+              keunggulan: { type: "string", description: "Product advantages/USP" }
+            },
+            required: ["product", "target", "keunggulan"]
+          },
+        },
+        {
+          name: "1ai-ads_generate_creative_package",
+          description: "Generate complete ad package: copy, image directions, video script, targeting suggestions",
+          inputSchema: {
+            type: "object",
+            properties: {
+              product: { type: "string", description: "Product name and description" },
+              target: { type: "string", description: "Target audience" },
+              keunggulan: { type: "string", description: "Product advantages/USP" },
+              platform: { type: "string", enum: ["meta", "google", "tiktok"], description: "Target platform" }
+            },
+            required: ["product", "target", "keunggulan"]
+          },
+        },
+        {
+          name: "1ai-ads_get_ai_suggestions",
+          description: "Get AI-powered optimization suggestions for campaigns and ads",
+          inputSchema: {
+            type: "object",
+            properties: {
+              user_id: { type: "string", description: "User ID to get suggestions for" }
+            },
+            required: ["user_id"]
+          },
+        },
+        {
+          name: "1ai-ads_apply_suggestion",
+          description: "Apply an AI suggestion to optimize a campaign or ad",
+          inputSchema: {
+            type: "object",
+            properties: {
+              suggestion_id: { type: "string", description: "The suggestion ID to apply" },
+              user_id: { type: "string", description: "User ID who owns the suggestion" }
+            },
+            required: ["suggestion_id", "user_id"]
+          },
+        },
+        {
+          name: "1ai-ads_list_suggestions",
+          description: "List all pending and applied AI suggestions",
+          inputSchema: {
+            type: "object",
+            properties: {
+              user_id: { type: "string", description: "User ID to filter suggestions" },
+              status: { type: "string", enum: ["pending", "applied", "all"], description: "Filter by status" }
+            },
+            required: ["user_id"]
+          },
+        },
+        {
+          name: "1ai-ads_analyze_competitor",
+          description: "Analyze a competitor's ads and landing pages",
+          inputSchema: {
+            type: "object",
+            properties: {
+              competitor_url: { type: "string", description: "Competitor website or Facebook page URL" }
+            },
+            required: ["competitor_url"]
+          },
+        },
+        {
+          name: "1ai-ads_get_automation_rules",
+          description: "List all automation rules for campaign optimization",
+          inputSchema: {
+            type: "object",
+            properties: {
+              user_id: { type: "string", description: "User ID to filter rules" }
+            },
+            required: ["user_id"]
+          },
+        },
+        {
+          name: "1ai-ads_create_campaign",
+          description: "Create a new advertising campaign",
+          inputSchema: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Campaign name" },
+              platform: { type: "string", enum: ["meta", "google", "tiktok"], description: "Target platform" },
+              budget: { type: "number", description: "Daily budget in local currency" },
+              objective: { type: "string", description: "Campaign objective (conversions, traffic, reach)" }
+            },
+            required: ["name", "platform", "budget"]
+          },
+        },
       ],
     };
   });
@@ -93,10 +193,86 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo) {
           };
         }
 
+        case "1ai-ads_generate_ad_copy": {
+          if (!adGenerator) throw new Error("AdGenerator service not available");
+          const result = await adGenerator.generateAds(args.product, args.target, args.keunggulan);
+          return {
+            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          };
+        }
+
+        case "1ai-ads_generate_creative_package": {
+          if (!creativeStudio) throw new Error("CreativeStudio service not available");
+          const result = await creativeStudio.generateAdPackage(args.product, args.target, args.keunggulan, args.platform || 'meta');
+          return {
+            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          };
+        }
+
+        case "1ai-ads_get_ai_suggestions": {
+          if (!aiAgent) throw new Error("AiAgent service not available");
+          const suggestions = await aiAgent.analyzeAndSuggest(args.user_id);
+          return {
+            content: [{ type: "text", text: JSON.stringify({ suggestions_created: suggestions }, null, 2) }],
+          };
+        }
+
+        case "1ai-ads_apply_suggestion": {
+          if (!aiAgent) throw new Error("AiAgent service not available");
+          const result = await aiAgent.applySuggestion(args.user_id, args.suggestion_id);
+          return {
+            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          };
+        }
+
+        case "1ai-ads_list_suggestions": {
+          if (!aiAgent?.suggestionsRepo) throw new Error("Suggestions repository not available");
+          const status = args.status || 'all';
+          const suggestions = aiAgent.suggestionsRepo.getByUserId
+            ? aiAgent.suggestionsRepo.getByUserId(args.user_id)
+            : [];
+          const filtered = status === 'all' ? suggestions : suggestions.filter(s => s.status === status);
+          return {
+            content: [{ type: "text", text: JSON.stringify(filtered, null, 2) }],
+          };
+        }
+
+        case "1ai-ads_analyze_competitor": {
+          if (!competitorSpy) throw new Error("CompetitorSpy service not available");
+          const result = await competitorSpy.analyzePage(args.competitor_url);
+          return {
+            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          };
+        }
+
+        case "1ai-ads_get_automation_rules": {
+          const rules = autoOptimizer?.rulesRepo?.getByUserId
+            ? autoOptimizer.rulesRepo.getByUserId(args.user_id)
+            : [];
+          return {
+            content: [{ type: "text", text: JSON.stringify(rules, null, 2) }],
+          };
+        }
+
+        case "1ai-ads_create_campaign": {
+          const campaign = campaignsRepo.create({
+            name: args.name,
+            platform: args.platform,
+            budget: args.budget,
+            objective: args.objective || 'conversions',
+            status: 'draft',
+            created_at: new Date().toISOString()
+          });
+          return {
+            content: [{ type: "text", text: JSON.stringify(campaign, null, 2) }],
+          };
+        }
+
         default:
           throw new Error(`Unknown tool: ${name}`);
       }
     } catch (error) {
+      log.error('MCP tool error', { tool: name, error: error.message });
       return {
         content: [{ type: "text", text: `Error: ${error.message}` }],
         isError: true,
