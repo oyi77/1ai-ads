@@ -426,8 +426,18 @@ export class AutonomousAgent {
   }
 
   async _getActionsTakenToday(userId) {
-    // Count actions taken today from logs/repo
-    return 0; // Placeholder
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const rules = this.rulesRepo.findAll({}) || [];
+      const triggeredToday = rules.filter(r => {
+        if (!r.last_triggered) return false;
+        return r.last_triggered.startsWith(today);
+      });
+      return triggeredToday.length;
+    } catch (err) {
+      log.debug('Failed to count actions today', { error: err.message });
+      return 0;
+    }
   }
 
   async _sendReportToUser(userId, report) {
