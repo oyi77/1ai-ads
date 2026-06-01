@@ -38,6 +38,7 @@ import { AiAgent } from './services/ai-agent.js';
 import { MetaVideoService } from './services/meta-video-service.js';
 import { ContentScheduler } from './services/content-scheduler.js';
 import { AdResearchService } from './services/ad-research.js';
+import { createSelowRoutes } from './routes/selow.js';
 import rateLimit from 'express-rate-limit';
 import express from 'express';
 import cors from 'cors';
@@ -82,17 +83,20 @@ import { createMcpRouter } from './routes/mcp.js';
 import { ScalevService } from './services/scalev.js';
 import { ShopeeAdapter } from './services/shopee-adapter.js';
 import { AttributionService } from './services/attribution-service.js';
+import { GoogleAdsAPI } from './services/google-ads-api.js';
+import { TikTokAdsAPI } from './services/tiktok-api.js';
 
 import { AttributionRepository } from './repositories/attribution.js';
 import createAttributionRouter from './routes/attribution.js';
 
-
+import { createLogger } from './lib/logger.js';
 
 // Import middleware
 import { requireAuth } from './middleware/auth.js';
 
 
 export function createApp(params) {
+  const log = createLogger('app');
   // Support both direct db and { db, llmClient, mcpClient } pattern
   const db = params && typeof params === 'object' && params.db ? params.db : params;
   // Create repositories
@@ -181,7 +185,6 @@ export function createApp(params) {
   // Serve frontend static files (SPA)
   const clientPath = path.join(process.cwd(), 'dist');
   app.use(express.static(clientPath));
-  
 
   // Rate limiting
   const publicRateLimit = rateLimit({
@@ -228,30 +231,32 @@ export function createApp(params) {
   app.use('/api/schedule', requireAuth, scheduleRouter);
   app.use('/api/meta', requireAuth, metaAccountsRouter);
   app.use('/api/meta/content', requireAuth, metaContentRouter);
-  app.use('/api/google-ads', requireAuth, createGoogleAdsRouter(settingsRepo));
-  app.use('/api/tiktok-ads', requireAuth, createTikTokAdsRouter(settingsRepo));
+  const googleAdsRouter = createGoogleAdsRouter(settingsRepo);
+  const tiktokAdsRouter = createTikTokAdsRouter(settingsRepo);
+  const selowRouter = createSelowRoutes(settingsRepo);
+  app.use('/api/google-ads', requireAuth, googleAdsRouter);
+  app.use('/api/tiktok-ads', requireAuth, tiktokAdsRouter);
+  app.use('/api/selow', requireAuth, selowRouter);
 
+
+  // Platform API clients for RuleEvaluator (DIP: pass in, don't instantiate internally)
+  const googleAdsAPI = new GoogleAdsAPI(settingsRepo);
+  const tiktokAdsAPI = new TikTokAdsAPI(settingsRepo);
 
   // Autonomous campaign monitor
-  const autonomousAgent = new AutonomousAgent(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, llmClient);
-  autonomousAgent.runAutonomousMode();
+  const autonomousAgent = new AutonomousAgent(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, llmClient, undefined, { metaAdsAPI: metaApi, googleAdsAPI, tiktokAdsAPI });
 
   // Auto-optimizer: evaluates rules every 6 hours
   const autoOptimizer = new AutoOptimizer(metaApi, rulesRepo, campaignsRepo);
-  autoOptimizer.start();
 
-  app.use('/api/optimizer', requireAuth, createOptimizerRouter(rulesRepo, autoOptimizer));
-
-  // AI agent scheduler: generates suggestions every 5 minutes
-  aiAgent.startScheduler(() => usersRepo.findAll().map(u => u.id));
+  const optimizerRouter = createOptimizerRouter(rulesRepo, autoOptimizer);
+  app.use('/api/optimizer', requireAuth, optimizerRouter);
 
   // Webhook event processor: processes unprocessed events every 60s
   const webhookProcessor = new WebhookProcessor(webhookEventsRepo, campaignsRepo);
-  webhookProcessor.start();
 
   // Data cleanup: removes old records weekly
   const dataCleanup = new DataCleanup(db);
-  dataCleanup.start();
 
   const autonomousRouter = createAutonomousRouter(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, autonomousAgent);
   app.use('/api/autonomous', requireAuth, autonomousRouter);
@@ -295,7 +300,7 @@ export function createApp(params) {
     const indexPath = path.join(clientPath, 'index.html');
     fs.readFile(indexPath, 'utf8', (err, data) => {
       if (err) {
-        console.error('Failed to read index.html:', err);
+        log.error('Failed to read index.html', { error: err.message });
         return res.status(500).send('Internal Server Error');
       }
       res.set('Content-Type', 'text/html');
@@ -315,10 +320,10 @@ export function createApp(params) {
       error: err.message,
       ...(config.nodeEnv === 'development' && { stack: err.stack }),
     };
-    console.error('[ERROR]', JSON.stringify(logEntry));
+    log.error('Request error', logEntry);
 
     if (status >= 500) {
-      console.error('[ERROR_STACK]', err.stack);
+      log.error('Server error stack', { stack: err.stack });
     }
 
     res.status(status).json({
@@ -327,5 +332,32 @@ export function createApp(params) {
     });
   });
 
+  // Store services on app.locals for startServices
+  app.locals._services = {
+    autonomousAgent,
+    autoOptimizer,
+    aiAgent,
+    webhookProcessor,
+    dataCleanup,
+    usersRepo,
+  };
+
   return app;
+}
+
+/**
+ * Start background services (schedulers, processors).
+ * Call AFTER app.listen() to avoid side effects in createApp().
+ */
+export function startServices(app) {
+  const log = createLogger('app');
+  const { autonomousAgent, autoOptimizer, aiAgent, webhookProcessor, dataCleanup, usersRepo } = app.locals._services;
+
+  autonomousAgent.runAutonomousMode();
+  autoOptimizer.start();
+  aiAgent.startScheduler(() => usersRepo.findAll().map(u => u.id));
+  webhookProcessor.start();
+  dataCleanup.start();
+
+  log.info('Background services started');
 }

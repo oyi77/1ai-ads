@@ -7,7 +7,7 @@ const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '.env') });
 
 import { createDatabase } from './db/index.js';
-import { createApp } from './server/app.js';
+import { createApp, startServices } from './server/app.js';
 import { LLMClient } from './server/services/llm-client.js';
 import { MCPClientManager } from './server/services/mcp-client.js';
 import { AutonomousAgent } from './server/services/autonomous-agent.js';
@@ -91,6 +91,9 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 
 // Attach WebSocket realtime service
 app.locals.realtimeService.attach(server);
+
+// Start background services after server is listening
+startServices(app);
 
 // Graceful shutdown (ignore SIGTERM from pm2/bash hooks)
 process.on('SIGTERM', () => {

@@ -86,4 +86,54 @@ export class CampaignsRepository {
       LIMIT ?
     `).all(limit);
   }
+
+  findById(id) {
+    const row = this.db.prepare('SELECT * FROM campaigns WHERE id = ?').get(id);
+    if (!row) return null;
+    return { ...row, stats: { spend: row.spend, revenue: row.revenue, roas: row.roas, impressions: row.impressions, clicks: row.clicks } };
+  }
+
+  getById(id) {
+    return this.findById(id);
+  }
+
+  findActive(userId) {
+    return this.db.prepare('SELECT * FROM campaigns WHERE status = ?').all('ACTIVE').map(row => ({
+      ...row,
+      stats: { spend: row.spend, revenue: row.revenue, roas: row.roas, impressions: row.impressions, clicks: row.clicks },
+    }));
+  }
+
+  getByUserId(userId) {
+    return this.db.prepare('SELECT * FROM campaigns ORDER BY created_at DESC').all().map(row => ({
+      ...row,
+      stats: { spend: row.spend, revenue: row.revenue, roas: row.roas, impressions: row.impressions, clicks: row.clicks },
+    }));
+  }
+
+  update(id, data) {
+    const fields = [];
+    const values = [];
+    for (const [key, val] of Object.entries(data)) {
+      if (val !== undefined) {
+        fields.push(`${key} = ?`);
+        values.push(typeof val === 'object' ? JSON.stringify(val) : val);
+      }
+    }
+    if (fields.length === 0) return false;
+    values.push(id);
+    const result = this.db.prepare(`UPDATE campaigns SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+    return result.changes > 0;
+  }
+
+  getAds(campaignId) {
+    return this.db.prepare('SELECT * FROM ads WHERE campaign_id = ?').all(campaignId).map(row => ({
+      ...row,
+      stats: { spend: row.spend, revenue: row.revenue, roas: row.roas },
+    }));
+  }
+
+  create(data) {
+    return this.upsert(data);
+  }
 }

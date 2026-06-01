@@ -120,6 +120,26 @@ export class RulesRepository {
     return this.db.prepare(`SELECT COUNT(*) as count FROM ${this.table} WHERE user_id = ? AND enabled = 1`).get(userId).count;
   }
 
+  findAll(filters = {}) {
+    let rows;
+    if (filters.campaignId) {
+      rows = this.db.prepare(`SELECT * FROM ${this.table} WHERE condition LIKE ? ORDER BY created_at DESC`).all(`%${filters.campaignId}%`);
+    } else {
+      rows = this.db.prepare(`SELECT * FROM ${this.table} ORDER BY created_at DESC`).all();
+    }
+    return rows.map(r => ({
+      id: r.id,
+      user_id: r.user_id,
+      name: r.name,
+      condition: JSON.parse(r.condition),
+      action: JSON.parse(r.action),
+      priority: r.priority,
+      enabled: r.enabled === 1,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    }));
+  }
+
   delete(id) {
     const result = this.db.prepare(`DELETE FROM ${this.table} WHERE id = ?`).run(id);
     log.info('Rule deleted', { id });

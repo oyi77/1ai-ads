@@ -4,6 +4,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { createLogger } from '../lib/logger.js';
+import { calculateProfit, evaluateROAS, getCampaignStatus } from './profitability-calculator.js';
 
 const log = createLogger('mcp-server');
 
@@ -154,6 +155,69 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
             required: ["name", "platform", "budget"]
           },
         },
+        {
+          name: "1ai-ads_selow_list_accounts",
+          description: "List all SELOW ad accounts with balance info",
+          inputSchema: {
+            type: "object",
+            properties: {
+              search: { type: "string", description: "Search filter" },
+              status: { type: "string", description: "Status filter" }
+            }
+          },
+        },
+        {
+          name: "1ai-ads_selow_topup",
+          description: "Initiate topup for a SELOW ad account",
+          inputSchema: {
+            type: "object",
+            properties: {
+              account_id: { type: "string", description: "SELOW account ID" },
+              amount: { type: "number", description: "Topup amount in Rp" },
+              merchant: { type: "string", description: "Payment merchant (bri, bca, mandiri)" }
+            },
+            required: ["account_id", "amount"]
+          },
+        },
+        {
+          name: "1ai-ads_check_profitability",
+          description: "Check campaign profitability using IKLAN_WORKFLOW formula (Profit = Commission - Spend×1.06)",
+          inputSchema: {
+            type: "object",
+            properties: {
+              campaign_id: { type: "string", description: "Campaign ID" },
+              commission: { type: "number", description: "Affiliate commission in Rp" },
+              spend: { type: "number", description: "Total ad spend in Rp" }
+            },
+            required: ["campaign_id", "commission", "spend"]
+          },
+        },
+        {
+          name: "1ai-ads_run_workflow",
+          description: "Run IKLAN_WORKFLOW daily check or 3-day evaluation",
+          inputSchema: {
+            type: "object",
+            properties: {
+              action: { type: "string", enum: ["daily_check", "3day_eval", "weekly_cycle"], description: "Workflow action" },
+              campaign_id: { type: "string", description: "Campaign ID (required for 3day_eval)" },
+              user_id: { type: "string", description: "User ID" }
+            },
+            required: ["action", "user_id"]
+          },
+        },
+        {
+          name: "1ai-ads_trigger_scale",
+          description: "Trigger scale-up for a winning campaign — duplicate with new interests",
+          inputSchema: {
+            type: "object",
+            properties: {
+              campaign_id: { type: "string", description: "Winning campaign ID to scale" },
+              account_id: { type: "string", description: "Meta ad account ID" },
+              product: { type: "string", description: "Product name for interest generation" }
+            },
+            required: ["campaign_id", "account_id", "product"]
+          },
+        },
       ],
     };
   });
@@ -211,6 +275,7 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
 
         case "1ai-ads_get_ai_suggestions": {
           if (!aiAgent) throw new Error("AiAgent service not available");
+          if (!args.user_id) throw new Error("user_id is required");
           const suggestions = await aiAgent.analyzeAndSuggest(args.user_id);
           return {
             content: [{ type: "text", text: JSON.stringify({ suggestions_created: suggestions }, null, 2) }],
@@ -219,6 +284,7 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
 
         case "1ai-ads_apply_suggestion": {
           if (!aiAgent) throw new Error("AiAgent service not available");
+          if (!args.user_id) throw new Error("user_id is required");
           const result = await aiAgent.applySuggestion(args.user_id, args.suggestion_id);
           return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
@@ -227,6 +293,7 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
 
         case "1ai-ads_list_suggestions": {
           if (!aiAgent?.suggestionsRepo) throw new Error("Suggestions repository not available");
+          if (!args.user_id) throw new Error("user_id is required");
           const status = args.status || 'all';
           const suggestions = aiAgent.suggestionsRepo.getByUserId
             ? aiAgent.suggestionsRepo.getByUserId(args.user_id)
@@ -265,6 +332,58 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
           });
           return {
             content: [{ type: "text", text: JSON.stringify(campaign, null, 2) }],
+          };
+        }
+
+        case "1ai-ads_selow_list_accounts": {
+          if (!services.selowApi) throw new Error("SELOW API not configured");
+          const result = await services.selowApi.listAccounts({ search: args?.search, status: args?.status });
+          return {
+            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          };
+        }
+
+        case "1ai-ads_selow_topup": {
+          if (!services.selowApi) throw new Error("SELOW API not configured");
+          const result = await services.selowApi.topupBalance(args.account_id, args.amount, args.merchant || 'bri');
+          return {
+            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          };
+        }
+
+        case "1ai-ads_check_profitability": {
+          const profit = calculateProfit(args.commission, args.spend);
+          const roas = evaluateROAS(args.commission, args.spend);
+          const status = getCampaignStatus(args.commission, args.spend);
+          return {
+            content: [{ type: "text", text: JSON.stringify({ profit, roas, status, campaign_id: args.campaign_id }, null, 2) }],
+          };
+        }
+
+        case "1ai-ads_run_workflow": {
+          if (!services.workflowEngine) throw new Error("WorkflowEngine not available");
+          let result;
+          if (args.action === 'daily_check') {
+            result = await services.workflowEngine.runDailyCheck(args.user_id);
+          } else if (args.action === '3day_eval') {
+            if (!args.campaign_id) throw new Error("campaign_id required for 3day_eval");
+            result = await services.workflowEngine.run3DayEvaluation(args.campaign_id);
+          } else if (args.action === 'weekly_cycle') {
+            result = services.workflowEngine.getWeeklyAction();
+          } else {
+            throw new Error(`Unknown workflow action: ${args.action}`);
+          }
+          return {
+            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          };
+        }
+
+        case "1ai-ads_trigger_scale": {
+          if (!services.scaleManager) throw new Error("ScaleManager not available");
+          const interests = await services.scaleManager.expandHiddenInterests(args.product);
+          const result = await services.scaleManager.duplicateCampaign(args.account_id, args.campaign_id, interests);
+          return {
+            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           };
         }
 
