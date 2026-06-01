@@ -75,7 +75,8 @@ function parseJsonSafe(raw) {
   try {
     const match = raw.match(/```json\n([\s\S]*?)\n```/) || raw.match(/```\n([\s\S]*?)\n```/);
     return match ? JSON.parse(match[1]) : JSON.parse(raw);
-  } catch {
+  } catch (err) {
+    log.debug('JSON parse failed for creative response', { error: err.message });
     return { error: 'Failed to parse AI response', raw_content: raw };
   }
 }

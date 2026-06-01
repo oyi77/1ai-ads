@@ -9,6 +9,7 @@ Features:
 - Telegram Bot integration per user (BotFather token)
 - Real-time FB ad alerts via user's bot
 """
+
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session
 from datetime import datetime, timedelta
 import sqlite3
@@ -24,32 +25,53 @@ from collections import defaultdict
 import hashlib
 import shutil
 
-app = Flask(__name__, static_folder='static', template_folder='templates')
-app.secret_key = os.getenv('ADFORGE_DASHBOARD_SECRET', os.urandom(32).hex())
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
+app = Flask(__name__, static_folder="static", template_folder="templates")
+app.secret_key = os.getenv("ADFORGE_DASHBOARD_SECRET", os.urandom(32).hex())
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=24)
 
 # ============ RATE LIMITER ============
 _rate_limits = defaultdict(list)
 
+
 def rate_limit(max_attempts=10, window=300):
     """Simple in-memory rate limiter. 10 attempts per 5 min window by default."""
+
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
-            ip = request.remote_addr or '127.0.0.1'
+            ip = request.remote_addr or "127.0.0.1"
             now = time.time()
             _rate_limits[ip] = [t for t in _rate_limits[ip] if now - t < window]
             if len(_rate_limits[ip]) >= max_attempts:
-                if request.path.startswith('/api/'):
-                    return jsonify({'success': False, 'error': 'Too many attempts. Try again later.'}), 429
-                return render_template('login_dashboard.html', error='Too many login attempts. Please wait 5 minutes.'), 429
+                if request.path.startswith("/api/"):
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "error": "Too many attempts. Try again later.",
+                            }
+                        ),
+                        429,
+                    )
+                return (
+                    render_template(
+                        "login_dashboard.html",
+                        error="Too many login attempts. Please wait 5 minutes.",
+                    ),
+                    429,
+                )
             _rate_limits[ip].append(now)
             return f(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
+
 # Paths
-BASE_DIR = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "adforge", "db"))
+BASE_DIR = Path(
+    os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "adforge", "db")
+)
 MASTER_DB = str(BASE_DIR / "adforge.db")
 USER_DB_DIR = str(BASE_DIR / "users")
 os.makedirs(USER_DB_DIR, exist_ok=True)
@@ -59,9 +81,13 @@ API_USER = "admin"
 API_PASS = "admin123"
 
 # Load FB config from .env
-ENV_PATH = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "adforge", ".env")
+ENV_PATH = os.path.join(
+    os.path.expanduser("~"), ".openclaw", "workspace", "adforge", ".env"
+)
 FB_SYSTEM_TOKEN = ""
 FB_APP_ID = ""
+
+
 def load_fb_config():
     global FB_SYSTEM_TOKEN, FB_APP_ID
     try:
@@ -74,9 +100,12 @@ def load_fb_config():
                     FB_APP_ID = line.split("=", 1)[1].strip().strip("'\"")
     except Exception:
         pass
+
+
 load_fb_config()
 
 # ===================== DB HELPERS =====================
+
 
 def get_master_db():
     """Connect to master DB (authentication only)."""
@@ -84,9 +113,11 @@ def get_master_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def get_user_db_path(user_id):
     """Get path to a user's isolated database."""
     return os.path.join(USER_DB_DIR, f"adforge_user_{user_id}.db")
+
 
 def get_user_db(user_id):
     """Connect to a user's isolated database."""
@@ -97,11 +128,12 @@ def get_user_db(user_id):
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
+
 def init_master_db():
     """Init master DB — ONLY authentication table."""
     conn = get_master_db()
     c = conn.cursor()
-    
+
     c.execute("""
         CREATE TABLE IF NOT EXISTS dashboard_users (
             id TEXT PRIMARY KEY,
@@ -116,31 +148,37 @@ def init_master_db():
             last_login TIMESTAMP
         )
     """)
-    
+
     # Create default admin if not exists
-    admin = c.execute("SELECT id FROM dashboard_users WHERE username = 'admin'").fetchone()
+    admin = c.execute(
+        "SELECT id FROM dashboard_users WHERE username = 'admin'"
+    ).fetchone()
     if not admin:
         admin_id = str(uuid.uuid4())[:8]
-        pw_hash = hashlib.sha256('admin123'.encode()).hexdigest()
-        c.execute("""
+        pw_hash = hashlib.sha256("admin123".encode()).hexdigest()
+        c.execute(
+            """
             INSERT INTO dashboard_users (id, username, password_hash, email, role)
             VALUES (?, ?, ?, ?, 'admin')
-        """, (admin_id, 'admin', pw_hash, 'admin@adforge.local'))
-        
+        """,
+            (admin_id, "admin", pw_hash, "admin@adforge.local"),
+        )
+
         # Also create their user DB
         ensure_user_db(admin_id)
-    
+
     conn.commit()
     conn.close()
+
 
 def ensure_user_db(user_id):
     """Create a user's isolated database with all tables if it doesn't exist."""
     path = get_user_db_path(user_id)
     need_tables = not os.path.exists(path)
-    
+
     conn = get_user_db(user_id)
     c = conn.cursor()
-    
+
     if need_tables:
         c.execute("""
             CREATE TABLE IF NOT EXISTS platform_accounts (
@@ -157,7 +195,7 @@ def ensure_user_db(user_id):
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        
+
         c.execute("""
             CREATE TABLE IF NOT EXISTS campaigns (
                 id TEXT PRIMARY KEY,
@@ -179,7 +217,7 @@ def ensure_user_db(user_id):
                 bid_strategy TEXT
             )
         """)
-        
+
         c.execute("""
             CREATE TABLE IF NOT EXISTS approval_drafts (
                 id TEXT PRIMARY KEY,
@@ -195,7 +233,7 @@ def ensure_user_db(user_id):
                 execution_result TEXT
             )
         """)
-        
+
         c.execute("""
             CREATE TABLE IF NOT EXISTS automation_rules (
                 id TEXT PRIMARY KEY,
@@ -209,7 +247,7 @@ def ensure_user_db(user_id):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        
+
         c.execute("""
             CREATE TABLE IF NOT EXISTS performance_history (
                 id TEXT PRIMARY KEY,
@@ -223,7 +261,7 @@ def ensure_user_db(user_id):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        
+
         c.execute("""
             CREATE TABLE IF NOT EXISTS plugins (
                 id TEXT PRIMARY KEY,
@@ -233,131 +271,156 @@ def ensure_user_db(user_id):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        
+
         conn.commit()
-    
+
     conn.close()
     return need_tables
 
+
 # ===================== AUTH =====================
+
 
 def hash_password(password):
     """Hash password with salt using PBKDF2 (128k iterations)."""
     salt = os.urandom(16)
-    key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 128000)
-    return salt.hex() + ':' + key.hex()
+    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 128000)
+    return salt.hex() + ":" + key.hex()
+
 
 def verify_password(password, stored_hash):
     """Verify password against stored PBKDF2 hash."""
-    parts = stored_hash.split(':')
+    parts = stored_hash.split(":")
     if len(parts) == 2:
         salt = bytes.fromhex(parts[0])
         key = bytes.fromhex(parts[1])
-        new_key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 128000)
+        new_key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 128000)
         return new_key == key
     # Legacy: plain SHA256 fallback for old passwords
     return hashlib.sha256(password.encode()).hexdigest() == stored_hash
 
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if 'user_id' not in session:
-            if request.path.startswith('/api/'):
-                return jsonify({'success': False, 'error': 'Unauthorized'}), 401
-            return redirect(url_for('login_page'))
+        if "user_id" not in session:
+            if request.path.startswith("/api/"):
+                return jsonify({"success": False, "error": "Unauthorized"}), 401
+            return redirect(url_for("login_page"))
         return f(*args, **kwargs)
+
     return decorated
+
 
 # ===================== AUTH ROUTES =====================
 
-@app.route('/login', methods=['GET', 'POST'])
+
+@app.route("/login", methods=["GET", "POST"])
 @rate_limit(max_attempts=10, window=300)
 def login_page():
-    if request.method == 'GET':
-        return render_template('login_dashboard.html', error=None)
-    
-    username = request.form.get('username', '')
-    password = request.form.get('password', '')
-    
+    if request.method == "GET":
+        return render_template("login_dashboard.html", error=None)
+
+    username = request.form.get("username", "")
+    password = request.form.get("password", "")
+
     conn = get_master_db()
-    user = conn.execute("SELECT * FROM dashboard_users WHERE username = ? AND is_active = 1", (username,)).fetchone()
+    user = conn.execute(
+        "SELECT * FROM dashboard_users WHERE username = ? AND is_active = 1",
+        (username,),
+    ).fetchone()
     conn.close()
-    
-    if user and verify_password(password, user['password_hash']):
-        session['user_id'] = user['id']
-        session['username'] = user['username']
-        session['role'] = user['role']
-        
+
+    if user and verify_password(password, user["password_hash"]):
+        session["user_id"] = user["id"]
+        session["username"] = user["username"]
+        session["role"] = user["role"]
+
         # Ensure user DB exists
-        ensure_user_db(user['id'])
-        
+        ensure_user_db(user["id"])
+
         # Update last login
         conn = get_master_db()
-        conn.execute("UPDATE dashboard_users SET last_login = CURRENT_TIMESTAMP WHERE id = ?", (user['id'],))
+        conn.execute(
+            "UPDATE dashboard_users SET last_login = CURRENT_TIMESTAMP WHERE id = ?",
+            (user["id"],),
+        )
         conn.commit()
         conn.close()
-        
-        return redirect(url_for('dashboard'))
-    
-    return render_template('login_dashboard.html', error='Invalid credentials')
 
-@app.route('/register', methods=['GET', 'POST'])
+        return redirect(url_for("dashboard"))
+
+    return render_template("login_dashboard.html", error="Invalid credentials")
+
+
+@app.route("/register", methods=["GET", "POST"])
 @rate_limit(max_attempts=5, window=600)
 def register_page():
-    if request.method == 'GET':
-        return render_template('register.html', error=None)
-    
-    username = request.form.get('username', '')
-    password = request.form.get('password', '')
-    email = request.form.get('email', '')
-    
+    if request.method == "GET":
+        return render_template("register.html", error=None)
+
+    username = request.form.get("username", "")
+    password = request.form.get("password", "")
+    email = request.form.get("email", "")
+
     if not username or not password:
-        return render_template('register.html', error='Username and password required')
-    
+        return render_template("register.html", error="Username and password required")
+
     conn = get_master_db()
-    existing = conn.execute("SELECT id FROM dashboard_users WHERE username = ?", (username,)).fetchone()
+    existing = conn.execute(
+        "SELECT id FROM dashboard_users WHERE username = ?", (username,)
+    ).fetchone()
     if existing:
         conn.close()
-        return render_template('register.html', error='Username already taken')
-    
+        return render_template("register.html", error="Username already taken")
+
     user_id = str(uuid.uuid4())[:8]
     pw_hash = hash_password(password)
-    
-    conn.execute("""
+
+    conn.execute(
+        """
         INSERT INTO dashboard_users (id, username, password_hash, email, role)
         VALUES (?, ?, ?, ?, 'user')
-    """, (user_id, username, pw_hash, email))
+    """,
+        (user_id, username, pw_hash, email),
+    )
     conn.commit()
     conn.close()
-    
+
     # Create their isolated database
     ensure_user_db(user_id)
-    
-    session['user_id'] = user_id
-    session['username'] = username
-    session['role'] = 'user'
-    
-    return redirect(url_for('dashboard'))
 
-@app.route('/logout')
+    session["user_id"] = user_id
+    session["username"] = username
+    session["role"] = "user"
+
+    return redirect(url_for("dashboard"))
+
+
+@app.route("/logout")
 def logout():
     session.clear()
-    return redirect(url_for('login_page'))
+    return redirect(url_for("login_page"))
+
 
 # ===================== SPA AUTH =====================
+
 
 def get_api_token():
     """Get JWT token from Node.js API for backend operations."""
     try:
-        r = requests.post(f"{API_URL}/api/auth/login", json={
-            "username": API_USER, "password": API_PASS
-        }, timeout=5)
+        r = requests.post(
+            f"{API_URL}/api/auth/login",
+            json={"username": API_USER, "password": API_PASS},
+            timeout=5,
+        )
         data = r.json()
         if data.get("success"):
             return data["data"]["accessToken"]
     except Exception as e:
         print(f"[api] Auth failed: {e}")
     return None
+
 
 def api_get(path, token=None):
     """GET from Node.js API."""
@@ -366,51 +429,65 @@ def api_get(path, token=None):
     if not token:
         return {"error": "auth_failed"}
     try:
-        r = requests.get(f"{API_URL}{path}", headers={
-            "Authorization": f"Bearer {token}"
-        }, timeout=10)
+        r = requests.get(
+            f"{API_URL}{path}", headers={"Authorization": f"Bearer {token}"}, timeout=10
+        )
         return r.json()
     except Exception as e:
         return {"error": str(e)}
 
+
 # ===================== DASHBOARD ROUTES =====================
 
-@app.route('/')
+
+@app.route("/")
 def index():
     """Landing page (no auth required)."""
-    if 'user_id' in session:
-        return redirect(url_for('dashboard'))
-    return render_template('landing.html')
+    if "user_id" in session:
+        return redirect(url_for("dashboard"))
+    return render_template("landing.html")
 
-@app.route('/app')
+
+@app.route("/app")
 @login_required
 def dashboard():
     """Main dashboard — reads ONLY from current user's DB."""
-    user_id = session['user_id']
+    user_id = session["user_id"]
     conn = get_user_db(user_id)
     c = conn.cursor()
-    
-    campaigns = c.execute("SELECT * FROM campaigns ORDER BY spend DESC LIMIT 10").fetchall()
-    campaigns_count = c.execute("SELECT COUNT(*) as cnt FROM campaigns").fetchone()['cnt']
-    pending_count = c.execute("SELECT COUNT(*) as cnt FROM approval_drafts WHERE status = 'pending'").fetchone()['cnt']
-    rules = c.execute("SELECT * FROM automation_rules LIMIT 5").fetchall()
-    accounts = c.execute("SELECT * FROM platform_accounts ORDER BY created_at DESC").fetchall()
-    
-    conn.close()
-    
-    return render_template('dashboard.html',
-                         campaigns=campaigns,
-                         campaigns_count=campaigns_count,
-                         pending_drafts=pending_count,
-                         rules=rules,
-                         accounts=accounts,
-                         username=session.get('username'),
-                         role=session.get('role'))
 
-@app.route('/campaigns')
+    campaigns = c.execute(
+        "SELECT * FROM campaigns ORDER BY spend DESC LIMIT 10"
+    ).fetchall()
+    campaigns_count = c.execute("SELECT COUNT(*) as cnt FROM campaigns").fetchone()[
+        "cnt"
+    ]
+    pending_count = c.execute(
+        "SELECT COUNT(*) as cnt FROM approval_drafts WHERE status = 'pending'"
+    ).fetchone()["cnt"]
+    rules = c.execute("SELECT * FROM automation_rules LIMIT 5").fetchall()
+    accounts = c.execute(
+        "SELECT * FROM platform_accounts ORDER BY created_at DESC"
+    ).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "dashboard.html",
+        campaigns=campaigns,
+        campaigns_count=campaigns_count,
+        pending_drafts=pending_count,
+        rules=rules,
+        accounts=accounts,
+        username=session.get("username"),
+        role=session.get("role"),
+    )
+
+
+@app.route("/campaigns")
 @login_required
 def campaigns():
-    conn = get_user_db(session['user_id'])
+    conn = get_user_db(session["user_id"])
     c = conn.cursor()
     campaigns = c.execute("""
         SELECT id, name, platform, status, 
@@ -421,414 +498,558 @@ def campaigns():
         ORDER BY created_at DESC
     """).fetchall()
     conn.close()
-    return render_template('campaigns.html', campaigns=campaigns, username=session.get('username'))
+    return render_template(
+        "campaigns.html", campaigns=campaigns, username=session.get("username")
+    )
 
-@app.route('/accounts')
+
+@app.route("/accounts")
 @login_required
 def accounts_page():
     """List platform accounts — only from current user's DB."""
-    conn = get_user_db(session['user_id'])
-    accounts = conn.execute("SELECT * FROM platform_accounts ORDER BY created_at DESC").fetchall()
-    connected_ids = [a['platform_account_id'] for a in accounts if a['platform_account_id']]
+    conn = get_user_db(session["user_id"])
+    accounts = conn.execute(
+        "SELECT * FROM platform_accounts ORDER BY created_at DESC"
+    ).fetchall()
+    connected_ids = [
+        a["platform_account_id"] for a in accounts if a["platform_account_id"]
+    ]
     conn.close()
-    return render_template('accounts.html', accounts=accounts, connected_ids=connected_ids)
+    return render_template(
+        "accounts.html", accounts=accounts, connected_ids=connected_ids
+    )
 
-@app.route('/settings', methods=['GET', 'POST'])
+
+@app.route("/settings", methods=["GET", "POST"])
 @login_required
 def settings_page():
     """User settings — stored in master DB alongside user record."""
-    user_id = session['user_id']
+    user_id = session["user_id"]
     conn = get_master_db()
-    
-    if request.method == 'POST':
-        token = request.form.get('telegram_bot_token', '')
-        chat_id = request.form.get('telegram_chat_id', '')
-        
-        conn.execute("""
+
+    if request.method == "POST":
+        token = request.form.get("telegram_bot_token", "")
+        chat_id = request.form.get("telegram_chat_id", "")
+
+        conn.execute(
+            """
             UPDATE dashboard_users 
             SET telegram_bot_token = ?, telegram_chat_id = ? 
             WHERE id = ?
-        """, (token, chat_id, user_id))
+        """,
+            (token, chat_id, user_id),
+        )
         conn.commit()
-        
+
         # Test connection if credentials provided
         if token and chat_id:
             try:
                 msg = "✅ Your AdForge dashboard is connected! You'll receive real-time FB ads alerts here."
-                requests.post(f"https://api.telegram.org/bot{token}/sendMessage", 
-                             json={"chat_id": chat_id, "text": msg}, timeout=5)
+                requests.post(
+                    f"https://api.telegram.org/bot{token}/sendMessage",
+                    json={"chat_id": chat_id, "text": msg},
+                    timeout=5,
+                )
             except Exception:
                 pass
-                
-        conn.close()
-        return redirect(url_for('settings_page', success=1))
-    
-    user = conn.execute("SELECT * FROM dashboard_users WHERE id = ?", (user_id,)).fetchone()
-    conn.close()
-    return render_template('settings.html', user=user, success=request.args.get('success'))
 
-@app.route('/users')
+        conn.close()
+        return redirect(url_for("settings_page", success=1))
+
+    user = conn.execute(
+        "SELECT * FROM dashboard_users WHERE id = ?", (user_id,)
+    ).fetchone()
+    conn.close()
+    return render_template(
+        "settings.html", user=user, success=request.args.get("success")
+    )
+
+
+@app.route("/users")
 @login_required
 def users_page():
     """User management page (admin only)."""
-    if session.get('role') != 'admin':
-        return redirect(url_for('dashboard'))
-    
-    conn = get_master_db()
-    users = conn.execute("SELECT id, username, email, role, is_active, created_at, last_login FROM dashboard_users").fetchall()
-    conn.close()
-    return render_template('users.html', users=users, username=session.get('username'))
+    if session.get("role") != "admin":
+        return redirect(url_for("dashboard"))
 
-@app.route('/taglinks')
+    conn = get_master_db()
+    users = conn.execute(
+        "SELECT id, username, email, role, is_active, created_at, last_login FROM dashboard_users"
+    ).fetchall()
+    conn.close()
+    return render_template("users.html", users=users, username=session.get("username"))
+
+
+@app.route("/taglinks")
 @login_required
 def taglinks_page():
     """Taglink attribution management page."""
-    conn = get_user_db(session['user_id'])
+    conn = get_user_db(session["user_id"])
     taglinks = conn.execute("""
         SELECT id, name, campaign_id, status, created_at 
         FROM campaigns WHERE platform = 'shopee_taglink'
         ORDER BY created_at DESC LIMIT 50
     """).fetchall()
     conn.close()
-    return render_template('taglinks.html', taglinks=taglinks, username=session.get('username'))
+    return render_template(
+        "taglinks.html", taglinks=taglinks, username=session.get("username")
+    )
+
 
 # ===================== ACCOUNT MANAGEMENT API =====================
 
-@app.route('/api/accounts/add', methods=['POST'])
+
+@app.route("/api/accounts/add", methods=["POST"])
 @login_required
 def add_account():
     """Add account — stored in current user's isolated DB."""
     data = request.json
-    name = data.get('name')
-    platform = data.get('platform', 'meta')
-    token = data.get('token')
-    platform_account_id = data.get('platform_account_id', '')
-    account_type = data.get('account_type', 'ad_account')
-    
+    name = data.get("name")
+    platform = data.get("platform", "meta")
+    token = data.get("token")
+    platform_account_id = data.get("platform_account_id", "")
+    account_type = data.get("account_type", "ad_account")
+
     if not name or not token:
-        return jsonify({'success': False, 'error': 'Name and Token are required'}), 400
-    
-    conn = get_user_db(session['user_id'])
+        return jsonify({"success": False, "error": "Name and Token are required"}), 400
+
+    conn = get_user_db(session["user_id"])
     acc_id = str(uuid.uuid4())[:12]
-    
+
     if platform_account_id:
         existing = conn.execute(
             "SELECT id FROM platform_accounts WHERE platform_account_id = ?",
-            (platform_account_id,)
+            (platform_account_id,),
         ).fetchone()
         if existing:
             conn.close()
-            return jsonify({'success': True, 'message': 'Already connected', 'id': existing['id']})
-    
+            return jsonify(
+                {"success": True, "message": "Already connected", "id": existing["id"]}
+            )
+
     try:
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO platform_accounts (id, platform, account_name, credentials, platform_account_id, account_type)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (acc_id, platform, name, token, platform_account_id, account_type))
+        """,
+            (acc_id, platform, name, token, platform_account_id, account_type),
+        )
         conn.commit()
     except Exception as e:
         conn.close()
-        return jsonify({'success': False, 'error': str(e)}), 500
-    
-    conn.close()
-    return jsonify({'success': True, 'message': 'Account added'})
+        return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route('/api/accounts/<account_id>/delete', methods=['POST'])
+    conn.close()
+    return jsonify({"success": True, "message": "Account added"})
+
+
+@app.route("/api/accounts/<account_id>/delete", methods=["POST"])
 @login_required
 def delete_account(account_id):
     """Delete account from user's DB."""
-    conn = get_user_db(session['user_id'])
+    conn = get_user_db(session["user_id"])
     conn.execute("DELETE FROM platform_accounts WHERE id = ?", (account_id,))
     conn.commit()
     conn.close()
-    return jsonify({'success': True})
+    return jsonify({"success": True})
+
 
 # ===================== SYSTEM USER FB API =====================
 
-@app.route('/api/auth/facebook/login')
+
+@app.route("/api/auth/facebook/login")
 @login_required
 def flask_fb_login():
     try:
         r = requests.get(f"{API_URL}/api/auth/facebook/login", timeout=5)
         return jsonify(r.json())
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route('/api/system-user/accounts')
+
+@app.route("/api/system-user/accounts")
 @login_required
 def system_user_accounts():
     if not FB_SYSTEM_TOKEN:
-        return jsonify({'success': False, 'error': 'System User token not configured'}), 400
-    
+        return (
+            jsonify({"success": False, "error": "System User token not configured"}),
+            400,
+        )
+
     try:
         results = []
         for endpoint, params, account_type in [
-            ('/me/adaccounts', {'fields': 'id,name,account_status,currency,amount_spent', 'limit': 100}, 'ad_account'),
-            ('/me/accounts', {'fields': 'id,name,category,access_token', 'limit': 100}, 'page'),
-            ('/me/businesses', {'fields': 'id,name,created_time', 'limit': 10}, 'business'),
+            (
+                "/me/adaccounts",
+                {
+                    "fields": "id,name,account_status,currency,amount_spent",
+                    "limit": 100,
+                },
+                "ad_account",
+            ),
+            (
+                "/me/accounts",
+                {"fields": "id,name,category,access_token", "limit": 100},
+                "page",
+            ),
+            (
+                "/me/businesses",
+                {"fields": "id,name,created_time", "limit": 10},
+                "business",
+            ),
         ]:
             try:
                 r = requests.get(
-                    f'https://graph.facebook.com/v22.0{endpoint}',
-                    params={'access_token': FB_SYSTEM_TOKEN, **params},
-                    timeout=10
+                    f"https://graph.facebook.com/v22.0{endpoint}",
+                    params={"access_token": FB_SYSTEM_TOKEN, **params},
+                    timeout=10,
                 )
                 data = r.json()
-                if 'data' in data:
-                    for item in data['data']:
-                        entry = {'id': item['id'], 'name': item.get('name', item['id']), 'account_type': account_type}
-                        if 'category' in item: entry['category'] = item['category']
-                        if 'access_token' in item: entry['access_token'] = item['access_token']
+                if "data" in data:
+                    for item in data["data"]:
+                        entry = {
+                            "id": item["id"],
+                            "name": item.get("name", item["id"]),
+                            "account_type": account_type,
+                        }
+                        if "category" in item:
+                            entry["category"] = item["category"]
+                        if "access_token" in item:
+                            entry["access_token"] = item["access_token"]
                         results.append(entry)
             except Exception as e:
                 print(f"[sys-user] Failed: {endpoint}: {e}")
-        
-        return jsonify({'success': True, 'accounts': results})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/system-user/connect', methods=['POST'])
+        return jsonify({"success": True, "accounts": results})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/system-user/connect", methods=["POST"])
 @login_required
 def system_user_connect():
     if not FB_SYSTEM_TOKEN:
-        return jsonify({'success': False, 'error': 'System User token not configured'}), 400
-    
+        return (
+            jsonify({"success": False, "error": "System User token not configured"}),
+            400,
+        )
+
     data = request.json
-    account_id = data.get('account_id')
-    account_name = data.get('account_name', '')
-    account_type = data.get('account_type', '')
-    
+    account_id = data.get("account_id")
+    account_name = data.get("account_name", "")
+    account_type = data.get("account_type", "")
+
     if not account_id:
-        return jsonify({'success': False, 'error': 'account_id required'}), 400
-    
-    conn = get_user_db(session['user_id'])
-    
+        return jsonify({"success": False, "error": "account_id required"}), 400
+
+    conn = get_user_db(session["user_id"])
+
     existing = conn.execute(
-        "SELECT id FROM platform_accounts WHERE platform_account_id = ?",
-        (account_id,)
+        "SELECT id FROM platform_accounts WHERE platform_account_id = ?", (account_id,)
     ).fetchone()
-    
+
     if existing:
         conn.close()
-        return jsonify({'success': True, 'message': 'Already connected', 'id': existing['id']})
-    
+        return jsonify(
+            {"success": True, "message": "Already connected", "id": existing["id"]}
+        )
+
     if not account_name or not account_type:
         try:
             r = requests.get(
-                f'https://graph.facebook.com/v22.0/{account_id}',
-                params={'access_token': FB_SYSTEM_TOKEN, 'fields': 'id,name'},
-                timeout=5
+                f"https://graph.facebook.com/v22.0/{account_id}",
+                params={"access_token": FB_SYSTEM_TOKEN, "fields": "id,name"},
+                timeout=5,
             )
             info = r.json()
-            if 'name' in info:
-                account_name = info['name']
+            if "name" in info:
+                account_name = info["name"]
         except Exception:
             pass
-        if 'act_' in account_id or account_id.startswith('10'):
-            account_type = 'ad_account'
-    
+        if "act_" in account_id or account_id.startswith("10"):
+            account_type = "ad_account"
+
     acc_id = str(uuid.uuid4())[:12]
     try:
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO platform_accounts (id, platform, account_name, credentials, platform_account_id, account_type)
             VALUES (?, 'meta', ?, ?, ?, ?)
-        """, (acc_id, account_name, FB_SYSTEM_TOKEN, account_id, account_type or 'ad_account'))
+        """,
+            (
+                acc_id,
+                account_name,
+                FB_SYSTEM_TOKEN,
+                account_id,
+                account_type or "ad_account",
+            ),
+        )
         conn.commit()
         conn.close()
-        return jsonify({'success': True, 'id': acc_id, 'name': account_name})
+        return jsonify({"success": True, "id": acc_id, "name": account_name})
     except Exception as e:
         conn.close()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route('/api/system-user/connect-all', methods=['POST'])
+
+@app.route("/api/system-user/connect-all", methods=["POST"])
 @login_required
 def system_user_connect_all():
     if not FB_SYSTEM_TOKEN:
-        return jsonify({'success': False, 'error': 'System User token not configured'}), 400
-    
+        return (
+            jsonify({"success": False, "error": "System User token not configured"}),
+            400,
+        )
+
     try:
         results = []
-        conn = get_user_db(session['user_id'])
-        
+        conn = get_user_db(session["user_id"])
+
         r = requests.get(
-            'https://graph.facebook.com/v22.0/me/adaccounts',
-            params={'access_token': FB_SYSTEM_TOKEN, 'fields': 'id,name', 'limit': 100},
-            timeout=10
+            "https://graph.facebook.com/v22.0/me/adaccounts",
+            params={"access_token": FB_SYSTEM_TOKEN, "fields": "id,name", "limit": 100},
+            timeout=10,
         )
         data = r.json()
-        if 'data' in data:
-            for acc in data['data']:
+        if "data" in data:
+            for acc in data["data"]:
                 existing = conn.execute(
                     "SELECT id FROM platform_accounts WHERE platform_account_id = ?",
-                    (acc['id'],)
+                    (acc["id"],),
                 ).fetchone()
                 if not existing:
                     acc_id = str(uuid.uuid4())[:12]
-                    conn.execute("""
+                    conn.execute(
+                        """
                         INSERT INTO platform_accounts (id, platform, account_name, credentials, platform_account_id, account_type)
                         VALUES (?, 'meta', ?, ?, ?, 'ad_account')
-                    """, (acc_id, acc.get('name', acc['id']), FB_SYSTEM_TOKEN, acc['id']))
+                    """,
+                        (
+                            acc_id,
+                            acc.get("name", acc["id"]),
+                            FB_SYSTEM_TOKEN,
+                            acc["id"],
+                        ),
+                    )
                     results.append(acc_id)
-        
+
         conn.commit()
         conn.close()
-        return jsonify({'success': True, 'connected': len(results), 'ids': results})
+        return jsonify({"success": True, "connected": len(results), "ids": results})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 # ===================== DRAFTS API =====================
 
-@app.route('/api/drafts')
+
+@app.route("/api/drafts")
 def api_drafts():
-    user_id = session.get('user_id')
+    user_id = session.get("user_id")
     if not user_id:
         return jsonify([])
     conn = get_user_db(user_id)
     c = conn.cursor()
-    status = request.args.get('status', 'pending')
-    drafts = c.execute("SELECT * FROM approval_drafts WHERE status = ? ORDER BY created_at DESC", (status,)).fetchall()
+    status = request.args.get("status", "pending")
+    drafts = c.execute(
+        "SELECT * FROM approval_drafts WHERE status = ? ORDER BY created_at DESC",
+        (status,),
+    ).fetchall()
     conn.close()
     return jsonify([dict(d) for d in drafts])
 
-@app.route('/api/drafts/create', methods=['POST'])
+
+@app.route("/api/drafts/create", methods=["POST"])
 @login_required
 def api_draft_create():
     data = request.get_json()
     draft_id = str(uuid.uuid4())[:8]
-    conn = get_user_db(session['user_id'])
+    conn = get_user_db(session["user_id"])
     c = conn.cursor()
-    
+
     try:
-        c.execute("""
+        c.execute(
+            """
             INSERT INTO approval_drafts (id, type, summary, details_json, proposed_by, status) 
             VALUES (?, ?, ?, ?, ?, 'pending')
-        """, (draft_id, data.get('type'), data.get('summary'), json.dumps(data.get('details', {})), data.get('proposed_by', 'ai')))
+        """,
+            (
+                draft_id,
+                data.get("type"),
+                data.get("summary"),
+                json.dumps(data.get("details", {})),
+                data.get("proposed_by", "ai"),
+            ),
+        )
         conn.commit()
         conn.close()
-        return jsonify({'success': True, 'draft_id': draft_id})
+        return jsonify({"success": True, "draft_id": draft_id})
     except Exception as e:
         conn.close()
-        return jsonify({'success': False, 'error': str(e)}), 400
+        return jsonify({"success": False, "error": str(e)}), 400
 
-@app.route('/api/drafts/<draft_id>/approve', methods=['POST'])
+
+@app.route("/api/drafts/<draft_id>/approve", methods=["POST"])
 @login_required
 def api_draft_approve(draft_id):
     data = request.get_json() or {}
-    conn = get_user_db(session['user_id'])
+    conn = get_user_db(session["user_id"])
     c = conn.cursor()
-    
+
     try:
-        draft = c.execute("SELECT * FROM approval_drafts WHERE id = ?", (draft_id,)).fetchone()
+        draft = c.execute(
+            "SELECT * FROM approval_drafts WHERE id = ?", (draft_id,)
+        ).fetchone()
         if not draft:
             conn.close()
-            return jsonify({'success': False, 'error': 'Draft not found'}), 404
-        
-        c.execute("""
+            return jsonify({"success": False, "error": "Draft not found"}), 404
+
+        c.execute(
+            """
             UPDATE approval_drafts 
             SET status = 'approved', 
                 reviewed_at = CURRENT_TIMESTAMP, 
                 reviewed_by = ?,
                 execution_result = ?
             WHERE id = ?
-        """, (
-            data.get('reviewed_by', session.get('username', 'user')),
-            json.dumps({'status': 'executed', 'timestamp': datetime.now().isoformat()}),
-            draft_id
-        ))
-        
+        """,
+            (
+                data.get("reviewed_by", session.get("username", "user")),
+                json.dumps(
+                    {"status": "executed", "timestamp": datetime.now().isoformat()}
+                ),
+                draft_id,
+            ),
+        )
+
         conn.commit()
         conn.close()
-        
+
         # Send Telegram notification to this user
-        send_telegram_alert(session['user_id'], 
-            text=f"✅ *Draft Approved*\nSummary: {draft['summary']}\nType: {draft['type']}")
-        
-        return jsonify({'success': True, 'message': 'Draft approved'})
+        send_telegram_alert(
+            session["user_id"],
+            text=f"✅ *Draft Approved*\nSummary: {draft['summary']}\nType: {draft['type']}",
+        )
+
+        return jsonify({"success": True, "message": "Draft approved"})
     except Exception as e:
         conn.close()
-        return jsonify({'success': False, 'error': str(e)}), 400
+        return jsonify({"success": False, "error": str(e)}), 400
 
-@app.route('/api/drafts/<draft_id>/reject', methods=['POST'])
+
+@app.route("/api/drafts/<draft_id>/reject", methods=["POST"])
 @login_required
 def api_draft_reject(draft_id):
     data = request.get_json() or {}
-    conn = get_user_db(session['user_id'])
+    conn = get_user_db(session["user_id"])
     c = conn.cursor()
-    
+
     try:
-        c.execute("""
+        c.execute(
+            """
             UPDATE approval_drafts SET status = 'rejected', reviewed_at = CURRENT_TIMESTAMP,
                 reviewed_by = ?, rejection_reason = ? WHERE id = ?
-        """, (data.get('reviewed_by', session.get('username', 'user')), data.get('reason', ''), draft_id))
+        """,
+            (
+                data.get("reviewed_by", session.get("username", "user")),
+                data.get("reason", ""),
+                draft_id,
+            ),
+        )
         conn.commit()
         conn.close()
-        return jsonify({'success': True, 'message': 'Draft rejected'})
+        return jsonify({"success": True, "message": "Draft rejected"})
     except Exception as e:
         conn.close()
-        return jsonify({'success': False, 'error': str(e)}), 400
+        return jsonify({"success": False, "error": str(e)}), 400
+
 
 # ===================== USER MANAGEMENT API =====================
 
-@app.route('/api/users')
+
+@app.route("/api/users")
 @login_required
 def api_users():
-    if session.get('role') != 'admin':
-        return jsonify({'success': False, 'error': 'Admin only'}), 403
-    
+    if session.get("role") != "admin":
+        return jsonify({"success": False, "error": "Admin only"}), 403
+
     conn = get_master_db()
-    users = conn.execute("SELECT id, username, email, role, is_active, created_at, last_login FROM dashboard_users").fetchall()
+    users = conn.execute(
+        "SELECT id, username, email, role, is_active, created_at, last_login FROM dashboard_users"
+    ).fetchall()
     conn.close()
     return jsonify([dict(u) for u in users])
 
+
 # ===================== TAGLINK API =====================
 
-@app.route('/api/taglink/generate', methods=['POST'])
+
+@app.route("/api/taglink/generate", methods=["POST"])
 @login_required
 def api_taglink_generate():
     """Generate tagged Shopee link for attribution."""
     data = request.json
-    url = data.get('url', '')
-    campaign = data.get('campaign', '')
-    adset = data.get('adset', '')
-    ad = data.get('ad', '')
-    account = data.get('account', '0858')
-    
+    url = data.get("url", "")
+    campaign = data.get("campaign", "")
+    adset = data.get("adset", "")
+    ad = data.get("ad", "")
+    account = data.get("account", "0858")
+
     if not url or not campaign:
-        return jsonify({'success': False, 'error': 'URL and campaign required'}), 400
-    
+        return jsonify({"success": False, "error": "URL and campaign required"}), 400
+
     import subprocess
-    result = subprocess.run([
-        'python3', 'scripts/vilona_taglink_attribution.py', 'generate',
-        '--campaign', campaign,
-        '--url', url,
-        '--adset', adset,
-        '--ad', ad,
-        '--account', account
-    ], capture_output=True, text=True, cwd=os.path.join(os.path.expanduser('~'), '.openclaw', 'workspace'))
-    
+
+    result = subprocess.run(
+        [
+            "python3",
+            "scripts/vilona_taglink_attribution.py",
+            "generate",
+            "--campaign",
+            campaign,
+            "--url",
+            url,
+            "--adset",
+            adset,
+            "--ad",
+            ad,
+            "--account",
+            account,
+        ],
+        capture_output=True,
+        text=True,
+        cwd=os.path.join(os.path.expanduser("~"), ".openclaw", "workspace"),
+    )
+
     try:
         output = json.loads(result.stdout)
-        return jsonify({'success': True, 'taglink': output})
+        return jsonify({"success": True, "taglink": output})
     except Exception:
-        return jsonify({'success': False, 'error': result.stderr or result.stdout}), 500
+        return jsonify({"success": False, "error": result.stderr or result.stdout}), 500
 
-@app.route('/api/taglink/report')
+
+@app.route("/api/taglink/report")
 @login_required
 def api_taglink_report():
     """Get attribution report for current user's campaigns."""
     import subprocess
-    result = subprocess.run([
-        'python3', 'scripts/vilona_taglink_attribution.py', 'report',
-        '--json'
-    ], capture_output=True, text=True, cwd=os.path.join(os.path.expanduser('~'), '.openclaw', 'workspace'))
-    
-    return jsonify({'success': True, 'report': result.stdout})
 
-@app.route('/api/taglink/list')
+    result = subprocess.run(
+        ["python3", "scripts/vilona_taglink_attribution.py", "report", "--json"],
+        capture_output=True,
+        text=True,
+        cwd=os.path.join(os.path.expanduser("~"), ".openclaw", "workspace"),
+    )
+
+    return jsonify({"success": True, "report": result.stdout})
+
+
+@app.route("/api/taglink/list")
 @login_required
 def api_taglink_list():
     """List all taglinks generated by this user."""
-    conn = get_user_db(session['user_id'])
+    conn = get_user_db(session["user_id"])
     taglinks = conn.execute("""
         SELECT id, name, campaign_id, status, created_at 
         FROM campaigns WHERE platform = 'shopee_taglink'
@@ -843,22 +1064,28 @@ def send_telegram_alert(user_id, text):
     conn = get_master_db()
     user = conn.execute(
         "SELECT telegram_bot_token, telegram_chat_id FROM dashboard_users WHERE id = ?",
-        (user_id,)
+        (user_id,),
     ).fetchone()
     conn.close()
-    
-    if user and user['telegram_bot_token'] and user['telegram_chat_id']:
+
+    if user and user["telegram_bot_token"] and user["telegram_chat_id"]:
         try:
             requests.post(
                 f"https://api.telegram.org/bot{user['telegram_bot_token']}/sendMessage",
-                json={"chat_id": user['telegram_chat_id'], "text": text, "parse_mode": "Markdown"},
-                timeout=5
+                json={
+                    "chat_id": user["telegram_chat_id"],
+                    "text": text,
+                    "parse_mode": "Markdown",
+                },
+                timeout=5,
             )
         except Exception:
             pass
 
+
 # ===================== INIT (lazy) =====================
 _db_initialized = False
+
 
 def ensure_master_db():
     global _db_initialized
@@ -868,9 +1095,11 @@ def ensure_master_db():
     migrate_existing_users()
     _db_initialized = True
 
+
 @app.before_request
 def before_request():
     ensure_master_db()
+
 
 def migrate_existing_users():
     """Ensure all existing users in master DB have their isolated DBs."""
@@ -878,12 +1107,101 @@ def migrate_existing_users():
     users = conn.execute("SELECT id FROM dashboard_users").fetchall()
     conn.close()
     for u in users:
-        ensure_user_db(u['id'])
+        ensure_user_db(u["id"])
 
-if __name__ == '__main__':
+
+# === 0858 FB ADS ENGINE INTEGRATION (31 May 2026) ===
+ENGINE_STATE_0858 = Path.home() / ".openclaw/workspace/data/engine_0858_v3_state.json"
+ENGINE_LOG_0858 = Path.home() / ".openclaw/workspace/logs/engine_0858_v3.log"
+ENGINE_DASH_0858 = (
+    Path.home() / ".openclaw/workspace/data/0858/0858_dashboard_live.json"
+)
+
+
+def load_0858_status():
+    """Load 0858 engine status from state files."""
+    status = {
+        "engine": "0858_v3",
+        "account": "act_435670549443081",
+        "active": False,
+        "last_check": None,
+        "daily_spend": 0,
+        "cap": 300000,
+        "hard_cap": False,
+        "total_campaigns": 0,
+        "active_campaigns": 0,
+        "paused_campaigns": 0,
+        "off_skip": 0,
+        "avg_cpc": 0,
+        "today_clicks": 0,
+        "products": [],
+        "actions": {},
+        "log_tail": [],
+        "campaigns": [],
+    }
+    if ENGINE_STATE_0858.exists():
+        try:
+            state = json.loads(ENGINE_STATE_0858.read_text())
+            status["last_check"] = state.get("last_check", "")
+            status["hard_cap"] = state.get("hard_cap", False)
+            cycle = state.get("cycle_summary", {})
+            status["daily_spend"] = cycle.get("daily_spend", 0)
+            status["cap"] = cycle.get("cap", 300000)
+            status["actions"] = cycle.get("actions", {})
+            for k, v in state.get("product_roas", {}).items():
+                status["products"].append(
+                    {
+                        "name": k,
+                        "commission": v.get("commission", 0),
+                        "roas": v.get("roas", 0),
+                    }
+                )
+        except Exception:
+            pass
+    if ENGINE_DASH_0858.exists():
+        try:
+            dash = json.loads(ENGINE_DASH_0858.read_text())
+            status["total_campaigns"] = dash.get("total_campaigns", 0)
+            status["active_campaigns"] = dash.get("active", 0)
+            status["off_skip"] = dash.get("off_active", 0)
+            status["avg_cpc"] = dash.get("avg_cpc", 0)
+            status["today_clicks"] = dash.get("today_clicks", 0)
+            status["campaigns"] = dash.get("campaigns", [])
+            if not status["daily_spend"]:
+                status["daily_spend"] = dash.get("today_spend", 0)
+        except Exception:
+            pass
+    if ENGINE_LOG_0858.exists():
+        try:
+            with open(ENGINE_LOG_0858, "r") as f:
+                status["log_tail"] = f.readlines()[-25:]
+        except Exception:
+            pass
+    return status
+
+
+@app.route("/0858")
+@login_required
+def dashboard_0858():
+    return render_template("0858_dashboard.html", status=load_0858_status())
+
+
+@app.route("/api/0858/status")
+@login_required
+def api_0858_status():
+    return jsonify(load_0858_status())
+
+
+@app.route("/api/0858/campaigns")
+@login_required
+def api_0858_campaigns():
+    return jsonify(load_0858_status().get("campaigns", []))
+
+
+if __name__ == "__main__":
     print("=" * 60)
     print("🚀 AdForge Dashboard v3.0 — Per-User Database Isolation")
     print("   http://127.0.0.1:5002")
     print("   Users: Each user has their OWN database file")
     print("=" * 60)
-    app.run(host='127.0.0.1', port=5002, debug=True, use_reloader=False)
+    app.run(host="127.0.0.1", port=5002, debug=True, use_reloader=False)

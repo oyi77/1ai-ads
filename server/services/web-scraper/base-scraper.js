@@ -57,8 +57,8 @@ export class PuppeteerPool {
       this._puppeteer = await import('puppeteer');
       log.info('Puppeteer loaded successfully');
       return this._puppeteer;
-    } catch {
-      log.warn('Puppeteer not installed. Scraping will use fetch-based fallback.');
+    } catch (err) {
+      log.debug('Puppeteer import failed, using fetch fallback', { error: err.message });
       this._puppeteer = false;
       return null;
     }

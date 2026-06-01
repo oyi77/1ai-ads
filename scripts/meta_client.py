@@ -7,6 +7,7 @@ Usage:
     campaigns = client.get_campaigns()
     client.pause_campaign("123456")
 """
+
 import os
 import sys
 import requests
@@ -26,17 +27,23 @@ class AdForgeClient:
         return h
 
     def _get(self, path, params=None):
-        r = requests.get(f"{self.base}{path}", headers=self._headers(), params=params, timeout=30)
+        r = requests.get(
+            f"{self.base}{path}", headers=self._headers(), params=params, timeout=30
+        )
         r.raise_for_status()
         return r.json()
 
     def _post(self, path, data=None):
-        r = requests.post(f"{self.base}{path}", headers=self._headers(), json=data, timeout=30)
+        r = requests.post(
+            f"{self.base}{path}", headers=self._headers(), json=data, timeout=30
+        )
         r.raise_for_status()
         return r.json()
 
     def _put(self, path, data=None):
-        r = requests.put(f"{self.base}{path}", headers=self._headers(), json=data, timeout=30)
+        r = requests.put(
+            f"{self.base}{path}", headers=self._headers(), json=data, timeout=30
+        )
         r.raise_for_status()
         return r.json()
 

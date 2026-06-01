@@ -133,7 +133,9 @@ export function createMcpRouter(mcpClient, settingsRepo, campaignsRepo, adsRepo,
             metrics: ['impressions', 'clicks', 'spend', 'ctr', 'cpc', 'conversions'],
           });
           insightsData = insightsResult.data;
-        } catch {}
+        } catch (err) {
+          log.debug('Insights fetch failed, continuing without', { error: err.message });
+        }
       }
 
       // Persist campaigns to local database

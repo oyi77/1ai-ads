@@ -12,7 +12,8 @@ async function getAIPipeline() {
     try {
       const mod = await import('@1ai/ai-pipeline');
       _AIPipelineClass = mod.AIPipeline;
-    } catch {
+    } catch (err) {
+      log.debug('AIPipeline import failed, using direct fetch', { error: err.message });
       _AIPipelineClass = undefined;
     }
   }
@@ -133,7 +134,8 @@ export class LLMClient {
           u.pathname = u.pathname.replace(/\/$/, '') + '/models';
         }
         modelsUrl = u.toString();
-      } catch {
+      } catch (err) {
+        log.debug('URL parse failed for models endpoint', { error: err.message });
         modelsUrl = modelsUrl.replace(/\/$/, '') + '/models';
       }
     }

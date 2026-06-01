@@ -14,38 +14,73 @@ COOKIE_FILE = Path(__file__).parent.parent / "config" / "shopee_seller_cookies.j
 OUTPUT_DIR = Path(__file__).parent.parent / "data" / "shopee"
 
 SHOPEE_DOMAINS = {
-    'id': {'seller': 'seller.shopee.co.id', 'affiliate': 'affiliate.shopee.co.id', 'main': 'shopee.co.id'},
-    'my': {'seller': 'seller.shopee.com.my', 'affiliate': 'affiliate.shopee.com.my', 'main': 'shopee.com.my'},
-    'th': {'seller': 'seller.shopee.co.th', 'affiliate': 'affiliate.shopee.co.th', 'main': 'shopee.co.th'},
-    'vn': {'seller': 'seller.shopee.vn', 'affiliate': 'affiliate.shopee.vn', 'main': 'shopee.vn'},
-    'ph': {'seller': 'seller.shopee.ph', 'affiliate': 'affiliate.shopee.ph', 'main': 'shopee.ph'},
-    'sg': {'seller': 'seller.shopee.sg', 'affiliate': 'affiliate.shopee.sg', 'main': 'shopee.sg'},
-    'br': {'seller': 'seller.shopee.com.br', 'affiliate': 'affiliate.shopee.com.br', 'main': 'shopee.com.br'},
-    'mx': {'seller': 'seller.shopee.com.mx', 'affiliate': 'affiliate.shopee.com.mx', 'main': 'shopee.com.mx'},
+    "id": {
+        "seller": "seller.shopee.co.id",
+        "affiliate": "affiliate.shopee.co.id",
+        "main": "shopee.co.id",
+    },
+    "my": {
+        "seller": "seller.shopee.com.my",
+        "affiliate": "affiliate.shopee.com.my",
+        "main": "shopee.com.my",
+    },
+    "th": {
+        "seller": "seller.shopee.co.th",
+        "affiliate": "affiliate.shopee.co.th",
+        "main": "shopee.co.th",
+    },
+    "vn": {
+        "seller": "seller.shopee.vn",
+        "affiliate": "affiliate.shopee.vn",
+        "main": "shopee.vn",
+    },
+    "ph": {
+        "seller": "seller.shopee.ph",
+        "affiliate": "affiliate.shopee.ph",
+        "main": "shopee.ph",
+    },
+    "sg": {
+        "seller": "seller.shopee.sg",
+        "affiliate": "affiliate.shopee.sg",
+        "main": "shopee.sg",
+    },
+    "br": {
+        "seller": "seller.shopee.com.br",
+        "affiliate": "affiliate.shopee.com.br",
+        "main": "shopee.com.br",
+    },
+    "mx": {
+        "seller": "seller.shopee.com.mx",
+        "affiliate": "affiliate.shopee.com.mx",
+        "main": "shopee.com.mx",
+    },
 }
 
 
-def load_cookies(country='id'):
+def load_cookies(country="id"):
     """Load cookies from config file."""
     with open(COOKIE_FILE) as f:
         data = json.load(f)
     cookies = data.get("cookies", [])
-    domain = SHOPEE_DOMAINS.get(country, SHOPEE_DOMAINS['id'])
+    domain = SHOPEE_DOMAINS.get(country, SHOPEE_DOMAINS["id"])
     pw_cookies = []
     for c in cookies:
-        pw_cookies.append({
-            "name": c["name"],
-            "value": c["value"],
-            "domain": c.get("domain", f'.{domain["main"]}'),
-            "path": "/",
-        })
+        pw_cookies.append(
+            {
+                "name": c["name"],
+                "value": c["value"],
+                "domain": c.get("domain", f'.{domain["main"]}'),
+                "path": "/",
+            }
+        )
     return pw_cookies
 
 
-def scrape_affiliate_orders(country='id'):
+def scrape_affiliate_orders(country="id"):
     """Scrape affiliate conversion report."""
     from cloakbrowser import launch
-    domain = SHOPEE_DOMAINS.get(country, SHOPEE_DOMAINS['id'])
+
+    domain = SHOPEE_DOMAINS.get(country, SHOPEE_DOMAINS["id"])
 
     browser = launch(headless=True)
     page = browser.new_page()
@@ -75,7 +110,9 @@ def scrape_affiliate_orders(country='id'):
         }""")
 
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        out_file = OUTPUT_DIR / f"affiliate_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        out_file = (
+            OUTPUT_DIR / f"affiliate_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        )
         with open(out_file, "w") as f:
             json.dump(content, f, indent=2, ensure_ascii=False)
 
@@ -89,10 +126,11 @@ def scrape_affiliate_orders(country='id'):
         browser.close()
 
 
-def scrape_seller_orders(country='id'):
+def scrape_seller_orders(country="id"):
     """Scrape seller orders via API in browser context."""
     from cloakbrowser import launch
-    domain = SHOPEE_DOMAINS.get(country, SHOPEE_DOMAINS['id'])
+
+    domain = SHOPEE_DOMAINS.get(country, SHOPEE_DOMAINS["id"])
 
     browser = launch(headless=True)
     page = browser.new_page()
@@ -124,7 +162,9 @@ def scrape_seller_orders(country='id'):
         }""")
 
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        out_file = OUTPUT_DIR / f"seller_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        out_file = (
+            OUTPUT_DIR / f"seller_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        )
         with open(out_file, "w") as f:
             json.dump(orders_data, f, indent=2, ensure_ascii=False)
 
@@ -138,9 +178,9 @@ def scrape_seller_orders(country='id'):
         browser.close()
 
 
-def main(country='id'):
+def main(country="id"):
     """Run both scrapers for a specific country."""
-    domain = SHOPEE_DOMAINS.get(country, SHOPEE_DOMAINS['id'])
+    domain = SHOPEE_DOMAINS.get(country, SHOPEE_DOMAINS["id"])
     print(f"=== Shopee Scraper [{country}] ({datetime.now().isoformat()}) ===")
     print(f"  Seller: {domain['seller']}")
     print(f"  Affiliate: {domain['affiliate']}")
@@ -156,5 +196,6 @@ def main(country='id'):
 
 if __name__ == "__main__":
     import sys
-    country = sys.argv[1] if len(sys.argv) > 1 else 'id'
+
+    country = sys.argv[1] if len(sys.argv) > 1 else "id"
     main(country)

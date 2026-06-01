@@ -197,7 +197,8 @@ export class AdResearchService {
         limit,
       });
       return result?.content || [];
-    } catch {
+    } catch (err) {
+      log.debug('Trending content fetch failed', { error: err.message });
       return [];
     }
   }

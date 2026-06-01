@@ -16,8 +16,17 @@ from datetime import datetime
 import os
 
 # Load platform mapping
-mapping_file = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "outputs", "jendralbot_autoscaler", "platform_mapping.json"))
-with open(mapping_file, 'r') as f:
+mapping_file = Path(
+    os.path.join(
+        os.path.expanduser("~"),
+        ".openclaw",
+        "workspace",
+        "outputs",
+        "jendralbot_autoscaler",
+        "platform_mapping.json",
+    )
+)
+with open(mapping_file, "r") as f:
     platform_data = json.load(f)
 
 print("=" * 60)
@@ -28,16 +37,16 @@ print("=" * 60)
 underperforming = []
 
 for platform in platform_data:
-    name = platform['Platform']
-    orders = int(platform['Orders'])
-    canceled = int(platform['Canceled'])
-    completed = int(platform['Completed'])
-    clicks = int(platform['Clicks'])
-    
+    name = platform["Platform"]
+    orders = int(platform["Orders"])
+    canceled = int(platform["Canceled"])
+    completed = int(platform["Completed"])
+    clicks = int(platform["Clicks"])
+
     # Calculate cancel rate (based on orders, not clicks)
     cancel_rate = (canceled / orders * 100) if orders > 0 else 0
     conv_rate = (completed / clicks * 100) if clicks > 0 else 0
-    
+
     reasons = []
     if cancel_rate > 3:
         reasons.append(f"High cancel rate ({cancel_rate:.1f}%)")
@@ -45,17 +54,19 @@ for platform in platform_data:
         reasons.append(f"Low volume ({orders} orders)")
     if conv_rate < 0.5:
         reasons.append(f"Low conversion ({conv_rate:.2f}%)")
-    
+
     if reasons:
-        underperforming.append({
-            'platform': name,
-            'orders': orders,
-            'completed': completed,
-            'canceled': canceled,
-            'cancel_rate': cancel_rate,
-            'conv_rate': conv_rate,
-            'reasons': reasons
-        })
+        underperforming.append(
+            {
+                "platform": name,
+                "orders": orders,
+                "completed": completed,
+                "canceled": canceled,
+                "cancel_rate": cancel_rate,
+                "conv_rate": conv_rate,
+                "reasons": reasons,
+            }
+        )
 
 print("\n=== UNDERPERFORMING PLATFORMS TO PAUSE ===\n")
 
@@ -73,23 +84,42 @@ for up in underperforming:
 pause_plan = []
 
 for up in underperforming:
-    pause_plan.append({
-        'action': 'pause',
-        'platform': up['platform'],
-        'reasons': up['reasons'],
-        'timestamp': datetime.now().isoformat()
-    })
+    pause_plan.append(
+        {
+            "action": "pause",
+            "platform": up["platform"],
+            "reasons": up["reasons"],
+            "timestamp": datetime.now().isoformat(),
+        }
+    )
 
 # Save pause plan
-pause_file = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "outputs", "jendralbot_autoscaler", "pause_plan.json"))
-with open(pause_file, 'w') as f:
+pause_file = Path(
+    os.path.join(
+        os.path.expanduser("~"),
+        ".openclaw",
+        "workspace",
+        "outputs",
+        "jendralbot_autoscaler",
+        "pause_plan.json",
+    )
+)
+with open(pause_file, "w") as f:
     json.dump(pause_plan, f, indent=2)
 
 print(f"\nAuto-pause plan saved to: {pause_file}")
 
 # Log action
-log_file = Path(os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "logs", "autoscaler_report.log"))
-with open(log_file, 'a') as f:
+log_file = Path(
+    os.path.join(
+        os.path.expanduser("~"),
+        ".openclaw",
+        "workspace",
+        "logs",
+        "autoscaler_report.log",
+    )
+)
+with open(log_file, "a") as f:
     f.write(f"{datetime.now().isoformat()} | Auto-pause script executed\n")
     f.write(f"  Platforms to pause: {len(underperforming)}\n")
     for up in underperforming:
@@ -105,5 +135,7 @@ print("=" * 60)
 print(f"\n✅ SCALE UP: Instagram (best performer)")
 print("\n🛑 PAUSE: ")
 for up in underperforming:
-    print(f"  - {up['platform']}: {up['orders']} orders, {up['cancel_rate']:.1f}% cancel")
+    print(
+        f"  - {up['platform']}: {up['orders']} orders, {up['cancel_rate']:.1f}% cancel"
+    )
 print("\n📝 NEXT STEP: Run auto-scale script to redirect budget to Instagram")

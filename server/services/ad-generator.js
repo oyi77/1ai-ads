@@ -17,7 +17,8 @@ function parseJsonResponse(raw) {
   try {
     const jsonMatch = raw.match(/```json\n([\s\S]*?)\n```/) || raw.match(/```\n([\s\S]*?)\n```/);
     return jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(raw);
-  } catch {
+  } catch (err) {
+    log.debug('JSON parse failed for AI response', { error: err.message });
     return { error: 'Failed to parse AI response as JSON', raw_content: raw };
   }
 }

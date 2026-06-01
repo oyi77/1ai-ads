@@ -49,7 +49,8 @@ export class TikTokAdapter extends BasePlatformAdapter {
     try {
       const creds = this.settingsRepo.getCredentials('tiktok');
       return !!(creds?.access_token);
-    } catch {
+    } catch (err) {
+      log.debug('Credentials check failed', { error: err.message });
       return false;
     }
   }

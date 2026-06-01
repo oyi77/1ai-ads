@@ -175,8 +175,8 @@ export class MetaScraper extends BaseScraper {
     let data;
     try {
       data = JSON.parse(text);
-    } catch {
-      // Try to extract JSON from HTML response
+    } catch (err) {
+      log.debug('JSON parse failed, attempting HTML extraction', { error: err.message });
       const jsonMatch = text.match(/"ads":\s*(\[.*?\])/s);
       if (jsonMatch) {
         data = { ads: JSON.parse(jsonMatch[1]) };

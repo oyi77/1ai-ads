@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Auto-activate LLA campaign at 05:00 WIB"""
+
 import urllib.request, json
 from datetime import datetime
 import os
@@ -16,7 +17,9 @@ for item in [
 ]:
     eid = item[1]
     url = f"https://graph.facebook.com/v19.0/{eid}?access_token={TOKEN}"
-    req = urllib.request.Request(url, data=b'{"status":"ACTIVE"}', headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(
+        url, data=b'{"status":"ACTIVE"}', headers={"Content-Type": "application/json"}
+    )
     try:
         resp = urllib.request.urlopen(req, timeout=15)
         print(f"  ✅ {item[0]} ACTIVE")

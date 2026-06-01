@@ -44,7 +44,8 @@ export class ShopeeAdapter {
       const raw = readFileSync(this.sellerCookiesPath, 'utf-8');
       const data = JSON.parse(raw);
       return data.cookies || [];
-    } catch {
+    } catch (err) {
+      log.debug('Failed to read seller cookies', { error: err.message });
       return [];
     }
   }

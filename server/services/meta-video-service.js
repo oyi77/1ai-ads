@@ -220,8 +220,8 @@ export class MetaVideoService {
         // metaApi._getToken() might throw if not configured
         return this.metaApi._getToken();
       }
-    } catch {
-      // Fall through
+    } catch (err) {
+      log.debug('Token fallback triggered', { error: err.message });
     }
 
     // Fallback to config

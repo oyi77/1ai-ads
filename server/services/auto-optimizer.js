@@ -40,8 +40,9 @@ export class AutoOptimizer {
         let insights;
         try {
           insights = await this.meta.getCampaignInsights(rule.campaign_id, { datePreset: 'last_7d' });
-        } catch {
-          continue; // Skip if can't get insights (token expired, etc)
+        } catch (err) {
+          log.debug('Skipping rule - insights unavailable', { ruleId: rule.id, error: err.message });
+          continue;
         }
 
         if (!insights) continue;

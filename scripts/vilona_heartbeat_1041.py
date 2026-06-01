@@ -4,20 +4,19 @@ Vilona Governor Heartbeat — Auto Report ke Telegram setiap 2 jam
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Dipanggil via cron. Kirim status 1041 ke Veris via Telethon.
 """
-import os
 import sys, os, asyncio, time, json
 from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(os.path.expanduser('~'), '.openclaw', 'workspace', 'scripts'))
+sys.path.insert(0, '/home/openclaw/.openclaw/workspace/scripts')
 
 from vilona_telethon_notify import send_alert
 import urllib.request
 
 TOKEN = "***"
 ACCOUNT = "act_380721031313330"
-STATE_FILE = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "state", "ads_1041_governor_state.json")
+STATE_FILE = "/home/openclaw/.openclaw/workspace/state/ads_1041_governor_state.json"
 
 def api(url):
     req = urllib.request.Request(url)
@@ -35,7 +34,7 @@ def get_status():
         clicks = int(dat.get('clicks', 0) or 0)
         cpc = float(dat.get('cpc', 0) or 0)
         ctr = dat.get('ctr', '0')
-    except Exception:
+    except:
         spend, impressions, clicks, cpc, ctr = 0, 0, 0, 0, '0'
     
     # Get active campaigns
@@ -43,7 +42,7 @@ def get_status():
         camp_url = f"https://graph.facebook.com/v19.0/{ACCOUNT}/campaigns?fields=name,id,status&effective_status=[\"ACTIVE\"]&limit=100&access_token=***"
         active = api(camp_url).get('data', [])
         active_count = len(active)
-    except Exception:
+    except:
         active_count = 0
     
     # Get state
@@ -53,7 +52,7 @@ def get_status():
         budget = state.get('daily_budget', 300000)
         paused = state.get('paused_today', False)
         soft = state.get('soft_paused', False)
-    except Exception:
+    except:
         budget = 300000
         paused = False
         soft = False

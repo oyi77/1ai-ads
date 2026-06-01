@@ -39,7 +39,9 @@ from telethon.tl.types import (
 # ═══════════════════════════════════════════════════════════════
 API_ID = 23913448
 API_HASH = "78d168f985edf365a5cd9679a917a0b2"
-SESSION_PATH = os.path.expanduser("~/.openclaw/workspace/.vilona/sessions/veris.session")
+SESSION_PATH = os.path.expanduser(
+    "~/.openclaw/workspace/.vilona/sessions/veris.session"
+)
 REPORT_GROUP_ID = -1003788883693  # Report Army Group (OLD)
 VERIS_CHAT_ID = 157228659  # Veris personal chat — kirim kesini bro, bukan ke paijo
 
@@ -48,41 +50,38 @@ VERIS_CHAT_ID = 157228659  # Veris personal chat — kirim kesini bro, bukan ke 
 # Diambil dari scan forum groups Veris (51 total forum groups)
 TARGET_GROUPS = {
     # ── AI/TECH ──
-    "vip-ai-agent": -1002618823726,       # Member VIP AI Agent community
-    "vidabot": -1002360202546,             # VIDABOT - Video AI Robot
-    "markibot-labs": -1002535819394,       # M A R K I B O T Labs
-    "tekno-ai": -1002646824083,            # TEKNO AI GLOBAL
-    "ai-creative": -1002710114205,         # AI Creative Community by @abangtedy_
-    
+    "vip-ai-agent": -1002618823726,  # Member VIP AI Agent community
+    "vidabot": -1002360202546,  # VIDABOT - Video AI Robot
+    "markibot-labs": -1002535819394,  # M A R K I B O T Labs
+    "tekno-ai": -1002646824083,  # TEKNO AI GLOBAL
+    "ai-creative": -1002710114205,  # AI Creative Community by @abangtedy_
     # ── MARKETING / ADS / AFFILIATE ──
-    "iklan-jos": -1002177884783,           # IKLAN JOS, ANTI BONCOS
-    "fb-advertiser": -1001555356282,       # Facebook Advertiser Indonesia
-    "markas-cuan": -1003591485885,          # Markas Cuan Affiliate Shopee
-    "shopee-affiliate": -1002017573849,    # Group Support Shopee Affiliate
-    "aff-go": -1003671263284,              # AFF GO
-    "bigdream": -1002042715385,            # Kolaborasi BigDream
-    "iklan-jos-course": -1003270910510,    # IKLAN JOS ANTI BONCOS (E-COURSE ONLY)
-    
+    "iklan-jos": -1002177884783,  # IKLAN JOS, ANTI BONCOS
+    "fb-advertiser": -1001555356282,  # Facebook Advertiser Indonesia
+    "markas-cuan": -1003591485885,  # Markas Cuan Affiliate Shopee
+    "shopee-affiliate": -1002017573849,  # Group Support Shopee Affiliate
+    "aff-go": -1003671263284,  # AFF GO
+    "bigdream": -1002042715385,  # Kolaborasi BigDream
+    "iklan-jos-course": -1003270910510,  # IKLAN JOS ANTI BONCOS (E-COURSE ONLY)
     # ── TRADING / CRYPTO ──
-    "trading-formula": -1002317577817,     # TRADING FORMULA
-    "bot-trading-forex": -1003125474336,   # Bot Trading Forex MT5
-    "crypto-fams": -1002158492666,         # Screening crypto fams
-    "cryptomanic": -1002155978952,         # CRYPTOMANIC
-    "ea-profit-sakti": -1003087834088,     # VIP EA Profit Sakti
-    "tele-signal": -1003092487853,         # Tele Signal Cuan
-    "va-mod": -1001376538955,              # VA-MOD Volumes-Analysis
-    "ea-robot-forex": -1002682544612,      # EA Robot Forex Premium
-    
+    "trading-formula": -1002317577817,  # TRADING FORMULA
+    "bot-trading-forex": -1003125474336,  # Bot Trading Forex MT5
+    "crypto-fams": -1002158492666,  # Screening crypto fams
+    "cryptomanic": -1002155978952,  # CRYPTOMANIC
+    "ea-profit-sakti": -1003087834088,  # VIP EA Profit Sakti
+    "tele-signal": -1003092487853,  # Tele Signal Cuan
+    "va-mod": -1001376538955,  # VA-MOD Volumes-Analysis
+    "ea-robot-forex": -1002682544612,  # EA Robot Forex Premium
     # ── BUSINESS / EDU ──
-    "kantin-scalev": -1002232700724,       # Kantin Scalev
-    "vanapro": -1002566401895,             # VANAPRO BASIC CLASS
-    "bumi-digital": -1002641735707,        # BUMI DIGITAL
-    "edukazo": -1003635010202,             # Edukazo Squad
-    "member-vip": -1002618823726,          # Member VIP AI Agent
-    "raw-engine": -1003538188518,          # RAW ENGINE BATCH 5
-    "hendra-setyo": -1002066760900,        # GROUP DISKUSI MEMBER HENDRA SETYO
-    "king-seller": -1002366179321,         # Member King Seller All
-    "mentorstream": -1002072541453,        # MentorStream - Member
+    "kantin-scalev": -1002232700724,  # Kantin Scalev
+    "vanapro": -1002566401895,  # VANAPRO BASIC CLASS
+    "bumi-digital": -1002641735707,  # BUMI DIGITAL
+    "edukazo": -1003635010202,  # Edukazo Squad
+    "member-vip": -1002618823726,  # Member VIP AI Agent
+    "raw-engine": -1003538188518,  # RAW ENGINE BATCH 5
+    "hendra-setyo": -1002066760900,  # GROUP DISKUSI MEMBER HENDRA SETYO
+    "king-seller": -1002366179321,  # Member King Seller All
+    "mentorstream": -1002072541453,  # MentorStream - Member
 }
 
 WORKSPACE = os.path.expanduser("~/.openclaw/workspace")
@@ -124,6 +123,7 @@ def save_state(state: dict):
 # TOPIC MANAGEMENT
 # ═══════════════════════════════════════════════════════════════
 
+
 async def get_forum_topics(client: TelegramClient, group_id: int) -> list[dict]:
     """Ambil semua topic dari forum-enabled group."""
     try:
@@ -138,27 +138,41 @@ async def get_forum_topics(client: TelegramClient, group_id: int) -> list[dict]:
     offset_date = 0
 
     while True:
-        result = await client(GetForumTopicsRequest(
-            channel=channel,
-            offset_date=offset_date,
-            offset_id=0,
-            offset_topic=0,
-            limit=100,
-        ))
+        result = await client(
+            GetForumTopicsRequest(
+                channel=channel,
+                offset_date=offset_date,
+                offset_id=0,
+                offset_topic=0,
+                limit=100,
+            )
+        )
 
         for topic in result.topics:
-            topics.append({
-                "id": topic.id,
-                "title": topic.title,
-                "icon_color": topic.icon_color if hasattr(topic, "icon_color") else None,
-                "closed": topic.closed if hasattr(topic, "closed") else False,
-                "pinned": topic.pinned if hasattr(topic, "pinned") else False,
-                "date": topic.date.isoformat() if hasattr(topic, "date") else None,
-                "author_id": topic.from_id if hasattr(topic, "from_id") else None,
-                "unread_count": topic.unread_count if hasattr(topic, "unread_count") else 0,
-                "unread_mentions_count": topic.unread_mentions_count if hasattr(topic, "unread_mentions_count") else 0,
-                "top_message": topic.top_message if hasattr(topic, "top_message") else 0,
-            })
+            topics.append(
+                {
+                    "id": topic.id,
+                    "title": topic.title,
+                    "icon_color": (
+                        topic.icon_color if hasattr(topic, "icon_color") else None
+                    ),
+                    "closed": topic.closed if hasattr(topic, "closed") else False,
+                    "pinned": topic.pinned if hasattr(topic, "pinned") else False,
+                    "date": topic.date.isoformat() if hasattr(topic, "date") else None,
+                    "author_id": topic.from_id if hasattr(topic, "from_id") else None,
+                    "unread_count": (
+                        topic.unread_count if hasattr(topic, "unread_count") else 0
+                    ),
+                    "unread_mentions_count": (
+                        topic.unread_mentions_count
+                        if hasattr(topic, "unread_mentions_count")
+                        else 0
+                    ),
+                    "top_message": (
+                        topic.top_message if hasattr(topic, "top_message") else 0
+                    ),
+                }
+            )
 
         if len(result.topics) < 100:
             break
@@ -171,7 +185,9 @@ async def get_forum_topics(client: TelegramClient, group_id: int) -> list[dict]:
     return topics
 
 
-async def get_topic_messages(client: TelegramClient, group_id: int, topic_id: int, limit: int = 10) -> list[str]:
+async def get_topic_messages(
+    client: TelegramClient, group_id: int, topic_id: int, limit: int = 10
+) -> list[str]:
     """Ambil pesan terbaru dari sebuah topic."""
     entity = await client.get_entity(group_id)
     messages = await client.get_messages(entity, limit=limit, reply_to=topic_id)
@@ -181,7 +197,9 @@ async def get_topic_messages(client: TelegramClient, group_id: int, topic_id: in
     ]
 
 
-async def send_to_topic(client: TelegramClient, group_id: int, topic_id: int, text: str) -> bool:
+async def send_to_topic(
+    client: TelegramClient, group_id: int, topic_id: int, text: str
+) -> bool:
     """Kirim pesan ke topic spesifik."""
     try:
         entity = await client.get_entity(group_id)
@@ -193,7 +211,9 @@ async def send_to_topic(client: TelegramClient, group_id: int, topic_id: int, te
         return False
 
 
-async def find_topic_by_title(client: TelegramClient, group_id: int, keyword: str) -> Optional[dict]:
+async def find_topic_by_title(
+    client: TelegramClient, group_id: int, keyword: str
+) -> Optional[dict]:
     """Cari topic by keyword di judul."""
     topics = await get_forum_topics(client, group_id)
     keyword_lower = keyword.lower()
@@ -206,6 +226,7 @@ async def find_topic_by_title(client: TelegramClient, group_id: int, keyword: st
 # ═══════════════════════════════════════════════════════════════
 # MONITORING & REPORTING
 # ═══════════════════════════════════════════════════════════════
+
 
 async def build_topic_report(client: TelegramClient) -> str:
     """Build report semua topic dari semua target groups."""
@@ -229,7 +250,11 @@ async def build_topic_report(client: TelegramClient) -> str:
             topics = await get_forum_topics(client, group_id)
 
             # Filter: only show topics with activity
-            active = [t for t in topics if t["unread_count"] > 0 or t["unread_mentions_count"] > 0]
+            active = [
+                t
+                for t in topics
+                if t["unread_count"] > 0 or t["unread_mentions_count"] > 0
+            ]
 
             total_topics += len(topics)
             for t in topics:
@@ -242,12 +267,19 @@ async def build_topic_report(client: TelegramClient) -> str:
 
             if active:
                 # Sort by unread count descending
-                active.sort(key=lambda x: x["unread_count"] + x["unread_mentions_count"], reverse=True)
+                active.sort(
+                    key=lambda x: x["unread_count"] + x["unread_mentions_count"],
+                    reverse=True,
+                )
                 for i, t in enumerate(active[:10], 1):
                     status = "🔒" if t["closed"] else ("📌" if t["pinned"] else "💬")
                     mention_flag = " 🔔" if t["unread_mentions_count"] > 0 else ""
-                    unread_str = f"{t['unread_count']:,}" if t["unread_count"] > 0 else "0"
-                    lines.append(f"  {i}. {status} `{t['title'][:40]}` — {unread_str} unread{mention_flag}")
+                    unread_str = (
+                        f"{t['unread_count']:,}" if t["unread_count"] > 0 else "0"
+                    )
+                    lines.append(
+                        f"  {i}. {status} `{t['title'][:40]}` — {unread_str} unread{mention_flag}"
+                    )
 
                 if len(active) > 10:
                     lines.append(f"  ... _and {len(active) - 10} more_")
@@ -290,6 +322,7 @@ async def send_group_report(client: TelegramClient, text: str):
 # COMMANDS
 # ═══════════════════════════════════════════════════════════════
 
+
 async def cmd_topics(client: TelegramClient, group_id: int = None):
     """List semua topics."""
     if group_id is None:
@@ -318,7 +351,9 @@ async def cmd_topics(client: TelegramClient, group_id: int = None):
         for t in active:
             mention = " 🔔" if t["unread_mentions_count"] > 0 else ""
             status = "🔒" if t["closed"] else ("📌" if t["pinned"] else "💬")
-            print(f"  {status} #{t['id']} {t['title'][:50]} — {t['unread_count']:,}{mention}")
+            print(
+                f"  {status} #{t['id']} {t['title'][:50]} — {t['unread_count']:,}{mention}"
+            )
 
     if inactive[:5]:
         print("\n😴 INACTIVE (sample):")
@@ -378,6 +413,7 @@ async def cmd_status(client: TelegramClient):
 # DAEMON
 # ═══════════════════════════════════════════════════════════════
 
+
 async def daemon_loop():
     """Loop monitoring topics dan kirim report tiap 15 menit."""
     state = load_state()
@@ -426,6 +462,7 @@ async def daemon_loop():
 # ═══════════════════════════════════════════════════════════════
 # MAIN
 # ═══════════════════════════════════════════════════════════════
+
 
 async def main():
     if len(sys.argv) < 2:

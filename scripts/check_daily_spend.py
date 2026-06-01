@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Check today's total spend across all ad accounts"""
+
 import requests, json, sys
 
-TOKEN = open('/dev/stdin', 'r')  # Will replace below
+TOKEN = open("/dev/stdin", "r")  # Will replace below
 
 ACCOUNTS = {
-    'act_380721031313330': '1041',
-    'act_435670549443081': '0858',
-    'act_1181078009580337': '1340',
+    "act_380721031313330": "1041",
+    "act_435670549443081": "0858",
+    "act_1181078009580337": "1340",
 }
 DAILY_CAP = 20000  # Rp 20.000 total all accounts
 CRITICAL_PCT = 80  # Alert when 80% of cap reached
@@ -22,28 +23,35 @@ total_spend = 0
 results = {}
 
 for acct_id, acct_name in ACCOUNTS.items():
-    r = requests.get(f'https://graph.facebook.com/v22.0/{acct_id}/insights', params={
-        'access_token': TOKEN,
-        'fields': 'spend,impressions,clicks,ctr,cpc',
-        'date_preset': 'today'
-    })
+    r = requests.get(
+        f"https://graph.facebook.com/v22.0/{acct_id}/insights",
+        params={
+            "access_token": TOKEN,
+            "fields": "spend,impressions,clicks,ctr,cpc",
+            "date_preset": "today",
+        },
+    )
     data = r.json()
-    if 'data' in data and data['data']:
-        d = data['data'][0]
-        sp = float(d.get('spend', 0))
-        cpc = float(d.get('cpc', 0))
-        results[acct_name] = {'spend': sp, 'cpc': cpc}
+    if "data" in data and data["data"]:
+        d = data["data"][0]
+        sp = float(d.get("spend", 0))
+        cpc = float(d.get("cpc", 0))
+        results[acct_name] = {"spend": sp, "cpc": cpc}
         total_spend += sp
 
 # Print report
 print(f"\n{'='*50}")
-print(f"SPEND MONITOR — {__import__('datetime').datetime.now().strftime('%d %b %H:%M')} WIB")
+print(
+    f"SPEND MONITOR — {__import__('datetime').datetime.now().strftime('%d %b %H:%M')} WIB"
+)
 print(f"{'='*50}")
 
 for acct_name, data in results.items():
-    pct = (data['spend'] / DAILY_CAP) * 100
-    bar = '█' * int(pct / 5) + '░' * (20 - int(pct / 5))
-    print(f"  {acct_name}: Rp {data['spend']:>8,.0f} | CPC Rp {data['cpc']:>5,.0f} | {bar} {pct:.0f}%")
+    pct = (data["spend"] / DAILY_CAP) * 100
+    bar = "█" * int(pct / 5) + "░" * (20 - int(pct / 5))
+    print(
+        f"  {acct_name}: Rp {data['spend']:>8,.0f} | CPC Rp {data['cpc']:>5,.0f} | {bar} {pct:.0f}%"
+    )
 
 total_pct = (total_spend / DAILY_CAP) * 100
 print(f"\n  TOTAL: Rp {total_spend:>8,.0f} dari Rp {DAILY_CAP:,} ({total_pct:.0f}%)")

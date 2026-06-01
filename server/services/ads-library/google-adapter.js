@@ -44,7 +44,8 @@ export class GoogleAdapter extends BasePlatformAdapter {
     try {
       const creds = this.settingsRepo.getCredentials('google');
       return !!(creds?.developer_token && creds?.oauth_token);
-    } catch {
+    } catch (err) {
+      log.debug('Credentials check failed', { error: err.message });
       return false;
     }
   }

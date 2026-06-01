@@ -8,6 +8,7 @@ Per Veris Rules (2026-05-18):
 - Scale Rules: +20% budget if ROAS > 2.0x AND CPC < 150 (max 1x/day/adset)
 - No OpenClaw dependency — runs via cron.
 """
+
 import urllib.request, json, os, sys, urllib.parse
 from datetime import datetime
 import os
@@ -19,34 +20,43 @@ ADSET_IDS = [
     "120248835533980416",  # DongkrakElektrik_BelanjaOnline_IGonly_23-55
     "120248835539130416",  # DongkrakElektrik_Tersembunyi_IGonly_23-55
 ]
-LOG_DIR = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "logs", "dongkrak_scaletest.log")
+LOG_DIR = os.path.join(
+    os.path.expanduser("~"), ".openclaw", "workspace", "logs", "dongkrak_scaletest.log"
+)
 
 # ─── DATA GATES (HOLD thresholds — MUST be met before evaluating) ─────────
 GATE = {
-    "CPC_MIN_IMPRESSIONS": 200,      # CPC evaluation: impressions >= 200
-    "CTR_MIN_IMPRESSIONS": 500,      # CTR evaluation: impressions >= 500
-    "ZEROCLICK_MIN_SPEND": 5000,     # Zero-click evaluation: spend >= Rp5.000
+    "CPC_MIN_IMPRESSIONS": 200,  # CPC evaluation: impressions >= 200
+    "CTR_MIN_IMPRESSIONS": 500,  # CTR evaluation: impressions >= 500
+    "ZEROCLICK_MIN_SPEND": 5000,  # Zero-click evaluation: spend >= Rp5.000
 }
 
 # ─── KILL THRESHOLDS ─────────────────────────────────────────────────────
 KILL = {
-    "CPC_MAX": 300,          # CPC > 300 → PAUSE
-    "CTR_MIN": 0.5,          # CTR < 0.5% → PAUSE
-    "ZEROCLICK_SPEND": 5000, # Spend >= Rp5K + 0 clicks → PAUSE
+    "CPC_MAX": 300,  # CPC > 300 → PAUSE
+    "CTR_MIN": 0.5,  # CTR < 0.5% → PAUSE
+    "ZEROCLICK_SPEND": 5000,  # Spend >= Rp5K + 0 clicks → PAUSE
 }
 
 # ─── SCALE THRESHOLDS ────────────────────────────────────────────────────
 SCALE = {
     "ROAS_MIN": 2.0,  # ROAS T-1 > 2.0x
-    "CPC_MAX": 150,   # CPC today < 150
+    "CPC_MAX": 150,  # CPC today < 150
     "BUDGET_INCREASE_PCT": 20,  # +20%
-    "MAX_PER_ADSET_DAILY": 1,   # max 1x scale per day
+    "MAX_PER_ADSET_DAILY": 1,  # max 1x scale per day
 }
 
 # Keep track of today's scale actions (resets each day by T-1 data injection)
-SCALE_HISTORY_FILE = os.path.join(os.path.expanduser("~"), ".openclaw", "workspace", "logs", "dongkrak_scaletest_scale_history.json")
+SCALE_HISTORY_FILE = os.path.join(
+    os.path.expanduser("~"),
+    ".openclaw",
+    "workspace",
+    "logs",
+    "dongkrak_scaletest_scale_history.json",
+)
 
 # ─── HELPERS ──────────────────────────────────────────────────────────────
+
 
 def log(msg):
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -56,6 +66,7 @@ def log(msg):
         f.write(line + "\n")
     print(line)
 
+
 def action_log(action, adset_name, reason):
     """Structured log format for actions."""
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -64,6 +75,7 @@ def action_log(action, adset_name, reason):
     with open(LOG_DIR, "a") as f:
         f.write(line + "\n")
     print(line)
+
 
 def api_get(url_suffix):
     url = f"https://graph.facebook.com/v22.0/{url_suffix}&access_token={TOKEN}"
@@ -79,6 +91,7 @@ def api_get(url_suffix):
         log(f"  ⚠️ Request error: {str(e)[:100]}")
         return None
 
+
 def api_post(url_suffix, data):
     url = f"https://graph.facebook.com/v22.0/{url_suffix}"
     data["access_token"] = TOKEN
@@ -92,6 +105,7 @@ def api_post(url_suffix, data):
         log(f"  ⚠️ API POST error: {e.code} {body[:100]}")
         return None
 
+
 def get_today_scales():
     """Read scale actions done today."""
     today = datetime.now().strftime("%Y-%m-%d")
@@ -104,6 +118,7 @@ def get_today_scales():
         pass
     return []
 
+
 def save_scale_action(as_id):
     """Record a scale action for today."""
     today = datetime.now().strftime("%Y-%m-%d")
@@ -113,7 +128,9 @@ def save_scale_action(as_id):
     with open(SCALE_HISTORY_FILE, "w") as f:
         json.dump({"date": today, "scaled": scales}, f)
 
+
 # ─── CORE MONITOR LOGIC ──────────────────────────────────────────────────
+
 
 def check_adset(as_id, as_name):
     """
@@ -138,9 +155,15 @@ def check_adset(as_id, as_name):
     clicks = int(ins.get("inline_link_clicks", 0))
     outbound_clicks = int(ins.get("outbound_clicks", 0))
     cpc_idr = float(ins.get("cpc", 0)) / 100 if ins.get("cpc") else 0
-    ctr_pct = float(ins.get("inline_link_click_ctr", 0)) if ins.get("inline_link_click_ctr") else 0
+    ctr_pct = (
+        float(ins.get("inline_link_click_ctr", 0))
+        if ins.get("inline_link_click_ctr")
+        else 0
+    )
 
-    log(f"  📊 {as_name}: Rp{spend_idr:,.0f} spent | {impressions} impr | {clicks} click | {outbound_clicks} outbound | CTR {ctr_pct:.2f}% | CPC Rp{cpc_idr:,.0f}")
+    log(
+        f"  📊 {as_name}: Rp{spend_idr:,.0f} spent | {impressions} impr | {clicks} click | {outbound_clicks} outbound | CTR {ctr_pct:.2f}% | CPC Rp{cpc_idr:,.0f}"
+    )
 
     # ── DATA GATES (HOLD checks) ──
     # If gate not passed, skip kill evaluation (let it run)
@@ -149,7 +172,9 @@ def check_adset(as_id, as_name):
     can_eval_zeroclick = spend_idr >= GATE["ZEROCLICK_MIN_SPEND"]
 
     if not can_eval_cpc and not can_eval_ctr and not can_eval_zeroclick:
-        log(f"  ⏳ {as_name}: HOLD — impressions ({impressions}) < min gates, letting it run")
+        log(
+            f"  ⏳ {as_name}: HOLD — impressions ({impressions}) < min gates, letting it run"
+        )
         return True
 
     # ── KILL RULES (only if relevant data gate is passed) ──
@@ -178,6 +203,7 @@ def check_adset(as_id, as_name):
     log(f"  ✅ {as_name}: All checks passed")
     return True
 
+
 def toggle_balance_resume():
     """
     Resume rule: If campaign was auto-paused due to insufficient balance
@@ -191,6 +217,7 @@ def toggle_balance_resume():
         # Check if all adsets are also paused — if yes, check reason
         # This is triggered externally when balance is refilled
         pass  # Reserved for future use
+
 
 def check_campaign_health():
     """Main check — evaluate all adsets."""
@@ -229,14 +256,19 @@ def check_campaign_health():
 
     # If both adsets were killed, pause the campaign too
     if all_killed:
-        action_log("PAUSE_CAMPAIGN", "ABO_DongkrakElektrik_ScaleTest_BIDCAP130_VILONA",
-                    "Both adsets killed — pausing campaign to prevent waste")
+        action_log(
+            "PAUSE_CAMPAIGN",
+            "ABO_DongkrakElektrik_ScaleTest_BIDCAP130_VILONA",
+            "Both adsets killed — pausing campaign to prevent waste",
+        )
         api_post(CAMPAIGN_ID, {"status": "PAUSED"})
         log("  🛑 Campaign paused — both adsets killed")
 
     log(f"  ✅ Check complete")
 
+
 # ─── EXTERNAL ENTRY POINTS ───────────────────────────────────────────────
+
 
 def resume_by_roas(as_id, as_name, roas_t1):
     """
@@ -248,10 +280,14 @@ def resume_by_roas(as_id, as_name, roas_t1):
         if as_data and as_data.get("status") == "PAUSED":
             result = api_post(as_id, {"status": "ACTIVE"})
             if result:
-                action_log("TURN_ON_ADSET", as_name,
-                           f"ROAS T-1 {roas_t1:.1f}x > threshold {SCALE['ROAS_MIN']}x")
+                action_log(
+                    "TURN_ON_ADSET",
+                    as_name,
+                    f"ROAS T-1 {roas_t1:.1f}x > threshold {SCALE['ROAS_MIN']}x",
+                )
                 return True
     return False
+
 
 def scale_by_roas(as_id, as_name, roas_t1, cpc_today):
     """
@@ -279,12 +315,16 @@ def scale_by_roas(as_id, as_name, roas_t1, cpc_today):
 
     result = api_post(as_id, {"daily_budget": new_budget})
     if result:
-        action_log("INCREASE_BUDGET", as_name,
-                   f"ROAS {roas_t1:.1f}x > {SCALE['ROAS_MIN']}x, CPC {cpc_today:.0f} < {SCALE['CPC_MAX']}, "
-                   f"Rp{current_budget/100:,.0f} → Rp{new_budget/100:,.0f} (+{SCALE['BUDGET_INCREASE_PCT']}%)")
+        action_log(
+            "INCREASE_BUDGET",
+            as_name,
+            f"ROAS {roas_t1:.1f}x > {SCALE['ROAS_MIN']}x, CPC {cpc_today:.0f} < {SCALE['CPC_MAX']}, "
+            f"Rp{current_budget/100:,.0f} → Rp{new_budget/100:,.0f} (+{SCALE['BUDGET_INCREASE_PCT']}%)",
+        )
         save_scale_action(as_id)
         return True
     return False
+
 
 def resume_by_balance_refill():
     """
@@ -299,9 +339,13 @@ def resume_by_balance_refill():
 
     # Resume campaign
     api_post(CAMPAIGN_ID, {"status": "ACTIVE"})
-    action_log("TURN_ON_CAMPAIGN", "ABO_DongkrakElektrik_ScaleTest_BIDCAP130_VILONA",
-               "Balance refilled — resuming campaign")
+    action_log(
+        "TURN_ON_CAMPAIGN",
+        "ABO_DongkrakElektrik_ScaleTest_BIDCAP130_VILONA",
+        "Balance refilled — resuming campaign",
+    )
     return True
+
 
 # ─── CLI ENTRY POINT ─────────────────────────────────────────────────────
 

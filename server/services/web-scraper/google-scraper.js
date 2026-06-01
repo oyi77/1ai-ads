@@ -273,8 +273,8 @@ export class GoogleScraper extends BaseScraper {
         try {
           const parsedAds = JSON.parse(dataMatch[1]);
           ads.push(...parsedAds.slice(0, limit));
-        } catch {
-          // Not valid JSON, skip
+        } catch (err) {
+          log.debug('Failed to parse scraped ads JSON', { error: err.message });
         }
       }
     }

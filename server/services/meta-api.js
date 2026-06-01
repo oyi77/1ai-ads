@@ -324,8 +324,8 @@ export class MetaAdsAPI {
         limit: '50',
       });
       return { source: 'ads_archive', ads: data.data || [] };
-    } catch {
-      // Fallback: get page info only
+    } catch (err) {
+      log.debug('Ads archive unavailable, falling back to page info', { pageId, error: err.message });
       const page = await this._get(`/${pageId}`, {
         fields: 'id,name,category,fan_count,about,website',
       });

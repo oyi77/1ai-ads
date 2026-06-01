@@ -13,8 +13,10 @@ if not os.path.exists(SESSION_DIR):
     os.makedirs(SESSION_DIR)
 
 import logging
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 async def main():
     logger.info(f"Starting login for {PHONE}...")
@@ -26,6 +28,7 @@ async def main():
         logger.error(f"Error during login: {e}")
     finally:
         await client.disconnect()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
