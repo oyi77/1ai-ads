@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1776073959577,
+  "lastScanned": 1780340592223,
   "projectRoot": "/home/openclaw/projects/1ai-ads",
   "techStack": {
     "languages": [
@@ -72,107 +72,255 @@
     "workspaces": [],
     "mainDirectories": [
       "docs",
+      "scripts",
       "src",
       "tests"
     ],
-    "gitBranches": null
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
   },
   "customNotes": [],
   "directoryMap": {
+    "__pycache__": {
+      "path": "__pycache__",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1780340592185,
+      "keyFiles": [
+        "adforge.cpython-313.pyc",
+        "adforge.cpython-314.pyc"
+      ]
+    },
+    "adforge-dashboard": {
+      "path": "adforge-dashboard",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1780340592190,
+      "keyFiles": [
+        "app.py",
+        "migrate_per_user_db.py"
+      ]
+    },
+    "adforge-generator": {
+      "path": "adforge-generator",
+      "purpose": null,
+      "fileCount": 4,
+      "lastAccessed": 1780340592200,
+      "keyFiles": [
+        "README.md",
+        "index.html",
+        "package.json",
+        "server.js"
+      ]
+    },
+    "ads-optimizer": {
+      "path": "ads-optimizer",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1780340592206,
+      "keyFiles": [
+        "campaign_optimizer.py",
+        "monitor_0858.py",
+        "spend_monitor_1041.py"
+      ]
+    },
+    "backups": {
+      "path": "backups",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1780340592207,
+      "keyFiles": [
+        "1ai-ads.db.archive"
+      ]
+    },
     "client": {
       "path": "client",
       "purpose": null,
       "fileCount": 2,
-      "lastAccessed": 1776073959557,
+      "lastAccessed": 1780340592208,
       "keyFiles": [
         "AGENTS.md",
         "index.html"
       ]
     },
+    "config": {
+      "path": "config",
+      "purpose": "Configuration files",
+      "fileCount": 2,
+      "lastAccessed": 1780340592208,
+      "keyFiles": [
+        "shopee_seller_cookies.json",
+        "targeting_1041.json"
+      ]
+    },
+    "data": {
+      "path": "data",
+      "purpose": "Data files",
+      "fileCount": 0,
+      "lastAccessed": 1780340592208,
+      "keyFiles": []
+    },
     "db": {
       "path": "db",
       "purpose": null,
-      "fileCount": 5,
-      "lastAccessed": 1776073959557,
+      "fileCount": 8,
+      "lastAccessed": 1780340592209,
       "keyFiles": [
-        "AGENTS.md",
         "1ai-ads.db",
-        "index.js",
-        "schema.sql",
-        "seed.js"
+        "AGENTS.md",
+        "adforge.db",
+        "adforge.db-shm",
+        "adforge.db-wal"
+      ]
+    },
+    "deriv_ads_optimizer": {
+      "path": "deriv_ads_optimizer",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1780340592209,
+      "keyFiles": [
+        "campaign_optimizer.py",
+        "monitor_0858.py",
+        "spend_monitor_1041.py"
       ]
     },
     "dist": {
       "path": "dist",
       "purpose": "Distribution/build output",
-      "fileCount": 3,
-      "lastAccessed": 1776073959563,
+      "fileCount": 2,
+      "lastAccessed": 1780340592215,
       "keyFiles": [
         "favicon.ico",
-        "index.html",
-        "privacy.html"
+        "index.html"
       ]
     },
     "docs": {
       "path": "docs",
       "purpose": "Documentation",
-      "fileCount": 1,
-      "lastAccessed": 1776073959568,
+      "fileCount": 4,
+      "lastAccessed": 1780340592216,
       "keyFiles": [
-        "BACKLOG_PAYMENTS.md"
+        "APP_REVIEW_FORM.md",
+        "BACKLOG_PAYMENTS.md",
+        "RUNBOOK.md",
+        "standalone-tools.md"
       ]
+    },
+    "logs": {
+      "path": "logs",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1780340592216,
+      "keyFiles": [
+        "scheduler_0858.log"
+      ]
+    },
+    "netlify": {
+      "path": "netlify",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1780340592217,
+      "keyFiles": []
     },
     "opencli-adapter": {
       "path": "opencli-adapter",
       "purpose": null,
-      "fileCount": 5,
-      "lastAccessed": 1776073959569,
+      "fileCount": 7,
+      "lastAccessed": 1780340592217,
       "keyFiles": [
         "README.md",
         "USAGE.md",
         "adapter.js",
         "index.js",
-        "package.json"
+        "index.mjs"
+      ]
+    },
+    "reports": {
+      "path": "reports",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1780340592218,
+      "keyFiles": [
+        "shopee_Kakriput_check.png",
+        "shopee_NyamiResep_check.png"
+      ]
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 196,
+      "lastAccessed": 1780340592219,
+      "keyFiles": [
+        "1208_herbal_rules.py",
+        "activate_0858_0400.py",
+        "activate_adforge_winners.py",
+        "activate_lla_campaign.py",
+        "activate_scheduled.py"
       ]
     },
     "server": {
       "path": "server",
       "purpose": null,
-      "fileCount": 2,
-      "lastAccessed": 1776073959569,
+      "fileCount": 3,
+      "lastAccessed": 1780340592219,
       "keyFiles": [
         "AGENTS.md",
-        "app.js"
+        "app.js",
+        "app_autonomous.txt"
+      ]
+    },
+    "shopee-ads-optimizer": {
+      "path": "shopee-ads-optimizer",
+      "purpose": null,
+      "fileCount": 4,
+      "lastAccessed": 1780340592219,
+      "keyFiles": [
+        "README.md",
+        "campaign_optimizer.py",
+        "monitor_0858.py",
+        "spend_monitor_1041.py"
       ]
     },
     "src": {
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1776073959570,
+      "lastAccessed": 1780340592219,
       "keyFiles": []
     },
     "state": {
       "path": "state",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1776073959570,
+      "lastAccessed": 1780340592220,
       "keyFiles": [
         "cancel-signal-state.json"
+      ]
+    },
+    "templates": {
+      "path": "templates",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1780340592220,
+      "keyFiles": [
+        "dashboard.html",
+        "login.html"
       ]
     },
     "test-results": {
       "path": "test-results",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1776073959571,
+      "lastAccessed": 1780340592220,
       "keyFiles": []
     },
     "tests": {
       "path": "tests",
       "purpose": "Test files",
       "fileCount": 2,
-      "lastAccessed": 1776073959571,
+      "lastAccessed": 1780340592220,
       "keyFiles": [
         "AGENTS.md",
         "setup.test.js"
@@ -182,7 +330,7 @@
       "path": "client/public",
       "purpose": "Public files",
       "fileCount": 1,
-      "lastAccessed": 1776073959572,
+      "lastAccessed": 1780340592220,
       "keyFiles": [
         "favicon.ico"
       ]
@@ -191,7 +339,7 @@
       "path": "client/src",
       "purpose": "Source code",
       "fileCount": 2,
-      "lastAccessed": 1776073959572,
+      "lastAccessed": 1780340592221,
       "keyFiles": [
         "AGENTS.md",
         "app.js"
@@ -200,39 +348,40 @@
     "dist/assets": {
       "path": "dist/assets",
       "purpose": "Static assets",
-      "fileCount": 41,
-      "lastAccessed": 1776073959573,
+      "fileCount": 11,
+      "lastAccessed": 1780340592221,
       "keyFiles": [
-        "index-00XHAhoz.js",
-        "index-9LPe_zzz.js",
-        "index-BBz2FEvH.js"
+        "attribution-B2g77_hA.js",
+        "attribution-BXGVdoXr.js",
+        "attribution-CWyQLuuq.js"
       ]
     },
     "server/config": {
       "path": "server/config",
       "purpose": "Configuration files",
-      "fileCount": 1,
-      "lastAccessed": 1776073959575,
+      "fileCount": 2,
+      "lastAccessed": 1780340592222,
       "keyFiles": [
-        "index.js"
+        "index.js",
+        "prompts.js"
       ]
     },
     "server/lib": {
       "path": "server/lib",
       "purpose": "Library code",
-      "fileCount": 9,
-      "lastAccessed": 1776073959575,
+      "fileCount": 10,
+      "lastAccessed": 1780340592222,
       "keyFiles": [
         "AGENTS.md",
         "auth.js",
-        "errors.js"
+        "base-platform-api.js"
       ]
     },
     "server/middleware": {
       "path": "server/middleware",
       "purpose": "Middleware",
       "fileCount": 2,
-      "lastAccessed": 1776073959576,
+      "lastAccessed": 1780340592222,
       "keyFiles": [
         "AGENTS.md",
         "auth.js"
@@ -241,30 +390,30 @@
     "server/routes": {
       "path": "server/routes",
       "purpose": "Route handlers",
-      "fileCount": 21,
-      "lastAccessed": 1776073959577,
+      "fileCount": 36,
+      "lastAccessed": 1780340592222,
       "keyFiles": [
         "AGENTS.md",
-        "ads-library.js",
-        "ads.js"
+        "ab-tests.js",
+        "ads-library.js"
       ]
     },
     "server/services": {
       "path": "server/services",
       "purpose": "Business logic services",
-      "fileCount": 26,
-      "lastAccessed": 1776073959577,
+      "fileCount": 46,
+      "lastAccessed": 1780340592223,
       "keyFiles": [
         "AGENTS.md",
-        "ad-generator.js",
-        "ad-intelligence.js"
+        "ab-test-service.js",
+        "ad-generator.js"
       ]
     },
     "tests/helpers": {
       "path": "tests/helpers",
       "purpose": "Helper functions",
       "fileCount": 2,
-      "lastAccessed": 1776073959577,
+      "lastAccessed": 1780340592223,
       "keyFiles": [
         "db.js",
         "fixtures.js"
@@ -274,302 +423,248 @@
   "hotPaths": [
     {
       "path": "server/app.js",
-      "accessCount": 166,
-      "lastAccessed": 1780083881755,
-      "type": "file"
-    },
-    {
-      "path": "",
-      "accessCount": 72,
-      "lastAccessed": 1780084149190,
+      "accessCount": 82,
+      "lastAccessed": 1780364900731,
       "type": "directory"
     },
     {
-      "path": "server",
-      "accessCount": 53,
-      "lastAccessed": 1780082868052,
-      "type": "directory"
-    },
-    {
-      "path": "tests/integration/competitor-spy.test.js",
-      "accessCount": 49,
-      "lastAccessed": 1775806886092,
-      "type": "file"
-    },
-    {
-      "path": "server/config/index.js",
-      "accessCount": 47,
-      "lastAccessed": 1779916140399,
-      "type": "file"
-    },
-    {
-      "path": "client/src/views/settings.js",
-      "accessCount": 46,
-      "lastAccessed": 1775814240251,
-      "type": "file"
-    },
-    {
-      "path": "db/schema.sql",
-      "accessCount": 41,
-      "lastAccessed": 1780083467509,
-      "type": "file"
-    },
-    {
-      "path": "server/services/competitor-spy.js",
-      "accessCount": 39,
-      "lastAccessed": 1775803909627,
-      "type": "file"
-    },
-    {
-      "path": "server/services/payments.js",
+      "path": "server/services/mcp-server.js",
       "accessCount": 38,
-      "lastAccessed": 1779917628483,
+      "lastAccessed": 1780364947463,
       "type": "file"
     },
     {
-      "path": "db/seed.js",
-      "accessCount": 33,
-      "lastAccessed": 1780083087638,
-      "type": "file"
-    },
-    {
-      "path": "server/routes/competitor-spy.js",
-      "accessCount": 32,
-      "lastAccessed": 1775803915245,
-      "type": "file"
-    },
-    {
-      "path": "client/src/app.js",
-      "accessCount": 25,
-      "lastAccessed": 1780084820422,
-      "type": "file"
-    },
-    {
-      "path": "tests/integration/payments.test.js",
-      "accessCount": 23,
-      "lastAccessed": 1775738313415,
-      "type": "file"
-    },
-    {
-      "path": "server/routes/payments.js",
-      "accessCount": 23,
-      "lastAccessed": 1779917366636,
-      "type": "file"
-    },
-    {
-      "path": "server/repositories/payments.js",
-      "accessCount": 18,
-      "lastAccessed": 1779917004357,
-      "type": "file"
-    },
-    {
-      "path": "server/services/trending.js",
-      "accessCount": 16,
-      "lastAccessed": 1775783621610,
-      "type": "file"
-    },
-    {
-      "path": "db/index.js",
-      "accessCount": 16,
-      "lastAccessed": 1780082829339,
-      "type": "file"
-    },
-    {
-      "path": "server/routes/trending.js",
-      "accessCount": 15,
-      "lastAccessed": 1775783190614,
-      "type": "file"
-    },
-    {
-      "path": ".env.example",
-      "accessCount": 14,
-      "lastAccessed": 1775807048925,
-      "type": "file"
-    },
-    {
-      "path": "client/index.html",
+      "path": "server/services/workflow-engine.js",
       "accessCount": 13,
-      "lastAccessed": 1775809243438,
+      "lastAccessed": 1780353116921,
       "type": "file"
     },
     {
-      "path": "server/services/scalev.js",
+      "path": "server/services/profitability-calculator.js",
+      "accessCount": 13,
+      "lastAccessed": 1780353220536,
+      "type": "file"
+    },
+    {
+      "path": "server/services/rule-evaluator.js",
       "accessCount": 12,
-      "lastAccessed": 1775739342429,
+      "lastAccessed": 1780352886840,
       "type": "file"
     },
     {
-      "path": "server/routes/landing.js",
-      "accessCount": 12,
-      "lastAccessed": 1775782760843,
+      "path": "server/services/scale-manager.js",
+      "accessCount": 11,
+      "lastAccessed": 1780352999345,
       "type": "file"
     },
     {
-      "path": "server.js",
-      "accessCount": 12,
-      "lastAccessed": 1780082706615,
-      "type": "file"
-    },
-    {
-      "path": "server/repositories/competitors.js",
+      "path": "server/services/autonomous-agent.js",
       "accessCount": 10,
-      "lastAccessed": 1775782746527,
+      "lastAccessed": 1780352944744,
       "type": "file"
     },
     {
-      "path": "server/routes/scalev.js",
+      "path": "server/services/facebook-connection.js",
       "accessCount": 10,
-      "lastAccessed": 1775806877446,
+      "lastAccessed": 1780353029262,
       "type": "file"
     },
     {
-      "path": "client/src",
+      "path": "server/services/stoploss-engine.js",
       "accessCount": 9,
-      "lastAccessed": 1780083670711,
+      "lastAccessed": 1780352854547,
+      "type": "file"
+    },
+    {
+      "path": "server/routes/selow.js",
+      "accessCount": 9,
+      "lastAccessed": 1780352982265,
+      "type": "file"
+    },
+    {
+      "path": "server/routes/optimizer.js",
+      "accessCount": 8,
+      "lastAccessed": 1780352981980,
       "type": "directory"
     },
     {
-      "path": "client",
-      "accessCount": 8,
-      "lastAccessed": 1775743298409,
-      "type": "directory"
-    },
-    {
-      "path": "client/src/views/trending.js",
-      "accessCount": 8,
-      "lastAccessed": 1775744153392,
-      "type": "file"
-    },
-    {
-      "path": "package.json",
-      "accessCount": 8,
-      "lastAccessed": 1775780702185,
-      "type": "file"
-    },
-    {
-      "path": "server/services/templates.js",
-      "accessCount": 8,
-      "lastAccessed": 1775781371850,
-      "type": "file"
-    },
-    {
-      "path": "server/lib/plan-check.js",
+      "path": "server/services/campaign-reporter.js",
       "accessCount": 7,
-      "lastAccessed": 1775782771910,
+      "lastAccessed": 1780352836786,
       "type": "file"
     },
     {
-      "path": "server/lib/logger.js",
+      "path": "docs/plans/ECOSYSTEM_AUDIT.md",
       "accessCount": 7,
-      "lastAccessed": 1775806717770,
-      "type": "file"
-    },
-    {
-      "path": "server/repositories/templates.js",
-      "accessCount": 7,
-      "lastAccessed": 1780082823817,
-      "type": "file"
-    },
-    {
-      "path": "server/routes",
-      "accessCount": 6,
-      "lastAccessed": 1779902263878,
-      "type": "directory"
-    },
-    {
-      "path": "client/src/lib/api.js",
-      "accessCount": 6,
-      "lastAccessed": 1780082828993,
-      "type": "file"
-    },
-    {
-      "path": "client/src/views/competitor-spy.js",
-      "accessCount": 5,
-      "lastAccessed": 1775744153314,
-      "type": "file"
-    },
-    {
-      "path": "server/routes/templates.js",
-      "accessCount": 5,
-      "lastAccessed": 1775782762938,
-      "type": "file"
-    },
-    {
-      "path": "server/repositories/landing.js",
-      "accessCount": 5,
-      "lastAccessed": 1775782828787,
+      "lastAccessed": 1780364927831,
       "type": "file"
     },
     {
       "path": "server/repositories/campaigns.js",
-      "accessCount": 5,
-      "lastAccessed": 1775783368133,
-      "type": "file"
-    },
-    {
-      "path": "server/middleware/auth.js",
-      "accessCount": 4,
-      "lastAccessed": 1775782760075,
-      "type": "file"
-    },
-    {
-      "path": "server/services/mcp-server.js",
-      "accessCount": 4,
-      "lastAccessed": 1775803771686,
-      "type": "file"
-    },
-    {
-      "path": "server/repositories",
-      "accessCount": 4,
-      "lastAccessed": 1780083399894,
+      "accessCount": 6,
+      "lastAccessed": 1780352510536,
       "type": "directory"
     },
     {
-      "path": "tests/unit/services/trending.test.js",
-      "accessCount": 3,
-      "lastAccessed": 1775738095429,
+      "path": "server/services/selow-api.js",
+      "accessCount": 6,
+      "lastAccessed": 1780352959547,
       "type": "file"
     },
     {
-      "path": "tests/unit/services/competitor-spy.test.js",
-      "accessCount": 3,
-      "lastAccessed": 1775803927041,
-      "type": "file"
-    },
-    {
-      "path": "client/src/views/dashboard.js",
-      "accessCount": 2,
-      "lastAccessed": 1775736345489,
-      "type": "file"
-    },
-    {
-      "path": "README.md",
-      "accessCount": 1,
-      "lastAccessed": 1775734257362,
-      "type": "file"
-    },
-    {
-      "path": "vite.config.js",
-      "accessCount": 1,
-      "lastAccessed": 1775734264875,
+      "path": "server/services/content-bridge.js",
+      "accessCount": 6,
+      "lastAccessed": 1780363746905,
       "type": "file"
     },
     {
       "path": "mcp.js",
-      "accessCount": 1,
-      "lastAccessed": 1775734294573,
+      "accessCount": 6,
+      "lastAccessed": 1780364874362,
       "type": "file"
     },
     {
-      "path": "tests/e2e/competitor-spy.spec.js",
+      "path": "server/repositories/rules.js",
+      "accessCount": 5,
+      "lastAccessed": 1780352495079,
+      "type": "file"
+    },
+    {
+      "path": "server.js",
+      "accessCount": 5,
+      "lastAccessed": 1780352943924,
+      "type": "file"
+    },
+    {
+      "path": "tests",
+      "accessCount": 4,
+      "lastAccessed": 1780352813993,
+      "type": "directory"
+    },
+    {
+      "path": "",
+      "accessCount": 4,
+      "lastAccessed": 1780352844021,
+      "type": "directory"
+    },
+    {
+      "path": "tests/integration/workflow-engine.test.js",
+      "accessCount": 4,
+      "lastAccessed": 1780353060815,
+      "type": "file"
+    },
+    {
+      "path": "server/services/platform-interfaces.js",
+      "accessCount": 3,
+      "lastAccessed": 1780352309575,
+      "type": "file"
+    },
+    {
+      "path": "server",
+      "accessCount": 3,
+      "lastAccessed": 1780352333069,
+      "type": "directory"
+    },
+    {
+      "path": "server/services",
+      "accessCount": 3,
+      "lastAccessed": 1780352340257,
+      "type": "directory"
+    },
+    {
+      "path": "docker-compose.yml",
+      "accessCount": 2,
+      "lastAccessed": 1780344316675,
+      "type": "file"
+    },
+    {
+      "path": "docs/architecture/service-diagrams.md",
+      "accessCount": 2,
+      "lastAccessed": 1780344338337,
+      "type": "file"
+    },
+    {
+      "path": "docs/plans/SELOW.md",
       "accessCount": 1,
-      "lastAccessed": 1775734376597,
+      "lastAccessed": 1780340688805,
+      "type": "file"
+    },
+    {
+      "path": "docs/plans/IKLAN_WORKFLOW.md",
+      "accessCount": 1,
+      "lastAccessed": 1780340688894,
+      "type": "file"
+    },
+    {
+      "path": "server/AGENTS.md",
+      "accessCount": 1,
+      "lastAccessed": 1780340701202,
+      "type": "file"
+    },
+    {
+      "path": "server/services/meta-api.js",
+      "accessCount": 1,
+      "lastAccessed": 1780349494314,
+      "type": "file"
+    },
+    {
+      "path": "server/services/auto-optimizer.js",
+      "accessCount": 1,
+      "lastAccessed": 1780350074708,
+      "type": "file"
+    },
+    {
+      "path": "server/repositories",
+      "accessCount": 1,
+      "lastAccessed": 1780352333244,
+      "type": "directory"
+    },
+    {
+      "path": "server/config/index.js",
+      "accessCount": 1,
+      "lastAccessed": 1780352804716,
+      "type": "file"
+    },
+    {
+      "path": "server/lib/logger.js",
+      "accessCount": 1,
+      "lastAccessed": 1780352805041,
+      "type": "file"
+    },
+    {
+      "path": "server/services/google-ads-api.js",
+      "accessCount": 1,
+      "lastAccessed": 1780352814081,
+      "type": "file"
+    },
+    {
+      "path": "server/services/tiktok-api.js",
+      "accessCount": 1,
+      "lastAccessed": 1780352814187,
       "type": "file"
     },
     {
       "path": "docs/BACKLOG_PAYMENTS.md",
       "accessCount": 1,
-      "lastAccessed": 1775734396262,
+      "lastAccessed": 1780361361465,
+      "type": "file"
+    },
+    {
+      "path": "docs/standalone-tools.md",
+      "accessCount": 1,
+      "lastAccessed": 1780361374462,
+      "type": "file"
+    },
+    {
+      "path": "server/services/social-bridge.js",
+      "accessCount": 1,
+      "lastAccessed": 1780364733414,
+      "type": "file"
+    },
+    {
+      "path": "docs/plans/CROSS_PROJECT_CONTRACTS.md",
+      "accessCount": 1,
+      "lastAccessed": 1780364842140,
       "type": "file"
     }
   ],

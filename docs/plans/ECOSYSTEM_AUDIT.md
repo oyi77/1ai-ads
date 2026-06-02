@@ -105,10 +105,10 @@
    - 1ai-ads proxies to 1ai-social and 1ai-content
    - OpenClaw sees one unified tool set
 
-### Phase 4: Shared API Contracts
+### Phase 4: Shared API Contracts ✅ DONE
 **Priority: MEDIUM**
 
-9. **Define content generation contract**
+9. **Define content generation contract** ✅ `docs/plans/CROSS_PROJECT_CONTRACTS.md`
    ```
    POST /api/content/generate
    Request: { productName, description, niche, style, duration }

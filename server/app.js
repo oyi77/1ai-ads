@@ -39,6 +39,8 @@ import { MetaVideoService } from './services/meta-video-service.js';
 import { ContentScheduler } from './services/content-scheduler.js';
 import { AdResearchService } from './services/ad-research.js';
 import { createSelowRoutes } from './routes/selow.js';
+import { ContentBridge } from './services/content-bridge.js';
+import { SocialBridge } from './services/social-bridge.js';
 import rateLimit from 'express-rate-limit';
 import express from 'express';
 import cors from 'cors';
@@ -140,6 +142,16 @@ export function createApp(params) {
   const adResearchService = new AdResearchService({ metaApi, db });
   const orchestrator = new CampaignOrchestrator(metaApi, creativeStudio);
   const realtimeService = new RealtimeService(metaApi, campaignsRepo);
+
+  // Content bridge for cross-project video generation (1ai-ads → 1ai-content)
+  const contentBridgeUrl = settingsRepo.getKey?.('content_bridge_url') || process.env.CONTENT_BRIDGE_URL || 'http://localhost:3000';
+  const contentBridgeApiKey = settingsRepo.getKey?.('content_bridge_api_key') || process.env.CONTENT_BRIDGE_API_KEY || '';
+  const contentBridge = new ContentBridge(contentBridgeUrl, contentBridgeApiKey);
+
+  // Social bridge for cross-project Fanpage posting (1ai-ads → 1ai-social)
+  const socialBridgeUrl = settingsRepo.getKey?.('social_bridge_url') || process.env.SOCIAL_BRIDGE_URL || 'http://localhost:8200';
+  const socialBridgeApiKey = settingsRepo.getKey?.('social_bridge_api_key') || process.env.SOCIAL_BRIDGE_API_KEY || '';
+  const socialBridge = new SocialBridge(socialBridgeUrl, socialBridgeApiKey);
 
   const suggestionsRepo = new AiSuggestionsRepository(db);
   const aiAgent = new AiAgent(settingsRepo, adsRepo, campaignsRepo, llmClient, suggestionsRepo, landingRepo);
