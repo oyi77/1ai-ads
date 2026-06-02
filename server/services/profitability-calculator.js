@@ -122,17 +122,18 @@ export function shouldReviewCreative({ ctr, cpc }) {
  * @param {object} params
  * @returns {string} Formatted report
  */
+function determineDecision(status, roas) {
+  if (status === 'RUGI') return 'HENTIKAN';
+  if (roas >= ROAS_THRESHOLDS.SCALE_UP) return 'SCALE UP';
+  return 'LANJUT';
+}
+
 export function generateReport({ product, day, totalDays, spend, commission }) {
-  const effectiveCost = calculateEffectiveCost(spend);
-  const profit = calculateProfit(commission, spend);
-  const roas = evaluateROAS(commission, spend);
-  const status = getCampaignStatus(commission, spend);
+  const { profit, roas, status, effectiveCost } = evaluateMetrics(commission, spend);
+  const decision = determineDecision(status, roas);
+  const date = new Date().toISOString().split('T')[0];
 
-  let decision = 'LANJUT';
-  if (status === 'RUGI') decision = 'HENTIKAN';
-  else if (roas >= ROAS_THRESHOLDS.SCALE_UP) decision = 'SCALE UP';
-
-  return `📊 LAPORAN CAMPAIGN — ${new Date().toISOString().split('T')[0]}
+  return `📊 LAPORAN CAMPAIGN — ${date}
 
 Produk      : ${product}
 Periode     : Hari ke-${day} / ${totalDays} hari berjalan

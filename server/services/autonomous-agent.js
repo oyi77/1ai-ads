@@ -62,35 +62,36 @@ export class AutonomousAgent {
   async runAutonomousMode() {
     log.info('Autonomous mode started');
 
-    this.scheduler = setInterval(async () => {
-      try {
-        const users = await this.platformAccountsRepo.getUsersWithAutoMode();
-
-        for (const user of users) {
-          const rulesCount = await this.ruleEvaluator.rulesRepo.countEnabled(user.id);
-          if (rulesCount === 0) continue;
-
-          const platforms = ['meta', 'google', 'tiktok'];
-          for (const platform of platforms) {
-            const account = await this.platformAccountsRepo.getByPlatform(user.id, platform);
-            if (!account?.access_token) continue;
-
-            if (platform === 'meta') {
-              this.ruleEvaluator.metaAdsAPI = new (await import('./meta-api.js')).MetaAdsAPI(account.access_token);
-            }
-
-            const results = await this.checkCampaigns(user.id);
-            if (results.length > 0) {
-              log.info('Autonomous actions executed', { userId: user.id, platform, actions: results.length });
-            }
-          }
-        }
-      } catch (err) {
-        log.error('Autonomous mode error', { error: err.message });
-      }
+    this.scheduler = setInterval(() => {
+      this._runAutonomousCycle().catch(err =>
+        log.error('Autonomous mode error', { error: err.message })
+      );
     }, 5 * 60 * 1000);
 
     return () => clearInterval(this.scheduler);
+  }
+
+  async _runAutonomousCycle() {
+    const users = await this.platformAccountsRepo.getUsersWithAutoMode();
+    for (const user of users) {
+      await this._checkUserCampaigns(user);
+    }
+  }
+
+  async _checkUserCampaigns(user) {
+    const rulesCount = await this.ruleEvaluator.rulesRepo.countEnabled(user.id);
+    if (rulesCount === 0) return;
+
+    const platforms = ['meta', 'google', 'tiktok'];
+    for (const platform of platforms) {
+      const account = await this.platformAccountsRepo.getByPlatform(user.id, platform);
+      if (!account?.access_token) continue;
+
+      const results = await this.checkCampaigns(user.id);
+      if (results.length > 0) {
+        log.info('Autonomous actions executed', { userId: user.id, platform, actions: results.length });
+      }
+    }
   }
 
 }

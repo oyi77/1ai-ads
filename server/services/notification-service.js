@@ -65,20 +65,18 @@ export class NotificationService {
     await this.sendWebhook(event, data);
   }
 
+  static MESSAGE_FORMATTERS = {
+    roas_alert: (data) => `ROAS Alert: Campaign ${data.campaign_id} ROAS dropped to ${data.roas?.toFixed(2)} (threshold: ${data.threshold})`,
+    cpa_breach: (data) => `CPA Breach: Campaign ${data.campaign_id} CPA ${data.cpa?.toFixed(0)} exceeds limit ${data.limit}`,
+    auto_pause: (data) => `Auto-Pause: Campaign ${data.campaign_id} paused — ${data.reason}`,
+    attribution_match: (data) => `Attribution: Order ${data.order_id} matched to ad ${data.ad_id} — revenue ${data.revenue}`,
+    circuit_open: (data) => `Circuit Open: ${data.service} failed ${data.failures} times`,
+  };
+
   _formatMessage(event, data) {
-    switch (event) {
-      case 'roas_alert':
-        return `ROAS Alert: Campaign ${data.campaign_id} ROAS dropped to ${data.roas?.toFixed(2)} (threshold: ${data.threshold})`;
-      case 'cpa_breach':
-        return `CPA Breach: Campaign ${data.campaign_id} CPA ${data.cpa?.toFixed(0)} exceeds limit ${data.limit}`;
-      case 'auto_pause':
-        return `Auto-Pause: Campaign ${data.campaign_id} paused — ${data.reason}`;
-      case 'attribution_match':
-        return `Attribution: Order ${data.order_id} matched to ad ${data.ad_id} — revenue ${data.revenue}`;
-      case 'circuit_open':
-        return `Circuit Open: ${data.service} failed ${data.failures} times`;
-      default:
-        return `[${event}] ${JSON.stringify(data)}`;
-    }
+    const formatter = this.constructor.MESSAGE_FORMATTERS[event];
+    return formatter
+      ? formatter(data)
+      : `[${event}] ${JSON.stringify(data)}`;
   }
 }

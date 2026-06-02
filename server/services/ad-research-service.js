@@ -43,27 +43,12 @@ export class AdResearchService {
    */
   async searchTrendingAds({ query, country = 'ID', limit = 20, source = 'api' }) {
     log.info('Searching trending ads', { query, country, source });
-
     try {
-      // Primary: use Meta Ads Archive API via existing meta-api
-      if (source === 'api' || source === 'auto') {
-        const ads = await this.metaApi.getAdLibrary({ query, country, limit });
-        if (ads && ads.length > 0) {
-          return { success: true, data: ads, source: 'meta_ads_archive' };
-        }
-      }
+      const apiResult = await this._tryApiSearch(query, country, limit, source);
+      if (apiResult) return apiResult;
 
-      // Fallback: try MCP external search
-      if (this.mcpClient && (source === 'scrape' || source === 'auto')) {
-        try {
-          const mcpResult = await this._searchViaMCP(query, country, limit);
-          if (mcpResult && mcpResult.length > 0) {
-            return { success: true, data: mcpResult, source: 'mcp' };
-          }
-        } catch (mcpErr) {
-          log.warn('MCP search failed', { error: mcpErr.message });
-        }
-      }
+      const mcpResult = await this._tryMcpSearch(query, country, limit, source);
+      if (mcpResult) return mcpResult;
 
       return { success: true, data: [], source };
     } catch (err) {
@@ -72,54 +57,43 @@ export class AdResearchService {
     }
   }
 
-  /**
-   * Analyze competitor's ads
-   *
-   * @param {object} options
-   * @param {string} options.pageId - Competitor Facebook Page ID
-   * @param {number} [options.limit=20] - Max ads to analyze
-   * @returns {Promise<{success: boolean, data: object, error?: string}>}
-   */
+  async _tryApiSearch(query, country, limit, source) {
+    if (source !== 'api' && source !== 'auto') return null;
+    const ads = await this.metaApi.getAdLibrary({ query, country, limit });
+    return ads?.length > 0 ? { success: true, data: ads, source: 'meta_ads_archive' } : null;
+  }
+
+  async _tryMcpSearch(query, country, limit, source) {
+    if (!this.mcpClient || (source !== 'scrape' && source !== 'auto')) return null;
+    try {
+      const mcpResult = await this._searchViaMCP(query, country, limit);
+      return mcpResult?.length > 0 ? { success: true, data: mcpResult, source: 'mcp' } : null;
+    } catch (mcpErr) {
+      log.warn('MCP search failed', { error: mcpErr.message });
+      return null;
+    }
+  }
+
   async analyzeCompetitor({ pageId, limit = 20 }) {
     log.info('Analyzing competitor', { pageId });
-
     try {
       const result = await this.metaApi.getPageAds(pageId);
-
-      if (result.source === 'ads_archive') {
-        const ads = (result.ads || []).slice(0, limit);
-
-        // Extract common patterns
-        const patterns = this._extractPatterns(ads);
-
-        return {
-          success: true,
-          data: {
-            pageId,
-            source: result.source,
-            totalAds: result.ads?.length || 0,
-            ads,
-            patterns,
-          },
-        };
-      }
-
-      return {
-        success: true,
-        data: {
-          pageId,
-          source: result.source,
-          page: result.page,
-          totalAds: 0,
-          ads: [],
-          patterns: null,
-          note: 'Ads Archive API returned page info only. Full ad data requires Ads Library API access.',
-        },
-      };
+      return result.source === 'ads_archive'
+        ? this._buildArchiveResult(pageId, result, limit)
+        : this._buildPageOnlyResult(pageId, result);
     } catch (err) {
       log.error('Competitor analysis failed', { pageId, error: err.message });
       return { success: false, data: null, error: err.message };
     }
+  }
+
+  _buildArchiveResult(pageId, result, limit) {
+    const ads = (result.ads || []).slice(0, limit);
+    return { success: true, data: { pageId, source: result.source, totalAds: result.ads?.length || 0, ads, patterns: this._extractPatterns(ads) } };
+  }
+
+  _buildPageOnlyResult(pageId, result) {
+    return { success: true, data: { pageId, source: result.source, page: result.page, totalAds: 0, ads: [], patterns: null, note: 'Ads Archive API returned page info only. Full ad data requires Ads Library API access.' } };
   }
 
   /**
@@ -157,29 +131,35 @@ export class AdResearchService {
    */
   _extractPatterns(ads) {
     const bodyLengths = [];
-    const ctaTypes = {};
     const platforms = {};
 
     for (const ad of ads) {
-      const bodies = ad.ad_creative_bodies || [];
-      for (const body of bodies) {
-        bodyLengths.push(body.length);
-      }
-
-      const platforms_ = ad.publisher_platforms || [];
-      for (const p of platforms_) {
-        platforms[p] = (platforms[p] || 0) + 1;
-      }
+      this._collectBodyLengths(ad, bodyLengths);
+      this._countPlatforms(ad, platforms);
     }
 
     return {
       adCount: ads.length,
-      avgBodyLength: bodyLengths.length > 0
-        ? Math.round(bodyLengths.reduce((a, b) => a + b, 0) / bodyLengths.length)
-        : 0,
+      avgBodyLength: this._avg(bodyLengths),
       platformDistribution: Object.keys(platforms).length > 0 ? platforms : null,
       hasMultipleVariants: bodyLengths.length > ads.length,
     };
+  }
+
+  _collectBodyLengths(ad, lengths) {
+    for (const body of ad.ad_creative_bodies || []) {
+      lengths.push(body.length);
+    }
+  }
+
+  _countPlatforms(ad, counts) {
+    for (const p of ad.publisher_platforms || []) {
+      counts[p] = (counts[p] || 0) + 1;
+    }
+  }
+
+  _avg(nums) {
+    return nums.length > 0 ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : 0;
   }
 
   /**

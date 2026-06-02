@@ -3,7 +3,7 @@ import { v4 as uuid } from 'uuid';
 import config from '../config/index.js';
 import { PlanCheck } from '../lib/plan-check.js';
 
-export function createSettingsRouter(settingsRepo, llmClient, db) {
+export function createSettingsRouter(settingsRepo, llmClient, db, metaApi) {
   const router = Router();
   const planCheck = new PlanCheck(db);
 
@@ -161,9 +161,8 @@ export function createSettingsRouter(settingsRepo, llmClient, db) {
 
     try {
       if (platform === 'meta') {
-        const { MetaAdsAPI } = await import('../services/meta-api.js');
         const mockRepo = { getCredentials: () => credentials };
-        const api = new MetaAdsAPI(mockRepo);
+        const api = new metaApi.constructor(mockRepo);
         const me = await api.getMe();
         return res.json({ success: true, message: `Connected as ${me.name}` });
       }
@@ -200,9 +199,8 @@ export function createSettingsRouter(settingsRepo, llmClient, db) {
         expiresIn = Math.floor((tokenInfo.data.expires_at * 1000 - Date.now()) / (1000 * 60 * 60 * 24));
       }
 
-      const { MetaAdsAPI } = await import('../services/meta-api.js');
       const mockRepo = { getCredentials: () => ({ access_token: longToken }) };
-      const api = new MetaAdsAPI(mockRepo);
+      const api = new metaApi.constructor(mockRepo);
       const me = await api.getMe();
 
       const accountName = `Meta - ${me.name}`;

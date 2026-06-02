@@ -429,8 +429,8 @@
     },
     {
       "path": "server/services/mcp-server.js",
-      "accessCount": 38,
-      "lastAccessed": 1780364947463,
+      "accessCount": 47,
+      "lastAccessed": 1780367186870,
       "type": "file"
     },
     {
@@ -482,6 +482,12 @@
       "type": "file"
     },
     {
+      "path": "mcp.js",
+      "accessCount": 9,
+      "lastAccessed": 1780365061080,
+      "type": "file"
+    },
+    {
       "path": "server/routes/optimizer.js",
       "accessCount": 8,
       "lastAccessed": 1780352981980,
@@ -500,6 +506,12 @@
       "type": "file"
     },
     {
+      "path": "server/services/content-bridge.js",
+      "accessCount": 7,
+      "lastAccessed": 1780367120707,
+      "type": "file"
+    },
+    {
       "path": "server/repositories/campaigns.js",
       "accessCount": 6,
       "lastAccessed": 1780352510536,
@@ -509,18 +521,6 @@
       "path": "server/services/selow-api.js",
       "accessCount": 6,
       "lastAccessed": 1780352959547,
-      "type": "file"
-    },
-    {
-      "path": "server/services/content-bridge.js",
-      "accessCount": 6,
-      "lastAccessed": 1780363746905,
-      "type": "file"
-    },
-    {
-      "path": "mcp.js",
-      "accessCount": 6,
-      "lastAccessed": 1780364874362,
       "type": "file"
     },
     {
@@ -536,15 +536,15 @@
       "type": "file"
     },
     {
-      "path": "tests",
-      "accessCount": 4,
-      "lastAccessed": 1780352813993,
+      "path": "",
+      "accessCount": 5,
+      "lastAccessed": 1780367185014,
       "type": "directory"
     },
     {
-      "path": "",
+      "path": "tests",
       "accessCount": 4,
-      "lastAccessed": 1780352844021,
+      "lastAccessed": 1780352813993,
       "type": "directory"
     },
     {
@@ -554,16 +554,16 @@
       "type": "file"
     },
     {
+      "path": "server",
+      "accessCount": 4,
+      "lastAccessed": 1780367184878,
+      "type": "directory"
+    },
+    {
       "path": "server/services/platform-interfaces.js",
       "accessCount": 3,
       "lastAccessed": 1780352309575,
       "type": "file"
-    },
-    {
-      "path": "server",
-      "accessCount": 3,
-      "lastAccessed": 1780352333069,
-      "type": "directory"
     },
     {
       "path": "server/services",

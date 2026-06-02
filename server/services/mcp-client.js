@@ -164,41 +164,37 @@ export class MCPClientManager {
     return entry.tools || [];
   }
 
-  /**
-   * Get MCP server config for a platform.
-   */
+  static PLATFORM_CONFIGS = {
+    meta: (credentials) => {
+      if (!credentials.access_token) throw new Error('META_ACCESS_TOKEN is required');
+      return {
+        command: 'npx',
+        args: ['-y', 'meta-ads-mcp'],
+        env: {
+          META_ACCESS_TOKEN: credentials.access_token,
+          ...(credentials.app_id && { META_APP_ID: credentials.app_id }),
+          ...(credentials.app_secret && { META_APP_SECRET: credentials.app_secret }),
+        },
+      };
+    },
+    google: (credentials) => {
+      if (!credentials.credentials_path) throw new Error('Google Ads credentials path is required');
+      if (!credentials.developer_token) throw new Error('Google Ads developer token is required');
+      return {
+        command: 'python3',
+        args: [credentials.server_path || 'google_ads_server.py'],
+        env: {
+          GOOGLE_ADS_AUTH_TYPE: credentials.auth_type || 'oauth',
+          GOOGLE_ADS_CREDENTIALS_PATH: credentials.credentials_path,
+          GOOGLE_ADS_DEVELOPER_TOKEN: credentials.developer_token,
+          ...(credentials.login_customer_id && { GOOGLE_ADS_LOGIN_CUSTOMER_ID: credentials.login_customer_id }),
+        },
+      };
+    },
+  };
+
   _getServerConfig(platform, credentials) {
-    switch (platform) {
-      case 'meta':
-        if (!credentials.access_token) throw new Error('META_ACCESS_TOKEN is required');
-        return {
-          command: 'npx',
-          args: ['-y', 'meta-ads-mcp'],
-          env: {
-            META_ACCESS_TOKEN: credentials.access_token,
-            ...(credentials.app_id && { META_APP_ID: credentials.app_id }),
-            ...(credentials.app_secret && { META_APP_SECRET: credentials.app_secret }),
-          },
-        };
-
-      case 'google':
-        // Google Ads MCP is Python-based (mcp-google-ads)
-        // Requires: credentials file path + developer token
-        if (!credentials.credentials_path) throw new Error('Google Ads credentials path is required');
-        if (!credentials.developer_token) throw new Error('Google Ads developer token is required');
-        return {
-          command: 'python3',
-          args: [credentials.server_path || 'google_ads_server.py'],
-          env: {
-            GOOGLE_ADS_AUTH_TYPE: credentials.auth_type || 'oauth',
-            GOOGLE_ADS_CREDENTIALS_PATH: credentials.credentials_path,
-            GOOGLE_ADS_DEVELOPER_TOKEN: credentials.developer_token,
-            ...(credentials.login_customer_id && { GOOGLE_ADS_LOGIN_CUSTOMER_ID: credentials.login_customer_id }),
-          },
-        };
-
-      default:
-        return null;
-    }
+    const configBuilder = MCPClientManager.PLATFORM_CONFIGS[platform];
+    return configBuilder ? configBuilder(credentials) : null;
   }
 }

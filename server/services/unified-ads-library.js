@@ -31,6 +31,9 @@ const log = createLogger('unified-ads-library');
 
 // Supported platforms
 const SUPPORTED_PLATFORMS = ['meta', 'google', 'tiktok'];
+const DEFAULT_CACHE_OPTS = { defaultTTL: 3600 * 1000, maxSize: 1000 };
+const DEFAULT_POOL_OPTS = { maxInstances: 3, headless: true };
+const DEFAULT_QUEUE_OPTS = { requestsPerMinute: 20, maxConcurrent: 3, minDelay: 1000 };
 
 /**
  * @typedef {Object} UnifiedSearchOptions
@@ -64,73 +67,38 @@ export class UnifiedAdsLibraryService {
    */
   constructor({ settingsRepo, cacheService, puppeteerPool, requestQueue } = {}) {
     this.settingsRepo = settingsRepo;
-
-    // Cache service (create default if not provided)
-    this.cacheService = cacheService || new CacheService({
-      defaultTTL: 3600 * 1000, // 1 hour
-      maxSize: 1000,
-    });
-
-    // Browser pool for scrapers
-    this.puppeteerPool = puppeteerPool || new PuppeteerPool({
-      maxInstances: 3,
-      headless: true,
-    });
-
-    // Request queue for rate limiting
-    this.requestQueue = requestQueue || new RequestQueue({
-      requestsPerMinute: 20,
-      maxConcurrent: 3,
-      minDelay: 1000,
-    });
-
-    // Initialize platform adapters with scrapers
+    this.cacheService = cacheService || new CacheService(DEFAULT_CACHE_OPTS);
+    this.puppeteerPool = puppeteerPool || new PuppeteerPool(DEFAULT_POOL_OPTS);
+    this.requestQueue = requestQueue || new RequestQueue(DEFAULT_QUEUE_OPTS);
     this._initializeAdapters();
   }
 
-  /**
-   * Initialize platform adapters with their corresponding scrapers.
-   * @private
-   */
+  _createScraper(ScraperClass) {
+    return new ScraperClass({ pool: this.puppeteerPool, queue: this.requestQueue });
+  }
+
+  _createAdapter(AdapterClass, scraper) {
+    return new AdapterClass({
+      cacheService: this.cacheService,
+      settingsRepo: this.settingsRepo,
+      scraper,
+    });
+  }
+
   _initializeAdapters() {
-    // Create scrapers with shared pool and queue
-    const metaScraper = new MetaScraper({
-      pool: this.puppeteerPool,
-      queue: this.requestQueue,
-    });
-
-    const googleScraper = new GoogleScraper({
-      pool: this.puppeteerPool,
-      queue: this.requestQueue,
-    });
-
-    const tiktokScraper = new TikTokScraper({
-      pool: this.puppeteerPool,
-      queue: this.requestQueue,
-    });
-
-    // Create adapters with scrapers
-    this.adapters = {
-      meta: new MetaAdapter({
-        cacheService: this.cacheService,
-        settingsRepo: this.settingsRepo,
-        scraper: metaScraper,
-      }),
-      google: new GoogleAdapter({
-        cacheService: this.cacheService,
-        settingsRepo: this.settingsRepo,
-        scraper: googleScraper,
-      }),
-      tiktok: new TikTokAdapter({
-        cacheService: this.cacheService,
-        settingsRepo: this.settingsRepo,
-        scraper: tiktokScraper,
-      }),
+    const scrapers = {
+      meta: this._createScraper(MetaScraper),
+      google: this._createScraper(GoogleScraper),
+      tiktok: this._createScraper(TikTokScraper),
     };
 
-    log.info('Platform adapters initialized', {
-      platforms: Object.keys(this.adapters),
-    });
+    this.adapters = {
+      meta: this._createAdapter(MetaAdapter, scrapers.meta),
+      google: this._createAdapter(GoogleAdapter, scrapers.google),
+      tiktok: this._createAdapter(TikTokAdapter, scrapers.tiktok),
+    };
+
+    log.info('Platform adapters initialized', { platforms: Object.keys(this.adapters) });
   }
 
   /**
@@ -141,86 +109,61 @@ export class UnifiedAdsLibraryService {
    * @returns {Promise<Object>} Unified search results
    */
   async search(query, options = {}) {
-    const {
-      platform = 'all',
-      source = 'auto',
-      country = 'US',
-      activeStatus = 'ALL',
-      mediaType,
-      adType,
-      limit = 50,
-      cursor,
-      cacheTTL,
-    } = options;
+    const opts = this._normalizeSearchOpts(options);
+    log.info('Unified ads library search', { query, platform: opts.platform, source: opts.source });
+    const platforms = this._resolvePlatforms(opts.platform);
+    const results = await Promise.allSettled(platforms.map(p => this._searchPlatform(p, query, opts)));
+    const platformResults = results.map((r, i) => this._buildPlatformResult(r, platforms[i]));
+    return this._aggregateResults(query, platformResults, platforms);
+  }
 
-    log.info('Unified ads library search', { query, platform, source });
+  _normalizeSearchOpts(options) {
+    const { platform = 'all', source = 'auto', country = 'US', activeStatus = 'ALL', mediaType, adType, limit = 50, cursor, cacheTTL } = options;
+    return { platform, source, country, activeStatus, mediaType, adType, limit, cursor, cacheTTL };
+  }
 
-    // Determine which platforms to search
-    const platforms = platform === 'all'
-      ? SUPPORTED_PLATFORMS
-      : [platform.toLowerCase()];
-
+  _resolvePlatforms(platform) {
     if (platform !== 'all' && !SUPPORTED_PLATFORMS.includes(platform.toLowerCase())) {
       throw new Error(`Unsupported platform: ${platform}. Supported: ${SUPPORTED_PLATFORMS.join(', ')}`);
     }
+    return platform === 'all' ? SUPPORTED_PLATFORMS : [platform.toLowerCase()];
+  }
 
-    // Search each platform in parallel
-    const searchPromises = platforms.map(p =>
-      this._searchPlatform(p, query, { source, country, activeStatus, mediaType, adType, limit, cursor, cacheTTL })
-    );
+  _buildPlatformResult(settled, platform) {
+    const ok = settled.status === 'fulfilled';
+    const data = ok ? settled.value : null;
+    return {
+      platform,
+      adapter: this.adapters[platform]?.displayName || platform,
+      source: data?.source || 'unknown',
+      ads: data?.ads || [],
+      total: data?.total || 0,
+      hasMore: data?.hasMore || false,
+      nextCursor: data?.nextCursor || null,
+      error: ok ? null : settled.reason?.message,
+      fromCache: data?.fromCache || false,
+    };
+  }
 
-    const results = await Promise.allSettled(searchPromises);
-
-    // Process results
-    const platformResults = results.map((result, i) => {
-      const isFulfilled = result.status === 'fulfilled';
-      const platform = platforms[i];
-      const data = isFulfilled ? result.value : null;
-      const error = isFulfilled ? null : result.reason?.message;
-
-      return {
-        platform,
-        adapter: this.adapters[platform]?.displayName || platform,
-        source: data?.source || 'unknown',
-        ads: data?.ads || [],
-        total: data?.total || 0,
-        hasMore: data?.hasMore || false,
-        nextCursor: data?.nextCursor || null,
-        error,
-        fromCache: data?.fromCache || false,
-      };
-    });
-
-    // Aggregate results
+  _aggregateResults(query, platformResults, platforms) {
     const allAds = platformResults.flatMap(r => r.ads);
     const anyErrors = platformResults.some(r => r.error);
     const fromCache = platformResults.some(r => r.fromCache);
 
-    const response = {
+    log.info('Unified search completed', {
+      totalAds: allAds.length, platformsSearched: platforms.length, hasErrors: anyErrors, fromCache,
+    });
+
+    return {
       query,
       platforms: platformResults,
       ads: allAds,
       total: allAds.length,
-      totalByPlatform: platformResults.reduce((acc, r) => {
-        acc[r.platform] = r.total;
-        return acc;
-      }, {}),
+      totalByPlatform: platformResults.reduce((acc, r) => { acc[r.platform] = r.total; return acc; }, {}),
       hasErrors: anyErrors,
-      errors: platformResults.filter(r => r.error).map(r => ({
-        platform: r.platform,
-        error: r.error,
-      })),
+      errors: platformResults.filter(r => r.error).map(r => ({ platform: r.platform, error: r.error })),
       fetchedAt: new Date().toISOString(),
     };
-
-    log.info('Unified search completed', {
-      totalAds: response.total,
-      platformsSearched: platforms.length,
-      hasErrors: anyErrors,
-      fromCache,
-    });
-
-    return response;
   }
 
   /**

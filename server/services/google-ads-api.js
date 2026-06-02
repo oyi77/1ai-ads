@@ -57,39 +57,37 @@ export class GoogleAdsAPI {
   async syncAllAccounts() {
     const customerIds = await this.listAccounts();
     const results = [];
-
     for (const customerId of customerIds) {
-      try {
-        const campaigns = await this.getCampaigns(customerId);
-        const performance = await this.getCampaignPerformance(customerId);
-        
-        results.push({
-          account: { id: customerId, name: `Google Ads (${customerId})` },
-          campaigns: campaigns.map(c => ({
-            id: c.campaign.id,
-            name: c.campaign.name,
-            status: c.campaign.status.toLowerCase(),
-            budget: parseFloat(c.campaignBudget.amountMicros) / 1000000,
-          })),
-          insights: performance.map(p => ({
-            campaign_id: p.campaign.id,
-            spend: parseFloat(p.metrics.costMicros) / 1000000,
-            impressions: parseInt(p.metrics.impressions),
-            clicks: parseInt(p.metrics.clicks),
-            conversions: parseFloat(p.metrics.conversions),
-          })),
-          syncedAt: new Date().toISOString(),
-        });
-      } catch (err) {
-        results.push({
-          account: { id: customerId, name: `Google Ads (${customerId})` },
-          error: err.message,
-          syncedAt: new Date().toISOString(),
-        });
-      }
+      results.push(await this._syncSingleAccount(customerId));
     }
-
     return results;
+  }
+
+  async _syncSingleAccount(customerId) {
+    try {
+      const campaigns = await this.getCampaigns(customerId);
+      const performance = await this.getCampaignPerformance(customerId);
+      return { account: { id: customerId, name: `Google Ads (${customerId})` },
+        campaigns: campaigns.map(c => this._mapCampaign(c)),
+        insights: performance.map(p => this._mapPerformance(p)),
+        syncedAt: new Date().toISOString(),
+      };
+    } catch (err) {
+      return { account: { id: customerId, name: `Google Ads (${customerId})` }, error: err.message, syncedAt: new Date().toISOString() };
+    }
+  }
+
+  _mapCampaign(c) {
+    return { id: c.campaign.id, name: c.campaign.name, status: c.campaign.status.toLowerCase(),
+      budget: parseFloat(c.campaignBudget.amountMicros) / 1000000,
+    };
+  }
+
+  _mapPerformance(p) {
+    return { campaign_id: p.campaign.id, spend: parseFloat(p.metrics.costMicros) / 1000000,
+      impressions: parseInt(p.metrics.impressions), clicks: parseInt(p.metrics.clicks),
+      conversions: parseFloat(p.metrics.conversions),
+    };
   }
 
   async getCampaigns(customerId) {

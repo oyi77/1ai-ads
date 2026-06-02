@@ -9,26 +9,31 @@ export class UtmTaggerService {
 
   tagUrl(url, adId, campaignId) {
     log.info('tagUrl', { url, adId, campaignId });
-    const baseUrl = `https://adforge.aitradepulse.com/t/${adId}`;
-    const utmParams = {
-      source: 'meta',
-      medium: 'paid',
-      campaign: campaignId,
-      content: adId,
-    };
     this.repo.create({
       ad_id: adId,
       campaign_id: campaignId,
       destination_url: url,
-      utm_params: utmParams,
+      utm_params: {
+        source: 'meta',
+        medium: 'paid',
+        campaign: campaignId,
+        content: adId,
+      },
     });
-    const qs = new URLSearchParams({
-      utm_source: utmParams.source,
-      utm_medium: utmParams.medium,
-      utm_campaign: utmParams.campaign,
-      utm_content: utmParams.content,
-    });
-    return `${baseUrl}?${qs.toString()}`;
+    return `${this._buildBaseUrl(adId)}?${this._buildUtmQueryString(campaignId, adId)}`;
+  }
+
+  _buildBaseUrl(adId) {
+    return `https://adforge.aitradepulse.com/t/${adId}`;
+  }
+
+  _buildUtmQueryString(campaignId, adId) {
+    return new URLSearchParams({
+      utm_source: 'meta',
+      utm_medium: 'paid',
+      utm_campaign: campaignId,
+      utm_content: adId,
+    }).toString();
   }
 
   buildRedirectUrl(record) {

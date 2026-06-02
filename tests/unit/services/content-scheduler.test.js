@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 import { readFileSync, writeFileSync, unlinkSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { ContentSchedulerQueueRepository } from '../../../server/repositories/content-scheduler-queue.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const schemaPath = join(__dirname, '../../../db/schema.sql');
@@ -24,6 +25,7 @@ import { ContentScheduler } from '../../../server/services/content-scheduler.js'
 
 describe('ContentScheduler', () => {
   let db;
+  let queueRepo;
   let videoService;
   let llmClient;
   let scheduler;
@@ -37,13 +39,14 @@ describe('ContentScheduler', () => {
 
   beforeEach(() => {
     db = createTestDb();
+    queueRepo = new ContentSchedulerQueueRepository(db);
     videoService = {
       uploadVideo: vi.fn(),
     };
     llmClient = {
       call: vi.fn(),
     };
-    scheduler = new ContentScheduler({ videoService, llmClient, db });
+    scheduler = new ContentScheduler({ videoService, llmClient, queueRepo });
   });
 
   describe('constructor', () => {
@@ -51,7 +54,7 @@ describe('ContentScheduler', () => {
       expect(scheduler).toBeInstanceOf(ContentScheduler);
       expect(scheduler.videoService).toBe(videoService);
       expect(scheduler.llmClient).toBe(llmClient);
-      expect(scheduler.db).toBe(db);
+      expect(scheduler.queueRepo).toBe(queueRepo);
       expect(scheduler._processing).toBe(false);
     });
   });

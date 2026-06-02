@@ -20,28 +20,33 @@ export class LandingGenerator {
   }
 
   async generateLandingPage(product, price, benefits, cta) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
-
+    const { signal, timeoutId } = this._createTimeout();
     try {
       log.info('Generating landing page', { product, price });
       const content = await this.llm.call(this.systemPrompt, this.buildPrompt(product, price, benefits, cta), {
-        temperature: 0.7,
-        max_tokens: 8000,
-        signal: controller.signal
+        temperature: 0.7, max_tokens: 8000, signal,
       });
       const html = parseHtmlResponse(content);
-      log.info('Landing page generated successfully', { length: html?.length || 0 });
+      log.info('Landing page generated', { length: html?.length || 0 });
       return html;
     } catch (err) {
-      if (err.name === 'AbortError' || err.message?.includes('abort')) {
-        log.warn('Landing page generation timed out', { timeoutMs: this.timeoutMs });
-        return { error: 'AI generation timed out after 45 seconds', timeout: true };
-      }
-      log.error('Landing page generation failed', { error: err.message });
-      throw err;
+      return this._handleGenerationError(err);
     } finally {
       clearTimeout(timeoutId);
     }
+  }
+
+  _createTimeout() {
+    const controller = new AbortController();
+    return { signal: controller.signal, timeoutId: setTimeout(() => controller.abort(), this.timeoutMs) };
+  }
+
+  _handleGenerationError(err) {
+    if (err.name === 'AbortError' || err.message?.includes('abort')) {
+      log.warn('Landing page generation timed out', { timeoutMs: this.timeoutMs });
+      return { error: 'AI generation timed out after 45 seconds', timeout: true };
+    }
+    log.error('Landing page generation failed', { error: err.message });
+    throw err;
   }
 }

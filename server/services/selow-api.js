@@ -79,13 +79,7 @@ export class SelowAPI {
     try {
       const res = await fetch(`${BASE_URL}${path}`, {
         method: 'POST',
-        headers: {
-          'accept': 'text/x-component',
-          'content-type': 'text/plain;charset=UTF-8',
-          'next-action': nextAction,
-          'cookie': this._cookies,
-          'Referer': `${BASE_URL}/facebook-account`,
-        },
+        headers: this._buildHeaders(nextAction),
         body: JSON.stringify(body),
       });
 
@@ -93,31 +87,32 @@ export class SelowAPI {
         throw new Error(`SELOW HTTP ${res.status}: ${res.statusText}`);
       }
 
-      const text = await res.text();
-      // Try full JSON parse first (some endpoints return plain JSON)
-      try {
-        const data = JSON.parse(text);
-        this._recordSuccess();
-        return data;
-      } catch {
-        // Fall back to RSC (React Server Components) line-by-line parsing
-      }
-      const lines = text.split('\n');
-      for (const line of lines) {
-        if (line.startsWith('1:')) {
-          const jsonStr = line.substring(2);
-          const data = JSON.parse(jsonStr);
-          this._recordSuccess();
-          return data;
-        }
-      }
-
-      throw new Error('SELOW response missing data payload');
+      const data = this._parseResponse(await res.text());
+      this._recordSuccess();
+      return data;
     } catch (err) {
       this._recordFailure();
       log.error('SELOW request failed', { error: err.message });
       throw err;
     }
+  }
+
+  _buildHeaders(nextAction) {
+    return {
+      'accept': 'text/x-component',
+      'content-type': 'text/plain;charset=UTF-8',
+      'next-action': nextAction,
+      'cookie': this._cookies,
+      'Referer': `${BASE_URL}/facebook-account`,
+    };
+  }
+
+  _parseResponse(text) {
+    try { return JSON.parse(text); } catch { /* RSC format below */ }
+    for (const line of text.split('\n')) {
+      if (line.startsWith('1:')) return JSON.parse(line.substring(2));
+    }
+    throw new Error('SELOW response missing data payload');
   }
 
   // ─── API Methods ───
@@ -165,26 +160,29 @@ export class SelowAPI {
    * @returns {object} { totalBalance, totalMetaBalance, accounts: [...] }
    */
   async getPortfolioSummary() {
-    const result = await this.listAccounts({ pageSize: 100 });
-    const accounts = result.data || [];
+    const { data: accounts = [] } = await this.listAccounts({ pageSize: 100 });
+    return {
+      ...this._calculatePortfolioTotals(accounts),
+      accountCount: accounts.length,
+      accounts: accounts.map(this._mapPortfolioAccount),
+    };
+  }
 
+  _calculatePortfolioTotals(accounts) {
     return {
       totalBalance: accounts.reduce((sum, a) => sum + (a.balance || 0), 0),
       totalMetaBalance: accounts.reduce((sum, a) => sum + (a.metaBalance?.balance || 0), 0),
       totalSpendCap: accounts.reduce((sum, a) => sum + (a.limit || 0), 0),
       totalSpent: accounts.reduce((sum, a) => sum + (a.metaBalance?.amountSpent || 0), 0),
       totalUnpaid: accounts.reduce((sum, a) => sum + (a.metaBalance?.unpaid || 0), 0),
-      accountCount: accounts.length,
-      accounts: accounts.map(a => ({
-        id: a.id || a._id,
-        label: a.label,
-        accountName: a.accountName,
-        status: a.status,
-        balance: a.balance,
-        metaBalance: a.metaBalance?.balance || 0,
-        spendCap: a.limit,
-        amountSpent: a.metaBalance?.amountSpent || 0,
-      })),
+    };
+  }
+
+  _mapPortfolioAccount(a) {
+    return {
+      id: a.id || a._id, label: a.label, accountName: a.accountName, status: a.status,
+      balance: a.balance, metaBalance: a.metaBalance?.balance || 0, spendCap: a.limit,
+      amountSpent: a.metaBalance?.amountSpent || 0,
     };
   }
 }

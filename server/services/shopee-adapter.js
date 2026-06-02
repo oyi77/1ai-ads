@@ -101,22 +101,10 @@ export class ShopeeAdapter {
     if (!this._sellerCookies.length) return null;
 
     try {
-      const body = {
-        page_number: params.page || 1,
-        page_size: params.limit || 50,
-      };
-
       const res = await fetch(`https://${this.domain.seller}/api/v3/order/search_order_list`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Referer': `https://${this.domain.seller}/portal/sale`,
-          'X-CSRFToken': this._csrfToken,
-          'X-Requested-With': 'XMLHttpRequest',
-          'Cookie': this._cookieHeader(),
-        },
-        body: JSON.stringify(body),
+        headers: this._sellerHeaders(),
+        body: JSON.stringify({ page_number: params.page || 1, page_size: params.limit || 50 }),
         signal: AbortSignal.timeout(15_000),
       });
 
@@ -124,26 +112,40 @@ export class ShopeeAdapter {
       const data = await res.json();
       if (data.errcode) throw new Error(`Seller API error: ${data.message}`);
 
-      const orders = (data.data?.order_list || []).map(o => ({
-        order_id: o.order_sn,
-        status: o.order_status,
-        total: o.total_amount,
-        currency: 'IDR',
-        created_at: o.create_time ? new Date(o.create_time * 1000).toISOString() : null,
-        items: (o.item_list || []).map(i => ({
-          product_id: i.item_id?.toString(),
-          name: i.model_name,
-          quantity: i.model_quantity_purchased,
-          price: i.model_original_price,
-        })),
-      }));
-
+      const orders = (data.data?.order_list || []).map(o => this._mapSellerOrder(o));
       log.info('Fetched orders from seller API', { count: orders.length });
       return orders;
     } catch (err) {
       log.warn('Seller API fetch failed', { error: err.message });
       return null;
     }
+  }
+
+  _sellerHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Referer': `https://${this.domain.seller}/portal/sale`,
+      'X-CSRFToken': this._csrfToken,
+      'X-Requested-With': 'XMLHttpRequest',
+      'Cookie': this._cookieHeader(),
+    };
+  }
+
+  _mapSellerOrder(o) {
+    return {
+      order_id: o.order_sn,
+      status: o.order_status,
+      total: o.total_amount,
+      currency: 'IDR',
+      created_at: o.create_time ? new Date(o.create_time * 1000).toISOString() : null,
+      items: (o.item_list || []).map(i => ({
+        product_id: i.item_id?.toString(),
+        name: i.model_name,
+        quantity: i.model_quantity_purchased,
+        price: i.model_original_price,
+      })),
+    };
   }
 
   async fetchOrders(params = {}) {
@@ -157,7 +159,6 @@ export class ShopeeAdapter {
       return this._cache;
     }
 
-    // Try direct seller API first
     const directOrders = await this.fetchOrdersDirect(params);
     if (directOrders && directOrders.length > 0) {
       this._recordSuccess();
@@ -166,7 +167,10 @@ export class ShopeeAdapter {
       return directOrders;
     }
 
-    // Fallback to 1ai-social API
+    return this._fetchViaProxy(params);
+  }
+
+  async _fetchViaProxy(params) {
     let lastError;
     for (let attempt = 0; attempt <= RETRY_COUNT; attempt++) {
       try {

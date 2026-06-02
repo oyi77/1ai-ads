@@ -265,224 +265,181 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
     };
   });
 
+  const TOOL_HANDLERS = {
+    '1ai-ads_list_campaigns': async (args) => {
+      const campaigns = campaignsRepo.getAll();
+      const filtered = args?.platform ? campaigns.filter(c => c.platform === args.platform) : campaigns;
+      return { content: [{ type: "text", text: JSON.stringify(filtered, null, 2) }] };
+    },
+
+    '1ai-ads_get_analytics': async (args) => {
+      const campaign = campaignsRepo.getById(args.campaign_id);
+      if (!campaign) throw new Error("Campaign not found");
+      return { content: [{ type: "text", text: JSON.stringify(campaign, null, 2) }] };
+    },
+
+    '1ai-ads_list_landing_pages': async (args) => {
+      const pages = landingRepo.getAll();
+      return { content: [{ type: "text", text: JSON.stringify(pages, null, 2) }] };
+    },
+
+    '1ai-ads_list_creatives': async (args) => {
+      const ads = adsRepo.getAll();
+      return { content: [{ type: "text", text: JSON.stringify(ads, null, 2) }] };
+    },
+
+    '1ai-ads_generate_ad_copy': async (args) => {
+      if (!adGenerator) throw new Error("AdGenerator service not available");
+      const result = await adGenerator.generateAds(args.product, args.target, args.keunggulan);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+
+    '1ai-ads_generate_creative_package': async (args) => {
+      if (!creativeStudio) throw new Error("CreativeStudio service not available");
+      const result = await creativeStudio.generateAdPackage(args.product, args.target, args.keunggulan, args.platform || 'meta');
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+
+    '1ai-ads_get_ai_suggestions': async (args) => {
+      if (!aiAgent) throw new Error("AiAgent service not available");
+      if (!args.user_id) throw new Error("user_id is required");
+      const suggestions = await aiAgent.analyzeAndSuggest(args.user_id);
+      return { content: [{ type: "text", text: JSON.stringify({ suggestions_created: suggestions }, null, 2) }] };
+    },
+
+    '1ai-ads_apply_suggestion': async (args) => {
+      if (!aiAgent) throw new Error("AiAgent service not available");
+      if (!args.user_id) throw new Error("user_id is required");
+      const result = await aiAgent.applySuggestion(args.user_id, args.suggestion_id);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+
+    '1ai-ads_list_suggestions': async (args) => {
+      if (!aiAgent?.suggestionsRepo) throw new Error("Suggestions repository not available");
+      if (!args.user_id) throw new Error("user_id is required");
+      const status = args.status || 'all';
+      const suggestions = aiAgent.suggestionsRepo.getByUserId
+        ? aiAgent.suggestionsRepo.getByUserId(args.user_id)
+        : [];
+      const filtered = status === 'all' ? suggestions : suggestions.filter(s => s.status === status);
+      return { content: [{ type: "text", text: JSON.stringify(filtered, null, 2) }] };
+    },
+
+    '1ai-ads_analyze_competitor': async (args) => {
+      if (!competitorSpy) throw new Error("CompetitorSpy service not available");
+      const result = await competitorSpy.analyzePage(args.competitor_url);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+
+    '1ai-ads_get_automation_rules': async (args) => {
+      const rules = autoOptimizer?.rulesRepo?.getByUserId
+        ? autoOptimizer.rulesRepo.getByUserId(args.user_id)
+        : [];
+      return { content: [{ type: "text", text: JSON.stringify(rules, null, 2) }] };
+    },
+
+    '1ai-ads_create_campaign': async (args) => {
+      const campaign = campaignsRepo.create({
+        name: args.name,
+        platform: args.platform,
+        budget: args.budget,
+        objective: args.objective || 'conversions',
+        status: 'draft',
+        created_at: new Date().toISOString()
+      });
+      return { content: [{ type: "text", text: JSON.stringify(campaign, null, 2) }] };
+    },
+
+    '1ai-ads_selow_list_accounts': async (args) => {
+      if (!services.selowApi) throw new Error("SELOW API not configured");
+      const result = await services.selowApi.listAccounts({ search: args?.search, status: args?.status });
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+
+    '1ai-ads_selow_topup': async (args) => {
+      if (!services.selowApi) throw new Error("SELOW API not configured");
+      const result = await services.selowApi.topupBalance(args.account_id, args.amount, args.merchant || 'bri');
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+
+    '1ai-ads_check_profitability': async (args) => {
+      const profit = calculateProfit(args.commission, args.spend);
+      const roas = evaluateROAS(args.commission, args.spend);
+      const status = getCampaignStatus(args.commission, args.spend);
+      return { content: [{ type: "text", text: JSON.stringify({ profit, roas, status, campaign_id: args.campaign_id }, null, 2) }] };
+    },
+
+    '1ai-ads_run_workflow': async (args) => {
+      if (!services.workflowEngine) throw new Error("WorkflowEngine not available");
+      const WORKFLOW_ACTIONS = {
+        daily_check: () => services.workflowEngine.runDailyCheck(args.user_id),
+        '3day_eval': () => {
+          if (!args.campaign_id) throw new Error("campaign_id required for 3day_eval");
+          return services.workflowEngine.run3DayEvaluation(args.campaign_id);
+        },
+        weekly_cycle: () => services.workflowEngine.getWeeklyAction(),
+      };
+      const action = WORKFLOW_ACTIONS[args.action];
+      if (!action) throw new Error(`Unknown workflow action: ${args.action}`);
+      const result = await action();
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+
+    '1ai-ads_trigger_scale': async (args) => {
+      if (!services.scaleManager) throw new Error("ScaleManager not available");
+      const interests = await services.scaleManager.expandHiddenInterests(args.product);
+      const result = await services.scaleManager.duplicateCampaign(args.account_id, args.campaign_id, interests);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+
+    '1ai-content_generate_video': async (args) => {
+      if (!services.contentBridge) throw new Error("ContentBridge not available");
+      const result = await services.contentBridge.requestVideoGeneration({
+        niche: args.niche,
+        duration: args.duration || 15,
+        customPrompt: args.customPrompt,
+        platform: args.platform || 'facebook',
+      });
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+
+    '1ai-content_list_videos': async (args) => {
+      if (!services.contentBridge) throw new Error("ContentBridge not available");
+      const videos = await services.contentBridge.listVideos();
+      return { content: [{ type: "text", text: JSON.stringify(videos, null, 2) }] };
+    },
+
+    '1ai-content_health': async (args) => {
+      if (!services.contentBridge) throw new Error("ContentBridge not available");
+      const health = await services.contentBridge.healthCheck();
+      return { content: [{ type: "text", text: JSON.stringify(health, null, 2) }] };
+    },
+
+    '1ai-social_post_fanpage': async (args) => {
+      if (!services.socialBridge) throw new Error("SocialBridge not available");
+      const result = await services.socialBridge.postToFanpage({
+        profileId: args.profile_id,
+        pageId: args.page_id,
+        message: args.message,
+        imageUrl: args.image_url,
+      });
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+
+    '1ai-social_health': async (args) => {
+      if (!services.socialBridge) throw new Error("SocialBridge not available");
+      const health = await services.socialBridge.healthCheck();
+      return { content: [{ type: "text", text: JSON.stringify(health, null, 2) }] };
+    },
+  };
+
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
 
     try {
-      switch (name) {
-        case "1ai-ads_list_campaigns": {
-          const campaigns = campaignsRepo.getAll();
-          const filtered = args?.platform ? campaigns.filter(c => c.platform === args.platform) : campaigns;
-          return {
-            content: [{ type: "text", text: JSON.stringify(filtered, null, 2) }],
-          };
-        }
-
-        case "1ai-ads_get_analytics": {
-          const campaign = campaignsRepo.getById(args.campaign_id);
-          if (!campaign) throw new Error("Campaign not found");
-          return {
-            content: [{ type: "text", text: JSON.stringify(campaign, null, 2) }],
-          };
-        }
-
-        case "1ai-ads_list_landing_pages": {
-          const pages = landingRepo.getAll();
-          return {
-            content: [{ type: "text", text: JSON.stringify(pages, null, 2) }],
-          };
-        }
-
-        case "1ai-ads_list_creatives": {
-          const ads = adsRepo.getAll();
-          return {
-            content: [{ type: "text", text: JSON.stringify(ads, null, 2) }],
-          };
-        }
-
-        case "1ai-ads_generate_ad_copy": {
-          if (!adGenerator) throw new Error("AdGenerator service not available");
-          const result = await adGenerator.generateAds(args.product, args.target, args.keunggulan);
-          return {
-            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-          };
-        }
-
-        case "1ai-ads_generate_creative_package": {
-          if (!creativeStudio) throw new Error("CreativeStudio service not available");
-          const result = await creativeStudio.generateAdPackage(args.product, args.target, args.keunggulan, args.platform || 'meta');
-          return {
-            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-          };
-        }
-
-        case "1ai-ads_get_ai_suggestions": {
-          if (!aiAgent) throw new Error("AiAgent service not available");
-          if (!args.user_id) throw new Error("user_id is required");
-          const suggestions = await aiAgent.analyzeAndSuggest(args.user_id);
-          return {
-            content: [{ type: "text", text: JSON.stringify({ suggestions_created: suggestions }, null, 2) }],
-          };
-        }
-
-        case "1ai-ads_apply_suggestion": {
-          if (!aiAgent) throw new Error("AiAgent service not available");
-          if (!args.user_id) throw new Error("user_id is required");
-          const result = await aiAgent.applySuggestion(args.user_id, args.suggestion_id);
-          return {
-            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-          };
-        }
-
-        case "1ai-ads_list_suggestions": {
-          if (!aiAgent?.suggestionsRepo) throw new Error("Suggestions repository not available");
-          if (!args.user_id) throw new Error("user_id is required");
-          const status = args.status || 'all';
-          const suggestions = aiAgent.suggestionsRepo.getByUserId
-            ? aiAgent.suggestionsRepo.getByUserId(args.user_id)
-            : [];
-          const filtered = status === 'all' ? suggestions : suggestions.filter(s => s.status === status);
-          return {
-            content: [{ type: "text", text: JSON.stringify(filtered, null, 2) }],
-          };
-        }
-
-        case "1ai-ads_analyze_competitor": {
-          if (!competitorSpy) throw new Error("CompetitorSpy service not available");
-          const result = await competitorSpy.analyzePage(args.competitor_url);
-          return {
-            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-          };
-        }
-
-        case "1ai-ads_get_automation_rules": {
-          const rules = autoOptimizer?.rulesRepo?.getByUserId
-            ? autoOptimizer.rulesRepo.getByUserId(args.user_id)
-            : [];
-          return {
-            content: [{ type: "text", text: JSON.stringify(rules, null, 2) }],
-          };
-        }
-
-        case "1ai-ads_create_campaign": {
-          const campaign = campaignsRepo.create({
-            name: args.name,
-            platform: args.platform,
-            budget: args.budget,
-            objective: args.objective || 'conversions',
-            status: 'draft',
-            created_at: new Date().toISOString()
-          });
-          return {
-            content: [{ type: "text", text: JSON.stringify(campaign, null, 2) }],
-          };
-        }
-
-        case "1ai-ads_selow_list_accounts": {
-          if (!services.selowApi) throw new Error("SELOW API not configured");
-          const result = await services.selowApi.listAccounts({ search: args?.search, status: args?.status });
-          return {
-            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-          };
-        }
-
-        case "1ai-ads_selow_topup": {
-          if (!services.selowApi) throw new Error("SELOW API not configured");
-          const result = await services.selowApi.topupBalance(args.account_id, args.amount, args.merchant || 'bri');
-          return {
-            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-          };
-        }
-
-        case "1ai-ads_check_profitability": {
-          const profit = calculateProfit(args.commission, args.spend);
-          const roas = evaluateROAS(args.commission, args.spend);
-          const status = getCampaignStatus(args.commission, args.spend);
-          return {
-            content: [{ type: "text", text: JSON.stringify({ profit, roas, status, campaign_id: args.campaign_id }, null, 2) }],
-          };
-        }
-
-        case "1ai-ads_run_workflow": {
-          if (!services.workflowEngine) throw new Error("WorkflowEngine not available");
-          let result;
-          if (args.action === 'daily_check') {
-            result = await services.workflowEngine.runDailyCheck(args.user_id);
-          } else if (args.action === '3day_eval') {
-            if (!args.campaign_id) throw new Error("campaign_id required for 3day_eval");
-            result = await services.workflowEngine.run3DayEvaluation(args.campaign_id);
-          } else if (args.action === 'weekly_cycle') {
-            result = services.workflowEngine.getWeeklyAction();
-          } else {
-            throw new Error(`Unknown workflow action: ${args.action}`);
-          }
-          return {
-            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-          };
-        }
-
-        case "1ai-ads_trigger_scale": {
-          if (!services.scaleManager) throw new Error("ScaleManager not available");
-          const interests = await services.scaleManager.expandHiddenInterests(args.product);
-          const result = await services.scaleManager.duplicateCampaign(args.account_id, args.campaign_id, interests);
-          return {
-            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-          };
-        }
-
-        case "1ai-content_generate_video": {
-          if (!services.contentBridge) throw new Error("ContentBridge not available");
-          const result = await services.contentBridge.requestVideoGeneration({
-            niche: args.niche,
-            duration: args.duration || 15,
-            customPrompt: args.customPrompt,
-            platform: args.platform || 'facebook',
-          });
-          return {
-            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-          };
-        }
-
-        case "1ai-content_list_videos": {
-          if (!services.contentBridge) throw new Error("ContentBridge not available");
-          const videos = await services.contentBridge.listVideos();
-          return {
-            content: [{ type: "text", text: JSON.stringify(videos, null, 2) }],
-          };
-        }
-
-        case "1ai-content_health": {
-          if (!services.contentBridge) throw new Error("ContentBridge not available");
-          const health = await services.contentBridge.healthCheck();
-          return {
-            content: [{ type: "text", text: JSON.stringify(health, null, 2) }],
-          };
-        }
-
-        case "1ai-social_post_fanpage": {
-          if (!services.socialBridge) throw new Error("SocialBridge not available");
-          const result = await services.socialBridge.postToFanpage({
-            profileId: args.profile_id,
-            pageId: args.page_id,
-            message: args.message,
-            imageUrl: args.image_url,
-          });
-          return {
-            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-          };
-        }
-
-        case "1ai-social_health": {
-          if (!services.socialBridge) throw new Error("SocialBridge not available");
-          const health = await services.socialBridge.healthCheck();
-          return {
-            content: [{ type: "text", text: JSON.stringify(health, null, 2) }],
-          };
-        }
-
-        default:
-          throw new Error(`Unknown tool: ${name}`);
-      }
+      const handler = TOOL_HANDLERS[name];
+      if (!handler) throw new Error(`Unknown tool: ${name}`);
+      return await handler(args);
     } catch (error) {
       log.error('MCP tool error', { tool: name, error: error.message });
       return {

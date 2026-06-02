@@ -57,45 +57,38 @@ export function detectRoasDrop(currentROAS, previousROAS) {
  * @param {number} params.currentDailyBudget
  * @returns {{ action: string, newBudget: number|null, reason: string }}
  */
+function handleKillCampaign(consecutiveDrops) {
+  return {
+    action: 'KILL', newBudget: 0,
+    reason: `ROAS dropped >30% for ${consecutiveDrops} consecutive days. Killing campaign.`,
+  };
+}
+
+function handleReduceBudget(consecutiveDrops, currentDailyBudget) {
+  const newBudget = Math.floor(currentDailyBudget * CONFIG.BUDGET_REDUCTION_FACTOR);
+  return {
+    action: 'REDUCE_BUDGET', newBudget,
+    reason: `ROAS dropped >30% for ${consecutiveDrops} days. Reducing budget 50%: Rp${currentDailyBudget} → Rp${newBudget}`,
+  };
+}
+
+function handleWaitOrMonitor(consecutiveDrops) {
+  if (CONFIG.WAIT_AFTER_FIRST_DROP && consecutiveDrops === 1) {
+    return { action: 'WAIT', newBudget: null, reason: 'First ROAS drop >30%. Waiting 1 day (could be normal fluctuation).' };
+  }
+  return { action: 'MONITOR', newBudget: null, reason: 'Monitoring ROAS trend' };
+}
+
 export function evaluateStoploss({ currentROAS, previousROAS, consecutiveDrops, alreadyReducedBudget, currentDailyBudget }) {
   const { dropped, exceedsThreshold } = detectRoasDrop(currentROAS, previousROAS);
-
-  if (!dropped) {
-    return { action: 'NONE', newBudget: null, reason: 'ROAS stable or improving' };
-  }
-
+  if (!dropped) return { action: 'NONE', newBudget: null, reason: 'ROAS stable or improving' };
   if (!exceedsThreshold) {
     const dropPct = calculateRoasDrop(currentROAS, previousROAS);
     return { action: 'MONITOR', newBudget: null, reason: `ROAS drop ${(dropPct ?? 0) * 100}% < 30% threshold` };
   }
-
-  // ROAS dropped > 30%
-  if (consecutiveDrops >= CONFIG.MAX_CONSECUTIVE_DROPS) {
-    return {
-      action: 'KILL',
-      newBudget: 0,
-      reason: `ROAS dropped >30% for ${consecutiveDrops} consecutive days. Killing campaign.`,
-    };
-  }
-
-  if (consecutiveDrops >= 2 && !alreadyReducedBudget) {
-    const newBudget = Math.floor(currentDailyBudget * CONFIG.BUDGET_REDUCTION_FACTOR);
-    return {
-      action: 'REDUCE_BUDGET',
-      newBudget,
-      reason: `ROAS dropped >30% for ${consecutiveDrops} days. Reducing budget 50%: Rp${currentDailyBudget} → Rp${newBudget}`,
-    };
-  }
-
-  if (CONFIG.WAIT_AFTER_FIRST_DROP && consecutiveDrops === 1) {
-    return {
-      action: 'WAIT',
-      newBudget: null,
-      reason: 'First ROAS drop >30%. Waiting 1 day (could be normal fluctuation).',
-    };
-  }
-
-  return { action: 'MONITOR', newBudget: null, reason: 'Monitoring ROAS trend' };
+  if (consecutiveDrops >= CONFIG.MAX_CONSECUTIVE_DROPS) return handleKillCampaign(consecutiveDrops);
+  if (consecutiveDrops >= 2 && !alreadyReducedBudget) return handleReduceBudget(consecutiveDrops, currentDailyBudget);
+  return handleWaitOrMonitor(consecutiveDrops);
 }
 
 /**

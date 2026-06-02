@@ -13,27 +13,22 @@ export class ABTestService {
     log.info('createTest', { name, campaignId, variants: variants?.length });
     const id = `abt_${crypto.randomUUID().slice(0, 8)}`;
     const test = {
-      id,
-      name,
-      campaignId,
-      variants: (variants || []).map((v, i) => ({
-        id: `v${i + 1}`,
-        name: v.name || `Variant ${i + 1}`,
-        adId: v.adId,
-        impressions: 0,
-        clicks: 0,
-        conversions: 0,
-        spend: 0,
-        ctr: 0,
-        cpc: 0
-      })),
+      id, name, campaignId,
+      variants: (variants || []).map((v, i) => this._buildVariant(v, i)),
       metric: metric || 'ctr',
       confidence: confidence || 0.95,
       status: 'draft',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
     this.tests.set(id, test);
     return test;
+  }
+
+  _buildVariant(v, i) {
+    return {
+      id: `v${i + 1}`, name: v.name || `Variant ${i + 1}`, adId: v.adId,
+      impressions: 0, clicks: 0, conversions: 0, spend: 0, ctr: 0, cpc: 0,
+    };
   }
 
   async getTests() {

@@ -47,6 +47,17 @@ export class WorkflowEngine {
    * @param {string} userId
    * @returns {object[]} Actions taken
    */
+  async _checkCampaign(campaign) {
+    const insights = await this.meta.getCampaignInsights(campaign.platform_campaign_id, { datePreset: 'last_3d' });
+    if (!insights) return null;
+
+    const spend = parseFloat(insights.spend || 0);
+    const commission = campaign.commission || 0;
+    const metrics = evaluateMetrics(commission, spend);
+
+    return { campaignId: campaign.id, product: campaign.product_name, spend, commission, ...metrics };
+  }
+
   async runDailyCheck(userId) {
     log.info('Running daily check', { userId });
     const campaigns = this.campaignsRepo.findActive(userId);
@@ -54,20 +65,8 @@ export class WorkflowEngine {
 
     for (const campaign of campaigns) {
       try {
-        const insights = await this.meta.getCampaignInsights(campaign.platform_campaign_id, { datePreset: 'last_3d' });
-        if (!insights) continue;
-
-        const spend = parseFloat(insights.spend || 0);
-        const commission = campaign.commission || 0;
-        const metrics = evaluateMetrics(commission, spend);
-
-        results.push({
-          campaignId: campaign.id,
-          product: campaign.product_name,
-          spend,
-          commission,
-          ...metrics,
-        });
+        const result = await this._checkCampaign(campaign);
+        if (result) results.push(result);
       } catch (err) {
         log.error('Daily check failed for campaign', { campaignId: campaign.id, error: err.message });
       }
@@ -82,6 +81,20 @@ export class WorkflowEngine {
    * @param {string} campaignId
    * @returns {object} Evaluation result with decision
    */
+  async _applyStoploss(campaign, stoplossResult) {
+    if (stoplossResult.action === 'KILL') {
+      await this.meta.updateCampaign(campaign.platform_campaign_id, { status: 'PAUSED' });
+      this.campaignsRepo.update(campaign.id, { status: 'stopped', stop_reason: stoplossResult.reason });
+      return { decision: 'STOP', reason: stoplossResult.reason };
+    }
+    if (stoplossResult.action === 'REDUCE_BUDGET') {
+      await this.meta.updateCampaign(campaign.platform_campaign_id, { daily_budget: stoplossResult.newBudget });
+      this.campaignsRepo.update(campaign.id, { daily_budget: stoplossResult.newBudget, budget_reduced: true });
+      return { decision: 'REDUCE_BUDGET', newBudget: stoplossResult.newBudget, reason: stoplossResult.reason };
+    }
+    return null;
+  }
+
   async run3DayEvaluation(campaignId) {
     const campaign = this.campaignsRepo.findById(campaignId);
     if (!campaign) throw new Error(`Campaign ${campaignId} not found`);
@@ -90,40 +103,24 @@ export class WorkflowEngine {
     if (!insights) return { decision: 'NO_DATA', reason: 'No insights available' };
 
     const spend = parseFloat(insights.spend || 0);
-    const commission = campaign.commission || 0;
-    const roas = evaluateROAS(commission, spend);
+    const roas = evaluateROAS(campaign.commission || 0, spend);
     const ctr = parseFloat(insights.ctr || 0);
     const cpc = parseFloat(insights.cpc || 0);
 
-    // Check stoploss first
-    const previousROAS = campaign.previous_roas || roas;
     const stoplossResult = evaluateStoploss({
       currentROAS: roas,
-      previousROAS,
+      previousROAS: campaign.previous_roas || roas,
       consecutiveDrops: campaign.consecutive_drops || 0,
       alreadyReducedBudget: campaign.budget_reduced || false,
       currentDailyBudget: campaign.daily_budget || 20_000,
     });
 
-    if (stoplossResult.action === 'KILL') {
-      await this.meta.updateCampaign(campaign.platform_campaign_id, { status: 'PAUSED' });
-      this.campaignsRepo.update(campaignId, { status: 'stopped', stop_reason: stoplossResult.reason });
-      return { decision: 'STOP', reason: stoplossResult.reason };
-    }
+    const stoplossAction = await this._applyStoploss(campaign, stoplossResult);
+    if (stoplossAction) return stoplossAction;
 
-    if (stoplossResult.action === 'REDUCE_BUDGET') {
-      await this.meta.updateCampaign(campaign.platform_campaign_id, { daily_budget: stoplossResult.newBudget });
-      this.campaignsRepo.update(campaignId, { daily_budget: stoplossResult.newBudget, budget_reduced: true });
-      return { decision: 'REDUCE_BUDGET', newBudget: stoplossResult.newBudget, reason: stoplossResult.reason };
-    }
-
-    // Check scale eligibility
     const scaleResult = this.scaleManager.evaluateScaleEligibility({ roas, ctr, cpc });
-    if (scaleResult.canScale) {
-      return { decision: 'SCALE_UP', reason: scaleResult.reason, metrics: { roas, ctr, cpc } };
-    }
+    if (scaleResult.canScale) return { decision: 'SCALE_UP', reason: scaleResult.reason, metrics: { roas, ctr, cpc } };
 
-    // Check if should stop (ROAS < 1 after 3 days)
     if (roas < 1) {
       await this.meta.updateCampaign(campaign.platform_campaign_id, { status: 'PAUSED' });
       this.campaignsRepo.update(campaignId, { status: 'stopped', stop_reason: `ROAS ${roas} < 1 after 3 days` });
