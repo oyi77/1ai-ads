@@ -218,6 +218,30 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
             required: ["campaign_id", "account_id", "product"]
           },
         },
+        {
+          name: "1ai-content_generate_video",
+          description: "Request video generation from 1ai-content service (cross-project)",
+          inputSchema: {
+            type: "object",
+            properties: {
+              niche: { type: "string", description: "Product niche (fashion, fb, tech, health, travel)" },
+              duration: { type: "number", description: "Video duration in seconds (5-60)" },
+              customPrompt: { type: "string", description: "Custom prompt for video generation" },
+              platform: { type: "string", description: "Target platform (tiktok, instagram, facebook)" }
+            },
+            required: ["niche", "duration"]
+          },
+        },
+        {
+          name: "1ai-content_list_videos",
+          description: "List videos from 1ai-content service",
+          inputSchema: { type: "object", properties: {} },
+        },
+        {
+          name: "1ai-content_health",
+          description: "Check 1ai-content service health",
+          inputSchema: { type: "object", properties: {} },
+        },
       ],
     };
   });
@@ -384,6 +408,35 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
           const result = await services.scaleManager.duplicateCampaign(args.account_id, args.campaign_id, interests);
           return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          };
+        }
+
+        case "1ai-content_generate_video": {
+          if (!services.contentBridge) throw new Error("ContentBridge not available");
+          const result = await services.contentBridge.requestVideoGeneration({
+            niche: args.niche,
+            duration: args.duration || 15,
+            customPrompt: args.customPrompt,
+            platform: args.platform || 'facebook',
+          });
+          return {
+            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          };
+        }
+
+        case "1ai-content_list_videos": {
+          if (!services.contentBridge) throw new Error("ContentBridge not available");
+          const videos = await services.contentBridge.listVideos();
+          return {
+            content: [{ type: "text", text: JSON.stringify(videos, null, 2) }],
+          };
+        }
+
+        case "1ai-content_health": {
+          if (!services.contentBridge) throw new Error("ContentBridge not available");
+          const health = await services.contentBridge.healthCheck();
+          return {
+            content: [{ type: "text", text: JSON.stringify(health, null, 2) }],
           };
         }
 

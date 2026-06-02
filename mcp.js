@@ -13,6 +13,7 @@ import { CompetitorSpy } from './server/services/competitor-spy.js';
 import { AutoOptimizer } from './server/services/auto-optimizer.js';
 import { LLMClient } from './server/services/llm-client.js';
 import { SettingsRepository } from './server/repositories/settings.js';
+import { ContentBridge } from './server/services/content-bridge.js';
 
 const db = createDatabase(process.env.DB_PATH || './db/adforge.db');
 
@@ -32,6 +33,11 @@ const aiAgent = new AiAgent(settingsRepo, adsRepo, campaignsRepo, llmClient, sug
 const competitorSpy = new CompetitorSpy(llmClient);
 const autoOptimizer = new AutoOptimizer(settingsRepo, rulesRepo, campaignsRepo);
 
+const contentBridge = new ContentBridge(
+  process.env.CONTENT_SERVICE_URL || 'http://localhost:3000',
+  process.env.CONTENT_API_KEY || ''
+);
+
 const server = create1aiAdsMCPServer(
   campaignsRepo,
   landingRepo,
@@ -42,7 +48,8 @@ const server = create1aiAdsMCPServer(
     aiAgent,
     competitorSpy,
     autoOptimizer,
-    llmClient
+    llmClient,
+    contentBridge
   }
 );
 

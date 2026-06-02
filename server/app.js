@@ -278,6 +278,18 @@ export function createApp(params) {
   app.use('/api/research', requireAuth, createResearchRouter(adResearchService));
   app.use('/api/mcp', requireAuth, createMcpRouter(mcpClient, settingsRepo, campaignsRepo, adsRepo, landingRepo));
 
+  // Webhook: 1ai-content notifies when video is complete
+  app.post('/api/webhooks/video-complete', (req, res) => {
+    const { jobId, status, videoUrl, thumbnailUrl } = req.body;
+    log.info('Video completion webhook received', { jobId, status, videoUrl });
+    // Store video URL for campaign use
+    if (status === 'completed' && videoUrl) {
+      app.locals.pendingVideos = app.locals.pendingVideos || {};
+      app.locals.pendingVideos[jobId] = { videoUrl, thumbnailUrl, receivedAt: Date.now() };
+    }
+    res.json({ received: true });
+  });
+
   app.get('/api/cf-health', publicRateLimit, (_req, res) => {
     res.json({ status: 'ok', service: 'adforge', timestamp: new Date().toISOString() });
   });
