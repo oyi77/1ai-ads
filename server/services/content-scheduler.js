@@ -63,6 +63,11 @@ export class ContentScheduler {
     this._interval = null;
   }
 
+  _safeParseHashtags(value) {
+    if (!value) return [];
+    try { return JSON.parse(value); } catch { return []; }
+  }
+
   start(intervalMs = 60 * 1000) {
     log.info(`ContentScheduler started (check every ${intervalMs / 1000}s)`);
     this._interval = setInterval(() => {
@@ -142,7 +147,7 @@ export class ContentScheduler {
 
   async _resolveCaption(row, logCtx) {
     let caption = row.caption;
-    let hashtags = JSON.parse(row.hashtags || '[]');
+    let hashtags = this._safeParseHashtags(row.hashtags);
 
     if (!caption && (row.category || row.product_desc)) {
       log.info('Generating caption via LLM', logCtx);

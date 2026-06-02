@@ -102,9 +102,15 @@ export class AiAgent {
     if (!row || row.user_id !== userId) throw new Error('Suggestion not found');
     if (row.status !== 'pending') throw new Error(`Suggestion is already ${row.status}`);
 
-    const suggestion = JSON.parse(row.suggestion);
+    const suggestion = this._parseSuggestion(row.suggestion);
     await this._applyChanges({ type: row.type, target_id: row.target_id, target_type: row.target_type, changes: suggestion.changes || [] });
     return this.suggestionsRepo.updateStatus(suggestionId, 'applied');
+  }
+
+  _parseSuggestion(value) {
+    if (!value) return {};
+    if (typeof value !== 'string') return value;
+    try { return JSON.parse(value); } catch { return {}; }
   }
 
   async _applyChanges(suggestion) {
