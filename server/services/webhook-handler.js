@@ -10,14 +10,11 @@ export class WebhookHandler {
 
   verifySignature(appSecret, payload, signature) {
     if (!appSecret || !signature) return false;
-    const expectedSig = crypto
-      .createHmac('sha256', appSecret)
-      .update(payload)
-      .digest('hex');
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(`sha256=${expectedSig}`)
-    );
+    const expectedSig = crypto.createHmac('sha256', appSecret).update(payload).digest('hex');
+    const expected = Buffer.from(`sha256=${expectedSig}`);
+    const provided = Buffer.from(signature);
+    if (expected.length !== provided.length) return false;
+    return crypto.timingSafeEqual(provided, expected);
   }
 
   handleVerification(mode, token, verifyToken) {

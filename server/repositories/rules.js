@@ -84,24 +84,22 @@ export class RulesRepository {
   }
 
   getAll(userId) {
-    return this.db.prepare(`SELECT * FROM ${this.table} WHERE user_id = ?`).all(userId).map(r => {
-      let condition = r.condition;
-      let action = r.action;
-      try { condition = JSON.parse(r.condition); } catch(e) {}
-      try { action = JSON.parse(r.action); } catch(e) {}
-      
-      return {
-        id: r.id,
-        user_id: r.user_id,
-        name: r.name,
-        condition,
-        action,
-        priority: r.priority,
-        enabled: r.enabled === 1,
-        created_at: r.created_at,
-        updated_at: r.updated_at
-      };
-    });
+    return this.db.prepare(`SELECT * FROM ${this.table} WHERE user_id = ?`).all(userId).map(r => ({
+      id: r.id,
+      user_id: r.user_id,
+      name: r.name,
+      condition: this._safeParse(r.condition),
+      action: this._safeParse(r.action),
+      priority: r.priority,
+      enabled: r.enabled === 1,
+      created_at: r.created_at,
+      updated_at: r.updated_at
+    }));
+  }
+
+  _safeParse(value) {
+    if (typeof value !== 'string') return value;
+    try { return JSON.parse(value); } catch { return value; }
   }
 
   getAllEnabled(userId) {

@@ -9,8 +9,15 @@ export class AdUtmMapRepository {
     const id = uuidv4();
     const { source = 'meta', medium = 'paid', campaign, content } = utm_params;
     this.db.prepare(`
-      INSERT OR REPLACE INTO ad_utm_map (id, ad_id, campaign_id, destination_url, utm_source, utm_medium, utm_campaign, utm_content)
+      INSERT INTO ad_utm_map (id, ad_id, campaign_id, destination_url, utm_source, utm_medium, utm_campaign, utm_content)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(ad_id) DO UPDATE SET
+        campaign_id = excluded.campaign_id,
+        destination_url = excluded.destination_url,
+        utm_source = excluded.utm_source,
+        utm_medium = excluded.utm_medium,
+        utm_campaign = excluded.utm_campaign,
+        utm_content = excluded.utm_content
     `).run(id, ad_id, campaign_id, destination_url, source, medium, campaign || campaign_id, content || ad_id);
     return this.getByAdId(ad_id);
   }

@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { WebhookHandler } from '../services/webhook-handler.js';
+import { createLogger } from '../lib/logger.js';
 import config from '../config/index.js';
+
+const log = createLogger('webhooks');
 
 export default function createWebhookRouter(webhookEventsRepo) {
   const router = Router();
@@ -17,14 +20,14 @@ export default function createWebhookRouter(webhookEventsRepo) {
     res.status(403).send('Forbidden');
   });
 
-  router.post('/', (req, res) => {
+  router.post('/', async (req, res) => {
     const rawBody = JSON.stringify(req.body);
     const signature = req.headers['x-hub-signature-256'];
     if (config.fbAppSecret && !handler.verifySignature(config.fbAppSecret, rawBody, signature)) {
       return res.status(401).send('Invalid signature');
     }
 
-    const events = handler.processEvent(req.body);
+    const events = await handler.processEvent(req.body);
     if (events.length > 0) {
       try {
         for (const event of events) {
@@ -35,7 +38,7 @@ export default function createWebhookRouter(webhookEventsRepo) {
           });
         }
       } catch (err) {
-        console.error('Failed to store webhook events:', err.message);
+        log.error('Failed to store webhook events', { error: err.message });
       }
     }
     res.status(200).send('OK');
