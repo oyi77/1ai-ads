@@ -24,12 +24,14 @@ export class RuleEvaluator {
     this.runningRules = new Set();
   }
 
+  static PLATFORM_APIS = {
+    google: (self) => self.googleAdsAPI,
+    tiktok: (self) => self.tiktokAdsAPI,
+  };
+
   _getPlatformApi(platform) {
-    switch (platform) {
-      case 'google': return this.googleAdsAPI;
-      case 'tiktok': return this.tiktokAdsAPI;
-      default: return this.metaAdsAPI;
-    }
+    const resolver = RuleEvaluator.PLATFORM_APIS[platform];
+    return resolver ? resolver(this) : this.metaAdsAPI;
   }
 
   createRule(userId, { name, condition, action, priority = 1, enabled = true }) {
@@ -48,38 +50,42 @@ export class RuleEvaluator {
     const condition = JSON.parse(rule.condition);
     const action = JSON.parse(rule.action);
 
-    let matches = false;
-    switch (condition.type) {
-      case 'roas':
-        matches = this._compare(campaign.stats?.roas || 0, condition.operator, condition.value);
-        break;
-      case 'spend':
-        matches = this._compare(campaign.stats?.spend || 0, condition.operator, condition.value);
-        break;
-      case 'cpm':
-        matches = this._compare(campaign.stats?.cpm || 0, condition.operator, condition.value);
-        break;
-      case 'status':
-        matches = campaign.status === condition.value;
-        break;
-    }
-
+    const matches = this._evaluateCondition(condition, campaign);
     if (matches) {
       return await this._executeAction(action, campaign);
     }
     return null;
   }
 
-  _compare(value, operator, target) {
-    switch (operator) {
-      case '>': return value > target;
-      case '>=': return value >= target;
-      case '<': return value < target;
-      case '<=': return value <= target;
-      case '===': return value === target;
-      case '!==': return value !== target;
-      default: return false;
+  _evaluateCondition(condition, campaign) {
+    if (condition.type === 'status') {
+      return campaign.status === condition.value;
     }
+
+    const CONDITION_METRICS = {
+      roas: (c) => c.stats?.roas || 0,
+      spend: (c) => c.stats?.spend || 0,
+      cpm: (c) => c.stats?.cpm || 0,
+    };
+
+    const getMetric = CONDITION_METRICS[condition.type];
+    if (!getMetric) return false;
+
+    return this._compare(getMetric(campaign), condition.operator, condition.value);
+  }
+
+  static OPERATORS = {
+    '>': (a, b) => a > b,
+    '>=': (a, b) => a >= b,
+    '<': (a, b) => a < b,
+    '<=': (a, b) => a <= b,
+    '===': (a, b) => a === b,
+    '!==': (a, b) => a !== b,
+  };
+
+  _compare(value, operator, target) {
+    const op = RuleEvaluator.OPERATORS[operator];
+    return op ? op(value, target) : false;
   }
 
   async _executeAction(action, campaign) {
@@ -94,29 +100,34 @@ export class RuleEvaluator {
     }
   }
 
+  static ACTION_HANDLERS = {
+    scale_up: (self, action, campaign) => self._scaleCampaign(campaign.id, action.amount || 1.5, 'increase'),
+    scale_down: (self, action, campaign) => self._scaleCampaign(campaign.id, action.amount || 0.8, 'decrease'),
+    pause: (self, _action, campaign) => self._pauseCampaign(campaign.id),
+    resume: (self, _action, campaign) => self._resumeCampaign(campaign.id),
+    optimize_creative: (self, _action, campaign) => self._optimizeCreative(campaign.id),
+    optimize_budget: (self, _action, campaign) => self._optimizeBudget(campaign.id),
+  };
+
   async _applyAction(action, campaign) {
-    switch (action.type) {
-      case 'scale_up':
-        return await this._scaleCampaign(campaign.id, action.amount || 1.5, 'increase');
-      case 'scale_down':
-        return await this._scaleCampaign(campaign.id, action.amount || 0.8, 'decrease');
-      case 'pause':
-        return await this._pauseCampaign(campaign.id);
-      case 'resume':
-        return await this._resumeCampaign(campaign.id);
-      case 'optimize_creative':
-        return await this._optimizeCreative(campaign.id);
-      case 'optimize_budget':
-        return await this._optimizeBudget(campaign.id);
-      default:
-        log.warn('Unknown action type', { type: action.type });
-        return null;
+    const handler = RuleEvaluator.ACTION_HANDLERS[action.type];
+    if (!handler) {
+      log.warn('Unknown action type', { type: action.type });
+      return null;
     }
+    return handler(this, action, campaign);
   }
 
   async _scaleCampaign(campaignId, multiplier, direction) {
     const campaign = await this.campaignsRepo.getById(campaignId);
     if (!campaign) return { error: 'Campaign not found' };
+
+    // Rule: Only scale LC_ campaigns. BIDCAP/TC limited by bid caps.
+    const name = campaign.name || '';
+    if (!name.startsWith('LC_')) {
+      log.info('Scale blocked: non-LC campaign', { id: campaignId, name });
+      return { error: 'Blocked: only LC_ campaigns benefit from budget scaling' };
+    }
 
     const platform = campaign.platform || 'meta';
     const api = this._getPlatformApi(platform);

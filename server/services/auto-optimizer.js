@@ -31,42 +31,37 @@ export class AutoOptimizer {
   async evaluate() {
     const activeRules = this.rules.findActive();
     if (activeRules.length === 0) return { checked: 0, triggered: 0 };
-
     const results = [];
-
     for (const rule of activeRules) {
       try {
-        // Get latest campaign insights
-        let insights;
-        try {
-          insights = await this.meta.getCampaignInsights(rule.campaign_id, { datePreset: 'last_7d' });
-        } catch (err) {
-          log.debug('Skipping rule - insights unavailable', { ruleId: rule.id, error: err.message });
-          continue;
-        }
-
-        if (!insights) continue;
-
-        // Get the metric value
-        const metricValue = this._getMetricValue(insights, rule.condition_metric);
-        if (metricValue === null) continue;
-
-        // Evaluate condition
-        const triggered = this._evaluateCondition(metricValue, rule.condition_operator, rule.condition_value);
-
-        if (triggered) {
-          // Execute action
-          const actionResult = await this._executeAction(rule.campaign_id, rule.action, rule.action_value, insights);
-          this.rules.markTriggered(rule.id);
-          results.push({ rule: rule.name, campaign: rule.campaign_id, metric: rule.condition_metric, value: metricValue, action: rule.action, result: actionResult });
-        }
+        const result = await this._evaluateRule(rule);
+        if (result) results.push(result);
       } catch (err) {
         results.push({ rule: rule.name, error: err.message });
       }
     }
-
     log.info(`AutoOptimizer: checked ${activeRules.length} rules, triggered ${results.filter(r => !r.error).length}`);
     return { checked: activeRules.length, triggered: results.length, results };
+  }
+
+  async _evaluateRule(rule) {
+    let insights;
+    try {
+      insights = await this.meta.getCampaignInsights(rule.campaign_id, { datePreset: 'last_7d' });
+    } catch (err) {
+      log.debug('Skipping rule - insights unavailable', { ruleId: rule.id, error: err.message });
+      return null;
+    }
+    if (!insights) return null;
+
+    const metricValue = this._getMetricValue(insights, rule.condition_metric);
+    if (metricValue === null) return null;
+
+    if (!this._evaluateCondition(metricValue, rule.condition_operator, rule.condition_value)) return null;
+
+    const actionResult = await this._executeAction(rule.campaign_id, rule.action, rule.action_value, insights);
+    this.rules.markTriggered(rule.id);
+    return { rule: rule.name, campaign: rule.campaign_id, metric: rule.condition_metric, value: metricValue, action: rule.action, result: actionResult };
   }
 
   _getMetricValue(insights, metric) {
@@ -82,46 +77,57 @@ export class AutoOptimizer {
     return map[metric] !== undefined ? map[metric] : null;
   }
 
+  static OPERATORS = {
+    '>': (a, b) => a > b,
+    '<': (a, b) => a < b,
+    '>=': (a, b) => a >= b,
+    '<=': (a, b) => a <= b,
+    '==': (a, b) => a === b,
+  };
+
   _evaluateCondition(value, operator, threshold) {
     if (value === null) return false;
-    switch (operator) {
-      case '>': return value > threshold;
-      case '<': return value < threshold;
-      case '>=': return value >= threshold;
-      case '<=': return value <= threshold;
-      case '==': return value === threshold;
-      default: return false;
-    }
+    const op = AutoOptimizer.OPERATORS[operator];
+    return op ? op(value, threshold) : false;
   }
 
   async _executeAction(campaignId, action, actionValue, insights) {
-    switch (action) {
-      case 'pause':
-        await this.meta.updateCampaign(campaignId, { status: 'PAUSED' });
-        return { action: 'paused', campaignId };
+    const ACTION_HANDLERS = {
+      pause: () => this._pauseAction(campaignId),
+      scale_up: () => this._scaleAction(campaignId, actionValue || 20, 'up', insights),
+      scale_down: () => this._scaleAction(campaignId, actionValue || 20, 'down', insights),
+      alert: () => this._alertAction(campaignId),
+    };
 
-      case 'scale_up': {
-        const currentBudget = insights.spend / 7; // Approximate daily from weekly
-        const increase = actionValue || 20; // Default 20% increase
-        const newBudget = Math.round(currentBudget * (1 + increase / 100));
-        await this.meta.updateCampaign(campaignId, { dailyBudget: newBudget });
-        return { action: 'scale_up', from: currentBudget, to: newBudget };
-      }
+    const handler = ACTION_HANDLERS[action];
+    if (!handler) return { action: 'unknown' };
+    return handler();
+  }
 
-      case 'scale_down': {
-        const currentBudget = insights.spend / 7;
-        const decrease = actionValue || 20;
-        const newBudget = Math.max(10000, Math.round(currentBudget * (1 - decrease / 100)));
-        await this.meta.updateCampaign(campaignId, { dailyBudget: newBudget });
-        return { action: 'scale_down', from: currentBudget, to: newBudget };
-      }
+  async _pauseAction(campaignId) {
+    await this.meta.updateCampaign(campaignId, { status: 'PAUSED' });
+    return { action: 'paused', campaignId };
+  }
 
-      case 'alert':
-        log.info(`ALERT: Campaign ${campaignId} triggered rule`);
-        return { action: 'alert', campaignId };
-
-      default:
-        return { action: 'unknown' };
+  async _scaleAction(campaignId, percent, direction, insights) {
+    // Rule: Only scale LC_ campaigns
+    const campaign = await this.campaignsRepo.getById(campaignId);
+    if (campaign && campaign.name && !campaign.name.startsWith('LC_')) {
+      log.info(`Scale blocked: ${campaign.name} is not LC_`);
+      return { action: 'blocked', reason: 'Only LC_ campaigns benefit from budget scaling' };
     }
+    
+    const currentBudget = insights.spend / 7;
+    const factor = direction === 'up' ? (1 + percent / 100) : (1 - percent / 100);
+    const newBudget = direction === 'down'
+      ? Math.max(10000, Math.round(currentBudget * factor))
+      : Math.round(currentBudget * factor);
+    await this.meta.updateCampaign(campaignId, { dailyBudget: newBudget });
+    return { action: `scale_${direction}`, from: currentBudget, to: newBudget };
+  }
+
+  _alertAction(campaignId) {
+    log.info(`ALERT: Campaign ${campaignId} triggered rule`);
+    return { action: 'alert', campaignId };
   }
 }
