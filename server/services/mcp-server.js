@@ -242,6 +242,25 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
           description: "Check 1ai-content service health",
           inputSchema: { type: "object", properties: {} },
         },
+        {
+          name: "1ai-social_post_fanpage",
+          description: "Post content to Facebook Fanpage via GoLogin (cross-project to 1ai-social)",
+          inputSchema: {
+            type: "object",
+            properties: {
+              profile_id: { type: "string", description: "GoLogin browser profile ID" },
+              page_id: { type: "string", description: "Facebook page ID" },
+              message: { type: "string", description: "Post content/caption" },
+              image_url: { type: "string", description: "Optional image URL" }
+            },
+            required: ["profile_id", "page_id", "message"]
+          },
+        },
+        {
+          name: "1ai-social_health",
+          description: "Check 1ai-social service health",
+          inputSchema: { type: "object", properties: {} },
+        },
       ],
     };
   });
@@ -437,6 +456,40 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
           const health = await services.contentBridge.healthCheck();
           return {
             content: [{ type: "text", text: JSON.stringify(health, null, 2) }],
+          };
+        }
+
+        case "1ai-social_post_fanpage": {
+          const socialUrl = process.env.SOCIAL_SERVICE_URL || 'http://localhost:8000';
+          const res = await fetch(`${socialUrl}/api/webhooks/fanpage-post`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(process.env.SOCIAL_WEBHOOK_SECRET ? { 'x-api-key': process.env.SOCIAL_WEBHOOK_SECRET } : {}),
+            },
+            body: JSON.stringify({
+              profile_id: args.profile_id,
+              page_id: args.page_id,
+              message: args.message,
+              image_url: args.image_url,
+            }),
+          });
+          if (!res.ok) {
+            const body = await res.text();
+            throw new Error(`1ai-social returned ${res.status}: ${body}`);
+          }
+          const data = await res.json();
+          return {
+            content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+          };
+        }
+
+        case "1ai-social_health": {
+          const socialUrl = process.env.SOCIAL_SERVICE_URL || 'http://localhost:8000';
+          const res = await fetch(`${socialUrl}/api/v1/health`);
+          const data = await res.json();
+          return {
+            content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
           };
         }
 
