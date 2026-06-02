@@ -14,6 +14,7 @@ import { AutoOptimizer } from './server/services/auto-optimizer.js';
 import { LLMClient } from './server/services/llm-client.js';
 import { SettingsRepository } from './server/repositories/settings.js';
 import { ContentBridge } from './server/services/content-bridge.js';
+import { SocialBridge } from './server/services/social-bridge.js';
 
 const db = createDatabase(process.env.DB_PATH || './db/adforge.db');
 
@@ -38,6 +39,11 @@ const contentBridge = new ContentBridge(
   process.env.CONTENT_API_KEY || ''
 );
 
+const socialBridge = new SocialBridge(
+  process.env.SOCIAL_SERVICE_URL || 'http://localhost:8200',
+  process.env.SOCIAL_WEBHOOK_SECRET || ''
+);
+
 const server = create1aiAdsMCPServer(
   campaignsRepo,
   landingRepo,
@@ -49,7 +55,8 @@ const server = create1aiAdsMCPServer(
     competitorSpy,
     autoOptimizer,
     llmClient,
-    contentBridge
+    contentBridge,
+    socialBridge
   }
 );
 

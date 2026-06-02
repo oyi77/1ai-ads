@@ -460,36 +460,23 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
         }
 
         case "1ai-social_post_fanpage": {
-          const socialUrl = process.env.SOCIAL_SERVICE_URL || 'http://localhost:8000';
-          const res = await fetch(`${socialUrl}/api/webhooks/fanpage-post`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(process.env.SOCIAL_WEBHOOK_SECRET ? { 'x-api-key': process.env.SOCIAL_WEBHOOK_SECRET } : {}),
-            },
-            body: JSON.stringify({
-              profile_id: args.profile_id,
-              page_id: args.page_id,
-              message: args.message,
-              image_url: args.image_url,
-            }),
+          if (!services.socialBridge) throw new Error("SocialBridge not available");
+          const result = await services.socialBridge.postToFanpage({
+            profileId: args.profile_id,
+            pageId: args.page_id,
+            message: args.message,
+            imageUrl: args.image_url,
           });
-          if (!res.ok) {
-            const body = await res.text();
-            throw new Error(`1ai-social returned ${res.status}: ${body}`);
-          }
-          const data = await res.json();
           return {
-            content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           };
         }
 
         case "1ai-social_health": {
-          const socialUrl = process.env.SOCIAL_SERVICE_URL || 'http://localhost:8000';
-          const res = await fetch(`${socialUrl}/api/v1/health`);
-          const data = await res.json();
+          if (!services.socialBridge) throw new Error("SocialBridge not available");
+          const health = await services.socialBridge.healthCheck();
           return {
-            content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+            content: [{ type: "text", text: JSON.stringify(health, null, 2) }],
           };
         }
 
