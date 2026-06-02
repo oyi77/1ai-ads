@@ -13,11 +13,11 @@ import { CompetitorsRepository } from '../repositories/competitors.js';
 const log = createLogger('competitor-spy');
 
 export class CompetitorSpyService {
-  constructor(db, adIntelligence = null, adSpireAdapter = null) {
+  constructor(db, adIntelligence = null, adSpireAdapter = null, competitorsRepo = null) {
     this.db = db;
     this.adIntelligence = adIntelligence;
     this.adSpireAdapter = adSpireAdapter;
-    this.competitorsRepo = new CompetitorsRepository(db);
+    this.competitorsRepo = competitorsRepo || new CompetitorsRepository(db);
   }
 
   /**
@@ -32,15 +32,8 @@ export class CompetitorSpyService {
   async monitorCompetitor(competitorId, userId, options = {}) {
     const { platform } = options;
     const domain = this._extractDomain(competitorId);
+    log.info('Starting competitor monitoring', { competitorId, domain, platform, userId });
 
-    log.info('Starting competitor monitoring', {
-      competitorId,
-      domain,
-      platform,
-      userId,
-    });
-
-    // Use AdSpire if available and primary service is not configured
     const intelligenceService = this.adIntelligence ||
       (this.adSpireAdapter?.isAvailable() ? this.adSpireAdapter : null);
 
@@ -51,51 +44,33 @@ export class CompetitorSpyService {
 
     try {
       const adData = await intelligenceService.getCompetitorAds(domain, { platform });
-
-      const snapshot = this.competitorsRepo.create({
-        url: competitorId,
-        platform: platform || null,
-        adData,
-        snapshotType: 'monitor',
-      });
-
-      log.info('Competitor monitoring completed', {
-        competitorId,
-        domain,
-        platform,
-        adsCount: adData.ads?.length || 0,
-        snapshotId: snapshot.id,
-      });
-
-      return {
-        success: true,
-        competitorId,
-        domain,
-        platform: platform || null,
-        adsCount: adData.ads?.length || 0,
-        totalSpend: adData.ads?.reduce((sum, ad) => sum + (ad.metrics?.spend || 0), 0) || 0,
-        totalImpressions: adData.ads?.reduce((sum, ad) => sum + (ad.metrics?.impressions || 0), 0) || 0,
-        totalClicks: adData.ads?.reduce((sum, ad) => sum + (ad.metrics?.clicks || 0), 0) || 0,
-        avgCTR: this._calculateAvgCTR(adData.ads),
-        snapshotId: snapshot.id,
-        capturedAt: snapshot.captured_at,
-      };
+      return this._buildMonitorSuccess(competitorId, domain, platform, adData);
     } catch (error) {
       log.error('Failed to monitor competitor with AdIntelligenceService', {
-        competitorId,
-        domain,
-        platform,
-        error: error.message,
+        competitorId, domain, platform, error: error.message,
       });
-
-      return {
-        success: false,
-        competitorId,
-        domain,
-        platform,
-        error: error.message,
-      };
+      return { success: false, competitorId, domain, platform, error: error.message };
     }
+  }
+
+  _buildMonitorSuccess(competitorId, domain, platform, adData) {
+    const snapshot = this.competitorsRepo.create({
+      url: competitorId, platform: platform || null, adData, snapshotType: 'monitor',
+    });
+
+    log.info('Competitor monitoring completed', {
+      competitorId, domain, platform, adsCount: adData.ads?.length || 0, snapshotId: snapshot.id,
+    });
+
+    return {
+      success: true, competitorId, domain, platform: platform || null,
+      adsCount: adData.ads?.length || 0,
+      totalSpend: adData.ads?.reduce((s, a) => s + (a.metrics?.spend || 0), 0) || 0,
+      totalImpressions: adData.ads?.reduce((s, a) => s + (a.metrics?.impressions || 0), 0) || 0,
+      totalClicks: adData.ads?.reduce((s, a) => s + (a.metrics?.clicks || 0), 0) || 0,
+      avgCTR: this._calculateAvgCTR(adData.ads),
+      snapshotId: snapshot.id, capturedAt: snapshot.captured_at,
+    };
   }
 
   /**
@@ -106,52 +81,44 @@ export class CompetitorSpyService {
    */
   async getCompetitorMetrics(competitorId) {
     const domain = this._extractDomain(competitorId);
-
     log.info('Fetching competitor metrics', { competitorId, domain });
 
     const snapshots = this.competitorsRepo.findByUrl(competitorId);
-
     if (!snapshots || snapshots.length === 0) {
       log.warn('No snapshots found for competitor', { competitorId, domain });
-      return {
-        competitorId,
-        domain,
-        hasData: false,
-        message: 'No monitoring data available for this competitor',
-      };
+      return { competitorId, domain, hasData: false, message: 'No monitoring data available for this competitor' };
     }
 
-    const latestSnapshot = snapshots[0];
+    return this._computeMetrics(competitorId, domain, snapshots);
+  }
+
+  _computeMetrics(competitorId, domain, snapshots) {
     const allAds = snapshots.flatMap(s => s.ad_data?.ads || []);
+    const latestSnapshot = snapshots[0];
+    const adsAgg = this._aggregateAdsData(allAds);
 
     const metrics = {
-      competitorId,
-      domain,
-      hasData: true,
-      snapshotCount: snapshots.length,
+      competitorId, domain, hasData: true, snapshotCount: snapshots.length,
       lastCapturedAt: latestSnapshot.captured_at,
-      totalAds: allAds.length,
-      activeAds: allAds.filter(ad => ad.status === 'active').length,
-      totalSpend: allAds.reduce((sum, ad) => sum + (ad.metrics?.spend || 0), 0),
-      totalImpressions: allAds.reduce((sum, ad) => sum + (ad.metrics?.impressions || 0), 0),
-      totalClicks: allAds.reduce((sum, ad) => sum + (ad.metrics?.clicks || 0), 0),
-      avgCTR: this._calculateAvgCTR(allAds),
-      avgCPC: this._calculateAvgCPC(allAds),
+      ...adsAgg,
+      avgCTR: this._calculateAvgCTR(allAds), avgCPC: this._calculateAvgCPC(allAds),
       platforms: this._aggregatePlatformMetrics(allAds),
       adTypes: this._aggregateAdTypeMetrics(allAds),
       topPerformingAds: this._getTopPerformingAds(allAds, 5),
       recentTrends: this._calculateRecentTrends(snapshots.slice(0, 10)),
     };
-
-    log.info('Competitor metrics calculated', {
-      competitorId,
-      domain,
-      totalAds: metrics.totalAds,
-      totalSpend: metrics.totalSpend,
-      avgCTR: metrics.avgCTR,
-    });
-
+    log.info('Competitor metrics calculated', { competitorId, domain, totalAds: metrics.totalAds, totalSpend: metrics.totalSpend, avgCTR: metrics.avgCTR });
     return metrics;
+  }
+
+  _aggregateAdsData(allAds) {
+    return {
+      totalAds: allAds.length,
+      activeAds: allAds.filter(ad => ad.status === 'active').length,
+      totalSpend: allAds.reduce((s, a) => s + (a.metrics?.spend || 0), 0),
+      totalImpressions: allAds.reduce((s, a) => s + (a.metrics?.impressions || 0), 0),
+      totalClicks: allAds.reduce((s, a) => s + (a.metrics?.clicks || 0), 0),
+    };
   }
 
   /**
@@ -179,37 +146,18 @@ export class CompetitorSpyService {
   async _performBasicMonitoring(domain, _userId) {
     const html = await this._fetchHtml(domain);
     const meta = this._extractMeta(html);
-
-    const basicData = {
-      title: meta.title || domain,
-      description: meta.description,
-      capturedAt: new Date().toISOString(),
-      source: 'basic',
-    };
+    const basicData = this._buildBasicData(domain, meta);
 
     const snapshot = this.competitorsRepo.create({
-      url: domain,
-      platform: null,
-      adData: basicData,
-      snapshotType: 'basic',
+      url: domain, platform: null, adData: basicData, snapshotType: 'basic',
     });
 
-    log.info('Basic competitor monitoring completed', {
-      domain,
-      title: basicData.title,
-      snapshotId: snapshot.id,
-    });
+    log.info('Basic competitor monitoring completed', { domain, title: basicData.title, snapshotId: snapshot.id });
+    return { success: true, competitorId: domain, domain, platform: null, basic: true, title: basicData.title, snapshotId: snapshot.id, capturedAt: snapshot.captured_at };
+  }
 
-    return {
-      success: true,
-      competitorId: domain,
-      domain,
-      platform: null,
-      basic: true,
-      title: basicData.title,
-      snapshotId: snapshot.id,
-      capturedAt: snapshot.captured_at,
-    };
+  _buildBasicData(domain, meta) {
+    return { title: meta.title || domain, description: meta.description, capturedAt: new Date().toISOString(), source: 'basic' };
   }
 
   /**
@@ -382,54 +330,39 @@ export class CompetitorSpyService {
   }
 }
 
-/**
- * Legacy function: Returns competitor data for backward compatibility.
- * Each object contains:
- *   - `name`: extracted page title (fallback to hostname)
- *   - `website`: the URL
- *   - `description`: meta description (or empty string)
- *   - `features`: empty array (can be populated later)
- *
- * If a single URL is provided, fetches only that URL.
- * Otherwise, loads URLs from env or uses a sane fallback.
- *
- * @deprecated Use CompetitorSpyService class instead
- */
+const DEFAULT_COMPETITOR_URLS = [
+  'https://www.google.com',
+  'https://www.facebook.com',
+  'https://www.amazon.com',
+];
+
+function _resolveUrls(url) {
+  if (url) return [url];
+  const envList = config.competitorUrls;
+  return envList ? envList.split(/\s*,\s*/) : DEFAULT_COMPETITOR_URLS;
+}
+
+function _extractSiteData(html, url) {
+  const service = new CompetitorSpyService(null);
+  const meta = service._extractMeta(html);
+  const hostname = new URL(url).hostname.replace('www.', '');
+  return { name: meta.title || hostname, website: url, description: meta.description, features: [] };
+}
+
+function _emptyResult() {
+  return { name: 'No competitor data available', website: '#', description: '', features: [] };
+}
+
 export async function getCompetitorData(url) {
-  let urls = [];
-
-  if (url) {
-    urls = [url];
-  } else {
-    const envList = config.competitorUrls;
-    const fallback = [
-      'https://www.google.com',
-      'https://www.facebook.com',
-      'https://www.amazon.com'
-    ];
-    urls = envList ? envList.split(/\s*,\s*/) : fallback;
-  }
-
+  const urls = _resolveUrls(url);
   const service = new CompetitorSpyService(null);
   const results = [];
+
   for (const u of urls) {
     const html = await service._fetchHtml(u);
-    const meta = service._extractMeta(html);
-    const hostname = (new URL(u)).hostname.replace('www.', '');
-    results.push({
-      name: meta.title || hostname,
-      website: u,
-      description: meta.description,
-      features: []
-    });
+    results.push(_extractSiteData(html, u));
   }
-  if (!results.length) {
-    results.push({
-      name: 'No competitor data available',
-      website: '#',
-      description: '',
-      features: []
-    });
-  }
+
+  if (!results.length) results.push(_emptyResult());
   return url ? results[0] : results;
 }

@@ -39,36 +39,11 @@ export class AdResearchService {
    * Search ads by keyword across the Meta Ad Library.
    */
   async searchAds({ query, country = 'ID', activeStatus = 'ALL', mediaType, limit = 50 }) {
-    if (!query) {
-      log.error('Search query is required');
-      throw new Error('Search query is required');
-    }
-
+    if (!query) throw new Error('Search query is required');
     log.info('Searching Meta Ad Library', { query, country, limit });
 
-    const token = this._getToken();
-    const params = new URLSearchParams({
-      search_terms: query,
-      ad_reached_countries: JSON.stringify([country]),
-      ad_active_status: activeStatus,
-      ad_type: 'ALL',
-      fields: DEFAULT_FIELDS,
-      limit: String(Math.min(limit, 500)),
-      access_token: token,
-    });
-
-    if (mediaType && mediaType !== 'ALL') {
-      params.set('media_type', mediaType);
-    }
-
-    const url = `${GRAPH_API_BASE}/ads_archive?${params}`;
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (data.error) {
-      log.error('Meta API error in ad search', { error: data.error.message, code: data.error.code });
-      throw new PlatformError(`Meta API error: ${data.error.message}`, 'meta', data.error.code);
-    }
+    const params = this._buildSearchParams({ query, country, activeStatus, mediaType, limit });
+    const data = await this._fetchArchive(params);
 
     const result = {
       ads: (data.data || []).map(this._formatAd),
@@ -76,36 +51,14 @@ export class AdResearchService {
       hasMore: !!data.paging?.next,
       nextCursor: data.paging?.cursors?.after || null,
     };
-
     log.info('Ad search completed', { total: result.total, hasMore: result.hasMore });
     return result;
   }
 
-  /**
-   * Search ads by a specific competitor page ID.
-   */
   async searchByPage({ pageId, country = 'ID', activeStatus = 'ACTIVE', limit = 100 }) {
     if (!pageId) throw new ConfigurationError('Page ID is required');
-
-    const token = this._getToken();
-    const params = new URLSearchParams({
-      search_page_ids: pageId,
-      ad_reached_countries: JSON.stringify([country]),
-      ad_active_status: activeStatus,
-      ad_type: 'ALL',
-      fields: DEFAULT_FIELDS,
-      limit: String(Math.min(limit, 500)),
-      access_token: token,
-    });
-
-    const url = `${GRAPH_API_BASE}/ads_archive?${params}`;
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (data.error) {
-      throw new PlatformError(`Meta API error: ${data.error.message}`, 'meta', data.error.code);
-    }
-
+    const params = this._buildPageParams({ pageId, country, activeStatus, limit });
+    const data = await this._fetchArchive(params);
     return {
       ads: (data.data || []).map(this._formatAd),
       total: data.data?.length || 0,
@@ -113,37 +66,54 @@ export class AdResearchService {
     };
   }
 
-  /**
-   * Resolve a Facebook page name/URL to a page ID.
-   */
   async resolvePageId(pageNameOrUrl) {
     log.info('Resolving Facebook page ID', { input: pageNameOrUrl });
-
+    const identifier = this._extractPageIdentifier(pageNameOrUrl);
     const token = this._getToken();
-
-    // If it looks like a URL, extract the page name
-    let identifier = pageNameOrUrl;
-    const urlMatch = pageNameOrUrl.match(/facebook\.com\/([^/?]+)/);
-    if (urlMatch) identifier = urlMatch[1];
-
     const url = `${GRAPH_API_BASE}/${encodeURIComponent(identifier)}?fields=id,name,fan_count,category&access_token=${token}`;
-    const res = await fetch(url);
-    const data = await res.json();
+    const data = await this._fetchJson(url);
 
+    if (data.error) throw new PlatformError(`Could not resolve page: ${data.error.message}`, 'meta', data.error.code);
+    log.info('Facebook page resolved', { name: data.name, id: data.id });
+    return { id: data.id, name: data.name, fanCount: data.fan_count, category: data.category };
+  }
+
+  _extractPageIdentifier(pageNameOrUrl) {
+    const urlMatch = pageNameOrUrl.match(/facebook\.com\/([^/?]+)/);
+    return urlMatch ? urlMatch[1] : pageNameOrUrl;
+  }
+
+  _buildSearchParams({ query, country, activeStatus, mediaType, limit }) {
+    const params = new URLSearchParams({
+      search_terms: query, ad_reached_countries: JSON.stringify([country]),
+      ad_active_status: activeStatus, ad_type: 'ALL', fields: DEFAULT_FIELDS,
+      limit: String(Math.min(limit, 500)), access_token: this._getToken(),
+    });
+    if (mediaType && mediaType !== 'ALL') params.set('media_type', mediaType);
+    return params;
+  }
+
+  _buildPageParams({ pageId, country, activeStatus, limit }) {
+    return new URLSearchParams({
+      search_page_ids: pageId, ad_reached_countries: JSON.stringify([country]),
+      ad_active_status: activeStatus, ad_type: 'ALL', fields: DEFAULT_FIELDS,
+      limit: String(Math.min(limit, 500)), access_token: this._getToken(),
+    });
+  }
+
+  async _fetchArchive(params) {
+    const url = `${GRAPH_API_BASE}/ads_archive?${params}`;
+    const data = await this._fetchJson(url);
     if (data.error) {
-      log.error('Failed to resolve Facebook page', { error: data.error.message });
-      throw new PlatformError(`Could not resolve page: ${data.error.message}`, 'meta', data.error.code);
+      log.error('Meta API error in ad search', { error: data.error.message, code: data.error.code });
+      throw new PlatformError(`Meta API error: ${data.error.message}`, 'meta', data.error.code);
     }
+    return data;
+  }
 
-    const result = {
-      id: data.id,
-      name: data.name,
-      fanCount: data.fan_count,
-      category: data.category,
-    };
-
-    log.info('Facebook page resolved', { name: result.name, id: result.id });
-    return result;
+  async _fetchJson(url) {
+    const res = await fetch(url);
+    return res.json();
   }
 
   _formatAd(ad) {

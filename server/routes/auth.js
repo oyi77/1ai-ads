@@ -32,27 +32,9 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
       return `${req.protocol}://${hostname}/api/auth/facebook/callback`;
     })();
     
-    // Load FB credentials from .env file (with fallback to process.env)
-    let fbAppId = process.env.FB_APP_ID;
-    let fbSecret = process.env.FB_APP_SECRET;
-    
-    if (!fbAppId || !fbSecret) {
-      // Manual .env parse as fallback
-      try {
-        const fs = require('fs');
-        const envContent = fs.readFileSync('./.env', 'utf8');
-        const lines = envContent.split('\n');
-        for (const line of lines) {
-          const [key, ...valueParts] = line.split('=');
-          const trimmedKey = key.trim();
-          const trimmedValue = valueParts.join('=').trim();
-          if (trimmedKey === 'FB_APP_ID') fbAppId = trimmedValue;
-          if (trimmedKey === 'FB_APP_SECRET') fbSecret = trimmedValue;
-        }
-      } catch (e) {
-        // Ignore parse error
-      }
-    }
+    // Load FB credentials from environment (dotenv already loaded in server.js)
+    const fbAppId = process.env.FB_APP_ID;
+    const fbSecret = process.env.FB_APP_SECRET;
     
     if (!fbAppId || !fbSecret) {
       return res.status(500).json({ success: false, error: 'FB_APP_ID or FB_APP_SECRET not configured' });

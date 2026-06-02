@@ -1,180 +1,37 @@
 import fs from 'fs';
-import { createAuthRouter } from './routes/auth.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-import { createTrendingRouter } from './routes/trending.js';
-import { createCompetitorSpyRouter } from './routes/competitor-spy.js';
-import { createPaymentsRouter } from './routes/payments.js';
-import { PaymentsRepository } from './repositories/payments.js';
-import { createTemplatesRouter } from './routes/templates.js';
-import { createLearningRouter } from './routes/learning.js';
-import { createAdsLibraryRoutes } from './routes/ads-library.js';
-import { createAdspirerRouter } from './routes/adspirer.js';
-
-import { createScheduleRouter } from './routes/schedule.js';
-import { ScheduleRepository } from './repositories/schedule.js';
-import { createMetaAccountsRouter } from './routes/meta-accounts.js';
-import { createMetaContentRouter } from './routes/meta-content.js';
-import { createGoogleAdsRouter } from './routes/google-ads.js';
-import { createTikTokAdsRouter } from './routes/tiktok-ads.js';
-import { createOptimizerRouter } from './routes/optimizer.js';
-import { createAutonomousRouter } from './routes/autonomous.js';
-import { createAiAgentRouter } from './routes/ai-agent.js';
-import createAudienceRouter from './routes/audiences.js';
-import createPixelRouter from './routes/pixels.js';
-import createBatchRouter from './routes/batch.js';
-import createTokenRouter from './routes/tokens.js';
-import createWebhookRouter from './routes/webhooks.js';
-import { createABTestsRouter } from './routes/ab-tests.js';
-import createTrackRouter from './routes/track.js';
-import { AdUtmMapRepository } from './repositories/ad-utm-map.js';
-import { UtmTaggerService } from './services/utm-tagger.js';
-import { createRealtimeRouter } from './routes/realtime.js';
-import { RealtimeService } from './services/realtime-service.js';
-import { AiAgent } from './services/ai-agent.js';
-import { MetaVideoService } from './services/meta-video-service.js';
-import { ContentScheduler } from './services/content-scheduler.js';
-import { AdResearchService } from './services/ad-research.js';
-import { createSelowRoutes } from './routes/selow.js';
-import { ContentBridge } from './services/content-bridge.js';
-import { SocialBridge } from './services/social-bridge.js';
-import rateLimit from 'express-rate-limit';
 import express from 'express';
 import cors from 'cors';
 import config from './config/index.js';
-
-// Import repositories
-import { UsersRepository } from './repositories/users.js';
-import { RefreshTokensRepository } from './repositories/refresh-tokens.js';
-import { SettingsRepository } from './repositories/settings.js';
-import { LandingRepository } from './repositories/landing.js';
-import { CampaignsRepository } from './repositories/campaigns.js';
-import { AdsRepository } from './repositories/ads.js';
-import { TemplatesRepository } from './repositories/templates.js';
-import { CompetitorsRepository } from './repositories/competitors.js';
-import { PlatformAccountsRepository } from './repositories/platform-accounts.js';
-import { AiSuggestionsRepository } from './repositories/ai-suggestions.js';
-import { WebhookEventsRepository } from './repositories/webhook-events.js';
-
-// Import services
-import { RulesRepository } from './repositories/rules.js';
-import { LLMClient } from './services/llm-client.js';
-import { AdspirerMcpClient } from './services/adspirer-mcp-client.js';
-import { TrendingService } from './services/trending.js';
-import { LearningService } from './services/learning.js';
-import { PaymentService } from './services/payments.js';
-
-import { AutonomousAgent } from './services/autonomous-agent.js';
-import { AutoOptimizer } from './services/auto-optimizer.js';
-import { CampaignOrchestrator } from './services/campaign-orchestrator.js';
-import { CreativeStudio } from './services/creative-studio.js';
-import { MetaAdsAPI } from './services/meta-api.js';
-import { WebhookProcessor } from './services/webhook-processor.js';
-import { DataCleanup } from './services/data-cleanup.js';
-
-import { createCampaignsRouter } from './routes/campaigns.js';
-import { createAdsRouter } from './routes/ads.js';
-import { createLandingRouter } from './routes/landing.js';
-import { createSettingsRouter } from './routes/settings.js';
-import { createAnalyticsRouter } from './routes/analytics.js';
-import { createResearchRouter } from './routes/research.js';
-import { createMcpRouter } from './routes/mcp.js';
-import { ScalevService } from './services/scalev.js';
-import { ShopeeAdapter } from './services/shopee-adapter.js';
-import { AttributionService } from './services/attribution-service.js';
-import { GoogleAdsAPI } from './services/google-ads-api.js';
-import { TikTokAdsAPI } from './services/tiktok-api.js';
-
-import { AttributionRepository } from './repositories/attribution.js';
-import createAttributionRouter from './routes/attribution.js';
-
 import { createLogger } from './lib/logger.js';
+import { createRepositories } from './app/repositories.js';
+import { createServices } from './app/services.js';
+import { createRouters } from './app/routers.js';
 
-// Import middleware
-import { requireAuth } from './middleware/auth.js';
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export function createApp(params) {
   const log = createLogger('app');
-  // Support both direct db and { db, llmClient, mcpClient } pattern
   const db = params && typeof params === 'object' && params.db ? params.db : params;
-  // Create repositories
-  const usersRepo = new UsersRepository(db);
-  const refreshTokensRepo = new RefreshTokensRepository(db);
-  const settingsRepo = new SettingsRepository(db);
-  const landingRepo = new LandingRepository(db);
-  const campaignsRepo = new CampaignsRepository(db);
-  const adsRepo = new AdsRepository(db);
-  const templatesRepo = new TemplatesRepository(db);
-  const competitorsRepo = new CompetitorsRepository(db);
-  const platformAccountsRepo = new PlatformAccountsRepository(db);
 
-  // Rules repository for autonomous campaign manager
-  const rulesRepo = new RulesRepository(db);
-  const webhookEventsRepo = new WebhookEventsRepository(db);
-  const adUtmMapRepo = new AdUtmMapRepository(db);
-  const utmTagger = new UtmTaggerService(adUtmMapRepo);
-  const scheduleRepo = new ScheduleRepository(db);
-  scheduleRepo.ensureTable();
+  const repos = createRepositories(db);
+  repos.db = db;
 
-  // Create services
-  const llmClient = (params && params.llmClient) || new LLMClient({
-    url: config.llm.url,
-    model: config.llm.model,
-    apiKey: config.llm.apiKey,
-    timeout: config.llm.timeout,
-  });
+  const services = createServices({ db, repos, params });
 
-  const adspirerClient = new AdspirerMcpClient(platformAccountsRepo);
-  const trendingService = new TrendingService(campaignsRepo);
-  const paymentsRepo = new PaymentsRepository(db);
-  const scalevService = (params && params.scalevService) || new ScalevService(settingsRepo);
-  const paymentService = new PaymentService(paymentsRepo, usersRepo, scalevService);
-  const learningService = new LearningService(campaignsRepo, adsRepo, landingRepo);
-  
-  const metaApi = new MetaAdsAPI(settingsRepo);
-  const creativeStudio = new CreativeStudio(llmClient);
-  const videoService = new MetaVideoService(metaApi);
-  const contentScheduler = new ContentScheduler({ videoService, llmClient, db });
-  const adResearchService = new AdResearchService({ metaApi, db });
-  const orchestrator = new CampaignOrchestrator(metaApi, creativeStudio);
-  const realtimeService = new RealtimeService(metaApi, campaignsRepo);
-
-  // Content bridge for cross-project video generation (1ai-ads → 1ai-content)
-  const contentBridgeUrl = settingsRepo.getKey?.('content_bridge_url') || process.env.CONTENT_BRIDGE_URL || 'http://localhost:3000';
-  const contentBridgeApiKey = settingsRepo.getKey?.('content_bridge_api_key') || process.env.CONTENT_BRIDGE_API_KEY || '';
-  const contentBridge = new ContentBridge(contentBridgeUrl, contentBridgeApiKey);
-
-  // Social bridge for cross-project Fanpage posting (1ai-ads → 1ai-social)
-  const socialBridgeUrl = settingsRepo.getKey?.('social_bridge_url') || process.env.SOCIAL_BRIDGE_URL || 'http://localhost:8200';
-  const socialBridgeApiKey = settingsRepo.getKey?.('social_bridge_api_key') || process.env.SOCIAL_BRIDGE_API_KEY || '';
-  const socialBridge = new SocialBridge(socialBridgeUrl, socialBridgeApiKey);
-
-  const suggestionsRepo = new AiSuggestionsRepository(db);
-  const aiAgent = new AiAgent(settingsRepo, adsRepo, campaignsRepo, llmClient, suggestionsRepo, landingRepo);
-
-  // Attribution service for Shopee order matching
-  const attributionRepo = new AttributionRepository(db);
-  const shopeeAdapter = new ShopeeAdapter();
-  const attributionService = new AttributionService(attributionRepo, shopeeAdapter, campaignsRepo, adsRepo);
-
-  // Create app
   const app = express();
 
-  // Set repositories in app locals for access in routes
-  app.locals.usersRepo = usersRepo;
-  app.locals.settingsRepo = settingsRepo;
-  app.locals.campaignsRepo = campaignsRepo;
-  app.locals.rulesRepo = rulesRepo;
-  app.locals.platformAccountsRepo = platformAccountsRepo;
-  app.locals.adResearchService = adResearchService;
+  app.locals.usersRepo = repos.usersRepo;
+  app.locals.settingsRepo = repos.settingsRepo;
+  app.locals.campaignsRepo = repos.campaignsRepo;
+  app.locals.rulesRepo = repos.rulesRepo;
+  app.locals.platformAccountsRepo = repos.platformAccountsRepo;
+  app.locals.adResearchService = services.adResearchService;
   app.locals.db = db;
-  
-  // Security headers
-  app.use((req, res, next) => {
+
+  app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '1; mode=block');
@@ -185,116 +42,22 @@ export function createApp(params) {
     next();
   });
 
-  // Set up JSON body parser
   app.use(cors({
     origin: config.corsOrigin,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   }));
-  
+
   app.use(express.json());
-  
-  // Serve frontend static files (SPA)
+
   const clientPath = path.join(process.cwd(), 'dist');
   app.use(express.static(clientPath));
 
-  // Rate limiting
-  const publicRateLimit = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    message: { success: false, error: 'Too many requests, please try again later.' },
-    standardHeaders: true,
-    legacyHeaders: false,
-  });
+  createRouters({ app, repos, services });
 
-  const authRouter = createAuthRouter(usersRepo, refreshTokensRepo);
-  const trendingRouter = createTrendingRouter(trendingService);
-  const campaignsRouter = createCampaignsRouter(orchestrator, metaApi, creativeStudio, campaignsRepo);
-  const adsRouter = createAdsRouter(adsRepo, creativeStudio);
-  const landingRouter = createLandingRouter(landingRepo, llmClient);
-  const settingsRouter = createSettingsRouter(settingsRepo, llmClient, db);
-  const aiAgentRouter = createAiAgentRouter(aiAgent, settingsRepo);
-  const competitorSpyRouter = createCompetitorSpyRouter(competitorsRepo);
-  const paymentsRouter = createPaymentsRouter(paymentService);
-  const templatesRouter = createTemplatesRouter(templatesRepo);
-  const learningRouter = createLearningRouter(learningService);
-  const adsLibraryRouter = createAdsLibraryRoutes();
-  const adspirerRouter = createAdspirerRouter(adspirerClient, platformAccountsRepo, settingsRepo);
-
-  const scheduleRouter = createScheduleRouter(db);
-  const metaAccountsRouter = createMetaAccountsRouter(settingsRepo);
-  const metaContentRouter = createMetaContentRouter(videoService, contentScheduler);
-
-  // Mount routers
-  app.use('/api/auth', publicRateLimit, authRouter);
-  app.use('/api/trending', publicRateLimit, trendingRouter);
-  app.use('/api/campaigns', requireAuth, campaignsRouter);
-  app.use('/api/ads', requireAuth, adsRouter);
-  app.use('/api/landing', requireAuth, landingRouter);
-  app.use('/api/settings', requireAuth, settingsRouter);
-  app.use('/api/competitor-spy', requireAuth, competitorSpyRouter);
-  app.use('/api/payments', requireAuth, paymentsRouter);
-  app.use('/api/templates', requireAuth, templatesRouter);
-  app.use('/api/learning', requireAuth, learningRouter);
-  app.use('/api/ads-library', publicRateLimit, adsLibraryRouter);
-  app.use('/api/adspirer', requireAuth, adspirerRouter);
-  app.use('/api/ai-agent', requireAuth, aiAgentRouter);
-
-  app.use('/api/schedule', requireAuth, scheduleRouter);
-  app.use('/api/meta', requireAuth, metaAccountsRouter);
-  app.use('/api/meta/content', requireAuth, metaContentRouter);
-  const googleAdsRouter = createGoogleAdsRouter(settingsRepo);
-  const tiktokAdsRouter = createTikTokAdsRouter(settingsRepo);
-  const selowRouter = createSelowRoutes(settingsRepo);
-  app.use('/api/google-ads', requireAuth, googleAdsRouter);
-  app.use('/api/tiktok-ads', requireAuth, tiktokAdsRouter);
-  app.use('/api/selow', requireAuth, selowRouter);
-
-
-  // Platform API clients for RuleEvaluator (DIP: pass in, don't instantiate internally)
-  const googleAdsAPI = new GoogleAdsAPI(settingsRepo);
-  const tiktokAdsAPI = new TikTokAdsAPI(settingsRepo);
-
-  // Autonomous campaign monitor
-  const autonomousAgent = new AutonomousAgent(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, llmClient, undefined, { metaAdsAPI: metaApi, googleAdsAPI, tiktokAdsAPI });
-
-  // Auto-optimizer: evaluates rules every 6 hours
-  const autoOptimizer = new AutoOptimizer(metaApi, rulesRepo, campaignsRepo);
-
-  const optimizerRouter = createOptimizerRouter(rulesRepo, autoOptimizer);
-  app.use('/api/optimizer', requireAuth, optimizerRouter);
-
-  // Webhook event processor: processes unprocessed events every 60s
-  const webhookProcessor = new WebhookProcessor(webhookEventsRepo, campaignsRepo);
-
-  // Data cleanup: removes old records weekly
-  const dataCleanup = new DataCleanup(db);
-
-  const autonomousRouter = createAutonomousRouter(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, autonomousAgent);
-  app.use('/api/autonomous', requireAuth, autonomousRouter);
-
-  // New consolidated services
-  app.use('/api/audiences', requireAuth, createAudienceRouter(metaApi));
-  app.use('/api/pixels', requireAuth, createPixelRouter(metaApi));
-  app.use('/api/batch', requireAuth, createBatchRouter(metaApi));
-  app.use('/api/tokens', requireAuth, createTokenRouter());
-  app.use('/api/webhooks', createWebhookRouter(webhookEventsRepo));
-  app.use('/api/ab-tests', requireAuth, createABTestsRouter(metaApi));
-
-  app.use('/api/attribution', requireAuth, createAttributionRouter(attributionService, attributionRepo));
-  app.use('/api/realtime', requireAuth, createRealtimeRouter(realtimeService));
-  app.locals.realtimeService = realtimeService;
-
-  const mcpClient = (params && params.mcpClient) || { getStatus: () => ({}), connect: () => ({}), disconnect: () => ({}), callTool: () => ({}), getTools: () => [] };
-  app.use('/api/analytics', requireAuth, createAnalyticsRouter(campaignsRepo));
-  app.use('/api/research', requireAuth, createResearchRouter(adResearchService));
-  app.use('/api/mcp', requireAuth, createMcpRouter(mcpClient, settingsRepo, campaignsRepo, adsRepo, landingRepo));
-
-  // Webhook: 1ai-content notifies when video is complete
   app.post('/api/webhooks/video-complete', (req, res) => {
     const { jobId, status, videoUrl, thumbnailUrl } = req.body;
     log.info('Video completion webhook received', { jobId, status, videoUrl });
-    // Store video URL for campaign use
     if (status === 'completed' && videoUrl) {
       app.locals.pendingVideos = app.locals.pendingVideos || {};
       app.locals.pendingVideos[jobId] = { videoUrl, thumbnailUrl, receivedAt: Date.now() };
@@ -302,23 +65,12 @@ export function createApp(params) {
     res.json({ received: true });
   });
 
-  app.get('/api/cf-health', publicRateLimit, (_req, res) => {
-    res.json({ status: 'ok', service: 'adforge', timestamp: new Date().toISOString() });
-  });
-
-  app.get('/health', publicRateLimit, (_req, res) => {
+  app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // Public tracking redirect (no auth — click tracking for ads)
-  app.use('/t', createTrackRouter(adUtmMapRepo, utmTagger));
-
-  // Frontend routes (SPA) - Catch-all for SPA routing
   app.use((req, res, next) => {
-    if (req.path.startsWith('/api') ||
-        req.path.startsWith('/assets') ||
-        req.path.startsWith('/t/') ||
-        req.path.startsWith('/favicon.ico')) {
+    if (req.path.startsWith('/api') || req.path.startsWith('/assets') || req.path.startsWith('/t/') || req.path.startsWith('/favicon.ico')) {
       return next();
     }
     const indexPath = path.join(clientPath, 'index.html');
@@ -332,47 +84,25 @@ export function createApp(params) {
     });
   });
 
-  // Global error handler with logging
   app.use((err, req, res, _next) => {
-    const timestamp = new Date().toISOString();
     const status = err.status || err.statusCode || 500;
-    const logEntry = {
-      timestamp,
-      method: req.method,
-      path: req.path,
-      status,
-      error: err.message,
-      ...(config.nodeEnv === 'development' && { stack: err.stack }),
-    };
-    log.error('Request error', logEntry);
-
-    if (status >= 500) {
-      log.error('Server error stack', { stack: err.stack });
-    }
-
-    res.status(status).json({
-      success: false,
-      error: config.nodeEnv === 'production' ? 'Internal Server Error' : err.message,
-    });
+    log.error('Request error', { timestamp: new Date().toISOString(), method: req.method, path: req.path, status, error: err.message });
+    if (status >= 500) log.error('Server error stack', { stack: err.stack });
+    res.status(status).json({ success: false, error: config.nodeEnv === 'production' ? 'Internal Server Error' : err.message });
   });
 
-  // Store services on app.locals for startServices
   app.locals._services = {
-    autonomousAgent,
-    autoOptimizer,
-    aiAgent,
-    webhookProcessor,
-    dataCleanup,
-    usersRepo,
+    autonomousAgent: services.autonomousAgent,
+    autoOptimizer: services.autoOptimizer,
+    aiAgent: services.aiAgent,
+    webhookProcessor: services.webhookProcessor,
+    dataCleanup: services.dataCleanup,
+    usersRepo: repos.usersRepo,
   };
 
   return app;
 }
 
-/**
- * Start background services (schedulers, processors).
- * Call AFTER app.listen() to avoid side effects in createApp().
- */
 export function startServices(app) {
   const log = createLogger('app');
   const { autonomousAgent, autoOptimizer, aiAgent, webhookProcessor, dataCleanup, usersRepo } = app.locals._services;

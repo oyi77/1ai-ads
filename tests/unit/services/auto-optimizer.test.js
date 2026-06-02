@@ -20,7 +20,12 @@ describe('AutoOptimizer', () => {
       markTriggered: vi.fn(),
     };
 
-    mockCampaignsRepo = {};
+    mockCampaignsRepo = {
+      getById: vi.fn().mockImplementation(async (id) => ({
+        id,
+        name: 'LC_' + id,  // Always return LC_ prefix so scaling is allowed
+      })),
+    };
 
     optimizer = new AutoOptimizer(mockMetaApi, mockRulesRepo, mockCampaignsRepo);
   });

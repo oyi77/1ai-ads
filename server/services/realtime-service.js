@@ -17,41 +17,22 @@ export class RealtimeService {
   /**
    * Attach WebSocket server to an HTTP server
    */
+  _handleConnection(ws, req) {
+    log.info('Client connected', { ip: req.socket.remoteAddress });
+    this.clients.add(ws);
+    ws.send(JSON.stringify({ type: 'snapshot', data: Object.fromEntries(this.metrics), timestamp: new Date().toISOString() }));
+    ws.on('close', () => { this.clients.delete(ws); log.info('Client disconnected', { remaining: this.clients.size }); });
+    ws.on('error', (err) => { log.error('WebSocket error', { error: err.message }); this.clients.delete(ws); });
+  }
+
   attach(server) {
     this.wss = new WebSocketServer({ noServer: true });
-
     server.on('upgrade', (req, socket, head) => {
       if (req.url === '/ws/realtime') {
-        this.wss.handleUpgrade(req, socket, head, (ws) => {
-          this.wss.emit('connection', ws, req);
-        });
-      } else {
-        socket.destroy();
-      }
+        this.wss.handleUpgrade(req, socket, head, (ws) => this.wss.emit('connection', ws, req));
+      } else { socket.destroy(); }
     });
-
-    this.wss.on('connection', (ws, req) => {
-      log.info('Client connected', { ip: req.socket.remoteAddress });
-      this.clients.add(ws);
-
-      // Send current metrics immediately
-      ws.send(JSON.stringify({
-        type: 'snapshot',
-        data: Object.fromEntries(this.metrics),
-        timestamp: new Date().toISOString(),
-      }));
-
-      ws.on('close', () => {
-        this.clients.delete(ws);
-        log.info('Client disconnected', { remaining: this.clients.size });
-      });
-
-      ws.on('error', (err) => {
-        log.error('WebSocket error', { error: err.message });
-        this.clients.delete(ws);
-      });
-    });
-
+    this.wss.on('connection', (ws, req) => this._handleConnection(ws, req));
     log.info('WebSocket server attached', { path: '/ws/realtime' });
   }
 
@@ -79,6 +60,19 @@ export class RealtimeService {
   /**
    * Poll Meta API for all active campaigns
    */
+  _buildMetricFromInsights(campaign, data) {
+    const spend = parseFloat(data.spend || 0);
+    const conversions = this._extractConversions(data);
+    return {
+      campaign_id: campaign.campaign_id,
+      name: campaign.name, status: campaign.status,
+      spend, clicks: parseInt(data.clicks || 0), impressions: parseInt(data.impressions || 0),
+      conversions, ctr: parseFloat(data.ctr || 0), cpc: parseFloat(data.cpc || 0),
+      roas: spend > 0 && conversions > 0 ? (campaign.revenue || 0) / spend : null,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   async _poll() {
     try {
       const campaigns = this.campaignsRepo.getAll ? this.campaignsRepo.getAll() : [];
@@ -87,39 +81,16 @@ export class RealtimeService {
       for (const campaign of activeCampaigns) {
         try {
           const insights = await this.metaApi.getCampaignInsights(campaign.campaign_id, {
-            date_preset: 'today',
-            fields: 'spend,impressions,clicks,actions,cost_per_action_type,ctr,cpc,cpm',
+            date_preset: 'today', fields: 'spend,impressions,clicks,actions,cost_per_action_type,ctr,cpc,cpm',
           });
-
           const data = insights?.data?.[0] || {};
-          const conversions = this._extractConversions(data);
-          const spend = parseFloat(data.spend || 0);
-          const clicks = parseInt(data.clicks || 0);
-          const impressions = parseInt(data.impressions || 0);
-          const ctr = parseFloat(data.ctr || 0);
-          const cpc = parseFloat(data.cpc || 0);
-
-          const metric = {
-            campaign_id: campaign.campaign_id,
-            name: campaign.name,
-            status: campaign.status,
-            spend,
-            clicks,
-            impressions,
-            conversions,
-            ctr,
-            cpc,
-            roas: spend > 0 && conversions > 0 ? (campaign.revenue || 0) / spend : null,
-            timestamp: new Date().toISOString(),
-          };
-
+          const metric = this._buildMetricFromInsights(campaign, data);
           this.metrics.set(campaign.campaign_id, metric);
           this._broadcast({ type: 'metric_update', data: metric });
         } catch (err) {
           log.warn('Failed to poll campaign', { campaignId: campaign.campaign_id, error: err.message });
         }
       }
-
       log.debug('Poll complete', { campaigns: activeCampaigns.length, clients: this.clients.size });
     } catch (err) {
       log.error('Poll failed', { error: err.message });
@@ -168,19 +139,14 @@ export class RealtimeService {
   async refreshCampaign(campaignId) {
     try {
       const insights = await this.metaApi.getCampaignInsights(campaignId, {
-        date_preset: 'today',
-        fields: 'spend,impressions,clicks,actions,ctr,cpc,cpm',
+        date_preset: 'today', fields: 'spend,impressions,clicks,actions,ctr,cpc,cpm',
       });
       const data = insights?.data?.[0] || {};
       const metric = {
-        campaign_id: campaignId,
-        spend: parseFloat(data.spend || 0),
-        clicks: parseInt(data.clicks || 0),
-        impressions: parseInt(data.impressions || 0),
-        conversions: this._extractConversions(data),
-        ctr: parseFloat(data.ctr || 0),
-        cpc: parseFloat(data.cpc || 0),
-        timestamp: new Date().toISOString(),
+        campaign_id: campaignId, spend: parseFloat(data.spend || 0),
+        clicks: parseInt(data.clicks || 0), impressions: parseInt(data.impressions || 0),
+        conversions: this._extractConversions(data), ctr: parseFloat(data.ctr || 0),
+        cpc: parseFloat(data.cpc || 0), timestamp: new Date().toISOString(),
       };
       this.metrics.set(campaignId, metric);
       this._broadcast({ type: 'metric_update', data: metric });

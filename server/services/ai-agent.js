@@ -45,48 +45,56 @@ export class AiAgent {
 
     const ads = this.adsRepo.getByUserId ? this.adsRepo.getByUserId(userId) : [];
     const campaigns = this.campaignsRepo.getAll ? this.campaignsRepo.getAll(userId) : [];
-
     if (ads.length === 0 && campaigns.length === 0) return [];
 
-    const context = JSON.stringify({
+    const context = this._buildAnalysisContext(ads, campaigns);
+    const suggestions = await this._fetchSuggestions(context);
+    if (suggestions.length === 0) return [];
+
+    const created = [];
+    for (const s of suggestions) {
+      const id = await this._persistSuggestion(userId, s);
+      created.push(id);
+    }
+    return created;
+  }
+
+  _buildAnalysisContext(ads, campaigns) {
+    return JSON.stringify({
       ads: ads.slice(0, 10).map(a => ({ id: a.id, title: a.title, status: a.status, platform: a.platform })),
       campaigns: campaigns.slice(0, 5).map(c => ({ id: c.id, name: c.name, status: c.status, budget: c.budget })),
     });
+  }
 
-    let suggestions = [];
+  async _fetchSuggestions(context) {
     try {
       const response = await this.llmClient.call(SYSTEM_PROMPT, `Analyze these ads and campaigns and suggest improvements:\n${context}`);
       const parsed = JSON.parse(response);
-      suggestions = Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch (err) {
       log.warn('AI analysis failed', { error: err.message });
       return [];
     }
+  }
 
-    const created = [];
+  async _persistSuggestion(userId, s) {
+    const autoApply = Boolean(s.target_id) && this.shouldAutoApply(s.type || 'ad_copy');
+    const status = autoApply ? 'applied' : 'pending';
+    const id = this.suggestionsRepo.create({
+      user_id: userId,
+      type: s.type || 'ad_copy',
+      target_id: s.target_id || null,
+      target_type: s.target_type || null,
+      suggestion: JSON.stringify({ changes: s.changes || [] }),
+      rationale: s.rationale || '',
+      status,
+    });
 
-    for (const s of suggestions) {
-      const autoApply = Boolean(s.target_id) && this.shouldAutoApply(s.type || 'ad_copy');
-      const status = autoApply ? 'applied' : 'pending';
-      const id = this.suggestionsRepo.create({
-        user_id: userId,
-        type: s.type || 'ad_copy',
-        target_id: s.target_id || null,
-        target_type: s.target_type || null,
-        suggestion: JSON.stringify({ changes: s.changes || [] }),
-        rationale: s.rationale || '',
-        status,
-      });
-
-      if (autoApply) {
-        await this._applyChanges(s).catch(err => log.warn('Auto-apply failed', { id, error: err.message }));
-        this.suggestionsRepo.updateStatus(id, 'applied');
-      }
-
-      created.push(id);
+    if (autoApply) {
+      await this._applyChanges(s).catch(err => log.warn('Auto-apply failed', { id, error: err.message }));
+      this.suggestionsRepo.updateStatus(id, 'applied');
     }
-
-    return created;
+    return id;
   }
 
   async applySuggestion(userId, suggestionId) {

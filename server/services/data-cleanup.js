@@ -1,10 +1,11 @@
+import { CleanupRepository } from '../repositories/cleanup.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('data-cleanup');
 
 export class DataCleanup {
-  constructor(db) {
-    this.db = db;
+  constructor(db, cleanupRepo = null) {
+    this.cleanupRepo = cleanupRepo || new CleanupRepository(db);
     this._interval = null;
   }
 
@@ -23,19 +24,11 @@ export class DataCleanup {
 
   run() {
     try {
-      const results = {};
-
-      results.webhookEvents = this.db.prepare(
-        "DELETE FROM webhook_events WHERE processed = 1 AND created_at < datetime('now', '-30 days')"
-      ).run().changes;
-
-      results.schedules = this.db.prepare(
-        "DELETE FROM schedules WHERE status = 'executed' AND updated_at < datetime('now', '-90 days')"
-      ).run().changes;
-
-      results.refreshTokens = this.db.prepare(
-        "DELETE FROM refresh_tokens WHERE expires_at < datetime('now')"
-      ).run().changes;
+      const results = {
+        webhookEvents: this.cleanupRepo.deleteProcessedWebhookEvents(30),
+        schedules: this.cleanupRepo.deleteExecutedSchedules(90),
+        refreshTokens: this.cleanupRepo.deleteExpiredRefreshTokens(),
+      };
 
       const total = Object.values(results).reduce((sum, n) => sum + n, 0);
       if (total > 0) {

@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import config from '../config/index.js';
+import { v4 as uuid } from 'uuid';
+import jwt from 'jsonwebtoken';
 
 export function createMetaAccountsRouter(settingsRepo) {
   const router = Router();
@@ -22,7 +24,7 @@ export function createMetaAccountsRouter(settingsRepo) {
     if (legacyToken) {
       // Migrate to platform_accounts for next time
       settingsRepo.addAccount({
-        id: require('uuid').v4(),
+        id: uuid(),
         user_id: userId,
         platform: 'meta',
         account_name: 'Meta - Legacy Migration',
@@ -87,7 +89,6 @@ export function createMetaAccountsRouter(settingsRepo) {
 
       let decoded;
       try {
-        const jwt = require('jsonwebtoken');
         decoded = jwt.verify(token, process.env.JWT_SECRET || (() => { throw new Error('JWT_SECRET not configured'); })());
       } catch (e) {
         return res.status(401).json({ success: false, error: 'Invalid token' });
@@ -139,7 +140,6 @@ export function createMetaAccountsRouter(settingsRepo) {
 
       let decoded;
       try {
-        const jwt = require('jsonwebtoken');
         decoded = jwt.verify(token, process.env.JWT_SECRET || (() => { throw new Error('JWT_SECRET not configured'); })());
       } catch (e) {
         return res.status(401).json({ success: false, error: 'Invalid token' });
@@ -193,7 +193,6 @@ export function createMetaAccountsRouter(settingsRepo) {
 
       let decoded;
       try {
-        const jwt = require('jsonwebtoken');
         decoded = jwt.verify(token, process.env.JWT_SECRET || (() => { throw new Error('JWT_SECRET not configured'); })());
       } catch (e) {
         return res.status(401).json({ success: false, error: 'Invalid token' });

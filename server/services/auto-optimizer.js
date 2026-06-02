@@ -101,7 +101,7 @@ export class AutoOptimizer {
 
     const handler = ACTION_HANDLERS[action];
     if (!handler) return { action: 'unknown' };
-    return handler();
+    return await handler();
   }
 
   async _pauseAction(campaignId) {
@@ -111,7 +111,7 @@ export class AutoOptimizer {
 
   async _scaleAction(campaignId, percent, direction, insights) {
     // Rule: Only scale LC_ campaigns
-    const campaign = await this.campaignsRepo.getById(campaignId);
+    const campaign = await this.campaigns.getById(campaignId);
     if (campaign && campaign.name && !campaign.name.startsWith('LC_')) {
       log.info(`Scale blocked: ${campaign.name} is not LC_`);
       return { action: 'blocked', reason: 'Only LC_ campaigns benefit from budget scaling' };

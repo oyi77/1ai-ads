@@ -36,28 +36,30 @@ export class AdGenerator {
   async generateAds(product, target, keunggulan) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
-
     try {
       log.info('Generating ad copies', { product, target });
-      const content = await this.llm.call(SYSTEM_PROMPT, this.buildPrompt(product, target, keunggulan), {
-        signal: controller.signal
-      });
-      const result = parseJsonResponse(content);
-      if (result.error) {
-        log.warn('Ad generation returned error', { error: result.error });
-      } else {
-        log.info('Ad generation successful', { copiesCount: result.ads?.length || 0 });
-      }
-      return result;
+      const content = await this.llm.call(SYSTEM_PROMPT, this.buildPrompt(product, target, keunggulan), { signal: controller.signal });
+      return this._parseAdResult(content);
     } catch (err) {
-      if (err.name === 'AbortError' || err.message?.includes('abort')) {
-        log.warn('Ad generation timed out', { timeoutMs: this.timeoutMs });
-        return { error: 'AI generation timed out after 45 seconds', timeout: true };
-      }
-      log.error('Ad generation failed', { error: err.message });
-      throw err;
+      return this._handleGenerateError(err);
     } finally {
       clearTimeout(timeoutId);
     }
+  }
+
+  _parseAdResult(content) {
+    const result = parseJsonResponse(content);
+    if (result.error) log.warn('Ad generation returned error', { error: result.error });
+    else log.info('Ad generation successful', { copiesCount: result.ads?.length || 0 });
+    return result;
+  }
+
+  _handleGenerateError(err) {
+    if (err.name === 'AbortError' || err.message?.includes('abort')) {
+      log.warn('Ad generation timed out', { timeoutMs: this.timeoutMs });
+      return { error: 'AI generation timed out after 45 seconds', timeout: true };
+    }
+    log.error('Ad generation failed', { error: err.message });
+    throw err;
   }
 }

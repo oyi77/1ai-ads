@@ -18,92 +18,63 @@ export class TrendingService {
     this.apiConfig = config.externalTrendingApi;
   }
 
-  /**
-   * Get internal trending data - top campaigns by ROAS growth or CTR over last 7 days
-   * @returns {Promise<Array>} Array of top performing campaigns
-   */
   async getInternalTrends() {
     const { data: campaigns } = this.campaignsRepo.findAll();
-    
-    if (!campaigns || campaigns.length === 0) {
-      return [];
-    }
+    if (!campaigns || campaigns.length === 0) return [];
 
-    // Sort by ROAS (descending) and take top 5
-    const topByRoas = campaigns
+    return campaigns
       .filter(c => c.roas !== null && c.roas > 0)
       .sort((a, b) => (b.roas || 0) - (a.roas || 0))
       .slice(0, 5)
-      .map(c => ({
-        id: c.id,
-        name: c.name,
-        platform: c.platform,
-        status: c.status,
-        roas: c.roas,
-        spend: c.spend,
-        revenue: c.revenue,
-        impressions: c.impressions,
-        clicks: c.clicks,
-        conversions: c.conversions,
-        ctr: c.impressions > 0 ? ((c.clicks / c.impressions) * 100).toFixed(2) : 0,
-        trend: 'up', // Mock trend indicator
-      }));
-
-    return topByRoas;
+      .map(c => this._formatCampaignTrend(c));
   }
 
-  /**
-   * Get external trending data from API with caching support
-   * @param {string} industry - Optional industry filter
-   * @param {string} region - Optional region filter
-   * @returns {Promise<Array>} Array of market trend themes
-   */
+  _formatCampaignTrend(c) {
+    return {
+      id: c.id, name: c.name, platform: c.platform, status: c.status,
+      roas: c.roas, spend: c.spend, revenue: c.revenue,
+      impressions: c.impressions, clicks: c.clicks, conversions: c.conversions,
+      ctr: c.impressions > 0 ? ((c.clicks / c.impressions) * 100).toFixed(2) : 0,
+      trend: 'up',
+    };
+  }
+
   async getExternalTrends(industry = null, region = null) {
     const cacheKey = this._getCacheKey(industry, region);
 
-    // Check cache first
     const cached = this._getCached(cacheKey);
     if (cached) {
       log.info('Returning cached external trends', { cacheKey, count: cached.length });
       return cached;
     }
 
-    // If mock mode, return empty array
     if (config.trendingExternalSource === 'mock') {
       log.info('Mock mode enabled, returning empty trends');
       return [];
     }
 
-    // If a URL is configured, try to fetch real data
     try {
       const data = await this._fetchExternalTrends(industry, region);
-
-      // Validate response
-      if (!data || !Array.isArray(data)) {
-        throw new Error('Invalid response format: expected array');
-      }
-
-      // Normalize data
-      const normalized = this._normalizeTrendData(data);
-
-      // Cache the result
-      this._setCached(cacheKey, normalized);
-
-      log.info('Fetched and cached external trends from API', {
-        cacheKey,
-        count: normalized.length,
-        industry,
-        region
-      });
-
-      return normalized;
+      return this._processExternalResponse(data, cacheKey, industry, region);
     } catch (err) {
-      log.warn('External trends API failed, returning empty data', {
-        cacheKey,
-        error: err.message
-      });
+      log.warn('External trends API failed, returning empty data', { cacheKey, error: err.message });
       return [];
     }
+  }
+
+  _processExternalResponse(data, cacheKey, industry, region) {
+    if (!data || !Array.isArray(data)) {
+      throw new Error('Invalid response format: expected array');
+    }
+
+    const normalized = this._normalizeTrendData(data);
+    this._setCached(cacheKey, normalized);
+
+    log.info('Fetched and cached external trends from API', {
+      cacheKey, count: normalized.length, industry, region,
+    });
+
+    return normalized;
   }
 
   /**

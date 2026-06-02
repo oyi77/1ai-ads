@@ -46,6 +46,13 @@ export class WebhookProcessor {
     return processed;
   }
 
+  static EVENT_HANDLERS = {
+    campaign_status_change: 'handleCampaignStatusChange',
+    lead: 'handleLead',
+    ad_review_approved: 'handleAdReview',
+    ad_review_rejected: 'handleAdReview',
+  };
+
   async processEvent(event) {
     let payload;
     try {
@@ -55,29 +62,19 @@ export class WebhookProcessor {
       return;
     }
 
-    switch (event.event_type) {
-      case 'campaign_status_change':
-        await this.handleCampaignStatusChange(payload);
-        break;
-      case 'lead':
-        await this.handleLead(payload);
-        break;
-      case 'ad_review_approved':
-      case 'ad_review_rejected':
-        await this.handleAdReview(event.event_type, payload);
-        break;
-      default:
-        break;
+    const handler = this.constructor.EVENT_HANDLERS[event.event_type];
+    if (handler) {
+      await this[handler](event.event_type, payload);
     }
   }
 
-  async handleCampaignStatusChange(payload) {
+  async handleCampaignStatusChange(_eventType, payload) {
     if (payload.campaign_id && payload.status) {
       log.info('Campaign status change', { campaignId: payload.campaign_id, status: payload.status });
     }
   }
 
-  async handleLead(payload) {
+  async handleLead(_eventType, payload) {
     log.info('Lead received', { leadId: payload.lead_id, formId: payload.form_id });
   }
 

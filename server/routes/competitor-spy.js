@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { createLogger } from '../lib/logger.js';
 const log = createLogger('competitor-spy');
 
-export function createCompetitorSpyRouter(competitorsRepo) {
+export function createCompetitorSpyRouter(competitorsRepo, adIntelligenceService, competitorSpyService) {
   const router = Router();
 
   // GET - list latest competitor snapshots
@@ -33,9 +33,7 @@ export function createCompetitorSpyRouter(competitorsRepo) {
       const { url, platform } = req.body;
       if (!url) return res.status(400).json({ success: false, error: 'url is required' });
 
-      const { AdIntelligenceService } = await import('../services/ad-intelligence.js');
-      const adService = new AdIntelligenceService(competitorsRepo.db);
-      const adData = await adService.getCompetitorAds(url, { platform }).catch(() => ({ ads: [], total: 0 }));
+      const adData = await adIntelligenceService.getCompetitorAds(url, { platform }).catch(() => ({ ads: [], total: 0 }));
       const snapshot = competitorsRepo.create({ url, platform: platform || null, adData, snapshotType: 'manual' });
       log.info('Competitor snapshot created', { url, id: snapshot.id });
       res.json({ success: true, data: snapshot });
@@ -52,9 +50,7 @@ export function createCompetitorSpyRouter(competitorsRepo) {
       const results = [];
       for (const snapshot of latest) {
         try {
-          const { AdIntelligenceService } = await import('../services/ad-intelligence.js');
-          const adService = new AdIntelligenceService(competitorsRepo.db);
-          const adData = await adService.getCompetitorAds(snapshot.url, { platform: snapshot.platform }).catch(() => ({ ads: [], total: 0 }));
+          const adData = await adIntelligenceService.getCompetitorAds(snapshot.url, { platform: snapshot.platform }).catch(() => ({ ads: [], total: 0 }));
           const newSnapshot = competitorsRepo.create({ url: snapshot.url, platform: snapshot.platform, adData, snapshotType: 'auto' });
           results.push(newSnapshot);
         } catch (e) {
@@ -108,8 +104,6 @@ export function createCompetitorSpyRouter(competitorsRepo) {
     try {
       const { competitorId } = req.params;
 
-      const { CompetitorSpyService } = await import('../services/competitor-spy.js');
-      const competitorSpyService = new CompetitorSpyService(competitorsRepo.db);
       const metrics = await competitorSpyService.getCompetitorMetrics(competitorId);
 
       if (!metrics.hasData) {
@@ -129,14 +123,6 @@ export function createCompetitorSpyRouter(competitorsRepo) {
       const { competitorId } = req.params;
       const { platform } = req.body || {};
       const userId = req.user?.id || 'anonymous';
-
-      const { CompetitorSpyService } = await import('../services/competitor-spy.js');
-      const { AdIntelligenceService } = await import('../services/ad-intelligence.js');
-
-      const competitorSpyService = new CompetitorSpyService(
-        competitorsRepo.db,
-        new AdIntelligenceService(competitorsRepo.db)
-      );
 
       const result = await competitorSpyService.monitorCompetitor(competitorId, userId, { platform });
 
