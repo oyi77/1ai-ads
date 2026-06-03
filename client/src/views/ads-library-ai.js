@@ -43,7 +43,11 @@ export async function renderAdsLibraryAiView(el) {
               <button type="submit" id="search-btn" class="w-full bg-sky-600 hover:bg-sky-500 px-6 py-3 rounded-lg font-bold text-white whitespace-nowrap">Search</button>
             </div>
           </div>
-          <p class="text-xs text-slate-500 mt-2">Proxies to facebook.com/api/graphql with doc_id <code class="bg-slate-800 px-1 rounded">29650582277919185</code></p>
+          <label class="flex items-center gap-2 mt-3 text-xs text-slate-400 cursor-pointer">
+            <input type="checkbox" id="force-fresh" class="rounded">
+            Force fresh (bypass cache, hit Meta directly)
+          </label>
+          <p class="text-xs text-slate-500 mt-2">Results cached 30min fresh, 24h stale. Falls back to scraper if cookies expired.</p>
         </form>
 
         <div id="result-meta" class="text-sm text-slate-400 mb-3"></div>
@@ -114,18 +118,28 @@ export async function renderAdsLibraryAiView(el) {
     const query = qInput.value.trim();
     if (!query) return;
     const country = countrySelect.value;
+    const forceFresh = el.querySelector('#force-fresh').checked;
     searchBtn.disabled = true;
     searchBtn.textContent = '...';
     resultsEl.innerHTML = '';
-    metaEl.textContent = 'Searching…';
+    metaEl.innerHTML = 'Searching…';
     try {
-      const { data } = await api.post('/ads-library-ai/search', { query, country });
-      const raw = data?.data;
+      const { data, source, cached, stale, notice } = await api.post('/ads-library-ai/search', { query, country, forceFresh });
+      const raw = data;
       const ads = raw?.ads || raw?.results || raw?.data?.ads || raw?.ad_library_search?.ads || raw?.adLibrarySearch?.ads || (Array.isArray(raw) ? raw : []);
-      lastResults = ads;
-      metaEl.textContent = ads.length > 0
-        ? `${ads.length} ads for "${query}" in ${country}`
-        : `0 ads for "${query}" in ${country} — see raw response below`;
+
+      const sourceBadge = source === 'cache' ? '<span class="text-xs px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded">cache</span>'
+        : source === 'stale-cache' ? '<span class="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded">stale cache</span>'
+        : source === 'scraper-fallback' ? '<span class="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded">scraper</span>'
+        : source === 'graphql' ? '<span class="text-xs px-2 py-0.5 bg-sky-500/20 text-sky-300 rounded">live</span>'
+        : '';
+
+      metaEl.innerHTML = `${ads.length > 0 ? `${ads.length} ads` : `0 ads`} for "${query}" in ${country} ${sourceBadge}`;
+
+      if (stale && notice) {
+        metaEl.innerHTML += ` <span class="text-xs text-amber-300 ml-2">${esc(notice)}</span>`;
+      }
+
       if (ads.length > 0) {
         resultsEl.innerHTML = ads.slice(0, 20).map((ad, i) => renderAd(ad, i)).join('');
       }
