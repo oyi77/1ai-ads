@@ -19,6 +19,7 @@ import createAudienceRouter from '../routes/audiences.js';
 import createPixelRouter from '../routes/pixels.js';
 import createBatchRouter from '../routes/batch.js';
 import { createMetaAiRouter } from '../routes/meta-ai.js';
+import { createAdsLibraryAiRouter } from '../routes/ads-library-ai.js';
 import createTokenRouter from '../routes/tokens.js';
 import createWebhookRouter from '../routes/webhooks.js';
 import { createABTestsRouter } from '../routes/ab-tests.js';
@@ -42,6 +43,7 @@ export function createRouters({ app, repos, services }) {
     message: { success: false, error: 'Too many requests, please try again later.' },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { xForwardedForHeader: false },
   });
 
   const mcpClient = services.mcpClient;
@@ -79,5 +81,6 @@ export function createRouters({ app, repos, services }) {
   app.use('/api/research', requireAuth, createResearchRouter(services.adResearchService));
   app.use('/api/mcp', requireAuth, createMcpRouter(mcpClient, repos.settingsRepo, repos.campaignsRepo, repos.adsRepo, repos.landingRepo));
   app.use('/api/meta-ai', requireAuth, createMetaAiRouter(repos.settingsRepo));
+  app.use('/api/ads-library-ai', publicRateLimit, createAdsLibraryAiRouter(repos.settingsRepo));
   app.use('/t', createTrackRouter(repos.adUtmMapRepo, services.utmTagger));
 }
