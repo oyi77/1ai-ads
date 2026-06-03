@@ -112,7 +112,7 @@ def extract_tag(name):
         if audience in nl:
             return tag
     # Fallback: clean prefix and numbers
-    c = re.sub(r'^(bidcap|bc|tc|off_|lc_|scale_|nyamiresep_|test_|winner_?|selow_?|0858_?|1208_?|1134_?|1340_?)+','',nl,flags=re.I)
+    c = re.sub(r'^(abo_|bidcap|bc|tc|off_|lc_|scale_|nyamiresep_|test_|winner_?|selow_?|0858_?|1208_?|1134_?|1340_?)+','',nl,flags=re.I)
     return re.sub(r'\s*\d+$','',c).strip('_ -') or nl
 
 def match_tag_to_shopeetags(camp_tag, all_shopee_tags, acc_key=None):

@@ -153,8 +153,8 @@ def get_winner_campaigns():
               if c['status'] == 'ACTIVE' and 'OFF_' not in c['name'][:10]
               and 'BIDCAP' not in c['name'] and 'BC_' not in c['name'][:3]]
     
-    # Filter to LC_ campaigns (only these can scale)
-    lc_camps = [c for c in active if c['name'].startswith('LC_') or c['name'].startswith('TC_')]
+    # Filter to LC_/TC_/ABO campaigns (only these can scale)
+    lc_camps = [c for c in active if c['name'].startswith(('LC_','TC_','ABO_'))]
     
     if not lc_camps:
         return []
@@ -185,7 +185,7 @@ def get_winner_campaigns():
         
         results.append({
             'id': cid, 'name': name, 'spend': spend, 'cpc': cpc,
-            'ctr': ctr, 'budget': budget, 'roas_estimate': ctr * 2,  # placeholder
+            'ctr': ctr, 'budget': budget,
         })
     
     return sorted(results, key=lambda x: x['ctr'], reverse=True)
