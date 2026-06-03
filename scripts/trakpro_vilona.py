@@ -39,7 +39,10 @@ EARLY_MAX_AGE = 3; EARLY_MIN_SPEND = 3000
 
 TAGS = ['rakdapur','rakdapur3','atayasetelankaosanak','wallpaperdindingvinyl',
     'benihsayuran','dressanakperempuan','setanakfernando','stikerkeramik',
-    'fashion','bajuanak','purwoceng','herbal','dapur','masak','perabotan']
+    'fashion','bajuanak','purwoceng','herbal','dapur','masak','perabotan',
+    # Malaysia 1134 tags
+    'longslave','studiolands','leggingwanitacotton','longsleeve','jerseymulimah',
+    'atasan','celana','social media']
 
 def api(p, params=None):
     u = f"https://graph.facebook.com/v19.0/{p}"
@@ -49,29 +52,41 @@ def api(p, params=None):
     except: return {"error": "timeout"}
 
 def load_shopee(csv_label, days=3):
+    """Load Shopee orders — auto-detects ID format (Tag_link) vs MY format (Sub_id)."""
     today = datetime.now(); orders = []
-    for i in range(days):
-        dt = (today - timedelta(days=i+1)).strftime('%Y-%m-%d')
-        for prefix in [f'{csv_label}_{dt}', f'nyamiresep_{dt}']:
+    for i in range(days+1):  # +1 includes today (export date)
+        dt = (today - timedelta(days=i)).strftime('%Y-%m-%d')
+        for prefix in [f'{csv_label}_{dt}']:
             p = DATA_DIR / f'{prefix}.csv'
             if p.exists():
                 try:
                     with open(p, 'r', encoding='utf-8-sig') as f:
-                        for row in csv.DictReader(f):
-                            t = row.get('Tag_link1','').strip()
-                            oid = row.get('ID Pemesanan','').strip()
+                        reader = csv.DictReader(f)
+                        headers = reader.fieldnames or []
+                        # Detect format
+                        is_my = any('Sub_id' in h for h in headers)
+                        tag_key = 'Sub_id1' if is_my else 'Tag_link1'
+                        comm_key = 'Komisen Bersih Affiliate(RM)' if is_my else 'Komisi Bersih Affiliate (Rp)'
+                        oid_key = 'Id Pembelian' if is_my else 'ID Pemesanan'
+                        tag_prefix = 'Sub_id' if is_my else 'Tag_link'
+                        
+                        for row in reader:
+                            t = row.get(tag_key,'').strip()
+                            oid = row.get(oid_key,'').strip()
                             if not t or not oid: continue
                             all_tags = []
                             for k in range(1,6):
-                                tv = row.get(f'Tag_link{k}','').strip().lower()
+                                tv = row.get(f'{tag_prefix}{k}','').strip().lower()
                                 if tv: all_tags.append(tv)
                             orders.append({
                                 'tag': t.lower(),
                                 'all_tags': all_tags,
-                                'comm': float(row.get('Komisi Bersih Affiliate (Rp)','0').replace(',','') or 0),
+                                'comm': float(row.get(comm_key,'0').replace(',','') or 0),
                                 'oid': oid,
+                                'currency': 'RM' if is_my else 'Rp',
                             })
-                except: pass
+                except Exception as e:
+                    pass
     return orders
 
 def extract_tag(name):
@@ -81,12 +96,22 @@ def extract_tag(name):
     c = re.sub(r'^(bidcap|bc|tc|off_|lc_|scale_|nyamiresep_|test_|winner_?|selow_?|0858_?|1208_?|1134_?|1340_?)+','',nl,flags=re.I)
     return re.sub(r'\s*\d+$','',c).strip('_ -') or nl
 
-def match_tag_to_shopeetags(camp_tag, all_shopee_tags):
+def match_tag_to_shopeetags(camp_tag, all_shopee_tags, acc_key=None):
     """Fuzzy match: campaign tag -> Shopee tag (e.g. rakdapur -> rakdapur3)"""
     camp_tag_lower = camp_tag.lower()
     # Exact match first
     if camp_tag_lower in all_shopee_tags:
         return [camp_tag_lower]
+    # Account-specific mappings (campaign naming vs Shopee sub_id)
+    ACC_MAP = {
+        '1134': {'longslave': ['studiolands', 'leggingwanitacotton', 'longsleeve', 'jerseymulimah']},
+    }
+    if acc_key and acc_key in ACC_MAP:
+        for k, v in ACC_MAP[acc_key].items():
+            if k in camp_tag_lower:
+                matches = [t for t in v if t in all_shopee_tags]
+                if matches:
+                    return matches
     # Substring match: campaign tag is prefix of shopee tag
     matches = [t for t in all_shopee_tags if t.startswith(camp_tag_lower)]
     if matches:
@@ -218,7 +243,7 @@ def rekomendasi(results, acc_key, days=3):
         camps = camp_by_tag[tag]
         total_spend = sum(c['spend'] for c in camps)
         # Fuzzy match: aggregate commission from all matching Shopee tags
-        matched = match_tag_to_shopeetags(tag, all_shopee_tags)
+        matched = match_tag_to_shopeetags(tag, all_shopee_tags, acc_key)
         total_comm = sum(tag_comm.get(mt, 0) for mt in matched)
         total_comm_all = sum(tag_all.get(mt, 0) for mt in matched)
         total_comm = max(total_comm, total_comm_all)  # use best attribution
@@ -293,7 +318,7 @@ def rekomendasi(results, acc_key, days=3):
     orphan_tags = []
     all_matched_shopee = set()
     for tag in all_tags_in_results:
-        matched = match_tag_to_shopeetags(tag, all_shopee_tags)
+        matched = match_tag_to_shopeetags(tag, all_shopee_tags, acc_key)
         all_matched_shopee.update(matched)
     for tag in tag_comm:
         if tag not in all_matched_shopee and tag_comm[tag] > 0:
