@@ -4,7 +4,7 @@ export default defineConfig({
   root: 'client',
   build: { outDir: '../dist' },
   server: {
-    proxy: { '/api': 'http://localhost:3000' },
+    proxy: { '/api': 'http://localhost:5000' },
     allowedHosts: true
   }
 });
