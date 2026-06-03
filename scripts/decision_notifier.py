@@ -20,7 +20,7 @@ def send_telegram(text):
     try:
         r = requests.post(
             f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage',
-            json={'chat_id': TELEGRAM_CHAT_ID, 'text': text, 'parse_mode': 'Markdown'},
+            json={'chat_id': TELEGRAM_CHAT_ID, 'text': text},
             timeout=10
         )
         return r.json().get('ok', False)
@@ -54,9 +54,9 @@ def main():
     
     ts = datetime.now()
     if mode == 'daily':
-        msg = [f"📋 *DAILY BRIEFING — {ts.strftime('%d %B %Y')}*"]
+        msg = [f"📋 DAILY BRIEFING — {ts.strftime('%d %B %Y')}"]
     else:
-        msg = [f"📊 *DECISION CENTER — {ts.strftime('%H:%M')}*"]
+        msg = [f"📊 DECISION CENTER — {ts.strftime('%H:%M')}"]
     
     msg.append("")
     
@@ -65,25 +65,25 @@ def main():
     
     if sections['PRIORITY']:
         msg.append("")
-        msg.append("*📋 PRIORITY ACTIONS:*")
+        msg.append("📋 PRIORITY ACTIONS:")
         msg.extend(sections['PRIORITY'][:10])
     
     if sections['WINNERS']:
         msg.append("")
-        msg.append("*🏆 TOP WINNERS:*")
+        msg.append("🏆 TOP WINNERS:")
         for line in sections['WINNERS']:
             if 'Profit' in line and len(msg) < 25:
                 msg.append(line)
     
     if sections['BONCOS']:
         msg.append("")
-        msg.append("*💀 BONCOS:*")
+        msg.append("💀 BONCOS:")
         for line in sections['BONCOS']:
             if 'Loss' in line and len(msg) < 30:
                 msg.append(line)
     
     msg.append("")
-    msg.append("_⚡ Auto Decision Center_")
+    msg.append("⚡ Auto Decision Center")
     
     full_msg = '\n'.join(msg)
     ok = send_telegram(full_msg[:4000])
