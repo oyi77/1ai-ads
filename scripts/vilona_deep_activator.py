@@ -10,7 +10,7 @@ import os, requests, json, urllib.request, urllib.parse
 from datetime import datetime, timezone, timedelta
 
 TOKEN = os.environ.get('FACEBOOK_ACCESS_TOKEN',
-    'os.getenv('META_ACCESS_TOKEN', '')')
+    os.getenv('META_ACCESS_TOKEN', ''))
 
 ACCOUNTS = {
     'act_380721031313330': 'Selow 1041',
