@@ -301,12 +301,107 @@ def send_alert(message):
     send_telegram(message)
     log(f"ALERT SENT: {message[:80]}...")
 
+# ─── BID STRATEGY DETECTION ───────────────────────────────────────────────────
+def get_campaign_bid_strategy(campaign_id):
+    """Detect actual bid strategy from campaign's adsets.
+    Returns: (dominant_strategy, avg_bid_amount)
+    Veris Rule: COST_CAP → NEVER scale budget, LOWEST_COST → can scale."""
+    try:
+        adsets = fb_get(f"{campaign_id}/adsets",
+            fields="bid_strategy,bid_amount,effective_status",
+            limit="50")
+        strategies = defaultdict(int)
+        bid_amounts = []
+        for a in adsets.get("data", []):
+            if a.get("effective_status") == "ACTIVE":
+                bs = a.get("bid_strategy", "UNKNOWN")
+                strategies[bs] += 1
+                ba = a.get("bid_amount", 0) or 0
+                if ba > 0:
+                    bid_amounts.append(int(ba))
+        if not strategies:
+            return ("UNKNOWN", 0)
+        dominant = max(strategies, key=strategies.get)
+        avg_bid = sum(bid_amounts) // len(bid_amounts) if bid_amounts else 0
+        return (dominant, avg_bid)
+    except Exception as e:
+        log(f"Bid strategy check failed: {e}", "WARN")
+        return ("UNKNOWN", 0)
+
+# ─── LC CLONE CREATOR ─────────────────────────────────────────────────────────
+def create_lc_clone(original_campaign, account_id, account_config):
+    """Create a LOWEST_COST clone from a winning COST_CAP campaign.
+    Veris Strategy: Proven COST_CAP winner → 1 LC copy to unlock volume.
+    Clone uses same targeting but LOWEST_COST_WITH_BID_CAP @ Rp200."""
+    try:
+        # Get original's adsets for targeting
+        adsets = fb_get(f"{original_campaign['id']}/adsets",
+            fields="name,targeting,optimization_goal,bid_strategy,promoted_object,status",
+            limit="5")
+        
+        if not adsets.get("data"):
+            log(f"No adsets found for clone", "WARN")
+            return None
+        
+        og_adset = adsets["data"][0]
+        today_str = datetime.now(WIB).strftime("%m%d")
+        product = "rakpiring" if "rakpiring" in original_campaign["name"].lower() else "organizer"
+        
+        # Create new campaign (LOWEST_COST)
+        new_camp_name = f"LC_{product}_{today_str}_CLONE"
+        camp_result = fb_post(f"{account_id}/campaigns",
+            name=new_camp_name,
+            objective="OUTCOME_TRAFFIC",
+            status="PAUSED",
+            special_ad_categories="[]")
+        
+        if "id" not in camp_result:
+            log(f"Clone campaign creation failed: {camp_result}", "WARN")
+            return None
+        
+        new_camp_id = camp_result["id"]
+        
+        # Create adset with LOWEST_COST_WITH_BID_CAP
+        targeting = og_adset.get("targeting", {})
+        adset_result = fb_post(f"{account_id}/adsets",
+            name=f"LC_{product}_{today_str}",
+            campaign_id=new_camp_id,
+            targeting=json.dumps(targeting),
+            optimization_goal="LINK_CLICKS",
+            billing_event="IMPRESSIONS",
+            bid_strategy="LOWEST_COST_WITH_BID_CAP",
+            bid_amount="20000",  # Rp200 in cents
+            daily_budget=str(min(100000, account_config["budget_cap_per_camp"])),
+            status="ACTIVE")
+        
+        if "id" in adset_result:
+            # Activate campaign after adset created
+            fb_post(new_camp_id, status="ACTIVE")
+            log(f"LC CLONE CREATED: {new_camp_name} (from {original_campaign['name'][:30]})")
+            return new_camp_id
+        else:
+            log(f"Clone adset creation failed: {adset_result}", "WARN")
+            return None
+            
+    except Exception as e:
+        log(f"Clone creation error: {e}", "ERROR")
+        traceback.print_exc()
+        return None
+
 # ─── ACTION EXECUTOR ──────────────────────────────────────────────────────────
 def execute_actions(account_id, account_config, classifications, acc_key=""):
-    """Execute pause/scale actions based on classifications."""
+    """Execute pause/scale actions based on Veris brain rules.
+    
+    Scale Rules (from bk-brain, 2026-06-03):
+    - COST_CAP winner → NEVER scale budget → create LOWEST_COST clone
+    - LOWEST_COST winner → scale budget +20%
+    - LOWEST_COST_WITH_BID_CAP → scale budget + optimize bid cap
+    - SUPER (ROAS > 8x) → scale budget +50% OR create LC clone"""
     campaigns = get_all_campaigns(account_id)
     actions_taken = []
     core = CORE_PORTFOLIO.get(acc_key, [])
+    clones_created = 0
+    max_clones_per_cycle = 3  # Limit to avoid spam
     
     # Startup guard: ensure all core portfolio campaigns are ACTIVE
     for cid, camp in campaigns.items():
@@ -315,7 +410,7 @@ def execute_actions(account_id, account_config, classifications, acc_key=""):
         if is_core and camp["status"] != "ACTIVE" and not name.startswith("OFF_"):
             try:
                 fb_post(cid, status="ACTIVE")
-                actions_taken.append(f"🛡️ GUARD: Reactivated core campaign {name}")
+                actions_taken.append(f"🛡️ GUARD: Reactivated {name[:40]}")
                 log(f"GUARD REACTIVATE: {name}")
             except Exception as e:
                 log(f"Guard reactivate failed: {e}", "ERROR")
@@ -331,53 +426,82 @@ def execute_actions(account_id, account_config, classifications, acc_key=""):
         is_core = any(c in name for c in core)
         
         if verdict == "OFF_LIMITS":
-            continue  # Never touch OFF_ campaigns
+            continue
         
         if verdict == "BONCOS":
-            # Never pause core portfolio campaigns
             if is_core:
-                actions_taken.append(f"🛡️ PROTECTED: {name} (core portfolio, skipping boncos)")
+                actions_taken.append(f"🛡️ PROTECTED: {name[:40]} (core)")
                 continue
             if status == "ACTIVE":
                 try:
                     fb_post(cid, status="PAUSED")
-                    actions_taken.append(f"💀 PAUSED: {name} — {reason}")
+                    actions_taken.append(f"💀 PAUSED: {name[:40]} — {reason}")
                     log(f"BONCOS PAUSE: {name}")
                 except Exception as e:
                     log(f"Pause failed for {name}: {e}", "ERROR")
             else:
-                actions_taken.append(f"💤 Already paused: {name}")
+                actions_taken.append(f"💤 Already paused: {name[:40]}")
         
         elif verdict in ("WINNER", "SUPER"):
-            scale_pct = 0.50 if verdict == "SUPER" else 0.20
-            new_budget = min(
-                int(current_budget * (1 + scale_pct)),
-                account_config["budget_cap_per_camp"]
-            )
-            
-            # Only auto-reactivate core portfolio campaigns
+            # Reactivate if core and paused
             if status != "ACTIVE" and is_core:
                 try:
                     fb_post(cid, status="ACTIVE")
-                    actions_taken.append(f"🔄 REACTIVATED: {name} (core)")
-                    log(f"WINNER REACTIVATED: {name}")
+                    actions_taken.append(f"🔄 REACTIVATED: {name[:40]}")
                 except Exception as e:
                     log(f"Reactivate failed: {e}", "ERROR")
-            elif status != "ACTIVE" and not is_core:
-                actions_taken.append(f"👀 Non-core winner still paused: {name}")
             
-            if new_budget > current_budget and new_budget <= account_config["budget_cap_per_camp"]:
-                try:
-                    fb_post(cid, daily_budget=str(new_budget))
+            # Check bid strategy (Veris rule: only scale LOWEST_COST)
+            bid_strategy, bid_amount = get_campaign_bid_strategy(cid)
+            is_cost_cap = bid_strategy in ("COST_CAP", "LOWEST_COST_WITH_BID_CAP")
+            is_lowest_cost = bid_strategy == "LOWEST_COST"
+            
+            if is_cost_cap and clones_created < max_clones_per_cycle:
+                # Veris Rule: COST_CAP winner → create LC clone, NOT scale budget
+                if status == "ACTIVE" and roas > account_config["roas_winner"]:
+                    clone_id = create_lc_clone(camp, account_id, account_config)
+                    if clone_id:
+                        clones_created += 1
+                        actions_taken.append(
+                            f"🧬 LC CLONE: {name[:30]} — COST_CAP→LOWEST_COST "
+                            f"(bid Rp{bid_amount}, ROAS {roas:.1f}x)"
+                        )
+                    else:
+                        actions_taken.append(
+                            f"⏸️ HOLD: {name[:40]} — COST_CAP winner, clone failed"
+                        )
+                else:
                     actions_taken.append(
-                        f"📈 SCALED: {name} — Rp{current_budget:,}→Rp{new_budget:,} ({reason})"
+                        f"⏸️ HOLD: {name[:40]} — COST_CAP (budget scale useless, "
+                        f"bid Rp{bid_amount} controls spend)"
                     )
-                    log(f"SCALE: {name} Rp{current_budget:,}→Rp{new_budget:,}")
-                except Exception as e:
-                    log(f"Scale failed: {e}", "ERROR")
+            
+            elif is_lowest_cost:
+                # LOWEST_COST → scale budget (this actually increases spend)
+                scale_pct = 0.50 if verdict == "SUPER" else 0.20
+                new_budget = min(
+                    int(current_budget * (1 + scale_pct)),
+                    account_config["budget_cap_per_camp"]
+                )
+                if new_budget > current_budget:
+                    try:
+                        fb_post(cid, daily_budget=str(new_budget))
+                        actions_taken.append(
+                            f"📈 SCALED: {name[:30]} — "
+                            f"Rp{current_budget:,}→Rp{new_budget:,} (LC, ROAS {roas:.1f}x)"
+                        )
+                        log(f"LC SCALE: {name} Rp{current_budget:,}→Rp{new_budget:,}")
+                    except Exception as e:
+                        log(f"Scale failed: {e}", "ERROR")
+            
+            else:
+                # Unknown strategy - log and hold
+                actions_taken.append(
+                    f"⏸️ HOLD: {name[:40]} — unknown bid strategy ({bid_strategy})"
+                )
         
         elif verdict == "FATIGUE":
-            actions_taken.append(f"🔄 FATIGUE: {name} — {reason} (rotate creative)")
+            actions_taken.append(f"🔄 FATIGUE: {name[:40]} — {reason}")
     
     return actions_taken
 
