@@ -32,7 +32,7 @@ export function applyAiSuggestion(type) {
   if (type === 'low_roas') {
     if (!confirm('Apply optimization to all campaigns with low ROAS?')) return;
     
-    api.post('/api/campaigns/optimize-low-roas')
+    api.post('/campaigns/optimize-low-roas')
       .then(result => {
         alert('Low ROAS campaigns optimized!\n' + result.message);
       })
@@ -40,7 +40,7 @@ export function applyAiSuggestion(type) {
   } else if (type === 'increase_budget') {
     if (!confirm('Increase budget for high-performing campaigns?')) return;
     
-    api.post('/api/campaigns/increase-budget')
+    api.post('/campaigns/increase-budget')
       .then(result => {
         alert('Budget increased!\n' + result.message);
       })

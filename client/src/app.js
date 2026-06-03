@@ -17,16 +17,25 @@ import { renderGlobalAds } from './views/global-ads.js';
 import { renderAiSuggestions } from './views/ai-suggestions.js';
 import { renderDocs } from './views/docs.js';
 import { renderPrivacyPolicy, renderTermsService, renderGDPR } from './views/legal.js';
+import { renderLogin } from './views/login.js';
+import { renderCampaignWizard } from './views/campaign-wizard.js';
+import { renderAdWizard } from './views/ads-wizard.js';
+import { renderMarketingLP } from './views/marketing-lp.js';
 
 const router = new Router(document.getElementById('app'));
 
 // Frictionless onboarding - dashboard for everyone!
 router.on('/', renderDashboard);
+router.on('/login', renderLogin);
+router.on('/register', renderLogin);
+router.on('/welcome', renderMarketingLP);
 router.on('/creator', renderCreatorDashboard);
 router.on('/docs', renderDocs);
 router.on('/privacy', renderPrivacyPolicy);
 router.on('/terms', renderTermsService);
 router.on('/gdpr', renderGDPR);
+router.on('/ads/wizard', renderAdWizard);
+router.on('/campaigns/wizard', renderCampaignWizard);
 router.on('/ads', renderAdsList);
 router.on('/ads/create', renderAdsCreate);
 router.on('/landing', renderLandingList);

@@ -19,6 +19,12 @@ export async function renderAdWizard(el) {
     { id: 6, title: 'Add CTA', description: 'What should they do next?' }
   ];
 
+  function renderStepDots(currentStepId, overallStep) {
+    const filled = '<div class="w-2 h-2 rounded-full bg-slate-600"></div>'.repeat(currentStepId);
+    const empty = '<div class="w-2 h-2 rounded-full bg-slate-500"></div>'.repeat(6 - currentStepId);
+    return filled + empty;
+  }
+
   function render() {
     el.innerHTML = `
       <div class="min-h-[calc(100vh-64px)] bg-gradient-to-br from-slate-900 to-slate-800 p-4 sm:p-8">
@@ -29,8 +35,7 @@ export async function renderAdWizard(el) {
               <div class="flex items-center gap-3 ${s.id <= state.step ? 'text-emerald-400' : 'text-slate-500'}">
                 <div class="w-8 h-8 rounded-full ${s.id < state.step ? 'bg-emerald-100' : 'bg-slate-700'} flex items-center justify-center font-bold text-white">${s.id}</div>
                 <div class="flex-1">
-                  ${[...Array(s.id).fill(0).map(() => '<div class="w-2 h-2 rounded-full bg-slate-600"></div>')}
-                  ${[...Array(6 - s.id).fill(0).map(() => '<div class="w-2 h-2 rounded-full ${s.id < state.step ? 'bg-emerald-300' : 'bg-slate-500'}"></div>')}
+                  ${renderStepDots(s.id, state.step)}
                 </div>
               </div>
             `).join('')}
