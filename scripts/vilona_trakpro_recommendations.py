@@ -8,7 +8,8 @@ Features:
   3. Decision Center — Score + prioritize campaigns
   4. Creative Fatigue Detector — CTR/CPC trend analysis
   5. Scale Ladder Planner — Graduated budget increase plan
-  6. Telegram Alert Generator — Formatted /winner, /boncos, /scale, /rekomendasi
+  6. SOP Auto Generator — Ready-to-execute scale/pause/pantau/cek mapping
+  7. Telegram Alert Generator — Formatted /winner, /boncos, /scale, /rekomendasi
 
 Output: ~/projects/1ai-ads/data/vilona_trakpro_recommendations.json
 """
@@ -191,6 +192,62 @@ def plan_scale_ladder(winners, max_budget=500000, max_daily_increase_pct=30):
     return ladders
 
 
+def generate_sop_actions(campaign_insights, scores, account_config, shopee_data):
+    """Generate ready-to-execute SOP instructions.
+    SCALE / PAUSE / PANTAU / CEK MAPPING"""
+    actions = []
+    sorted_scores = sorted(scores, key=lambda x: x["score"], reverse=True)
+    
+    # SCALE
+    top = [s for s in sorted_scores if s["score"] >= 60]
+    if top:
+        for s in top[:3]:
+            actions.append({"priority":1,"icon":"📈","category":"SCALE",
+                "title":f"Scale: {s['name'][:40]}",
+                "detail":f"Score {s['score']}/100 | {s['note']}",
+                "action":f"Buat LC clone baru. Budget Rp100K, LOWEST_COST_WITH_BID_CAP @ Rp200."})
+    else:
+        actions.append({"priority":1,"icon":"⏸️","category":"SCALE",
+            "title":"Belum ada siap scale","detail":"ROAS belum WINNER (3x)",
+            "action":"Engine auto-detect begitu ROAS tembus."})
+    
+    # PAUSE
+    pause_list = [s for s in sorted_scores if s.get("spend",0)>5000 and s.get("link_clicks",0)==0 and s["score"]<20]
+    if pause_list:
+        for s in pause_list[:3]:
+            actions.append({"priority":2,"icon":"🛑","category":"PAUSE",
+                "title":f"Pause: {s['name'][:40]}",
+                "detail":f"Rp{s['spend']:,.0f} tanpa link clicks",
+                "action":"Pause. Evaluasi creative & targeting."})
+    else:
+        actions.append({"priority":2,"icon":"✅","category":"PAUSE",
+            "title":"Tidak ada boncos","detail":"Semua campaign sehat",
+            "action":"Lanjutkan monitoring."})
+    
+    # PANTAU
+    mid = [s for s in sorted_scores if 30<=s["score"]<60 and s.get("spend",0)>2000]
+    if mid:
+        for s in mid[:3]:
+            actions.append({"priority":3,"icon":"👁️","category":"PANTAU",
+                "title":f"Pantau: {s['name'][:40]}",
+                "detail":f"Score {s['score']}/100 | {s['note']}",
+                "action":"Monitor 24 jam. Flag fatigue jika CPC naik/CTR turun."})
+    
+    # CEK MAPPING
+    tags = account_config.get("tags",[])
+    info = []
+    for tag in tags:
+        if tag in shopee_data:
+            d = shopee_data[tag]
+            info.append(f"{tag}: {d['orders']} orders, Rp{d['total_commission']:,.0f}")
+    actions.append({"priority":0,"icon":"🔗","category":"CEK MAPPING",
+        "title":"Cek Mapping Campaign → Taglink",
+        "detail":" | ".join(info) if info else "No Shopee data",
+        "action":"Upload CSV Shopee terbaru. Pastikan taglink sesuai."})
+    
+    return sorted(actions, key=lambda x: x["priority"])
+
+
 def generate_recommendations(campaign_insights, shopee_data, account_config, state):
     """
     Generate full recommendation report.
@@ -286,7 +343,7 @@ def generate_recommendations(campaign_insights, shopee_data, account_config, sta
         })
     
     # 5. Daily SOP Actions
-    sop_actions = []
+    sop_actions = generate_sop_actions(campaign_insights, scores, account_config, shopee_data)
     
     if scores:
         best = scores[0]
