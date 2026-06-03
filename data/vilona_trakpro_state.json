@@ -1,6 +1,6 @@
 {
   "0858": {
-    "last_cycle": "2026-06-03T18:56:49.532865+07:00",
+    "last_cycle": "2026-06-03T18:57:18.158369+07:00",
     "campaigns": {
       "120248404118800416": {
         "name": "0858_rakpiring_VILONA_WINNER_BID",
@@ -74,8 +74,8 @@
       },
       "120249941008950416": {
         "name": "0858_rakpiring_broad_BID",
-        "ctr": 5.086207,
-        "cpc": 155.762712
+        "ctr": 5.081826,
+        "cpc": 155.830508
       },
       "120249941045990416": {
         "name": "0858_organizer_broad_BID",
@@ -129,8 +129,8 @@
       },
       "120250016047830416": {
         "name": "0858_gajahThai_fashionShopping_BID",
-        "ctr": 5.948837,
-        "cpc": 83.993474
+        "ctr": 5.945503,
+        "cpc": 84.026106
       },
       "120250016058540416": {
         "name": "0858_gajahThai_fashionBelanja_BID",
@@ -194,9 +194,9 @@
       }
     },
     "summary": {
-      "active": 13,
+      "active": 6,
       "total_campaigns": 79,
-      "spend_48h": 379218,
+      "spend_48h": 379267,
       "winners": 0,
       "boncos": 0,
       "winner_names": [],
