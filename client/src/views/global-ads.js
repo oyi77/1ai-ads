@@ -20,8 +20,8 @@ export async function renderGlobalAds(el) {
       if (state.searchQuery) params.set('q', state.searchQuery);
       if (state.country) params.set('country', state.country);
       params.set('limit', '30');
-      const { data } = await api.get(`/meta/ad-library?${params.toString()}`);
-      state.ads = data || [];
+      const { data } = await api.get(`/ads-library/search?${params.toString()}`);
+      state.ads = data?.ads || [];
     } catch (err) {
       state.error = err.message;
       state.ads = [];
@@ -60,7 +60,7 @@ export async function renderGlobalAds(el) {
         ${state.error ? `
           <div class="bg-red-900/30 border border-red-700/50 p-6 rounded-xl text-center">
             <p class="text-red-300 font-medium">${esc(state.error)}</p>
-            <p class="text-slate-500 text-sm mt-2">Note: Ad Library API requires special permissions.</p>
+            <p class="text-slate-500 text-sm mt-2">Try Meta, Google, or TikTok platform. Note: Meta Ad Library API requires special app approval.</p>
           </div>
         ` : state.isLoading ? `
           <div class="p-12 text-center text-slate-400">
