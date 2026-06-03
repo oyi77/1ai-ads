@@ -1,0 +1,59 @@
+{
+  "date": "2026-06-02",
+  "account": "nyamiresep",
+  "total_commission": 592698.0,
+  "total_purchase_commissioned": 14250458.0,
+  "total_items_commissioned": 280,
+  "commissioned_orders": 204,
+  "zero_commission_orders": 17,
+  "total_orders": 221,
+  "commission_rate": 4.2,
+  "platform_breakdown": {
+    "Facebook": {
+      "orders": 128,
+      "commission": 384578.0
+    },
+    "Instagram": {
+      "orders": 31,
+      "commission": 101350.0
+    },
+    "Others": {
+      "orders": 28,
+      "commission": 63658.0
+    },
+    "Websites": {
+      "orders": 13,
+      "commission": 36318.0
+    },
+    "Threads": {
+      "orders": 4,
+      "commission": 6794.0
+    }
+  },
+  "tag_breakdown": {
+    "Atayasetelankaosanak": {
+      "orders": 81,
+      "commission": 296427.0
+    },
+    "rakdapur3": {
+      "orders": 98,
+      "commission": 209498.0
+    },
+    "dressanakperempuan": {
+      "orders": 6,
+      "commission": 35981.0
+    },
+    "WallpaperDindingVinyl": {
+      "orders": 14,
+      "commission": 24749.0
+    },
+    "benihsayuran": {
+      "orders": 4,
+      "commission": 23570.0
+    },
+    "setanakfernando": {
+      "orders": 1,
+      "commission": 2472.0
+    }
+  }
+}

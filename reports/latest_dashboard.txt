@@ -1,0 +1,36 @@
+📊 *ADS DASHBOARD* — 03 Jun 2026 13:44 WIB
+
+❌ *Selow ID 1041*
+  ├─ 0/0 kampanye aktif
+  ├─ Spend hari ini: Rp0
+  └─ Konversi: —
+
+❌ *Selow ID 1208*
+  ├─ 0/0 kampanye aktif
+  ├─ Spend hari ini: Rp0
+  └─ Konversi: —
+
+❌ *Selow ID 1134*
+  ├─ 0/0 kampanye aktif
+  ├─ Spend hari ini: Rp0
+  └─ Konversi: —
+
+❌ *Selow ID 1340*
+  ├─ 0/0 kampanye aktif
+  ├─ Spend hari ini: Rp0
+  └─ Konversi: —
+
+❌ *Selow ID 0858*
+  ├─ 0/0 kampanye aktif
+  ├─ Spend hari ini: Rp0
+  └─ Konversi: —
+
+❌ *Produk Digital*
+  ├─ 0/0 kampanye aktif
+  ├─ Spend hari ini: Rp0
+  └─ Konversi: —
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 *Total Spend:* Rp0
+📈 *Total Aktif:* 0/0 kampanye
+⏱️  *Last updated:* 03 Jun 2026 13:44 WIB
