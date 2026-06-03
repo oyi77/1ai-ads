@@ -33,11 +33,18 @@ def run_decision():
         ['python3', str(SCRIPT_DIR/'trakpro_vilona.py'), 'decide', '--account', '1041', '--days', '3'],
         capture_output=True, text=True, timeout=120, cwd=str(PROJECT_DIR)
     )
+    if result.returncode != 0:
+        print(f"❌ trakpro_vilona.py exited with code {result.returncode}")
+        print(f"   stderr: {result.stderr[:500]}")
+        return None
     return result.stdout
 
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else 'decide'
     output = run_decision()
+    if not output:
+        send_telegram('⚠️ Decision Center gagal generate report. Cek trakpro_vilona.py.')
+        return
     DECIDE_OUTPUT.write_text(output)
     
     lines = output.split('\n')
@@ -45,12 +52,20 @@ def main():
     current = None
     
     for line in lines:
-        if '📊 OVERVIEW' in line: current = 'OVERVIEW'
-        elif '🏆 WINNERS' in line: current = 'WINNERS'
-        elif '💀 BONCOS' in line: current = 'BONCOS'
-        elif '📋 PRIORITY' in line: current = 'PRIORITY'
-        elif current and line.strip():
-            sections[current].append(line)
+        # Match actual CLI output format from fmt_cli()
+        if line.startswith('Campaigns:') or line.startswith('ROAS:') or line.startswith('Spend:'):
+            current = 'OVERVIEW'
+            sections[current].append(line.strip())
+        elif 'WINNERS' in line and not line.startswith(' '):
+            current = 'WINNERS'
+        elif 'BONCOS' in line and not line.startswith(' '):
+            current = 'BONCOS'
+        elif 'PRIORITY ACTIONS' in line:
+            current = 'PRIORITY'
+        elif line.startswith('=='):
+            current = None
+        elif current and line.strip() and not line.startswith('--'):
+            sections[current].append(line.strip())
     
     ts = datetime.now()
     if mode == 'daily':
