@@ -51,16 +51,7 @@
             <span class="font-black text-xl tracking-tighter text-white">ADFORGE<span class="text-sky-500">.AI</span></span>
           </a>
           
-          <div id="nav-links" class="hidden xl:flex items-center gap-1">
-            ${renderTopNavItem('Dashboard', '#/')}
-            ${renderTopNavItem('Campaigns', '#/campaigns')}
-            ${renderTopNavItem('Creatives', '#/ads')}
-            ${renderTopNavItem('Landing', '#/landing')}
-            ${renderTopNavItem('Analytics', '#/analytics')}
-            ${renderTopNavItem('Trending', '#/trending')}
-            ${renderTopNavItem('Spy', '#/competitor-spy')}
-            ${renderTopNavItem('Global', '#/global-ads')}
-          </div>
+          <div id="nav-links" class="hidden xl:flex items-center gap-1"></div>
         </div>
 
         <div class="flex items-center gap-4">
@@ -84,6 +75,20 @@
       const active = window.location.hash === hash || (hash === '#/' && (window.location.hash === '' || window.location.hash === '#'));
       return `<a href="${hash}" class="px-4 py-2 rounded-lg text-xs font-bold transition-all ${active ? 'bg-sky-500/10 text-sky-400' : 'text-slate-500 hover:text-white hover:bg-[#161b22]'} uppercase tracking-widest">${label}</a>`;
     }
+    (function renderTopNav() {
+      const el = document.getElementById('nav-links');
+      if (!el) return;
+      el.innerHTML = [
+        renderTopNavItem('Dashboard', '#/'),
+        renderTopNavItem('Campaigns', '#/campaigns'),
+        renderTopNavItem('Creatives', '#/ads'),
+        renderTopNavItem('Landing', '#/landing'),
+        renderTopNavItem('Analytics', '#/analytics'),
+        renderTopNavItem('Trending', '#/trending'),
+        renderTopNavItem('Spy', '#/competitor-spy'),
+        renderTopNavItem('Global', '#/global-ads'),
+      ].join('');
+    })();
   </script>
   <div id="app"></div>
 
