@@ -57,6 +57,11 @@ router.on('/attribution', async () => {
   const { renderAttributionView } = await import('./views/attribution.js');
   document.getElementById('app').replaceChildren(await renderAttributionView());
 });
+router.on('/meta-ai', async () => {
+  const { renderMetaAiView } = await import('./views/meta-ai.js');
+  document.getElementById('app').replaceChildren();
+  await renderMetaAiView(document.getElementById('app'));
+});
 
 // Nav visibility - ALL links visible without auth
 function updateNav() {
@@ -81,7 +86,8 @@ function updateNav() {
       'a[href="#/creator"]',
       'a[href="#/settings"]',
       'a[href="#/realtime"]',
-      'a[href="#/attribution"]'
+      'a[href="#/attribution"]',
+      'a[href="#/meta-ai"]'
     ];
     allSelectors.forEach(sel => {
       const el = navLinks.querySelector(sel);
