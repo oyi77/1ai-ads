@@ -1,6 +1,6 @@
 {
   "0858": {
-    "last_cycle": "2026-06-03T18:37:02.467193+07:00",
+    "last_cycle": "2026-06-03T18:56:49.532865+07:00",
     "campaigns": {
       "120248404118800416": {
         "name": "0858_rakpiring_VILONA_WINNER_BID",
@@ -24,8 +24,8 @@
       },
       "120249502539430416": {
         "name": "TC_GEO_rakpiringpengering_INT01",
-        "ctr": 4.991443,
-        "cpc": 173.531429
+        "ctr": 4.99002,
+        "cpc": 173.611429
       },
       "120249722735620416": {
         "name": "OFF_GEO_rakpiringpengering_Parenting",
@@ -44,8 +44,8 @@
       },
       "120249722735720416": {
         "name": "0858_organizer_travel_BID",
-        "ctr": 4.341272,
-        "cpc": 148.416667
+        "ctr": 4.37142,
+        "cpc": 147.393103
       },
       "120249727183880416": {
         "name": "ON_V2_CBO_organizerpullout_Dapur_1",
@@ -129,13 +129,13 @@
       },
       "120250016047830416": {
         "name": "0858_gajahThai_fashionShopping_BID",
-        "ctr": 5.949548,
-        "cpc": 84.012364
+        "ctr": 5.948837,
+        "cpc": 83.993474
       },
       "120250016058540416": {
         "name": "0858_gajahThai_fashionBelanja_BID",
-        "ctr": 5.574047,
-        "cpc": 88.073248
+        "ctr": 5.577178,
+        "cpc": 87.997621
       },
       "120250017839070416": {
         "name": "0858_fashionWanitaPremium_shopping_BID",
@@ -194,9 +194,9 @@
       }
     },
     "summary": {
-      "active": 0,
+      "active": 13,
       "total_campaigns": 79,
-      "spend_48h": 378549,
+      "spend_48h": 379218,
       "winners": 0,
       "boncos": 0,
       "winner_names": [],
