@@ -1,0 +1,703 @@
+{
+  "0858": {
+    "last_cycle": "2026-06-03T16:46:37.558885+07:00",
+    "campaigns": {
+      "120248404118800416": {
+        "name": "0858_rakpiring_VILONA_WINNER_BID",
+        "ctr": 3.68272,
+        "cpc": 120.538462
+      },
+      "120249205714820416": {
+        "name": "0858_rakpiring_shopping_BID",
+        "ctr": 3.246014,
+        "cpc": 139.45614
+      },
+      "120249205714850416": {
+        "name": "0858_rakpiring_travel_BID",
+        "ctr": 3.832753,
+        "cpc": 179.136364
+      },
+      "120249209669800416": {
+        "name": "V2_CBO_organizerpullout_Dapur",
+        "ctr": 5.013193,
+        "cpc": 107.614035
+      },
+      "120249502539430416": {
+        "name": "TC_GEO_rakpiringpengering_INT01",
+        "ctr": 4.998572,
+        "cpc": 173.12
+      },
+      "120249722735620416": {
+        "name": "OFF_GEO_rakpiringpengering_Parenting",
+        "ctr": 3.846154,
+        "cpc": 198.2
+      },
+      "120249722735650416": {
+        "name": "TC_Kakriput_rakpiringpengering_Jewelry",
+        "ctr": 4.6875,
+        "cpc": 134.0
+      },
+      "120249722735700416": {
+        "name": "TC_Kakriput_rakpiringpengering_Pinterest",
+        "ctr": 4.398664,
+        "cpc": 106.151899
+      },
+      "120249722735720416": {
+        "name": "0858_organizer_travel_BID",
+        "ctr": 4.349139,
+        "cpc": 147.888889
+      },
+      "120249727183880416": {
+        "name": "ON_V2_CBO_organizerpullout_Dapur_1",
+        "ctr": 6.20915,
+        "cpc": 122.947368
+      },
+      "120249727184140416": {
+        "name": "0858_organizer_pelancong_EMPTY",
+        "ctr": 4.42623,
+        "cpc": 125.703704
+      },
+      "120249727184150416": {
+        "name": "0858_organizer_jewelry_EMPTY",
+        "ctr": 2.040816,
+        "cpc": 210.0
+      },
+      "120249727184160416": {
+        "name": "0858_organizer_interior_design_EMPTY",
+        "ctr": 1.923077,
+        "cpc": 201.0
+      },
+      "120249727184170416": {
+        "name": "0858_organizer_tableware_EMPTY",
+        "ctr": 5.244123,
+        "cpc": 146.37931
+      },
+      "120249941008950416": {
+        "name": "0858_rakpiring_broad_BID",
+        "ctr": 5.086207,
+        "cpc": 155.762712
+      },
+      "120249941045990416": {
+        "name": "0858_organizer_broad_BID",
+        "ctr": 3.658537,
+        "cpc": 104.666667
+      },
+      "120250009402690416": {
+        "name": "0858_organizer_broad2_BID",
+        "ctr": 5.333333,
+        "cpc": 135.142857
+      },
+      "120250009830630416": {
+        "name": "0858_organizer_dapurShop_BID",
+        "ctr": 5.283019,
+        "cpc": 138.857143
+      },
+      "120250009834770416": {
+        "name": "0858_organizer_shopping_BID",
+        "ctr": 2.702703,
+        "cpc": 295.0
+      },
+      "120250009839170416": {
+        "name": "0858_organizer_fashion_BID",
+        "ctr": 6.824147,
+        "cpc": 110.0
+      },
+      "120250009843030416": {
+        "name": "0858_organizer_broad_BID",
+        "ctr": 3.409091,
+        "cpc": 214.333333
+      },
+      "120250009867060416": {
+        "name": "0858_organizer_rumah_BID",
+        "ctr": 4.0,
+        "cpc": 196.0
+      },
+      "120250009872130416": {
+        "name": "0858_organizer_resep_BID",
+        "ctr": 2.985075,
+        "cpc": 260.5
+      },
+      "120250012602960416": {
+        "name": "TEST_gajahThailand_shoppingFashion_BID",
+        "ctr": 4.878049,
+        "cpc": 147.5
+      },
+      "120250015760320416": {
+        "name": "0858_gajahThailand_fashion_BID",
+        "ctr": 1.666667,
+        "cpc": 159.0
+      },
+      "120250016047830416": {
+        "name": "0858_gajahThai_fashionShopping_BID",
+        "ctr": 5.977518,
+        "cpc": 83.873894
+      },
+      "120250016058540416": {
+        "name": "0858_gajahThai_fashionBelanja_BID",
+        "ctr": 5.588381,
+        "cpc": 87.908797
+      },
+      "120250017839070416": {
+        "name": "0858_fashionWanitaPremium_shopping_BID",
+        "ctr": 0.0,
+        "cpc": 0.0
+      },
+      "120250055874890416": {
+        "name": "BIDCAP_GEO_rakpiringpengering_INT03",
+        "ctr": 5.555556,
+        "cpc": 86.333333
+      },
+      "120250055874900416": {
+        "name": "BIDCAP_GEO_rakpiringpengering_INT04",
+        "ctr": 6.20155,
+        "cpc": 71.916667
+      },
+      "120250055874910416": {
+        "name": "BIDCAP_GEO_rakpiringpengering_INT05",
+        "ctr": 4.723347,
+        "cpc": 129.6
+      },
+      "120250055874920416": {
+        "name": "BIDCAP_GEO_rakpiringpengering_INT06",
+        "ctr": 2.403846,
+        "cpc": 318.0
+      },
+      "120250055874930416": {
+        "name": "BIDCAP_GEO_rakpiringpengering_INT09",
+        "ctr": 2.307692,
+        "cpc": 298.333333
+      },
+      "120250055874940416": {
+        "name": "BIDCAP_GEO_rakpiringpengering_INT08",
+        "ctr": 3.184713,
+        "cpc": 147.4
+      },
+      "120250055875080416": {
+        "name": "BIDCAP_GEO_rakpiringpengering_INT01",
+        "ctr": 3.703704,
+        "cpc": 180.727273
+      },
+      "120250055875130416": {
+        "name": "BIDCAP_GEO_rakpiringpengering_INT07",
+        "ctr": 4.276316,
+        "cpc": 149.102564
+      },
+      "120250055875150416": {
+        "name": "BIDCAP_GEO_rakpiringpengering_INT10",
+        "ctr": 5.555556,
+        "cpc": 74.25
+      },
+      "120250055875170416": {
+        "name": "BIDCAP_GEO_rakpiringpengering_INT02",
+        "ctr": 4.61165,
+        "cpc": 147.578947
+      }
+    },
+    "summary": {
+      "active": 3,
+      "total_campaigns": 79,
+      "spend_48h": 374879,
+      "winners": 0,
+      "boncos": 0,
+      "winner_names": [],
+      "boncos_names": []
+    }
+  },
+  "1041": {
+    "last_cycle": "2026-06-03T16:46:40.975130+07:00",
+    "campaigns": {
+      "120245687035640121": {
+        "name": "OFF_TC_1-3-1_Rakdapur,multistorage",
+        "ctr": 4.615385,
+        "cpc": 152.0
+      },
+      "120245688589920121": {
+        "name": "TC_Nyamiresep_Action_Movies",
+        "ctr": 3.439269,
+        "cpc": 136.493671
+      },
+      "120245688602090121": {
+        "name": "TC_Nyamiresep_Movies",
+        "ctr": 3.833866,
+        "cpc": 75.666667
+      },
+      "120245814350950121": {
+        "name": "BIDCAP_Rakdapur3_Movies_WinnerA",
+        "ctr": 5.741627,
+        "cpc": 64.75
+      },
+      "120245955757740121": {
+        "name": "TC_Nyamiresep_LLA1p_Rakdapur",
+        "ctr": 3.350893,
+        "cpc": 122.449782
+      },
+      "120246294308390121": {
+        "name": "OFF_TC_Nyamiresep_Pertanian_rakdapur3",
+        "ctr": 9.356725,
+        "cpc": 122.3125
+      },
+      "120246346750600121": {
+        "name": "OFF_TC_Nyamiresep_PROFIT_Nyamiresep_Fashion_Rakdapur3",
+        "ctr": 1.989026,
+        "cpc": 143.655172
+      },
+      "120246346816880121": {
+        "name": "OFF_TC_Nyamiresep_Belanja_Rakdapur3",
+        "ctr": 2.564103,
+        "cpc": 157.0
+      },
+      "120246441368280121": {
+        "name": "OFF_LC_Nyamiresep_OFF",
+        "ctr": 3.954802,
+        "cpc": 264.714286
+      },
+      "120246461738850121": {
+        "name": "TC_Nyamiresep_VILONA_Tourism_Rakdapur",
+        "ctr": 7.150807,
+        "cpc": 90.595331
+      },
+      "120246605547500121": {
+        "name": "OFF_TC_Nyamiresep_Stikerkeramik",
+        "ctr": 3.864896,
+        "cpc": 87.444025
+      },
+      "120246606770070121": {
+        "name": "BIDCAP_Atayasetelankaosanak_Original",
+        "ctr": 7.401906,
+        "cpc": 79.20903
+      },
+      "120246607418410121": {
+        "name": "TC_Nyamiresep_Test_Bajuanak2",
+        "ctr": 7.106363,
+        "cpc": 82.287582
+      },
+      "120246609585580121": {
+        "name": "TC_Nyamiresep_Test_Benihsayuran_26052026_04",
+        "ctr": 5.615662,
+        "cpc": 84.40367
+      },
+      "120246652365070121": {
+        "name": "OFF_TC_Nyamiresep_TC_Test_Bajuanak3_26052026_05",
+        "ctr": 5.929633,
+        "cpc": 99.322251
+      },
+      "120246684442740121": {
+        "name": "TC_Nyamiresep_Scale_Rakdapur_Memasak",
+        "ctr": 5.128205,
+        "cpc": 86.5
+      },
+      "120246684458310121": {
+        "name": "TC_Nyamiresep_OFF_Nyamiresep_Scale_Rakdapur_Furnitur_Belanja",
+        "ctr": 5.65371,
+        "cpc": 142.375
+      },
+      "120246684890490121": {
+        "name": "TC_Nyamiresep_Scale_Rakdapur_Organisir",
+        "ctr": 6.443299,
+        "cpc": 86.44
+      },
+      "120246684897450121": {
+        "name": "OFF_TC_Nyamiresep_TC_Nyamiresep_Scale_Rakdapur_Furnitur_Interior",
+        "ctr": 4.687128,
+        "cpc": 117.279188
+      },
+      "120246684903190121": {
+        "name": "TC_Nyamiresep_OFF_Nyamiresep_Scale_Rakdapur_Masak_Perhiasan",
+        "ctr": 4.511278,
+        "cpc": 132.0
+      },
+      "120246684907160121": {
+        "name": "TC_Nyamiresep_Scale_Rakdapur_Online_Kecantikan",
+        "ctr": 3.310502,
+        "cpc": 94.062069
+      },
+      "120246684913510121": {
+        "name": "OFF_TC_Nyamiresep_Scale_Rakdapur_Dapur_Fashion",
+        "ctr": 4.651163,
+        "cpc": 118.5
+      },
+      "120246684918410121": {
+        "name": "TC_Nyamiresep_TC_Nyamiresep_Scale_Rakdapur_Furnitur_Masak",
+        "ctr": 7.380074,
+        "cpc": 79.85
+      },
+      "120246684923090121": {
+        "name": "TC_Nyamiresep_Scale_Rakdapur_Interior_Elektronik",
+        "ctr": 3.846154,
+        "cpc": 208.0
+      },
+      "120246684928290121": {
+        "name": "OFF_TC_Nyamiresep_Scale_Rakdapur_Renovasi_Belanja",
+        "ctr": 4.787234,
+        "cpc": 148.111111
+      },
+      "120246684934080121": {
+        "name": "TC_Nyamiresep_Scale_Rakdapur_Ritel",
+        "ctr": 0.0,
+        "cpc": 0.0
+      },
+      "120246870770940121": {
+        "name": "OFF_LC_Nyamiresep_Test_SetelanAnakTest_280526_1430",
+        "ctr": 13.580247,
+        "cpc": 117.136364
+      },
+      "120246870772310121": {
+        "name": "OFF_LC_Nyamiresep_Test_PisauPeelerTest_280526_1430",
+        "ctr": 6.086957,
+        "cpc": 201.714286
+      },
+      "120246978309690121": {
+        "name": "BC_Nyamiresep_Scale_Rakdapur_Furnitur",
+        "ctr": 5.232558,
+        "cpc": 105.722222
+      },
+      "120246978309700121": {
+        "name": "BC_Nyamiresep_VILONA_Tourism_Rakdapur",
+        "ctr": 6.227884,
+        "cpc": 96.477273
+      },
+      "120246978310020121": {
+        "name": "OFF_BC_Nyamiresep_Scale_Rakdapur_Masak_Belanja",
+        "ctr": 3.571429,
+        "cpc": 193.0
+      },
+      "120246978310030121": {
+        "name": "OFF_BC_Nyamiresep_BIDCAP_Test_Bajuanak2_26052026_03",
+        "ctr": 4.307116,
+        "cpc": 157.130435
+      },
+      "120246978310040121": {
+        "name": "TC_Nyamiresep_Rakdapur_Baju",
+        "ctr": 7.434053,
+        "cpc": 98.155914
+      },
+      "120246978310050121": {
+        "name": "OFF_TC_Nyamiresep_Belanja_Rakdapur3",
+        "ctr": 4.72895,
+        "cpc": 105.780488
+      },
+      "120246978310060121": {
+        "name": "TC_Nyamiresep_Pertanian",
+        "ctr": 6.101695,
+        "cpc": 103.927778
+      },
+      "120246978310070121": {
+        "name": "OFF_TC_Nyamiresep_Scale_Rakdapur_Renovasi_Belanja",
+        "ctr": 1.030928,
+        "cpc": 541.0
+      },
+      "120246978310080121": {
+        "name": "OFF_TC_Nyamiresep_Scale_Rakdapur_Ritel_Dapur",
+        "ctr": 3.125,
+        "cpc": 159.5
+      },
+      "120246978310090121": {
+        "name": "BC_Nyamiresep_Rakdapur3_Drama movies",
+        "ctr": 6.253889,
+        "cpc": 91.5
+      },
+      "120246978310100121": {
+        "name": "TC_Nyamiresep_Scale_Rakdapur_Interior",
+        "ctr": 3.498159,
+        "cpc": 97.43609
+      },
+      "120246978310110121": {
+        "name": "TC_Nyamiresep_Scale_Rakdapur_Kecantikan",
+        "ctr": 2.898551,
+        "cpc": 148.75
+      },
+      "120246978310120121": {
+        "name": "TC_Nyamiresep_Scale_Rakdapur_Fashion",
+        "ctr": 6.037799,
+        "cpc": 103.855956
+      },
+      "120246978310160121": {
+        "name": "OFF_BC_Nyamiresep_Scale_Rakdapur_Furnitur_Interior",
+        "ctr": 2.797203,
+        "cpc": 155.125
+      },
+      "120246992724310121": {
+        "name": "OFF_LC_Nyamiresep_Test_Bibit_26052026_04",
+        "ctr": 4.31328,
+        "cpc": 237.921053
+      },
+      "120246992724760121": {
+        "name": "OFF_LC_Nyamiresep_LC_Test_Bajuanak2_26052026_03",
+        "ctr": 4.64716,
+        "cpc": 103.641975
+      },
+      "120246992724780121": {
+        "name": "OFF_LC_Nyamiresep_Rakdapur3_Movies_WinnerA",
+        "ctr": 5.555556,
+        "cpc": 114.666667
+      },
+      "120246992724800121": {
+        "name": "OFF_LC_Nyamiresep_LC_Nyamiresep_Scale_Rakdapur_Furnitur_Masak",
+        "ctr": 4.530744,
+        "cpc": 134.452381
+      },
+      "120246992724810121": {
+        "name": "OFF_LC_Nyamiresep_ActionMovies_Rakdapur3",
+        "ctr": 6.422018,
+        "cpc": 112.285714
+      },
+      "120246992724820121": {
+        "name": "LC_Nyamiresep_OFF_Nyamiresep_Properti_Rakdapur3",
+        "ctr": 2.564103,
+        "cpc": 300.5
+      },
+      "120246992724830121": {
+        "name": "OFF_LC_Nyamiresep_LC_Nyamiresep_Scale_Rakdapur_Furnitur_Interior",
+        "ctr": 5.287009,
+        "cpc": 159.885714
+      },
+      "120246992724840121": {
+        "name": "OFF_LC_Nyamiresep_Rakdapur3_Drama movies",
+        "ctr": 4.507042,
+        "cpc": 154.8125
+      },
+      "120246992724850121": {
+        "name": "OFF_LC_Nyamiresep_LC_Test_Kacamatabaca_26052026_04",
+        "ctr": 0.0,
+        "cpc": 0.0
+      },
+      "120246992724860121": {
+        "name": "OFF_LC_Nyamiresep_LC_Nyamiresep_Scale_Rakdapur_Masak_Belanja",
+        "ctr": 2.380952,
+        "cpc": 186.666667
+      },
+      "120246992724880121": {
+        "name": "BC_Nyamiresep_Fashion_Rakdapur",
+        "ctr": 5.983773,
+        "cpc": 94.50077
+      },
+      "120246992724890121": {
+        "name": "OFF_LC_Nyamiresep_Movies",
+        "ctr": 6.25,
+        "cpc": 152.0
+      },
+      "120246992724900121": {
+        "name": "LC_Nyamiresep_LC_Test_Bajuanak1_26052026_02",
+        "ctr": 5.954838,
+        "cpc": 76.472987
+      },
+      "120246992724910121": {
+        "name": "OFF_LC_Nyamiresep_LC_Test_Bajuanak3_26052026_05",
+        "ctr": 5.410122,
+        "cpc": 201.419355
+      },
+      "120246992724920121": {
+        "name": "OFF_LC_Nyamiresep_1-3-1_Rakdapur,multistorage",
+        "ctr": 3.658537,
+        "cpc": 162.333333
+      },
+      "120246992724930121": {
+        "name": "OFF_LC_Nyamiresep_Samsung_Rakdapur3_v2",
+        "ctr": 6.451613,
+        "cpc": 116.5
+      },
+      "120246992724940121": {
+        "name": "OFF_LC_Nyamiresep_VILONA_Dresses _Rakdapur3",
+        "ctr": 4.609218,
+        "cpc": 238.521739
+      },
+      "120246992724950121": {
+        "name": "OFF_LC_Nyamiresep_Agriculture_Rakdapur3",
+        "ctr": 6.20155,
+        "cpc": 117.5
+      },
+      "120246992724960121": {
+        "name": "OFF_LC_Nyamiresep_VILONA_pernikahan _Rakdapur3",
+        "ctr": 4.081633,
+        "cpc": 282.333333
+      },
+      "120246992724970121": {
+        "name": "OFF_LC_Nyamiresep_LLA1p_Rakdapur3_v2",
+        "ctr": 4.516129,
+        "cpc": 341.904762
+      },
+      "120246992725090121": {
+        "name": "OFF_LC_Nyamiresep_Test_Stikerkeramik_26052026_01",
+        "ctr": 2.251407,
+        "cpc": 238.416667
+      },
+      "120247042406810121": {
+        "name": "OFF_BC_Nyamiresep_Scale_Rakdapur_Furnitur_Masak - Salin",
+        "ctr": 3.658537,
+        "cpc": 166.0
+      },
+      "120247042406820121": {
+        "name": "OFF_BC_Nyamiresep_Scale_Rakdapur_Furnitur_Masak - Salin",
+        "ctr": 4.225352,
+        "cpc": 176.333333
+      },
+      "120247042406830121": {
+        "name": "OFF_BC_Nyamiresep_Scale_Rakdapur_Furnitur_Masak - Salin",
+        "ctr": 6.41115,
+        "cpc": 98.217391
+      },
+      "120247042406850121": {
+        "name": "BC_Nyamiresep_Scale_Rakdapur_Furnitur_Masak - Salin",
+        "ctr": 6.25,
+        "cpc": 116.333333
+      },
+      "120247042406920121": {
+        "name": "OFF_BC_Nyamiresep_Scale_Rakdapur_Furnitur_Masak - Salin",
+        "ctr": 3.208556,
+        "cpc": 175.666667
+      },
+      "120247168584710121": {
+        "name": "OFF_LC_Nyamiresep_Rakdapur_Dapur_Memasak",
+        "ctr": 7.407407,
+        "cpc": 100.5
+      },
+      "120247168585470121": {
+        "name": "OFF_LC_Nyamiresep_Rakdapur_Furnitur_Interior",
+        "ctr": 6.578947,
+        "cpc": 123.8
+      },
+      "120247168585640121": {
+        "name": "OFF_LC_Nyamiresep_Rakdapur_Renovasi_DIY",
+        "ctr": 7.224335,
+        "cpc": 75.087719
+      },
+      "120247168586100121": {
+        "name": "OFF_LC_Nyamiresep_Rakdapur_Kuliner_Resep",
+        "ctr": 6.962457,
+        "cpc": 79.441176
+      },
+      "120247168586320121": {
+        "name": "OFF_LC_Nyamiresep_Rakdapur_Makanan_Minuman",
+        "ctr": 11.904762,
+        "cpc": 67.4
+      },
+      "120247245871210121": {
+        "name": "BIDCAP_Nyamiresep_Benihsayuran_ABO",
+        "ctr": 4.46753,
+        "cpc": 90.475222
+      },
+      "120247272252830121": {
+        "name": "BIDCAP_Atayasetelankaosanak_Perlengkapan",
+        "ctr": 7.465181,
+        "cpc": 70.985075
+      },
+      "120247272252840121": {
+        "name": "BIDCAP_Atayasetelankaosanak_Sepatu",
+        "ctr": 7.09988,
+        "cpc": 88.322034
+      },
+      "120247272253100121": {
+        "name": "BIDCAP_Atayasetelankaosanak_Aksesoris",
+        "ctr": 2.564103,
+        "cpc": 184.0
+      },
+      "120247272253110121": {
+        "name": "BIDCAP_Nyamiresep_Test_Atayasetelankaosanak 07",
+        "ctr": 8.11679,
+        "cpc": 63.624735
+      },
+      "120247272253120121": {
+        "name": "BIDCAP_Nyamiresep_Test_Atayasetelankaosanak 06",
+        "ctr": 7.739779,
+        "cpc": 66.901993
+      },
+      "120247272253130121": {
+        "name": "BIDCAP_Nyamiresep_Test_Atayasetelankaosanak 05",
+        "ctr": 7.656493,
+        "cpc": 66.827703
+      },
+      "120247272253140121": {
+        "name": "BIDCAP_Nyamiresep_Test_Atayasetelankaosanak 04",
+        "ctr": 7.756813,
+        "cpc": 67.589189
+      },
+      "120247272253160121": {
+        "name": "BIDCAP_Nyamiresep_Test_Atayasetelankaosanak 03",
+        "ctr": 5.882353,
+        "cpc": 98.625
+      },
+      "120247272253210121": {
+        "name": "BIDCAP_Nyamiresep_Test_Atayasetelankaosanak 02",
+        "ctr": 7.757369,
+        "cpc": 65.026432
+      },
+      "120247272253240121": {
+        "name": "BIDCAP_Nyamiresep_Test_Atayasetelankaosanak 01",
+        "ctr": 7.467817,
+        "cpc": 66.36141
+      },
+      "120247272267060121": {
+        "name": "LC_Rakdapur_Baju_0602",
+        "ctr": 4.166667,
+        "cpc": 187.0
+      },
+      "120247272335490121": {
+        "name": "LC_Rakdapur3_Drama movies_0602",
+        "ctr": 1.666667,
+        "cpc": 314.5
+      },
+      "120247330930460121": {
+        "name": "BC_Nyamiresep_Rakdapur3_Drama movies - Salin",
+        "ctr": 5.263158,
+        "cpc": 98.5
+      },
+      "120247331108190121": {
+        "name": "LC_Rakdapur3_Drama movies_0602_D3_0603",
+        "ctr": 5.326877,
+        "cpc": 121.681818
+      },
+      "120247331116360121": {
+        "name": "LC_Rakdapur_Baju_0602 - Salin",
+        "ctr": 11.627907,
+        "cpc": 57.2
+      }
+    },
+    "summary": {
+      "active": 3,
+      "total_campaigns": 179,
+      "spend_48h": 1975912,
+      "winners": 0,
+      "boncos": 24,
+      "winner_names": [],
+      "boncos_names": [
+        "TC_Nyamiresep_Action_Movies",
+        "TC_Nyamiresep_LLA1p_Rakdapur",
+        "TC_Nyamiresep_VILONA_Tourism_Rakdapur",
+        "BIDCAP_Atayasetelankaosanak_Original",
+        "TC_Nyamiresep_Test_Bajuanak2",
+        "TC_Nyamiresep_Test_Benihsayuran_26052026",
+        "TC_Nyamiresep_Scale_Rakdapur_Online_Keca",
+        "BC_Nyamiresep_VILONA_Tourism_Rakdapur",
+        "TC_Nyamiresep_Rakdapur_Baju",
+        "TC_Nyamiresep_Pertanian",
+        "BC_Nyamiresep_Rakdapur3_Drama movies",
+        "TC_Nyamiresep_Scale_Rakdapur_Interior",
+        "TC_Nyamiresep_Scale_Rakdapur_Fashion",
+        "BC_Nyamiresep_Fashion_Rakdapur",
+        "LC_Nyamiresep_LC_Test_Bajuanak1_26052026",
+        "BIDCAP_Nyamiresep_Benihsayuran_ABO",
+        "BIDCAP_Atayasetelankaosanak_Perlengkapan",
+        "BIDCAP_Atayasetelankaosanak_Sepatu",
+        "BIDCAP_Nyamiresep_Test_Atayasetelankaosa",
+        "BIDCAP_Nyamiresep_Test_Atayasetelankaosa",
+        "BIDCAP_Nyamiresep_Test_Atayasetelankaosa",
+        "BIDCAP_Nyamiresep_Test_Atayasetelankaosa",
+        "BIDCAP_Nyamiresep_Test_Atayasetelankaosa",
+        "BIDCAP_Nyamiresep_Test_Atayasetelankaosa"
+      ]
+    }
+  },
+  "1208": {
+    "last_cycle": "2026-06-03T16:46:43.370027+07:00",
+    "campaigns": {},
+    "summary": {
+      "active": 2,
+      "total_campaigns": 77,
+      "spend_48h": 0,
+      "winners": 0,
+      "boncos": 0,
+      "winner_names": [],
+      "boncos_names": []
+    }
+  }
+}
