@@ -49,4 +49,5 @@ def log(msg, log_file=None):
 ACCOUNTS = {
     "act_380721031313330": {"name": "1041", "budget_cap": 300000},
     "act_435670549443081": {"name": "0858", "budget_cap": 300000},
+    "act_2125021885010866": {"name": "glowscent", "budget_cap": 300000},
 }

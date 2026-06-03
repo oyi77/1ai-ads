@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-03T18:57:19.555840+07:00",
+  "generated_at": "2026-06-03T22:28:35.710118+07:00",
   "date": "2026-06-03",
   "account": "Kakriput",
   "sections": [
@@ -9,15 +9,15 @@
       "top_performers": [
         {
           "name": "BIDCAP_GEO_rakpiringpengering_INT04",
-          "score": 94,
-          "note": "ROAS:159.6x CPC:72 CTR:6.2% LC:20",
+          "score": 97,
+          "note": "ROAS:159.6x CPC:69 CTR:6.5% LC:21",
           "spend": 1726.0,
-          "link_clicks": 20,
-          "cpc": 71.916667,
-          "ctr": 6.20155
+          "link_clicks": 21,
+          "cpc": 69.04,
+          "ctr": 6.459948
         },
         {
-          "name": "TC_Kakriput_rakpiringpengering_Pinterest",
+          "name": "OFF_TC_Kakriput_rakpiringpengering_Pinterest",
           "score": 92,
           "note": "ROAS:32.9x CPC:106 CTR:4.4% LC:76",
           "spend": 8386.0,
@@ -35,16 +35,16 @@
           "ctr": 5.555556
         },
         {
-          "name": "V2_CBO_organizerpullout_Dapur",
+          "name": "BIDCAP_Organizer_organizerpullout_Dapur_0603",
           "score": 86,
-          "note": "ROAS:44.9x CPC:108 CTR:5.0% LC:42",
-          "spend": 6134.0,
+          "note": "ROAS:44.8x CPC:108 CTR:5.0% LC:42",
+          "spend": 6156.0,
           "link_clicks": 42,
-          "cpc": 107.614035,
-          "ctr": 5.013193
+          "cpc": 108.0,
+          "ctr": 5.0
         },
         {
-          "name": "0858_organizer_fashion_BID",
+          "name": "BIDCAP_Organizer_organizerpullout_Fashion_0603",
           "score": 86,
           "note": "ROAS:96.1x CPC:110 CTR:6.8% LC:17",
           "spend": 2868.0,
@@ -64,25 +64,25 @@
           "ctr": 3.846154
         },
         {
-          "name": "0858_gajahThai_fashionShopping_BID",
+          "name": "OFF_0858_gajahThai_fashionShopping_BID",
           "score": 57,
-          "note": "ROAS:2.4x CPC:84 CTR:5.9% LC:949",
-          "spend": 115872.0,
-          "link_clicks": 949,
-          "cpc": 84.026106,
-          "ctr": 5.945503
+          "note": "ROAS:2.3x CPC:84 CTR:5.9% LC:960",
+          "spend": 118247.0,
+          "link_clicks": 960,
+          "cpc": 84.341655,
+          "ctr": 5.909378
         },
         {
-          "name": "0858_gajahThai_fashionBelanja_BID",
+          "name": "OFF_0858_gajahThai_fashionBelanja_BID",
           "score": 57,
-          "note": "ROAS:2.5x CPC:88 CTR:5.6% LC:876",
-          "spend": 111025.0,
-          "link_clicks": 876,
-          "cpc": 87.975436,
-          "ctr": 5.579134
+          "note": "ROAS:2.4x CPC:88 CTR:5.5% LC:893",
+          "spend": 113417.0,
+          "link_clicks": 893,
+          "cpc": 88.399844,
+          "ctr": 5.549068
         },
         {
-          "name": "0858_organizer_jewelry_EMPTY",
+          "name": "OFF_0858_organizer_jewelry_EMPTY",
           "score": 56,
           "note": "ROAS:1312.0x CPC:210 CTR:2.0% LC:1",
           "spend": 210.0,
@@ -91,7 +91,7 @@
           "ctr": 2.040816
         },
         {
-          "name": "BIDCAP_GEO_rakpiringpengering_INT06",
+          "name": "OFF_BIDCAP_GEO_rakpiringpengering_INT06",
           "score": 56,
           "note": "ROAS:173.3x CPC:318 CTR:2.4% LC:5",
           "spend": 1590.0,
@@ -108,17 +108,17 @@
       "type": "early_winners",
       "winners": [
         {
-          "name": "0858_rakpiring_VILONA_WINNER_BID",
-          "spend": 3137.0,
+          "name": "BIDCAP_Rakpiring_rakpiringpengering_Winner_0603",
+          "spend": 3142.0,
           "link_clicks": 27,
-          "cpc": 120.653846,
-          "ctr": 3.677511,
+          "cpc": 120.846154,
+          "ctr": 3.672316,
           "signal": "EARLY_WINNER",
           "new_campaign": true,
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
         },
         {
-          "name": "0858_rakpiring_shopping_BID",
+          "name": "BIDCAP_Rakpiring_rakpiringpengering_Shopping_0603",
           "spend": 7949.0,
           "link_clicks": 52,
           "cpc": 139.45614,
@@ -128,17 +128,17 @@
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
         },
         {
-          "name": "V2_CBO_organizerpullout_Dapur",
-          "spend": 6134.0,
+          "name": "BIDCAP_Organizer_organizerpullout_Dapur_0603",
+          "spend": 6156.0,
           "link_clicks": 42,
-          "cpc": 107.614035,
-          "ctr": 5.013193,
+          "cpc": 108.0,
+          "ctr": 5.0,
           "signal": "EARLY_WINNER",
           "new_campaign": true,
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
         },
         {
-          "name": "TC_Kakriput_rakpiringpengering_Pinterest",
+          "name": "OFF_TC_Kakriput_rakpiringpengering_Pinterest",
           "spend": 8386.0,
           "link_clicks": 76,
           "cpc": 106.151899,
@@ -148,27 +148,27 @@
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
         },
         {
-          "name": "0858_organizer_travel_BID",
-          "spend": 21372.0,
+          "name": "BIDCAP_Organizer_organizerpullout_Travel_0603",
+          "spend": 21418.0,
           "link_clicks": 125,
-          "cpc": 147.393103,
-          "ctr": 4.37142,
+          "cpc": 147.710345,
+          "ctr": 4.363527,
           "signal": "EARLY_WINNER",
           "new_campaign": true,
           "recommendation": "Winner signal confirmed — pantau 24 jam lagi untuk scale penuh"
         },
         {
-          "name": "ON_V2_CBO_organizerpullout_Dapur_1",
-          "spend": 2344.0,
+          "name": "LC_Organizer_organizerpullout_Dapur_0603_CLONE1",
+          "spend": 2356.0,
           "link_clicks": 17,
-          "cpc": 123.368421,
-          "ctr": 6.188925,
+          "cpc": 124.0,
+          "ctr": 6.168831,
           "signal": "EARLY_WINNER",
           "new_campaign": true,
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
         },
         {
-          "name": "0858_organizer_pelancong_EMPTY",
+          "name": "OFF_0858_organizer_pelancong_EMPTY",
           "spend": 6788.0,
           "link_clicks": 38,
           "cpc": 125.703704,
@@ -178,27 +178,27 @@
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
         },
         {
-          "name": "0858_organizer_tableware_EMPTY",
-          "spend": 4245.0,
+          "name": "OFF_0858_organizer_tableware_EMPTY",
+          "spend": 4258.0,
           "link_clicks": 24,
-          "cpc": 146.37931,
-          "ctr": 5.244123,
+          "cpc": 146.827586,
+          "ctr": 5.225225,
           "signal": "EARLY_WINNER",
           "new_campaign": true,
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
         },
         {
-          "name": "0858_organizer_broad2_BID",
-          "spend": 3784.0,
+          "name": "BIDCAP_Organizer_organizerpullout_Broad2_0603",
+          "spend": 3791.0,
           "link_clicks": 17,
-          "cpc": 135.142857,
-          "ctr": 5.333333,
+          "cpc": 135.392857,
+          "ctr": 5.323194,
           "signal": "EARLY_WINNER",
           "new_campaign": true,
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
         },
         {
-          "name": "0858_organizer_dapurShop_BID",
+          "name": "BIDCAP_Organizer_organizerpullout_DapurShop_0603",
           "spend": 1952.0,
           "link_clicks": 12,
           "cpc": 139.428571,
@@ -208,7 +208,7 @@
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
         },
         {
-          "name": "0858_organizer_fashion_BID",
+          "name": "BIDCAP_Organizer_organizerpullout_Fashion_0603",
           "spend": 2868.0,
           "link_clicks": 17,
           "cpc": 110.307692,
@@ -220,15 +220,15 @@
         {
           "name": "BIDCAP_GEO_rakpiringpengering_INT04",
           "spend": 1726.0,
-          "link_clicks": 20,
-          "cpc": 71.916667,
-          "ctr": 6.20155,
+          "link_clicks": 21,
+          "cpc": 69.04,
+          "ctr": 6.459948,
           "signal": "EARLY_WINNER",
           "new_campaign": true,
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
         },
         {
-          "name": "BIDCAP_GEO_rakpiringpengering_INT05",
+          "name": "OFF_BIDCAP_GEO_rakpiringpengering_INT05",
           "spend": 4536.0,
           "link_clicks": 30,
           "cpc": 129.6,
@@ -248,7 +248,7 @@
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
         },
         {
-          "name": "BIDCAP_GEO_rakpiringpengering_INT02",
+          "name": "OFF_BIDCAP_GEO_rakpiringpengering_INT02",
           "spend": 2804.0,
           "link_clicks": 18,
           "cpc": 147.578947,
@@ -278,7 +278,7 @@
           ]
         },
         {
-          "campaign": "TC_Kakriput_rakpiringpengering_Pinterest",
+          "campaign": "OFF_TC_Kakriput_rakpiringpengering_Pinterest",
           "current_budget": 500000,
           "target_budget": 500000,
           "steps": [
@@ -320,7 +320,7 @@
           "priority": 1,
           "icon": "🏆",
           "title": "Scale pemenang: BIDCAP_GEO_rakpiringpengering_INT04",
-          "detail": "Score 94/100, ROAS:159.6x CPC:72 CTR:6.2% LC:20",
+          "detail": "Score 97/100, ROAS:159.6x CPC:69 CTR:6.5% LC:21",
           "action": "Naikkan budget 20% atau duplikasi ke audience baru"
         }
       ]

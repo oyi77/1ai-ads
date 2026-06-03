@@ -5,11 +5,14 @@ Auto-pause at spend threshold, auto-resume at peak hours,
 performance-ratio check, early stop when ROI is negative.
 """
 
-import urllib.request, json, os
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
+import urllib.request, json
 from datetime import datetime, timedelta
+from lib.credentials import get_meta_token, get_account_id
 
-TOKEN = "EAAKA2OT1FroBRot0MWOi39slvmVLfZAPYWFFYoSO4ZAYvZAq0X7wnLBvAmgp0vai9KHZBOjXQ5VmvWYZCwNDJkUhrdlDwSUXGvb0LZACz9v4DkQj33B2cDrizSrH49UCIDnoebkQPaRg3YoxDwgwT6nrgZA2IvZAXQ77A99YS1hm6VVbA9i2Dn3PPgD794QJNZCAMqyYEGXqOyzmOUc7IirP4KMXWxUzwZBtOSgQIx5v19Mz8oB2GB4TKcPQZDZD"
-ACCOUNT = "act_380721031313330"
+TOKEN = get_meta_token()
+ACCOUNT = get_account_id()
 
 # === THRESHOLDS (data-driven) ===
 DAILY_HARD_CAP = 200000  # Hard stop at Rp 200k (NEW - data-driven reduction)

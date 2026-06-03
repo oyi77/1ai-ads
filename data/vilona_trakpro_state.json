@@ -1,31 +1,31 @@
 {
   "0858": {
-    "last_cycle": "2026-06-03T18:57:18.158369+07:00",
+    "last_cycle": "2026-06-03T22:28:34.400392+07:00",
     "campaigns": {
       "120248404118800416": {
-        "name": "0858_rakpiring_VILONA_WINNER_BID",
-        "ctr": 3.677511,
-        "cpc": 120.653846
+        "name": "BIDCAP_Rakpiring_rakpiringpengering_Winner_0603",
+        "ctr": 3.672316,
+        "cpc": 120.846154
       },
       "120249205714820416": {
-        "name": "0858_rakpiring_shopping_BID",
+        "name": "BIDCAP_Rakpiring_rakpiringpengering_Shopping_0603",
         "ctr": 3.246014,
         "cpc": 139.45614
       },
       "120249205714850416": {
-        "name": "0858_rakpiring_travel_BID",
+        "name": "OFF_0858_rakpiring_travel_BID",
         "ctr": 3.831084,
         "cpc": 179.181818
       },
       "120249209669800416": {
-        "name": "V2_CBO_organizerpullout_Dapur",
-        "ctr": 5.013193,
-        "cpc": 107.614035
+        "name": "BIDCAP_Organizer_organizerpullout_Dapur_0603",
+        "ctr": 5.0,
+        "cpc": 108.0
       },
       "120249502539430416": {
-        "name": "TC_GEO_rakpiringpengering_INT01",
-        "ctr": 4.99002,
-        "cpc": 173.611429
+        "name": "OFF_TC_GEO_rakpiringpengering_INT01",
+        "ctr": 5.015674,
+        "cpc": 172.698864
       },
       "120249722735620416": {
         "name": "OFF_GEO_rakpiringpengering_Parenting",
@@ -33,49 +33,49 @@
         "cpc": 198.2
       },
       "120249722735650416": {
-        "name": "TC_Kakriput_rakpiringpengering_Jewelry",
+        "name": "OFF_TC_Kakriput_rakpiringpengering_Jewelry",
         "ctr": 4.6875,
         "cpc": 134.0
       },
       "120249722735700416": {
-        "name": "TC_Kakriput_rakpiringpengering_Pinterest",
+        "name": "OFF_TC_Kakriput_rakpiringpengering_Pinterest",
         "ctr": 4.398664,
         "cpc": 106.151899
       },
       "120249722735720416": {
-        "name": "0858_organizer_travel_BID",
-        "ctr": 4.37142,
-        "cpc": 147.393103
+        "name": "BIDCAP_Organizer_organizerpullout_Travel_0603",
+        "ctr": 4.363527,
+        "cpc": 147.710345
       },
       "120249727183880416": {
-        "name": "ON_V2_CBO_organizerpullout_Dapur_1",
-        "ctr": 6.188925,
-        "cpc": 123.368421
+        "name": "LC_Organizer_organizerpullout_Dapur_0603_CLONE1",
+        "ctr": 6.168831,
+        "cpc": 124.0
       },
       "120249727184140416": {
-        "name": "0858_organizer_pelancong_EMPTY",
+        "name": "OFF_0858_organizer_pelancong_EMPTY",
         "ctr": 4.42623,
         "cpc": 125.703704
       },
       "120249727184150416": {
-        "name": "0858_organizer_jewelry_EMPTY",
+        "name": "OFF_0858_organizer_jewelry_EMPTY",
         "ctr": 2.040816,
         "cpc": 210.0
       },
       "120249727184160416": {
-        "name": "0858_organizer_interior_design_EMPTY",
+        "name": "OFF_0858_organizer_interior_design_EMPTY",
         "ctr": 1.923077,
         "cpc": 201.0
       },
       "120249727184170416": {
-        "name": "0858_organizer_tableware_EMPTY",
-        "ctr": 5.244123,
-        "cpc": 146.37931
+        "name": "OFF_0858_organizer_tableware_EMPTY",
+        "ctr": 5.225225,
+        "cpc": 146.827586
       },
       "120249941008950416": {
-        "name": "0858_rakpiring_broad_BID",
-        "ctr": 5.081826,
-        "cpc": 155.830508
+        "name": "BIDCAP_Rakpiring_rakpiringpengering_Broad_0603",
+        "ctr": 5.077453,
+        "cpc": 156.152542
       },
       "120249941045990416": {
         "name": "0858_organizer_broad_BID",
@@ -83,87 +83,87 @@
         "cpc": 104.666667
       },
       "120250009402690416": {
-        "name": "0858_organizer_broad2_BID",
-        "ctr": 5.333333,
-        "cpc": 135.142857
+        "name": "BIDCAP_Organizer_organizerpullout_Broad2_0603",
+        "ctr": 5.323194,
+        "cpc": 135.392857
       },
       "120250009830630416": {
-        "name": "0858_organizer_dapurShop_BID",
+        "name": "BIDCAP_Organizer_organizerpullout_DapurShop_0603",
         "ctr": 5.263158,
         "cpc": 139.428571
       },
       "120250009834770416": {
-        "name": "0858_organizer_shopping_BID",
-        "ctr": 2.702703,
-        "cpc": 295.0
+        "name": "BIDCAP_Organizer_organizerpullout_Shopping_0603",
+        "ctr": 2.684564,
+        "cpc": 297.25
       },
       "120250009839170416": {
-        "name": "0858_organizer_fashion_BID",
+        "name": "BIDCAP_Organizer_organizerpullout_Fashion_0603",
         "ctr": 6.806283,
         "cpc": 110.307692
       },
       "120250009843030416": {
-        "name": "0858_organizer_broad_BID",
+        "name": "BIDCAP_Organizer_organizerpullout_Broad_0603",
         "ctr": 3.409091,
         "cpc": 214.333333
       },
       "120250009867060416": {
-        "name": "0858_organizer_rumah_BID",
+        "name": "BIDCAP_Organizer_organizerpullout_Rumah_0603",
         "ctr": 3.921569,
         "cpc": 199.0
       },
       "120250009872130416": {
-        "name": "0858_organizer_resep_BID",
-        "ctr": 2.985075,
-        "cpc": 260.5
+        "name": "BIDCAP_Organizer_organizerpullout_Resep_0603",
+        "ctr": 2.973978,
+        "cpc": 261.125
       },
       "120250012602960416": {
-        "name": "TEST_gajahThailand_shoppingFashion_BID",
+        "name": "OFF_TEST_gajahThailand_shoppingFashion_BID",
         "ctr": 4.878049,
         "cpc": 147.5
       },
       "120250015760320416": {
-        "name": "0858_gajahThailand_fashion_BID",
+        "name": "OFF_0858_gajahThailand_fashion_BID",
         "ctr": 1.666667,
         "cpc": 159.0
       },
       "120250016047830416": {
-        "name": "0858_gajahThai_fashionShopping_BID",
-        "ctr": 5.945503,
-        "cpc": 84.026106
+        "name": "OFF_0858_gajahThai_fashionShopping_BID",
+        "ctr": 5.909378,
+        "cpc": 84.341655
       },
       "120250016058540416": {
-        "name": "0858_gajahThai_fashionBelanja_BID",
-        "ctr": 5.577178,
-        "cpc": 87.997621
+        "name": "OFF_0858_gajahThai_fashionBelanja_BID",
+        "ctr": 5.549068,
+        "cpc": 88.399844
       },
       "120250017839070416": {
-        "name": "0858_fashionWanitaPremium_shopping_BID",
+        "name": "OFF_0858_fashionWanitaPremium_shopping_BID_Test",
         "ctr": 0.0,
         "cpc": 0.0
       },
       "120250055874890416": {
-        "name": "BIDCAP_GEO_rakpiringpengering_INT03",
+        "name": "OFF_BIDCAP_GEO_rakpiringpengering_INT03",
         "ctr": 5.555556,
         "cpc": 86.333333
       },
       "120250055874900416": {
         "name": "BIDCAP_GEO_rakpiringpengering_INT04",
-        "ctr": 6.20155,
-        "cpc": 71.916667
+        "ctr": 6.459948,
+        "cpc": 69.04
       },
       "120250055874910416": {
-        "name": "BIDCAP_GEO_rakpiringpengering_INT05",
+        "name": "OFF_BIDCAP_GEO_rakpiringpengering_INT05",
         "ctr": 4.723347,
         "cpc": 129.6
       },
       "120250055874920416": {
-        "name": "BIDCAP_GEO_rakpiringpengering_INT06",
+        "name": "OFF_BIDCAP_GEO_rakpiringpengering_INT06",
         "ctr": 2.403846,
         "cpc": 318.0
       },
       "120250055874930416": {
-        "name": "BIDCAP_GEO_rakpiringpengering_INT09",
+        "name": "OFF_BIDCAP_GEO_rakpiringpengering_INT09",
         "ctr": 2.307692,
         "cpc": 298.333333
       },
@@ -173,7 +173,7 @@
         "cpc": 147.4
       },
       "120250055875080416": {
-        "name": "BIDCAP_GEO_rakpiringpengering_INT01",
+        "name": "OFF_BIDCAP_GEO_rakpiringpengering_INT01",
         "ctr": 3.703704,
         "cpc": 180.727273
       },
@@ -188,15 +188,15 @@
         "cpc": 74.25
       },
       "120250055875170416": {
-        "name": "BIDCAP_GEO_rakpiringpengering_INT02",
+        "name": "OFF_BIDCAP_GEO_rakpiringpengering_INT02",
         "ctr": 4.61165,
         "cpc": 147.578947
       }
     },
     "summary": {
-      "active": 6,
+      "active": 0,
       "total_campaigns": 79,
-      "spend_48h": 379267,
+      "spend_48h": 384245,
       "winners": 0,
       "boncos": 0,
       "winner_names": [],

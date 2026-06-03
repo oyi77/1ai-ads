@@ -22,6 +22,7 @@ ACCOUNTS = [
     ("act_1181078009580337", "Selow ID 1340"),
     ("act_435670549443081", "Selow ID 0858"),
     ("act_1204208138534580", "Produk Digital"),
+    ("act_2125021885010866", "GlowScent"),
 ]
 
 os.makedirs("reports", exist_ok=True)

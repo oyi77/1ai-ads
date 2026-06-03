@@ -15,11 +15,13 @@ Usage:
 import json, os, sys, time, random, requests
 from pathlib import Path
 from datetime import datetime
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib'))
+from credentials import get_meta_token
 
 # ═══════════════════════════════
 # CONFIG
 # ═══════════════════════════════
-META_TOKEN = "EAAKA2OT1FroBRot0MWOi39slvmVLfZAPYWFFYoSO4ZAYvZAq0X7wnLBvAmgp0vai9KHZBOjXQ5VmvWYZCwNDJkUhrdlDwSUXGvb0LZACz9v4DkQj33B2cDrizSrH49UCIDnoebkQPaRg3YoxDwgwT6nrgZA2IvZAXQ77A99YS1hm6VVbA9i2Dn3PPgD794QJNZCAMqyYEGXqOyzmOUc7IirP4KMXWxUzwZBtOSgQIx5v19Mz8oB2GB4TKcPQZDZD"
+META_TOKEN = get_meta_token()
 ACCOUNT_ID = "act_380721031313330"  # nyamiresepdapur
 FB_PAGE_TOKEN_FILE = Path.home() / ".openclaw/workspace/data/fb_page_tokens.json"
 LOG_FILE = Path.home() / "projects/1ai-ads/logs/rakdapur_gass.log"
