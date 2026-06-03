@@ -56,6 +56,11 @@ TOKEN_FILE = Path("/tmp/fb_token.txt")
 ACCESS_TOKEN = TOKEN_FILE.read_text().strip() if TOKEN_FILE.exists() else None
 API = "https://graph.facebook.com/v19.0"
 
+# ─── TELEGRAM BOT ────────────────────────────────────────────────────────────
+TELEGRAM_BOT_TOKEN = "8665546627:AAFp6SSBasBcpN3tGf1jNSpRPotMYwM8DEM"
+TELEGRAM_CHAT_ID = "157228659"  # @alwayscuanbos (Andik veris)
+TELEGRAM_API = "https://api.telegram.org"
+
 # ─── ACCOUNTS ─────────────────────────────────────────────────────────────────
 # FOCUS: Only 0858 Kakriput (per Veris mandate 2026-06-03)
 ACCOUNTS = {
@@ -267,15 +272,34 @@ def classify_campaign(camp_insights, shopee_data, account_config, prev_state, al
         return "WATCH", 0, "No link clicks yet"
 
 # ─── TELEGRAM ALERTS ──────────────────────────────────────────────────────────
+def send_telegram(message):
+    """Send alert directly to Veris via Telegram bot."""
+    try:
+        url = f"{TELEGRAM_API}/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        data = json.dumps({
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": message[:4000],  # Telegram limit
+            "parse_mode": "HTML"
+        }).encode()
+        req = urllib.request.Request(url, data=data, method="POST")
+        req.add_header("Content-Type", "application/json")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read())
+    except Exception as e:
+        log(f"Telegram send failed: {e}", "ERROR")
+        return None
+
 def send_alert(message):
-    """Queue alert for Telegram delivery."""
+    """Queue alert for Telegram delivery + log to file."""
     alert_file = WORKSPACE / "data" / "vilona_trakpro_alerts.jsonl"
     try:
         with open(alert_file, "a") as f:
             f.write(json.dumps({"ts": datetime.now(WIB).isoformat(), "msg": message}) + "\n")
     except:
         pass
-    log(f"ALERT: {message[:100]}...")
+    # Send via Telegram
+    send_telegram(message)
+    log(f"ALERT SENT: {message[:80]}...")
 
 # ─── ACTION EXECUTOR ──────────────────────────────────────────────────────────
 def execute_actions(account_id, account_config, classifications, acc_key=""):
