@@ -1,5 +1,14 @@
 {
-  "cycle_count": 2,
-  "last_total_spend": 3708.0,
-  "last_winners": 7
+  "cycle_count": 27,
+  "last_total_spend": 0,
+  "last_winners": 0,
+  "strikes": {
+    "120249205714820416": {
+      "count": 1,
+      "first": "2026-06-03T13:22:45.139538",
+      "reasons": [
+        "CPC Rp166 > 130 [STANDARD]"
+      ]
+    }
+  }
 }

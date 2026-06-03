@@ -78,7 +78,7 @@ def main():
         f"{ACT_ID}/campaigns", {"fields": "id,name,status,daily_budget", "limit": 100}
     )
 
-    active_camps = [c for c in campaigns.get("data", []) if c["status"] == "ACTIVE"]
+    active_camps = [c for c in campaigns.get("data", []) if c["status"] == "ACTIVE" and not c["name"].startswith("OFF_")]
     log(f"Active campaigns: {len(active_camps)}")
 
     if not active_camps:
@@ -181,6 +181,11 @@ def main():
             continue
 
         cname = pause_info.get("name", cid)
+
+        # SKIP: never reactivate campaigns with OFF_ prefix (deliberately killed)
+        if cname.startswith("OFF_") or "OFF_" in cname:
+            log(f"  ⛔ SKIP (OFF_ prefix): {cname}")
+            continue
 
         # Reactivation decision
         if cpc <= REACTIVATE_GAS_CPC and ctr >= CTR_MIN_GAS:
