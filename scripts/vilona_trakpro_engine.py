@@ -331,10 +331,14 @@ def get_campaign_bid_strategy(campaign_id):
 # ─── LC CLONE CREATOR ─────────────────────────────────────────────────────────
 def create_lc_clone(original_campaign, account_id, account_config):
     """Create a LOWEST_COST clone from a winning COST_CAP campaign.
-    Veris Strategy: Proven COST_CAP winner → 1 LC copy to unlock volume.
-    Clone uses same targeting but LOWEST_COST_WITH_BID_CAP @ Rp200."""
+    
+    Naming Convention (Veris, 2026-06-03):
+    Campaign: {STRATEGI}_{PRODUK}_{TAGLINK}_{AUDIENCE}_{TANGGAL}_CLONE{n}
+    Adset:    {STRATEGI}_{PRODUK}_{INTEREST}_{UMUR}
+    Ad:       {Namaakunshopee}_{PRODUK}_{CREATIVE}_{VERSI}
+    """
     try:
-        # Get original's adsets for targeting
+        # Get original's adsets for targeting + ads
         adsets = fb_get(f"{original_campaign['id']}/adsets",
             fields="name,targeting,optimization_goal,bid_strategy,promoted_object,status",
             limit="5")
@@ -345,12 +349,43 @@ def create_lc_clone(original_campaign, account_id, account_config):
         
         og_adset = adsets["data"][0]
         today_str = datetime.now(WIB).strftime("%m%d")
-        product = "rakpiring" if "rakpiring" in original_campaign["name"].lower() else "organizer"
         
-        # Create new campaign (LOWEST_COST)
-        new_camp_name = f"LC_{product}_{today_str}_CLONE"
+        # Parse original campaign name for product/taglink/audience
+        og_name = original_campaign["name"]
+        # Extract product and audience from name like "0858_rakpiring_broad_BID"
+        parts = og_name.split("_")
+        product = "rakpiring" if "rakpiring" in og_name.lower() else "organizer"
+        taglink = "rakpiringpengering" if "rakpiring" in og_name.lower() else "organizerpullout"
+        audience = "Broad"
+        for p in parts:
+            if p.lower() in ("dapur", "travel", "shopping", "fashion", "broad", "tableware", 
+                             "pelancong", "rumah", "jewelry", "interior", "resep"):
+                audience = p.capitalize()
+                break
+        
+        shopee_account = "kakriput"
+        
+        # Find next clone number
+        existing = fb_get(f"{account_id}/campaigns",
+            fields="name", limit="200")
+        clone_num = 1
+        for c in existing.get("data", []):
+            if f"{product}_{taglink}_{audience}" in c["name"]:
+                if "_CLONE" in c["name"]:
+                    try:
+                        num = int(c["name"].split("CLONE")[-1])
+                        clone_num = max(clone_num, num + 1)
+                    except:
+                        clone_num += 1
+        
+        # Build names per Veris convention
+        camp_name = f"LC_{product.capitalize()}_{taglink}_{audience}_{today_str}_CLONE{clone_num}"
+        adset_name = f"LC_{product.capitalize()}_{audience}_25-55"
+        ad_name = f"{shopee_account}_{product.capitalize()}_Video1_v1"
+        
+        # Create campaign
         camp_result = fb_post(f"{account_id}/campaigns",
-            name=new_camp_name,
+            name=camp_name,
             objective="OUTCOME_TRAFFIC",
             status="PAUSED",
             special_ad_categories="[]")
@@ -364,20 +399,20 @@ def create_lc_clone(original_campaign, account_id, account_config):
         # Create adset with LOWEST_COST_WITH_BID_CAP
         targeting = og_adset.get("targeting", {})
         adset_result = fb_post(f"{account_id}/adsets",
-            name=f"LC_{product}_{today_str}",
+            name=adset_name,
             campaign_id=new_camp_id,
             targeting=json.dumps(targeting),
             optimization_goal="LINK_CLICKS",
             billing_event="IMPRESSIONS",
             bid_strategy="LOWEST_COST_WITH_BID_CAP",
-            bid_amount="20000",  # Rp200 in cents
-            daily_budget=str(min(100000, account_config["budget_cap_per_camp"])),
+            bid_amount="20000",
+            daily_budget="100000",
             status="ACTIVE")
         
         if "id" in adset_result:
-            # Activate campaign after adset created
             fb_post(new_camp_id, status="ACTIVE")
-            log(f"LC CLONE CREATED: {new_camp_name} (from {original_campaign['name'][:30]})")
+            log(f"LC CLONE CREATED: {camp_name}")
+            actions_taken_for_log = f"🧬 {camp_name} | {adset_name} | {ad_name}"
             return new_camp_id
         else:
             log(f"Clone adset creation failed: {adset_result}", "WARN")
