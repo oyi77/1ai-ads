@@ -441,7 +441,7 @@ def execute_actions(account_id, account_config, classifications, acc_key=""):
     # Startup guard: ensure all core portfolio campaigns are ACTIVE
     for cid, camp in campaigns.items():
         name = camp["name"]
-        is_core = any(c in name for c in core)
+        is_core = name in core  # EXACT match to prevent false positives
         if is_core and camp["status"] != "ACTIVE" and not name.startswith("OFF_"):
             try:
                 fb_post(cid, status="ACTIVE")
@@ -458,7 +458,7 @@ def execute_actions(account_id, account_config, classifications, acc_key=""):
         name = camp["name"]
         status = camp["status"]
         current_budget = int(camp.get("daily_budget", 0) or 0)
-        is_core = any(c in name for c in core)
+        is_core = name in core  # EXACT match
         
         if verdict == "OFF_LIMITS":
             continue
@@ -544,18 +544,19 @@ def execute_actions(account_id, account_config, classifications, acc_key=""):
 # Campaigns proven profitable that should ALWAYS stay active
 CORE_PORTFOLIO = {
     "0858": [
-        "0858_rakpiring_shopping_BID",
-        "0858_rakpiring_VILONA_WINNER_BID",
+        # RAKPIRING (7 campaigns, Veris convention 2026-06-03)
+        "BIDCAP_Rakpiring_rakpiringpengering_Shopping_0603",
+        "BIDCAP_Rakpiring_rakpiringpengering_Winner_0603",
+        "BIDCAP_Rakpiring_rakpiringpengering_Broad_0603",
         "BIDCAP_GEO_rakpiringpengering_INT04",
-        "0858_rakpiring_broad_BID",
-        "BIDCAP_GEO_rakpiringpengering_INT08",
         "BIDCAP_GEO_rakpiringpengering_INT07",
+        "BIDCAP_GEO_rakpiringpengering_INT08",
         "BIDCAP_GEO_rakpiringpengering_INT10",
-        "0858_organizer_pelancong_EMPTY",
-        "0858_organizer_travel_BID",
-        "V2_CBO_organizerpullout_Dapur",
-        "0858_organizer_fashion_BID",
-        "0858_organizer_tableware_EMPTY",
+        # ORGANIZER (4 campaigns)
+        "BIDCAP_Organizer_organizerpullout_Travel_0603",
+        "BIDCAP_Organizer_organizerpullout_Dapur_0603",
+        "BIDCAP_Organizer_organizerpullout_Fashion_0603",
+        "LC_Organizer_organizerpullout_Dapur_0603_CLONE1",
     ],
 }
 
