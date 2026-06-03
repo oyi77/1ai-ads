@@ -694,18 +694,73 @@ def run_cycle():
         summary_lines.append(f"  Actions: {len(all_actions)}")
         send_alert("\n".join(summary_lines))
     
-    # Daily midnight report
+    # Daily midnight report — full campaign mapping
     if hour == 0:
-        daily = [f"📋 DAILY REPORT — {cycle_start.strftime('%d %b %Y')}"]
-        for acc_key, s in account_summaries.items():
-            daily.append(
-                f"  {ACCOUNTS[acc_key]['name']}: "
-                f"Spend Rp{s['spend_48h']:,}/48h | "
-                f"{s['winners']} winners | {s['boncos']} boncos"
-            )
-            for w in s["winner_names"][:3]:
-                daily.append(f"    🏆 {w}")
-        send_alert("\n".join(daily))
+        try:
+            # Get today's campaign-level data
+            today_str = datetime.now(WIB).strftime("%Y-%m-%d")
+            today_insights = fb_get(f"{ACCOUNTS['0858']['id']}/insights",
+                fields="campaign_name,campaign_id,spend,clicks,impressions,cpc,ctr,actions",
+                time_range=f'{{\"since\":\"{today_str}\",\"until\":\"{today_str}\"}}',
+                level="campaign",
+                limit="100")
+            
+            camp_statuses = get_all_campaigns(ACCOUNTS["0858"]["id"])
+            
+            lines = [
+                f"📊 <b>0858 KAKRIPUT — Daily Mapping {cycle_start.strftime('%d %b %Y')}</b>",
+                ""
+            ]
+            total_spend = 0
+            total_links = 0
+            core_spend = 0
+            off_spend = 0
+            count = 0
+            
+            for c in sorted(today_insights.get("data", []),
+                           key=lambda x: float(x.get("spend", 0)), reverse=True):
+                spend = float(c.get("spend", 0))
+                if spend < 50:
+                    continue
+                name = c.get("campaign_name", "?")
+                link = 0
+                for a in c.get("actions", []):
+                    if a["action_type"] == "link_click":
+                        link = int(a["value"])
+                total_spend += spend
+                total_links += link
+                
+                is_off = name.startswith("OFF_")
+                is_core = name in CORE_PORTFOLIO.get("0858", [])
+                if is_off:
+                    off_spend += spend
+                if is_core:
+                    core_spend += spend
+                tag = "OFF" if is_off else ("CORE" if is_core else "?")
+                lines.append(
+                    f"{tag:4s} | Rp{spend:>9,.0f} | {link:>4}L | "
+                    f"CPC{float(c.get('cpc',0)):>5.0f} | {name[:40]}"
+                )
+                count += 1
+                if count >= 20:
+                    break
+            
+            lines.append("")
+            lines.append(f"💰 Total: Rp{total_spend:,.0f} | {total_links} link clicks | {count} campaigns")
+            if total_spend:
+                lines.append(f"🟢 Core: Rp{core_spend:,.0f} ({core_spend/total_spend*100:.0f}%)")
+                lines.append(f"🔴 OFF: Rp{off_spend:,.0f} ({off_spend/total_spend*100:.0f}%)")
+            
+            # Active core count
+            active_core = len([c for c in camp_statuses.values() 
+                             if c["status"] == "ACTIVE" and c["name"] in CORE_PORTFOLIO.get("0858", [])])
+            lines.append(f"\n✅ Active CORE: {active_core}/{len(CORE_PORTFOLIO.get('0858', []))}")
+            lines.append(f"📋 Next: 09:00 WIB morning summary")
+            
+            send_alert("\n".join(lines))
+            log("📋 Daily mapping report sent via bot")
+        except Exception as e:
+            log(f"Daily report failed: {e}", "ERROR")
     
     cycle_duration = (datetime.now(WIB) - cycle_start).total_seconds()
     log(f"✅ CYCLE DONE — {cycle_duration:.1f}s | "
