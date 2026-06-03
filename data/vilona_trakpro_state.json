@@ -1,6 +1,6 @@
 {
   "0858": {
-    "last_cycle": "2026-06-03T23:09:50.044544+07:00",
+    "last_cycle": "2026-06-03T23:28:53.152279+07:00",
     "campaigns": {
       "120248404118800416": {
         "name": "BIDCAP_Rakpiring_rakpiringpengering_Winner_0603",
@@ -129,13 +129,13 @@
       },
       "120250016047830416": {
         "name": "OFF_0858_gajahThai_fashionShopping_BID",
-        "ctr": 5.900177,
-        "cpc": 84.457917
+        "ctr": 5.90215,
+        "cpc": 84.424804
       },
       "120250016058540416": {
         "name": "OFF_0858_gajahThai_fashionBelanja_BID",
-        "ctr": 5.54788,
-        "cpc": 88.4607
+        "ctr": 5.54429,
+        "cpc": 88.518288
       },
       "120250017839070416": {
         "name": "OFF_0858_fashionWanitaPremium_shopping_BID_Test",
@@ -194,9 +194,9 @@
       }
     },
     "summary": {
-      "active": 2,
+      "active": 0,
       "total_campaigns": 79,
-      "spend_48h": 384683,
+      "spend_48h": 384795,
       "winners": 0,
       "boncos": 0,
       "winner_names": [],

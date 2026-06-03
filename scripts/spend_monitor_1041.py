@@ -48,7 +48,7 @@ except Exception:
         pass
 
 
-TOKEN = "os.getenv('META_ACCESS_TOKEN', '')"
+TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 ACCOUNT = "act_380721031313330"
 
 # === THRESHOLDS ===

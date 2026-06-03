@@ -1,7 +1,7 @@
 import urllib.request, json
 import os
 
-TOKEN = "os.getenv('META_ACCESS_TOKEN', '')"
+TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 ACCOUNT = "act_380721031313330"
 
 

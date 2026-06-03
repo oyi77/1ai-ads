@@ -21,7 +21,7 @@ import requests, json, os, sys, time, math
 from datetime import datetime
 import os
 
-TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 ACCOUNT_ID = 'act_1439536310038458'  # Selow ID 1208
 BASE = 'https://graph.facebook.com/v19.0'
 LOG_PATH = 'logs/vilona_1208_herbal_strategy.log'

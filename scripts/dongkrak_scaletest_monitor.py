@@ -14,7 +14,7 @@ from datetime import datetime
 import os
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────
-TOKEN = "os.getenv('META_ACCESS_TOKEN', '')"
+TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 CAMPAIGN_ID = "120248835386290416"
 ADSET_IDS = [
     "120248835533980416",  # DongkrakElektrik_BelanjaOnline_IGonly_23-55
