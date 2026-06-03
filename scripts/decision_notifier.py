@@ -30,7 +30,7 @@ def send_telegram(text):
 
 def run_decision():
     result = subprocess.run(
-        ['python3', str(SCRIPT_DIR/'campaign_decision_center.py'), 'decide', '--days', '3', '--min-spend', '5000'],
+        ['python3', str(SCRIPT_DIR/'trakpro_vilona.py'), 'decide', '--account', '1041', '--days', '3'],
         capture_output=True, text=True, timeout=120, cwd=str(PROJECT_DIR)
     )
     return result.stdout
