@@ -29,6 +29,7 @@ ACCOUNTS = {
     '1208': {'id': 'act_1439536310038458', 'nm': 'Herbal', 'csv': 'herbal'},
     '1134': {'id': 'act_1773760133153789', 'nm': 'Selow 1134', 'csv': 'selow1134'},
     '1340': {'id': 'act_1181078009580337', 'nm': 'BajuAnak', 'csv': 'bajuanak'},
+    'glowscent': {'id': 'act_2125021885010866', 'nm': 'GlowScent', 'csv': 'glowscent'},
 }
 
 WIN_MIN_PROFIT = 5000; WIN_MIN_ROAS = 1.2
@@ -39,7 +40,7 @@ EARLY_MAX_AGE = 3; EARLY_MIN_SPEND = 3000
 
 TAGS = ['rakdapur','rakdapur3','atayasetelankaosanak','wallpaperdindingvinyl',
     'benihsayuran','dressanakperempuan','setanakfernando','stikerkeramik',
-    'fashion','bajuanak','purwoceng','herbal','dapur','masak','perabotan',
+    'bajuanak','purwoceng','herbal','perabotan',
     # Malaysia 1134 tags
     'longslave','studiolands','leggingwanitacotton','longsleeve','jerseymulimah',
     'atasan','celana','social media']
@@ -90,9 +91,27 @@ def load_shopee(csv_label, days=3):
     return orders
 
 def extract_tag(name):
+    """Extract taglink from campaign name using known TAGS + audience mapping"""
     nl = name.lower()
+    # Check known tags
     for t in TAGS:
         if t in nl: return t
+    # Audience theme → taglink mapping (for renamed campaigns)
+    AUDIENCE_TO_TAG = {
+        'dapur': 'rakdapur3', 'masak': 'rakdapur3', 'perabotan': 'rakdapur3',
+        'drama': 'rakdapur3', 'movie': 'rakdapur3',
+        'interior': 'rakdapur3', 'rumah': 'rakdapur3', 'dekorasi': 'rakdapur3',
+        'fashion': 'rakdapur3', 'baju': 'rakdapur3',
+        'pertanian': 'rakdapur3', 'benih': 'benihsayuran',
+        'anak': 'dressanakperempuan', 'bayi': 'dressanakperempuan',
+        'wallpaper': 'wallpaperdindingvinyl', 'stiker': 'wallpaperdindingvinyl',
+        'elektronik': 'rakdapur3', 'belanja': 'rakdapur3',
+        'organisir': 'rakdapur3', 'kecantikan': 'rakdapur3',
+    }
+    for audience, tag in AUDIENCE_TO_TAG.items():
+        if audience in nl:
+            return tag
+    # Fallback: clean prefix and numbers
     c = re.sub(r'^(bidcap|bc|tc|off_|lc_|scale_|nyamiresep_|test_|winner_?|selow_?|0858_?|1208_?|1134_?|1340_?)+','',nl,flags=re.I)
     return re.sub(r'\s*\d+$','',c).strip('_ -') or nl
 
@@ -722,19 +741,58 @@ def main():
         while True:
             try:
                 r = analyze(args.account, args.days)
-                if not r: time.sleep(args.interval); continue
+                if not r: 
+                    time.sleep(args.interval)
+                    continue
+                
                 now = datetime.now(); h = now.hour
-                msg = fmt_telegram(r, 'daily')
+                all_camps = r['wins']+r['bons']+r['scales']+r['watch']+r['pend']
+                reko = rekomendasi(all_camps, args.account, args.days)
+                
+                # Morning: Full package (Daily + SOP + Rekomendasi)
                 if 7 <= h < 9 and (not last_am or last_am.date() < now.date()):
-                    send_tg(f"<b>MORNING BRIEFING</b>\n\n{msg}")
-                    last_am = now; print(f"[{now:%H:%M}] Morning sent")
+                    daily = fmt_telegram(r, 'daily')
+                    sop = fmt_cli(r, 'sop')
+                    reko_text = fmt_rekomendasi(r, reko) if reko else ''
+                    full = (
+                        f"<b>☀️ MORNING BRIEFING — {a['nm']}</b>\n\n"
+                        f"{daily}\n\n"
+                        f"<b>📋 SOP — Instruksi Hari Ini</b>\n<pre>{sop[-1500:]}</pre>\n\n"
+                    )
+                    if reko:
+                        # Include top 3 rekomendasi
+                        top3 = reko['reco'][:3]
+                        rec_lines = []
+                        for rc in top3:
+                            icon = {'GAS':'🚀','GAS+CREATIVE':'🚀🎨','STABIL':'✅','OPTIMIZE':'⚙️','PAUSE':'⏸️','TUNGGU':'⏳'}.get(rc['aksi'],'📌')
+                            rec_lines.append(f"{icon} {rc['tag']}: {rc['aksi']} — ROAS {rc['roas']:.1f}x | {rc['detail']}")
+                        full += f"<b>🎯 REKOMENDASI</b>\n" + '\n'.join(rec_lines)
+                    send_tg(full)
+                    last_am = now
+                    print(f"[{now:%H:%M}] Morning package sent")
+                
+                # Evening: Summary + SOP
                 elif 20 <= h < 22 and (not last_pm or last_pm.date() < now.date()):
-                    send_tg(f"<b>EVENING BRIEFING</b>\n\n{msg}")
-                    last_pm = now; print(f"[{now:%H:%M}] Evening sent")
-                crit = [c for c in r['bons']+r['fat'] if c.get('fatigue',0)>=2]
+                    daily = fmt_telegram(r, 'daily')
+                    sop = fmt_cli(r, 'sop')
+                    full = (
+                        f"<b>🌙 EVENING SUMMARY — {a['nm']}</b>\n\n"
+                        f"{daily}\n\n"
+                        f"<b>📋 SOP Besok</b>\n<pre>{sop[-1200:]}</pre>"
+                    )
+                    send_tg(full)
+                    last_pm = now
+                    print(f"[{now:%H:%M}] Evening package sent")
+                
+                # Critical alerts: any session
+                crit = [c for c in r['bons']+r['fat'] if c.get('fatigue',0)>=2 or c.get('cpc',999) > 235]
                 if crit:
-                    send_tg(f"<b>CRITICAL — {len(crit)} campaigns need action!</b>\n\n{fmt_telegram(r,'boncos')}")
+                    crit_msg = "<b>🚨 CRITICAL ALERT</b>\n\n"
+                    for c in crit[:5]:
+                        crit_msg += f"• {c['name'][:40]} | CPC {c['cpc']:.0f} | {c.get('fatigue_desc','')}\n"
+                    send_tg(crit_msg)
                     print(f"[{now:%H:%M}] Critical alert ({len(crit)})")
+                
                 print(f"[{now:%H:%M}] Spend: Rp {r['total_spend']:,.0f} | Profit: Rp {r['total_profit']:,.0f}")
                 time.sleep(args.interval)
             except KeyboardInterrupt:
