@@ -36,6 +36,7 @@ ACCOUNTS = {
     '0858': {'id': 'act_435670549443081', 'label': 'Selow 0858', 'shopee_label': 'selow0858'},
     '1208': {'id': 'act_1439536310038458', 'label': 'Herbal', 'shopee_label': 'herbal'},
     '1134': {'id': 'act_1773760133153789', 'label': 'Selow 1134', 'shopee_label': 'selow1134'},
+    'glowscent': {'id': 'act_2125021885010866', 'label': 'GlowScent', 'shopee_label': 'glowscent'},
 }
 
 # Decision thresholds

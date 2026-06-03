@@ -1,6 +1,18 @@
 #!/bin/bash
 # Post rak dapur content to all FB pages via curl
-TOKEN="EAAKA2OT1FroBRot0MWOi39slvmVLfZAPYWFFYoSO4ZAYvZAq0X7wnLBvAmgp0vai9KHZBOjXQ5VmvWYZCwNDJkUhrdlDwSUXGvb0LZACz9v4DkQj33B2cDrizSrH49UCIDnoebkQPaRg3YoxDwgwT6nrgZA2IvZAXQ77A99YS1hm6VVbA9i2Dn3PPgD794QJNZCAMqyYEGXqOyzmOUc7IirP4KMXWxUzwZBtOSgQIx5v19Mz8oB2GB4TKcPQZDZD"
+resolve_meta_token() {
+  [ -n "$META_ACCESS_TOKEN" ] && { echo "$META_ACCESS_TOKEN"; return; }
+  local f="$HOME/.openclaw/workspace/config/meta_token.json"
+  [ -f "$f" ] && python3 -c "import json,sys; print(json.load(open('$f'))['access_token'])" 2>/dev/null && return
+  [ -f "$(dirname "$0")/../.env" ] && { set -a; . "$(dirname "$0")/../.env"; set +a; [ -n "$META_ACCESS_TOKEN" ] && echo "$META_ACCESS_TOKEN"; }
+}
+
+TOKEN=$(resolve_meta_token)
+if [ -z "$TOKEN" ]; then
+  echo "ERROR: META_ACCESS_TOKEN not found. Set in .env or export as env var." >&2
+  exit 1
+fi
+
 BASE="https://graph.facebook.com/v19.0"
 
 # Get page tokens

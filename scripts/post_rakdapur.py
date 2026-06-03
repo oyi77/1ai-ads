@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Post rak dapur content to all FB pages with fresh tokens"""
-import requests, json, time, random
+import requests, json, time, random, os, sys
 from pathlib import Path
 from datetime import datetime
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib'))
+from credentials import get_meta_token
 
-TOKEN = 'EAAKA2OT1FroBRot0MWOi39slvmVLfZAPYWFFYoSO4ZAYvZAq0X7wnLBvAmgp0vai9KHZBOjXQ5VmvWYZCwNDJkUhrdlDwSUXGvb0LZACz9v4DkQj33B2cDrizSrH49UCIDnoebkQPaRg3YoxDwgwT6nrgZA2IvZAXQ77A99YS1hm6VVbA9i2Dn3PPgD794QJNZCAMqyYEGXqOyzmOUc7IirP4KMXWxUzwZBtOSgQIx5v19Mz8oB2GB4TKcPQZDZD'
+TOKEN = get_meta_token()
 BASE = 'https://graph.facebook.com/v19.0'
 
 # Get fresh page tokens

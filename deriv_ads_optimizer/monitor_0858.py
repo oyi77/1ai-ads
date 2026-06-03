@@ -5,11 +5,14 @@ Runs every 5 min, auto-pauses underperformers based on Shopee data.
 Target: Min ROI 2x. CBO_* campaigns are kill candidates.
 """
 
-import urllib.request, json, os, sys
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
+import urllib.request, json
 from datetime import datetime, timezone
 from pathlib import Path
+from lib.credentials import get_meta_token
 
-TOKEN = "EAAKA2OT1FroBRot0MWOi39slvmVLfZAPYWFFYoSO4ZAYvZAq0X7wnLBvAmgp0vai9KHZBOjXQ5VmvWYZCwNDJkUhrdlDwSUXGvb0LZACz9v4DkQj33B2cDrizSrH49UCIDnoebkQPaRg3YoxDwgwT6nrgZA2IvZAXQ77A99YS1hm6VVbA9i2Dn3PPgD794QJNZCAMqyYEGXqOyzmOUc7IirP4KMXWxUzwZBtOSgQIx5v19Mz8oB2GB4TKcPQZDZD"
+TOKEN = get_meta_token()
 ACCOUNT = "act_435670549443081"
 LOG_DIR = "/home/openclaw/.openclaw/workspace/logs/ads_0858_monitor.log"
 
