@@ -1197,6 +1197,59 @@ def api_0858_status():
 def api_0858_campaigns():
     return jsonify(load_0858_status().get("campaigns", []))
 
+# ─── TRAKPRO INTEGRATION ──────────────────────────────────────────────────
+TRAKPRO_STATE = Path(__file__).parent.parent / "data" / "vilona_trakpro_state.json"
+TRAKPRO_ALERTS = Path(__file__).parent.parent / "data" / "vilona_trakpro_alerts.jsonl"
+
+@app.route("/api/trakpro/status")
+def api_trakpro_status():
+    """Return Trakpro engine state for dashboard integration.
+    Accepts ?key=BerkahKarya2026! for non-session access."""
+    # Allow API key bypass for dashboard integration
+    api_key = request.args.get("key", "")
+    if api_key != "BerkahKarya2026!":
+        if "user_id" not in session:
+            return jsonify({"error": "Unauthorized", "success": False}), 401
+    state = {}
+    if TRAKPRO_STATE.exists():
+        try:
+            state = json.loads(TRAKPRO_STATE.read_text())
+        except:
+            pass
+    
+    # Add recent alerts
+    alerts = []
+    if TRAKPRO_ALERTS.exists():
+        try:
+            for line in TRAKPRO_ALERTS.read_text().strip().split("\n")[-10:]:
+                if line.strip():
+                    alerts.append(json.loads(line))
+        except:
+            pass
+    
+    # Check engine health
+    import subprocess
+    engine_running = subprocess.run(
+        ["systemctl", "--user", "is-active", "vilona-trakpro.service"],
+        capture_output=True, text=True, timeout=3
+    ).stdout.strip() == "active"
+    
+    return jsonify({
+        "engine": "running" if engine_running else "stopped",
+        "accounts": {
+            k: {
+                "last_cycle": v.get("last_cycle"),
+                "active": v.get("summary", {}).get("active", 0),
+                "total": v.get("summary", {}).get("total_campaigns", 0),
+                "spend_48h": v.get("summary", {}).get("spend_48h", 0),
+                "winners": v.get("summary", {}).get("winners", 0),
+                "boncos": v.get("summary", {}).get("boncos", 0),
+            }
+            for k, v in state.items() if k in ("0858", "1041", "1208")
+        },
+        "alerts": alerts[-5:],
+    })
+
 
 if __name__ == "__main__":
     print("=" * 60)
