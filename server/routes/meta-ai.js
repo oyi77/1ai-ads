@@ -1,30 +1,76 @@
 import { Router } from 'express';
 import { createLogger } from '../lib/logger.js';
-import { ConfigurationError } from '../lib/errors.js';
 
 const log = createLogger('meta-ai');
 
 const MAIBA_ENDPOINT = 'https://adsmanager.facebook.com/api/graphql/';
 const MAIBA_DOC_ID = '26667472482923907';
 const MAIBA_FRIENDLY_NAME = 'MAIBAGraphQLSendMessageV2QueryMutation';
+const COOKIES_KEY = 'meta_ai_cookies';
+const ACCOUNT_KEY = 'meta_ai_ad_account_id';
 
-export function createMetaAiRouter() {
+function resolveCookies(settingsRepo) {
+  const fromDb = settingsRepo?.get?.(COOKIES_KEY);
+  if (fromDb && typeof fromDb === 'string' && fromDb.trim()) return fromDb;
+  return process.env.META_AI_COOKIES || null;
+}
+
+function resolveAdAccountId(settingsRepo, bodyValue) {
+  if (bodyValue) return bodyValue;
+  const fromDb = settingsRepo?.get?.(ACCOUNT_KEY);
+  if (fromDb && typeof fromDb === 'string' && fromDb.trim()) return fromDb;
+  return null;
+}
+
+export function createMetaAiRouter(settingsRepo) {
   const router = Router();
 
   router.get('/status', (_req, res) => {
+    const cookies = resolveCookies(settingsRepo);
     res.json({
       success: true,
       data: {
-        configured: Boolean(process.env.META_AI_COOKIES),
+        configured: Boolean(cookies),
+        source: settingsRepo?.get?.(COOKIES_KEY) ? 'database' : (process.env.META_AI_COOKIES ? 'env' : 'none'),
         endpoint: MAIBA_ENDPOINT,
         docId: MAIBA_DOC_ID,
-        note: 'Set META_AI_COOKIES env var to your adsmanager.facebook.com browser cookies. See /meta-ai view for instructions.',
+        adAccountId: settingsRepo?.get?.(ACCOUNT_KEY) || null,
+        note: 'Configure cookies in Settings > Meta AI, or set META_AI_COOKIES env var.',
       },
     });
   });
 
+  router.put('/config', (req, res) => {
+    const { cookies, adAccountId } = req.body || {};
+    if (!settingsRepo) {
+      return res.status(500).json({ success: false, error: 'Settings repository not available' });
+    }
+    if (cookies !== undefined) {
+      if (typeof cookies !== 'string' || !cookies.trim()) {
+        return res.status(400).json({ success: false, error: 'cookies must be a non-empty string' });
+      }
+      settingsRepo.set(COOKIES_KEY, cookies.trim());
+    }
+    if (adAccountId !== undefined) {
+      if (typeof adAccountId !== 'string' || !adAccountId.trim()) {
+        return res.status(400).json({ success: false, error: 'adAccountId must be a non-empty string' });
+      }
+      settingsRepo.set(ACCOUNT_KEY, adAccountId.trim());
+    }
+    res.json({ success: true, data: { saved: true } });
+  });
+
+  router.delete('/config', (_req, res) => {
+    if (!settingsRepo) {
+      return res.status(500).json({ success: false, error: 'Settings repository not available' });
+    }
+    settingsRepo.delete(COOKIES_KEY);
+    settingsRepo.delete(ACCOUNT_KEY);
+    res.json({ success: true, data: { cleared: true } });
+  });
+
   router.post('/chat', async (req, res) => {
-    const cookies = process.env.META_AI_COOKIES;
+    const cookies = resolveCookies(settingsRepo);
     if (!cookies) {
       return res.status(400).json({
         success: false,
@@ -36,8 +82,9 @@ export function createMetaAiRouter() {
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ success: false, error: 'message is required' });
     }
-    if (!adAccountId) {
-      return res.status(400).json({ success: false, error: 'adAccountId is required' });
+    const finalAdAccountId = resolveAdAccountId(settingsRepo, adAccountId);
+    if (!finalAdAccountId) {
+      return res.status(400).json({ success: false, error: 'adAccountId is required (or set default in Settings > Meta AI)' });
     }
 
     const variables = JSON.stringify({
@@ -45,7 +92,7 @@ export function createMetaAiRouter() {
       isNewConversation: !conversationId,
       externalConversationId: conversationId || String(Date.now()),
       offlineThreadingId: offlineThreadingId || String(Date.now()),
-      clientContext: { ad_account_id: adAccountId, fb_account_id: null, context: { ad_spec: [] } },
+      clientContext: { ad_account_id: finalAdAccountId, fb_account_id: null, context: { ad_spec: [] } },
     });
 
     const formBody = new URLSearchParams({
