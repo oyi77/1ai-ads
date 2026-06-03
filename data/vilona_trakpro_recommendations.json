@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-03T23:09:52.424292+07:00",
+  "generated_at": "2026-06-03T23:28:54.327073+07:00",
   "date": "2026-06-03",
   "account": "Kakriput",
   "sections": [
@@ -67,19 +67,19 @@
           "name": "OFF_0858_gajahThai_fashionShopping_BID",
           "score": 57,
           "note": "ROAS:2.3x CPC:84 CTR:5.9% LC:960",
-          "spend": 118410.0,
+          "spend": 118448.0,
           "link_clicks": 960,
-          "cpc": 84.457917,
-          "ctr": 5.900177
+          "cpc": 84.424804,
+          "ctr": 5.90215
         },
         {
           "name": "OFF_0858_gajahThai_fashionBelanja_BID",
           "score": 57,
-          "note": "ROAS:2.4x CPC:88 CTR:5.5% LC:895",
-          "spend": 113672.0,
-          "link_clicks": 895,
-          "cpc": 88.4607,
-          "ctr": 5.54788
+          "note": "ROAS:2.4x CPC:89 CTR:5.5% LC:896",
+          "spend": 113746.0,
+          "link_clicks": 896,
+          "cpc": 88.518288,
+          "ctr": 5.54429
         },
         {
           "name": "OFF_0858_organizer_jewelry_EMPTY",

@@ -5,7 +5,7 @@ import urllib.request, json
 from datetime import datetime
 import os
 
-TOKEN = "os.getenv('META_ACCESS_TOKEN', '')"
+TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 
 print(f"🚀 Activating LLA Campaign at {datetime.now().strftime('%H:%M')} WIB")
 

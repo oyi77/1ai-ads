@@ -20,7 +20,7 @@ from datetime import datetime
 import os
 
 # ─── CONFIG ─────────────────────────────────────────────────────────────
-TOKEN = 'os.getenv('META_ACCESS_TOKEN', '')'
+TOKEN = os.getenv('META_ACCESS_TOKEN', '')
 ACCOUNT_ID = 'act_435670549443081'
 PAGE_ID = '997737406765722'  # JENDRALBOT page
 BASE = 'https://graph.facebook.com/v19.0'
