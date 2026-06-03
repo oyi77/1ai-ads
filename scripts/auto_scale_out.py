@@ -51,6 +51,17 @@ MIN_ROAS = 1.3
 MIN_PROFIT = 5000
 MIN_DAYS_ACTIVE = 3
 
+def extract_product_tag(campaign_name):
+    """Extract product/taglink from standardized campaign name.
+    Format: {STRATEGI}_{AKUN}_{PRODUK}_{TAGLINK}_{AUDIENCE}_{TANGGAL}
+    Returns PRODUK (index 2) or TAGLINK (index 3) if available."""
+    parts = campaign_name.split('_')
+    if len(parts) >= 4:
+        return parts[2]  # PRODUK
+    elif len(parts) >= 2:
+        return parts[1]
+    return campaign_name[:30]
+
 # 🎯 Interest pools — THEMATIC CLUSTERING (Veris rule)
 # Never cross categories! Same theme = large overlap audience
 INTEREST_POOLS = {
@@ -237,7 +248,8 @@ def create_scale_out(campaign_id, campaign_name, budget):
     # Format: {STRATEGI}_{AKUN}_{PRODUK}_{TAGLINK}_{AUDIENCE}_{TANGGAL}
     date_str = datetime.now().strftime('%d%m')
     product = extract_product_tag(campaign_name)
-    new_camp_name = f"LC_Nyamiresep_{product}_{product}_{product}_{date_str}"[:120]
+    interest_name = expand_interests[0]['name'][:20].replace(' ', '').replace('(','').replace(')','').replace('&','')
+    new_camp_name = f"LC_Nyamiresep_{product}_{product}_{interest_name}_{date_str}"[:120]
     
     new_camp = api_post(f'{ACT}/campaigns', {
         'name': new_camp_name,

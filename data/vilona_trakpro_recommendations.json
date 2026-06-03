@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-03T22:28:35.710118+07:00",
+  "generated_at": "2026-06-03T23:09:52.424292+07:00",
   "date": "2026-06-03",
   "account": "Kakriput",
   "sections": [
@@ -67,19 +67,19 @@
           "name": "OFF_0858_gajahThai_fashionShopping_BID",
           "score": 57,
           "note": "ROAS:2.3x CPC:84 CTR:5.9% LC:960",
-          "spend": 118247.0,
+          "spend": 118410.0,
           "link_clicks": 960,
-          "cpc": 84.341655,
-          "ctr": 5.909378
+          "cpc": 84.457917,
+          "ctr": 5.900177
         },
         {
           "name": "OFF_0858_gajahThai_fashionBelanja_BID",
           "score": 57,
-          "note": "ROAS:2.4x CPC:88 CTR:5.5% LC:893",
-          "spend": 113417.0,
-          "link_clicks": 893,
-          "cpc": 88.399844,
-          "ctr": 5.549068
+          "note": "ROAS:2.4x CPC:88 CTR:5.5% LC:895",
+          "spend": 113672.0,
+          "link_clicks": 895,
+          "cpc": 88.4607,
+          "ctr": 5.54788
         },
         {
           "name": "OFF_0858_organizer_jewelry_EMPTY",
@@ -149,10 +149,10 @@
         },
         {
           "name": "BIDCAP_Organizer_organizerpullout_Travel_0603",
-          "spend": 21418.0,
+          "spend": 21435.0,
           "link_clicks": 125,
-          "cpc": 147.710345,
-          "ctr": 4.363527,
+          "cpc": 147.827586,
+          "ctr": 4.360902,
           "signal": "EARLY_WINNER",
           "new_campaign": true,
           "recommendation": "Winner signal confirmed — pantau 24 jam lagi untuk scale penuh"

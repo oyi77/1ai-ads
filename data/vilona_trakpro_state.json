@@ -1,6 +1,6 @@
 {
   "0858": {
-    "last_cycle": "2026-06-03T22:28:34.400392+07:00",
+    "last_cycle": "2026-06-03T23:09:50.044544+07:00",
     "campaigns": {
       "120248404118800416": {
         "name": "BIDCAP_Rakpiring_rakpiringpengering_Winner_0603",
@@ -44,8 +44,8 @@
       },
       "120249722735720416": {
         "name": "BIDCAP_Organizer_organizerpullout_Travel_0603",
-        "ctr": 4.363527,
-        "cpc": 147.710345
+        "ctr": 4.360902,
+        "cpc": 147.827586
       },
       "120249727183880416": {
         "name": "LC_Organizer_organizerpullout_Dapur_0603_CLONE1",
@@ -94,8 +94,8 @@
       },
       "120250009834770416": {
         "name": "BIDCAP_Organizer_organizerpullout_Shopping_0603",
-        "ctr": 2.684564,
-        "cpc": 297.25
+        "ctr": 2.666667,
+        "cpc": 298.0
       },
       "120250009839170416": {
         "name": "BIDCAP_Organizer_organizerpullout_Fashion_0603",
@@ -129,13 +129,13 @@
       },
       "120250016047830416": {
         "name": "OFF_0858_gajahThai_fashionShopping_BID",
-        "ctr": 5.909378,
-        "cpc": 84.341655
+        "ctr": 5.900177,
+        "cpc": 84.457917
       },
       "120250016058540416": {
         "name": "OFF_0858_gajahThai_fashionBelanja_BID",
-        "ctr": 5.549068,
-        "cpc": 88.399844
+        "ctr": 5.54788,
+        "cpc": 88.4607
       },
       "120250017839070416": {
         "name": "OFF_0858_fashionWanitaPremium_shopping_BID_Test",
@@ -194,9 +194,9 @@
       }
     },
     "summary": {
-      "active": 0,
+      "active": 2,
       "total_campaigns": 79,
-      "spend_48h": 384245,
+      "spend_48h": 384683,
       "winners": 0,
       "boncos": 0,
       "winner_names": [],
