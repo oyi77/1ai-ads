@@ -1,69 +1,55 @@
 #!/usr/bin/env python3
 """
-🔥 AUTO SCALE-OUT — Duplicate winning campaigns to new audiences
-Part of Decision Center System. Runs hourly, fully autonomous.
+🔥 AUTO SCALE-OUT v2.0 — SIMPLE: duplicate winner → rename → expand audience
+Veris Method: Copy campaign, change targeting, ads stay same.
 
-Logic:
-  1. Detect winners (ROAS ≥ 1.3x, profit > 0, days active ≥ 3)
-  2. Clone campaign → new ad sets with expanded interests
-  3. Track state → never duplicate same campaign twice in 7 days
-  4. Telegram notification via bot
+Flow:
+  1. Find winner (active campaign with CTR ≥ 3% + spend > 5K)
+  2. Deep-copy via POST /{campaign_id}/copies (campaign + adsets + ads)
+  3. Rename campaign to {STRATEGI}_{AKUN}_{PRODUK}_{TAGLINK}_{NEW_AUDIENCE}_{DATE}
+  4. Update adset targeting with expanded thematic interests
+  5. Leave PAUSED for review
+  6. Telegram notification
 
 Safety:
-  - Max 2 scale-outs per day (per account)
-  - Thematic clustering (same-theme interests only)
-  - Min 2M audience per adset
-  - Cooldown 7 days per source campaign
+  - Max 2 per day, 7-day cooldown per source
+  - Thematic clustering only (Veris rule: never cross categories)
 """
 import sys, os, json, requests, argparse
 from datetime import datetime, timedelta
 from pathlib import Path
-from collections import defaultdict
 
 SCRIPT_DIR = Path(__file__).parent
 PROJECT_DIR = SCRIPT_DIR.parent
 STATE_FILE = PROJECT_DIR / 'data' / 'scale_out_state.json'
 LOG_FILE = PROJECT_DIR / 'logs' / 'scale_out.log'
 
-def get_token():
-    with open(PROJECT_DIR / '.env') as f:
-        for line in f:
-            if 'META_ACCESS_TOKEN' in line:
-                return line.strip().split('=', 1)[1]
-    return None
+# === CONFIG ===
+def load_env():
+    env = {}
+    env_file = PROJECT_DIR / '.env'
+    if env_file.exists():
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    k, v = line.split('=', 1)
+                    env[k.strip()] = v.strip()
+    return env
 
-def get_tg_token():
-    with open(PROJECT_DIR / '.env') as f:
-        for line in f:
-            if 'TELEGRAM_BOT_TOKEN' in line:
-                return line.strip().split('=', 1)[1]
-    return None
-
-TOKEN = get_token()
-TELEGRAM_TOKEN = get_token()
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '157228659')
+ENV = load_env()
+TOKEN = os.environ.get('META_ACCESS_TOKEN', '')
+TELEGRAM_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID', '157228659')
 
 API = 'https://graph.facebook.com/v19.0'
 ACT = 'act_380721031313330'
-MAX_SCALE_OUTS_PER_DAY = 2
+MAX_PER_DAY = 2
 COOLDOWN_DAYS = 7
-MIN_ROAS = 1.3
-MIN_PROFIT = 5000
-MIN_DAYS_ACTIVE = 3
-
-def extract_product_tag(campaign_name):
-    """Extract product/taglink from standardized campaign name.
-    Format: {STRATEGI}_{AKUN}_{PRODUK}_{TAGLINK}_{AUDIENCE}_{TANGGAL}
-    Returns PRODUK (index 2) or TAGLINK (index 3) if available."""
-    parts = campaign_name.split('_')
-    if len(parts) >= 4:
-        return parts[2]  # PRODUK
-    elif len(parts) >= 2:
-        return parts[1]
-    return campaign_name[:30]
+MIN_CTR = 3.0
+MIN_SPEND = 5000
 
 # 🎯 Interest pools — THEMATIC CLUSTERING (Veris rule)
-# Never cross categories! Same theme = large overlap audience
 INTEREST_POOLS = {
     'rakdapur3': {
         'primary': [
@@ -88,6 +74,50 @@ INTEREST_POOLS = {
             {'id': '6003346592981', 'name': 'Belanja online'},
         ]
     },
+    'dressanakperempuan': {
+        'primary': [
+            {'id': '6003053088645', 'name': 'Pakaian anak'},
+        ],
+        'expand': [
+            {'id': '6003221485467', 'name': 'Fashion anak'},
+            {'id': '6003263791114', 'name': 'Belanja fashion'},
+        ]
+    },
+    'bajuanak': {
+        'primary': [
+            {'id': '6003053088645', 'name': 'Pakaian anak'},
+        ],
+        'expand': [
+            {'id': '6003221485467', 'name': 'Fashion anak'},
+        ]
+    },
+    'benihsayuran': {
+        'primary': [
+            {'id': '6003121865564', 'name': 'Berkebun'},
+        ],
+        'expand': [
+            {'id': '6003364701153', 'name': 'Pertanian'},
+            {'id': '6003520360199', 'name': 'Tanaman hias'},
+        ]
+    },
+    'wallpaperdindingvinyl': {
+        'primary': [
+            {'id': '6003360332669', 'name': 'Dekorasi rumah'},
+        ],
+        'expand': [
+            {'id': '6003327621683', 'name': 'Rumah'},
+            {'id': '6003139266461', 'name': 'Perabot rumah'},
+        ]
+    },
+    'stikerkeramik': {
+        'primary': [
+            {'id': '6003360332669', 'name': 'Dekorasi rumah'},
+        ],
+        'expand': [
+            {'id': '6003327621683', 'name': 'Rumah'},
+            {'id': '6003139266461', 'name': 'Perabot rumah'},
+        ]
+    },
     'default': {
         'primary': [
             {'id': '6003346592981', 'name': 'Belanja online (ritel)'},
@@ -95,7 +125,6 @@ INTEREST_POOLS = {
         'expand': [
             {'id': '6003221485467', 'name': 'Perdagangan elektronik'},
             {'id': '6003263791114', 'name': 'Belanja (ritel)'},
-            {'id': '6003053088645', 'name': 'Online marketplace'},
         ]
     }
 }
@@ -107,6 +136,8 @@ BASE_TARGETING = {
     'publisher_platforms': ['facebook', 'instagram'],
     'device_platforms': ['mobile'],
 }
+
+# === HELPERS ===
 
 def log(msg):
     ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -128,247 +159,252 @@ def save_state(state):
 def api_get(path, params=None):
     p = {"access_token": TOKEN, "limit": 200}
     if params: p.update(params)
-    return requests.get(f"{API}/{path}", params=p, timeout=15).json()
+    try:
+        return requests.get(f"{API}/{path}", params=p, timeout=15).json()
+    except:
+        return {"error": "timeout"}
 
-def api_post(path, data):
-    return requests.post(f"{API}/{path}",
-        params={"access_token": TOKEN}, json=data, timeout=15).json()
+def api_post(path, data=None):
+    try:
+        return requests.post(f"{API}/{path}",
+            params={"access_token": TOKEN}, json=data or {}, timeout=15).json()
+    except:
+        return {"error": "timeout"}
 
-def send_telegram(text):
+def send_tg(text):
     if not TELEGRAM_TOKEN: return
     try:
         requests.post(f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage',
             json={'chat_id': TELEGRAM_CHAT_ID, 'text': text}, timeout=10)
     except: pass
 
-def get_winner_campaigns():
-    """Find campaigns ready for scale-out"""
+# === CORE LOGIC ===
+
+def get_winners():
+    """Find active scale-eligible campaigns with good CTR"""
     today = datetime.now()
-    since = (today - timedelta(days=MIN_DAYS_ACTIVE)).strftime('%Y-%m-%d')
+    since = (today - timedelta(days=3)).strftime('%Y-%m-%d')
     until = (today - timedelta(days=1)).strftime('%Y-%m-%d')
-    
-    # Get active campaigns with insights
-    camps = api_get(f'{ACT}/campaigns', {'fields': 'id,name,status,daily_budget'})
+
+    camps = api_get(f'{ACT}/campaigns', {
+        'fields': 'id,name,status,daily_budget',
+        'effective_status': '["ACTIVE"]',
+    })
+
     active = [c for c in camps.get('data', [])
-              if c['status'] == 'ACTIVE' and 'OFF_' not in c['name'][:10]
-              and 'BIDCAP' not in c['name'] and 'BC_' not in c['name'][:3]]
-    
-    # Filter to LC_/TC_/ABO campaigns (only these can scale)
-    lc_camps = [c for c in active if c['name'].startswith(('LC_','TC_','ABO_'))]
-    
-    if not lc_camps:
+              if 'OFF_' not in c.get('name', '')[:10]]
+
+    if not active:
         return []
-    
-    # Get insights
-    cids = [c['id'] for c in lc_camps]
+
+    cids = [c['id'] for c in active]
+
     ins = api_get(f'{ACT}/insights', {
         'level': 'campaign',
         'fields': 'campaign_id,campaign_name,spend,impressions,clicks,cpc,ctr',
-        'time_range': f'{{"since":"{since}","until":"{until}"}}',
+        'time_range': json.dumps({'since': since, 'until': until}),
         'filtering': json.dumps([{'field': 'campaign.id', 'operator': 'IN', 'value': cids}])
     })
-    
+
     results = []
     for i in ins.get('data', []):
         spend = float(i.get('spend', 0))
-        cpc = float(i.get('cpc', 0))
         ctr = float(i.get('ctr', 0))
-        name = i.get('campaign_name', '')
-        cid = i.get('campaign_id', '')
-        
-        if spend < 5000 or cpc == 0:
+        cpc = float(i.get('cpc', 0))
+        if spend < MIN_SPEND or cpc == 0 or ctr < MIN_CTR:
             continue
-        
-        # Find budget
-        camp_info = next((c for c in lc_camps if c['id'] == cid), {})
+
+        cid = i.get('campaign_id', '')
+        camp_info = next((c for c in active if c['id'] == cid), {})
         budget = int(camp_info.get('daily_budget', 0))
-        
+
         results.append({
-            'id': cid, 'name': name, 'spend': spend, 'cpc': cpc,
-            'ctr': ctr, 'budget': budget,
+            'id': cid, 'name': i.get('campaign_name', ''),
+            'spend': spend, 'ctr': ctr, 'cpc': cpc, 'budget': budget,
         })
-    
-    return sorted(results, key=lambda x: x['ctr'], reverse=True)
 
-def get_campaign_structure(campaign_id):
-    """Get campaign adsets and their targeting"""
-    adsets = api_get(f'{campaign_id}/adsets', {
-        'fields': 'id,name,targeting,status,daily_budget',
-    })
-    return adsets.get('data', [])
+    return sorted(results, key=lambda x: -x['ctr'])
 
-def get_interest_pool_for_campaign(name):
-    """Determine which interest pool to use based on campaign name"""
+
+def extract_product(name):
+    """Extract produk tag from campaign name"""
+    parts = name.lower().split('_')
+    if len(parts) >= 4:
+        return parts[2]
+    return name[:30]
+
+
+def get_pool(name):
+    """Get interest pool for campaign product"""
     name_lower = name.lower()
     for key in INTEREST_POOLS:
         if key != 'default' and key in name_lower:
             return INTEREST_POOLS[key]
     return INTEREST_POOLS['default']
 
-def get_existing_interests(adsets):
-    """Extract all interest IDs already used in adsets"""
-    interests = set()
-    for adset in adsets:
-        targeting = adset.get('targeting', {})
-        for interest in targeting.get('interests', []):
-            if isinstance(interest, dict):
-                interests.add(interest.get('id', ''))
-            else:
-                interests.add(str(interest))
-        for interest in targeting.get('flexible_spec', []):
-            for sub in interest.get('interests', []):
-                interests.add(sub.get('id', ''))
-    return interests
 
-def create_scale_out(campaign_id, campaign_name, budget):
-    """Create scale-out duplicate with expanded interests"""
-    
-    # Get original structure
-    adsets = get_campaign_structure(campaign_id)
-    if not adsets:
-        log(f"  ❌ No adsets found for {campaign_name}")
-        return None
-    
-    # Get first adset for reference
-    ref = adsets[0]
-    ref_targeting = ref.get('targeting', {})
-    
-    # Get existing interests (don't duplicate)
-    existing_interests = get_existing_interests(adsets)
-    
-    # Get interest pool for expansion
-    pool = get_interest_pool_for_campaign(campaign_name)
-    expand_interests = [i for i in pool['expand'] if i['id'] not in existing_interests]
-    
-    if not expand_interests:
-        log(f"  ⚠️ No new interests to expand into for {campaign_name}")
-        return None
-    
-    # Create new campaign (clone) with standard naming
-    # Format: {STRATEGI}_{AKUN}_{PRODUK}_{TAGLINK}_{AUDIENCE}_{TANGGAL}
-    date_str = datetime.now().strftime('%d%m')
-    product = extract_product_tag(campaign_name)
-    interest_name = expand_interests[0]['name'][:20].replace(' ', '').replace('(','').replace(')','').replace('&','')
-    new_camp_name = f"LC_Nyamiresep_{product}_{product}_{interest_name}_{date_str}"[:120]
-    
-    new_camp = api_post(f'{ACT}/campaigns', {
-        'name': new_camp_name,
-        'objective': 'OUTCOME_SALES',
-        'status': 'PAUSED',
-        'special_ad_categories': [],
+def get_existing_interest_ids(campaign_id):
+    """Get all interest IDs already targeted in this campaign"""
+    adsets = api_get(f'{campaign_id}/adsets', {
+        'fields': 'id,targeting', 'limit': 50
     })
+    ids = set()
+    for a in adsets.get('data', []):
+        t = a.get('targeting', {})
+        for interest in t.get('interests', []):
+            ids.add(interest.get('id', '') if isinstance(interest, dict) else str(interest))
+        for spec in t.get('flexible_spec', []):
+            for interest in spec.get('interests', []):
+                ids.add(interest.get('id', ''))
+    return ids
+
+
+def scale_out(campaign_id, campaign_name, budget):
+    """Simple scale-out: copy campaign → rename → expand audience"""
     
-    if not new_camp.get('id'):
-        log(f"  ❌ Failed to create campaign: {new_camp}")
+    # 1. Deep copy the campaign
+    log(f"  📋 Copying campaign...")
+    copy_result = api_post(f'{campaign_id}/copies', {
+        'deep_copy': True,
+        'status_option': 'PAUSED',
+    })
+
+    new_id = copy_result.get('copied_campaign_id', '')
+    if not new_id:
+        log(f"  ❌ Copy failed: {copy_result}")
         return None
-    
-    new_camp_id = new_camp['id']
-    new_budget = max(int(budget * 0.5), 10000)  # Start at 50% of original
-    created_adsets = 0
-    
-    # Create 2-3 new adsets with expanded interests
-    for i, interest in enumerate(expand_interests[:3]):
+
+    log(f"  ✅ Copied → {new_id}")
+
+    # 2. Rename with new audience
+    product = extract_product(campaign_name)
+    pool = get_pool(campaign_name)
+    existing = get_existing_interest_ids(campaign_id)
+    new_interests = [i for i in pool['expand'] if i['id'] not in existing]
+
+    if not new_interests:
+        # No new interests — clean up copy and skip
+        api_post(f'{new_id}', {'status': 'DELETED'})
+        log(f"  ⚠️ No new interests to expand — skipping")
+        return None
+
+    interest_name = new_interests[0]['name'].replace(' ', '').replace('(', '').replace(')', '').replace('&', '')[:20]
+    date_str = datetime.now().strftime('%d%m')
+    akun_name = 'Nyamiresep'
+    new_name = f"LC_{akun_name}_{product}_{product}_{interest_name}_{date_str}"[:120]
+
+    api_post(f'{new_id}', {'name': new_name})
+    log(f"  📝 Renamed: {new_name}")
+
+    # 3. Update adsets with expanded interests
+    adsets = api_get(f'{new_id}/adsets', {
+        'fields': 'id,name,targeting', 'limit': 50
+    })
+
+    updated = 0
+    for i, adset in enumerate(adsets.get('data', [])):
+        if i >= len(new_interests):
+            break
+
+        interest = new_interests[i]
+        ref_targeting = adset.get('targeting', {})
+
         new_targeting = {
             **BASE_TARGETING,
-            'interests': [interest],
+            'interests': [{'id': interest['id'], 'name': interest['name']}],
         }
-        
-        new_adset = api_post(f'{ACT}/adsets', {
-            'name': f"SO_{campaign_name[:30]}_Expand{i+1}",
-            'campaign_id': new_camp_id,
-            'daily_budget': new_budget // min(3, len(expand_interests[:3])),
-            'billing_event': 'IMPRESSIONS',
-            'optimization_goal': 'OFFSITE_CONVERSIONS',
-            'targeting': new_targeting,
-            'status': 'PAUSED',
-        })
-        
-        if new_adset.get('id'):
-            created_adsets += 1
-            log(f"    ✅ Adset: {interest['name']}")
-    
-    if created_adsets == 0:
-        # Clean up empty campaign
-        api_post(f'{new_camp_id}', {'status': 'DELETED'})
+
+        # Copy over any custom fields from original targeting
+        for field in ['custom_audiences', 'excluded_custom_audiences', 'locales',
+                       'targeting_optimization', 'flexible_spec']:
+            if field in ref_targeting:
+                new_targeting[field] = ref_targeting[field]
+
+        result = api_post(f'{adset["id"]}', {'targeting': new_targeting})
+        if 'error' not in result:
+            updated += 1
+            log(f"    ✅ Adset → {interest['name']}")
+
+    if updated == 0:
+        api_post(f'{new_id}', {'status': 'DELETED'})
+        log(f"  ❌ Failed to update any adsets — cleaned up")
         return None
-    
-    log(f"  📦 Campaign {new_camp_name} | {created_adsets} adsets | Budget: Rp {new_budget:,}")
-    return {'campaign_id': new_camp_id, 'name': new_camp_name, 'adsets': created_adsets, 'budget': new_budget}
+
+    # Calculate new budget
+    new_budget = max(int(budget * 0.5), 20000)
+
+    log(f"  📦 {new_name} | {updated} adsets | Budget: Rp {new_budget:,}")
+    return {
+        'id': new_id, 'name': new_name,
+        'adsets': updated, 'budget': new_budget,
+    }
+
 
 def run():
+    if not TOKEN:
+        log("❌ No Meta token")
+        return
+
     state = load_state()
     today = datetime.now().strftime('%Y-%m-%d')
-    
-    # Reset daily counter
+
     if state.get('last_reset') != today:
         state['daily_count'] = 0
         state['last_reset'] = today
-    
-    if state['daily_count'] >= MAX_SCALE_OUTS_PER_DAY:
-        log(f"⏸️ Daily limit reached ({MAX_SCALE_OUTS_PER_DAY}/day). Skipping.")
+
+    if state['daily_count'] >= MAX_PER_DAY:
+        log(f"⏸️ Daily limit ({MAX_PER_DAY}/day)")
         return
-    
-    log("=" * 60)
-    log("🔥 AUTO SCALE-OUT ENGINE STARTED")
-    
-    # Find winners
-    winners = get_winner_campaigns()
+
+    log("=" * 50)
+    log("🔥 AUTO SCALE-OUT v2.0")
+
+    winners = get_winners()
     if not winners:
-        log("No eligible LC_ campaigns found.")
+        log("No eligible winners")
         return
-    
-    log(f"Found {len(winners)} LC_ campaigns. Checking scale-out eligibility...")
-    
-    scaled = 0
+
+    log(f"Found {len(winners)} candidates")
+
     for w in winners:
-        if state['daily_count'] >= MAX_SCALE_OUTS_PER_DAY:
+        if state['daily_count'] >= MAX_PER_DAY:
             break
-        
+
         cid = w['id']
         cname = w['name']
-        
-        # Check cooldown
-        last_scale = state['scale_outs'].get(cid, {})
-        if last_scale:
-            last_date = last_scale.get('date', '2000-01-01')
-            days_since = (datetime.now() - datetime.fromisoformat(last_date)).days
-            if days_since < COOLDOWN_DAYS:
-                log(f"  ⏳ {cname[:50]} | {days_since}d since last scale-out (need {COOLDOWN_DAYS}d)")
+
+        # Cooldown check
+        last = state['scale_outs'].get(cid, {})
+        if last:
+            days = (datetime.now() - datetime.fromisoformat(last.get('date', '2000-01-01'))).days
+            if days < COOLDOWN_DAYS:
                 continue
-        
-        # Check quality
-        if w['ctr'] < 3.0:
-            log(f"  ⏭️ {cname[:50]} | CTR {w['ctr']:.1f}% too low")
-            continue
-        
-        log(f"  🎯 SCALE-OUT: {cname[:50]}")
-        log(f"     CTR: {w['ctr']:.1f}% | CPC: Rp {w['cpc']:,.0f} | Budget: Rp {w['budget']:,}")
-        
-        result = create_scale_out(cid, cname, w['budget'])
-        
+
+        log(f"\n🎯 {cname[:60]}")
+        log(f"   CTR {w['ctr']:.1f}% | CPC Rp {w['cpc']:,.0f} | Budget Rp {w['budget']:,}")
+
+        result = scale_out(cid, cname, w['budget'])
+
         if result:
             state['scale_outs'][cid] = {
-                'name': cname,
-                'date': today,
-                'new_campaign': result['name'],
-                'new_campaign_id': result['campaign_id'],
-                'adsets': result['adsets'],
-                'budget': result['budget'],
+                'name': cname, 'date': today,
+                'new': result['name'], 'new_id': result['id'],
+                'adsets': result['adsets'], 'budget': result['budget'],
             }
             state['daily_count'] += 1
-            scaled += 1
-            
-            # Notify
-            msg = (f"🔥 AUTO SCALE-OUT\n\n"
-                   f"Source: {cname[:50]}\n"
-                   f"New: {result['name']}\n"
-                   f"Adsets: {result['adsets']}\n"
-                   f"Budget: Rp {result['budget']:,}\n\n"
-                   f"⚠️ Campaign PAUSED — review before activating")
-            send_telegram(msg)
-    
+
+            send_tg(
+                f"🔥 AUTO SCALE-OUT\n\n"
+                f"Source: {cname[:50]}\n"
+                f"New: {result['name']}\n"
+                f"Adsets: {result['adsets']}\n"
+                f"Budget: Rp {result['budget']:,}\n\n"
+                f"⚠️ PAUSED — review lalu activate"
+            )
+
     save_state(state)
-    log(f"✅ Done. {scaled} scale-outs created today. Total: {state['daily_count']}/{MAX_SCALE_OUTS_PER_DAY}")
+    log(f"\n✅ Done. {state['daily_count']}/{MAX_PER_DAY} today")
+
 
 if __name__ == '__main__':
     run()
