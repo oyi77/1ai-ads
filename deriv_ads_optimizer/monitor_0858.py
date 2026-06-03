@@ -9,7 +9,7 @@ import urllib.request, json, os, sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-TOKEN = "EAAKA2OT1FroBRRatI2ZCH1pwWh0QTgeIa9Wd4BzfW3zPVykmC8Hvzo1WPKaoSUihtoYWAMgiXQnZCAx4hgOrBG5ZAWZAtUhQSaZCirwj9i13Ljf4nWZAsxSsimZCFkiIFxvRqyqzDQL7YmcafeBZBBQ6fAJ7q2KaO5pZArQLkVFMIRaktTuJf7CGeGOPZAtrOKb6whwAZDZD"
+TOKEN = "EAAKA2OT1FroBRot0MWOi39slvmVLfZAPYWFFYoSO4ZAYvZAq0X7wnLBvAmgp0vai9KHZBOjXQ5VmvWYZCwNDJkUhrdlDwSUXGvb0LZACz9v4DkQj33B2cDrizSrH49UCIDnoebkQPaRg3YoxDwgwT6nrgZA2IvZAXQ77A99YS1hm6VVbA9i2Dn3PPgD794QJNZCAMqyYEGXqOyzmOUc7IirP4KMXWxUzwZBtOSgQIx5v19Mz8oB2GB4TKcPQZDZD"
 ACCOUNT = "act_435670549443081"
 LOG_DIR = "/home/openclaw/.openclaw/workspace/logs/ads_0858_monitor.log"
 

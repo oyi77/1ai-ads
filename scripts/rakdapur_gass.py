@@ -19,7 +19,7 @@ from datetime import datetime
 # ═══════════════════════════════
 # CONFIG
 # ═══════════════════════════════
-META_TOKEN = "EAAKA2OT1FroBRRatI2ZCH1pwWh0QTgeIa9Wd4BzfW3zPVykmC8Hvzo1WPKaoSUihtoYWAMgiXQnZCAx4hgOrBG5ZAWZAtUhQSaZCirwj9i13Ljf4nWZAsxSsimZCFkiIFxvRqyqzDQL7YmcafeBZBBQ6fAJ7q2KaO5pZArQLkVFMIRaktTuJf7CGeGOPZAtrOKb6whwAZDZD"
+META_TOKEN = "EAAKA2OT1FroBRot0MWOi39slvmVLfZAPYWFFYoSO4ZAYvZAq0X7wnLBvAmgp0vai9KHZBOjXQ5VmvWYZCwNDJkUhrdlDwSUXGvb0LZACz9v4DkQj33B2cDrizSrH49UCIDnoebkQPaRg3YoxDwgwT6nrgZA2IvZAXQ77A99YS1hm6VVbA9i2Dn3PPgD794QJNZCAMqyYEGXqOyzmOUc7IirP4KMXWxUzwZBtOSgQIx5v19Mz8oB2GB4TKcPQZDZD"
 ACCOUNT_ID = "act_380721031313330"  # nyamiresepdapur
 FB_PAGE_TOKEN_FILE = Path.home() / ".openclaw/workspace/data/fb_page_tokens.json"
 LOG_FILE = Path.home() / "projects/1ai-ads/logs/rakdapur_gass.log"
