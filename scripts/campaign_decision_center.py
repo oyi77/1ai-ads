@@ -260,18 +260,28 @@ def get_campaign_spend(account_id, date_since, date_until):
 def classify_campaign(camp: Campaign, total_profit: float) -> Tuple[str, str]:
     """Classify campaign and generate SOP recommendation"""
     
+    # Check if cost-controlled (BIDCAP, Target Cost) — budget scaling useless
+    name_lower = camp.name.lower()
+    is_cost_controlled = any(kw in name_lower for kw in ['bidcap', 'target_cost', 'targetcost'])
+    is_tc = name_lower.startswith('tc_') and 'scale' not in name_lower and 'winner' not in name_lower
+    
     rec = ''
     
     if camp.spend < PENDING_MAX_SPEND and camp.clicks < PENDING_MIN_CLICKS:
         status = 'PENDING'
         rec = '⏳ Tunggu minimal 10 klik / Rp 5K spend sebelum decide'
     elif camp.profit >= WINNER_MIN_PROFIT and camp.roas >= WINNER_MIN_ROAS:
-        status = 'WINNER 🏆'
-        if camp.roas >= 2.0:
+        if is_cost_controlled or is_tc:
+            status = 'WINNER 🏆'
+            rec = f'🔒 NO-SCALE — Bid cap / Target Cost limits delivery | Maintain budget | Profit: Rp {camp.profit:,.0f}'
+        elif camp.roas >= 2.0:
+            status = 'WINNER 🏆'
             rec = f'🔥 GAS — Scale +30% (current: Rp {camp.spend:,.0f}) | Target profit: Rp {camp.profit*1.3:,.0f}'
         elif camp.roas >= 1.5:
+            status = 'WINNER 🏆'
             rec = f'📈 SCALE — +20% budget | Pantau 2 hari | ROAS {camp.roas:.1f}x solid'
         else:
+            status = 'WINNER 🏆'
             rec = f'✅ MAINTAIN — Budget saat ini oke | Monitor CPC stay di bawah Rp 130'
     elif camp.roas < BONCOS_MAX_ROAS and camp.spend > PENDING_MAX_SPEND:
         status = 'BONCOS 💀'
@@ -464,10 +474,15 @@ def cmd_scale(account, days, min_spend):
         roas = commission / c['spend'] if c['spend'] > 0 else 0
         orders = round(len(tag_orders.get(tag, set())) * share)
         
-        # Scale criteria
+        # Scale criteria — skip BIDCAP/TC (budget useless due to cost control)
+        is_cost_controlled = any(kw in c['name'].lower() for kw in ['bidcap'])
         if roas >= SCALE_MIN_ROAS and c['ctr'] >= SCALE_CTR_MIN and profit > 0:
             # Calculate scale recommendation
-            if roas >= 2.5:
+            if is_cost_controlled:
+                scale_pct = 0
+                scale_note = '🔒 BIDCAP — maintain (cost control)'
+                new_budget = c['spend']
+            elif roas >= 2.5:
                 scale_pct = 50
                 scale_note = '🔥 AGGRESSIVE SCALE'
             elif roas >= 2.0:

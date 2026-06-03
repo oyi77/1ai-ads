@@ -1,6 +1,6 @@
 {
   "0858": {
-    "last_cycle": "2026-06-03T17:10:39.392355+07:00",
+    "last_cycle": "2026-06-03T18:37:02.467193+07:00",
     "campaigns": {
       "120248404118800416": {
         "name": "0858_rakpiring_VILONA_WINNER_BID",
@@ -14,8 +14,8 @@
       },
       "120249205714850416": {
         "name": "0858_rakpiring_travel_BID",
-        "ctr": 3.832753,
-        "cpc": 179.136364
+        "ctr": 3.831084,
+        "cpc": 179.181818
       },
       "120249209669800416": {
         "name": "V2_CBO_organizerpullout_Dapur",
@@ -24,8 +24,8 @@
       },
       "120249502539430416": {
         "name": "TC_GEO_rakpiringpengering_INT01",
-        "ctr": 4.995718,
-        "cpc": 173.462857
+        "ctr": 4.991443,
+        "cpc": 173.531429
       },
       "120249722735620416": {
         "name": "OFF_GEO_rakpiringpengering_Parenting",
@@ -44,8 +44,8 @@
       },
       "120249722735720416": {
         "name": "0858_organizer_travel_BID",
-        "ctr": 4.346514,
-        "cpc": 147.9375
+        "ctr": 4.341272,
+        "cpc": 148.416667
       },
       "120249727183880416": {
         "name": "ON_V2_CBO_organizerpullout_Dapur_1",
@@ -89,8 +89,8 @@
       },
       "120250009830630416": {
         "name": "0858_organizer_dapurShop_BID",
-        "ctr": 5.283019,
-        "cpc": 138.857143
+        "ctr": 5.263158,
+        "cpc": 139.428571
       },
       "120250009834770416": {
         "name": "0858_organizer_shopping_BID",
@@ -99,8 +99,8 @@
       },
       "120250009839170416": {
         "name": "0858_organizer_fashion_BID",
-        "ctr": 6.824147,
-        "cpc": 110.0
+        "ctr": 6.806283,
+        "cpc": 110.307692
       },
       "120250009843030416": {
         "name": "0858_organizer_broad_BID",
@@ -109,8 +109,8 @@
       },
       "120250009867060416": {
         "name": "0858_organizer_rumah_BID",
-        "ctr": 4.0,
-        "cpc": 196.0
+        "ctr": 3.921569,
+        "cpc": 199.0
       },
       "120250009872130416": {
         "name": "0858_organizer_resep_BID",
@@ -129,13 +129,13 @@
       },
       "120250016047830416": {
         "name": "0858_gajahThai_fashionShopping_BID",
-        "ctr": 5.974015,
-        "cpc": 83.844232
+        "ctr": 5.949548,
+        "cpc": 84.012364
       },
       "120250016058540416": {
         "name": "0858_gajahThai_fashionBelanja_BID",
-        "ctr": 5.579014,
-        "cpc": 88.033816
+        "ctr": 5.574047,
+        "cpc": 88.073248
       },
       "120250017839070416": {
         "name": "0858_fashionWanitaPremium_shopping_BID",
@@ -196,7 +196,7 @@
     "summary": {
       "active": 0,
       "total_campaigns": 79,
-      "spend_48h": 375755,
+      "spend_48h": 378549,
       "winners": 0,
       "boncos": 0,
       "winner_names": [],
