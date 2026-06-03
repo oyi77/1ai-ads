@@ -1,12 +1,12 @@
 import { api } from '../lib/api.js';
 
 export function renderDashboard(el) {
-  if (!localStorage.getItem('adforge_token')) {
+  if (!localStorage.getItem('1ai-ads_token')) {
     window.location.hash = '/login';
     return;
   }
 
-  api.get('/api/campaigns').then(response => {
+  api.get('/campaigns').then(response => {
     const campaigns = response.data || [];
     const stats = {
       revenue: campaigns.reduce((s, c) => s + (c.revenue || 0), 0),
@@ -25,7 +25,7 @@ export function renderDashboard(el) {
           </div>
           <div class="flex items-center gap-3">
             <button onclick="window.location.hash='/research'" class="px-6 py-3 bg-[#161b22] border border-[#30363d] text-slate-300 rounded-2xl text-xs font-black uppercase tracking-widest hover:text-white transition-all">🔬 Intel Research</button>
-            <button onclick="window.location.hash='/campaign/create'" class="px-8 py-3 bg-white text-black rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-sky-400 transition-all shadow-xl shadow-white/5">🚀 Deploy Node</button>
+            <button onclick="window.location.hash='/ads/create'" class="px-8 py-3 bg-white text-black rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-sky-400 transition-all shadow-xl shadow-white/5">🚀 Deploy Node</button>
           </div>
         </div>
 

@@ -29,7 +29,7 @@ export async function renderAttributionView() {
     syncBtn.disabled = true;
     syncBtn.textContent = 'Syncing...';
     try {
-      await api.post('/api/attribution/sync');
+      await api.post('/attribution/sync');
       await loadData(container);
     } catch (e) {
       console.error('Sync failed:', e);
@@ -45,8 +45,8 @@ export async function renderAttributionView() {
 async function loadData(container) {
   try {
     const [dashRes, matchRes] = await Promise.all([
-      api.get('/api/attribution/dashboard').catch(() => ({ data: {} })),
-      api.get('/api/attribution/matches').catch(() => ({ data: { matches: [] } })),
+      api.get('/attribution/dashboard').catch(() => ({ data: {} })),
+      api.get('/attribution/matches').catch(() => ({ data: { matches: [] } })),
     ]);
     _dashboard = dashRes.data || {};
     _matches = matchRes.data?.matches || matchRes.data || [];

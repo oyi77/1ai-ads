@@ -1,3 +1,0 @@
-            <button data-section="autonomous" class="flex-shrink-0 w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${state.activeSection === 'autonomous' ? 'bg-[#58a6ff] text-white' : 'text-slate-400 hover:bg-[#21262d] hover:text-white'}">
-              Autonomous Campaigns
-            </button>

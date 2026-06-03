@@ -85,12 +85,12 @@ export function renderAISuggestions() {
 export function applyAiSuggestion(type) {
   if (type === 'low_roas') {
     if (!confirm('Apply optimization to all campaigns with low ROAS?')) return;
-    api.post('/api/campaigns/optimize-low-roas')
+    api.post('/campaigns/optimize-low-roas')
       .then(() => alert('Low ROAS campaigns optimized!'))
       .catch(err => alert('Failed: ' + err.message));
   } else if (type === 'increase_budget') {
     if (!confirm('Increase budget for high-performing campaigns?')) return;
-    api.post('/api/campaigns/increase-budget')
+    api.post('/campaigns/increase-budget')
       .then(() => alert('Budget increased!'))
       .catch(err => alert('Failed: ' + err.message));
   } else if (type === 'schedule') {
