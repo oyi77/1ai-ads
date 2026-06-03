@@ -41,6 +41,7 @@ import urllib.request, urllib.parse
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from collections import defaultdict
+from vilona_trakpro_recommendations import generate_recommendations, format_telegram
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 WIB = timezone(timedelta(hours=7))
@@ -56,6 +57,7 @@ ACCESS_TOKEN = TOKEN_FILE.read_text().strip() if TOKEN_FILE.exists() else None
 API = "https://graph.facebook.com/v19.0"
 
 # ─── ACCOUNTS ─────────────────────────────────────────────────────────────────
+# FOCUS: Only 0858 Kakriput (per Veris mandate 2026-06-03)
 ACCOUNTS = {
     "0858": {
         "id": "act_435670549443081",
@@ -65,32 +67,8 @@ ACCOUNTS = {
         "max_campaigns": 15,
         "cpc_warning": 200,
         "cpc_kill": 300,
-        "roas_winner": 3.0,    # ROAS > 3x = winner
-        "roas_super": 8.0,     # ROAS > 8x = super winner
-        "roas_kill": 0.3,      # ROAS < 0.3x = boncos
-    },
-    "1041": {
-        "id": "act_380721031313330",
-        "name": "Nyamiresep",
-        "tags": ["nyamiresepdapur"],
-        "budget_cap_per_camp": 500000,
-        "max_campaigns": 20,
-        "cpc_warning": 200,
-        "cpc_kill": 300,
-        "roas_winner": 2.0,
-        "roas_super": 5.0,
-        "roas_kill": 0.3,
-    },
-    "1208": {
-        "id": "act_1439536310038458",
-        "name": "Herbal",
-        "tags": ["purwoceng", "herbal"],
-        "budget_cap_per_camp": 300000,
-        "max_campaigns": 8,
-        "cpc_warning": 250,
-        "cpc_kill": 400,
-        "roas_winner": 2.0,
-        "roas_super": 5.0,
+        "roas_winner": 3.0,
+        "roas_super": 8.0,
         "roas_kill": 0.3,
     },
 }
@@ -503,6 +481,22 @@ def run_cycle():
     # Send alerts if significant
     if all_alerts:
         send_alert("\n".join(all_alerts))
+    
+    # ─── GENERATE RECOMMENDATIONS ───────────────────────────────────────
+    # Generate Trakpro-style daily recommendations for 0858
+    try:
+        acc_insights = get_campaign_insights(ACCOUNTS["0858"]["id"], days=2)
+        recs = generate_recommendations(
+            acc_insights, shopee_data, ACCOUNTS["0858"], state
+        )
+        log(f"  📋 Recommendations generated: {len(recs['sections'])} sections")
+        
+        # Format and queue Telegram alert for recommendations
+        telegram_msg = format_telegram(recs)
+        if telegram_msg.strip():
+            send_alert(telegram_msg)
+    except Exception as e:
+        log(f"  Recommendations gen failed: {e}", "WARN")
     
     # Morning/evening summary
     hour = datetime.now(WIB).hour
