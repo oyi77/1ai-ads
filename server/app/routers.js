@@ -78,6 +78,6 @@ export function createRouters({ app, repos, services }) {
   app.use('/api/analytics', requireAuth, createAnalyticsRouter(repos.campaignsRepo));
   app.use('/api/research', requireAuth, createResearchRouter(services.adResearchService));
   app.use('/api/mcp', requireAuth, createMcpRouter(mcpClient, repos.settingsRepo, repos.campaignsRepo, repos.adsRepo, repos.landingRepo));
-  app.use('/api/meta-ai', requireAuth, createMetaAiRouter());
+  app.use('/api/meta-ai', requireAuth, createMetaAiRouter(repos.settingsRepo));
   app.use('/t', createTrackRouter(repos.adUtmMapRepo, services.utmTagger));
 }
