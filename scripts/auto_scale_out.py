@@ -233,8 +233,11 @@ def create_scale_out(campaign_id, campaign_name, budget):
         log(f"  ⚠️ No new interests to expand into for {campaign_name}")
         return None
     
-    # Create new campaign (clone)
-    new_camp_name = f"SO_{campaign_name[:40]}_{datetime.now().strftime('%m%d')}"
+    # Create new campaign (clone) with standard naming
+    # Format: {STRATEGI}_{AKUN}_{PRODUK}_{TAGLINK}_{AUDIENCE}_{TANGGAL}
+    date_str = datetime.now().strftime('%d%m')
+    product = extract_product_tag(campaign_name)
+    new_camp_name = f"LC_Nyamiresep_{product}_{product}_{product}_{date_str}"[:120]
     
     new_camp = api_post(f'{ACT}/campaigns', {
         'name': new_camp_name,
