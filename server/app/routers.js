@@ -18,6 +18,7 @@ import { createAiAgentRouter } from '../routes/ai-agent.js';
 import createAudienceRouter from '../routes/audiences.js';
 import createPixelRouter from '../routes/pixels.js';
 import createBatchRouter from '../routes/batch.js';
+import { createMetaAiRouter } from '../routes/meta-ai.js';
 import createTokenRouter from '../routes/tokens.js';
 import createWebhookRouter from '../routes/webhooks.js';
 import { createABTestsRouter } from '../routes/ab-tests.js';
@@ -77,5 +78,6 @@ export function createRouters({ app, repos, services }) {
   app.use('/api/analytics', requireAuth, createAnalyticsRouter(repos.campaignsRepo));
   app.use('/api/research', requireAuth, createResearchRouter(services.adResearchService));
   app.use('/api/mcp', requireAuth, createMcpRouter(mcpClient, repos.settingsRepo, repos.campaignsRepo, repos.adsRepo, repos.landingRepo));
+  app.use('/api/meta-ai', requireAuth, createMetaAiRouter());
   app.use('/t', createTrackRouter(repos.adUtmMapRepo, services.utmTagger));
 }
