@@ -1,0 +1,647 @@
+# ADFORGE - ALIBABA CLOUD DEPLOYMENT CONFIGURATION
+# File location: deployment/alibaba-cloud-deploy.yml
+# This file demonstrates full deployment on Alibaba Cloud services
+
+apiVersion: v1
+kind: AdForgeDeployment
+metadata:
+  name: adforge-production
+  namespace: production
+  labels:
+    app: adforge
+    provider: alibaba-cloud
+    environment: production
+    version: "1.0"
+
+spec:
+  # ─────────────────────────────────────────────────────────────
+  # COMPUTE: ALIBABA CLOUD ECS (Elastic Compute Service)
+  # ─────────────────────────────────────────────────────────────
+  
+  compute:
+    service: alibaba-cloud-ecs
+    deployment:
+      name: adforge-api-cluster
+      instances:
+        minReplicas: 2
+        maxReplicas: 10
+        desiredReplicas: 3
+      
+      # Instance type: 2vCPU, 4GB RAM, optimized for web applications
+      instanceType: ecs.e5.large
+      imageId: ubuntu-22.04-lts
+      
+      diskConfiguration:
+        systemDisk:
+          size: 50  # GB
+          category: cloud_ssd
+          encrypted: true
+        dataDisks: []
+      
+      networkConfiguration:
+        vpcId: vpc-xxxxxxxxxxxxx
+        subnetId: vsw-xxxxxxxxxxxxx
+        securityGroupId: sg-xxxxxxxxxxxxx
+        publicIpAllocation: true
+        bandwidth: 10  # Mbps
+      
+      # Auto-scaling policy
+      autoScaling:
+        enabled: true
+        metrics:
+          - name: cpu_utilization
+            target: 70
+            scaleUpThreshold: 80
+            scaleDownThreshold: 30
+          - name: memory_utilization
+            target: 75
+            scaleUpThreshold: 85
+            scaleDownThreshold: 40
+          - name: network_traffic
+            target: 500  # Mbps
+        
+        scaleUpPolicy:
+          duration: 300  # seconds
+          addInstances: 1
+          cooldown: 600
+        
+        scaleDownPolicy:
+          duration: 600  # seconds
+          removeInstances: 1
+          cooldown: 1800
+
+  # ─────────────────────────────────────────────────────────────
+  # DATABASE: ALIBABA CLOUD RDS (Relational Database Service)
+  # ─────────────────────────────────────────────────────────────
+  
+  database:
+    service: alibaba-cloud-rds
+    engine: PostgreSQL
+    version: "14"
+    instanceClass: rds.pg.t2.medium  # 2vCPU, 4GB RAM
+    
+    storage:
+      type: cloud_ssd
+      allocated: 100  # GB
+      maxAllocated: 1000  # GB, auto-scaling enabled
+      autoBackup: true
+    
+    backup:
+      retentionDays: 30
+      backupTime: "02:00Z"
+      backupType: full_backup
+    
+    security:
+      encryption:
+        enabled: true
+        kmsKeyId: key-xxxxxxxxxxxxx
+      ssl:
+        enabled: true
+      ipWhitelist:
+        - 10.0.0.0/8  # Internal VPC
+    
+    highAvailability:
+      enabled: true
+      multiAz: true
+      replicas: 2
+    
+    monitoring:
+      enabled: true
+      metrics:
+        - cpu_usage
+        - memory_usage
+        - disk_usage
+        - connections
+        - qps
+    
+    connection:
+      endpoint: adforge.c4h3phm4qdp6.ap-southeast-1.rds.aliyuncs.com
+      port: 5432
+      database: adforge
+      user: admin
+      # password: managed by Alibaba Cloud Secrets Manager
+
+  # ─────────────────────────────────────────────────────────────
+  # CACHE: ALIBABA CLOUD REDIS
+  # ─────────────────────────────────────────────────────────────
+  
+  cache:
+    service: alibaba-cloud-redis
+    engine: Redis
+    version: "7.0"
+    instanceClass: redis.basic.s2.small
+    
+    memory:
+      size: 1  # GB
+      evictionPolicy: allkeys-lru
+    
+    persistence:
+      enabled: true
+      backupFrequency: daily
+      retentionDays: 7
+    
+    security:
+      password: true  # Managed by Secrets Manager
+      publicAccess: false
+      ssl: true
+    
+    cluster:
+      mode: standard  # Can upgrade to cluster mode
+      replicas: 2
+    
+    monitoring:
+      enabled: true
+      metrics:
+        - memory_usage
+        - commands_per_second
+        - connection_count
+        - cache_hit_rate
+
+  # ─────────────────────────────────────────────────────────────
+  # STORAGE: ALIBABA CLOUD OSS (Object Storage Service)
+  # ─────────────────────────────────────────────────────────────
+  
+  storage:
+    service: alibaba-cloud-oss
+    bucket: adforge-data
+    region: ap-southeast-1
+    
+    configuration:
+      acl: private
+      blockPublicAccess: true
+      versioning: enabled
+      encryption:
+        enabled: true
+        type: kms
+        kmsKeyId: key-xxxxxxxxxxxxx
+    
+    lifecycle:
+      rules:
+        - name: archive-old-data
+          status: enabled
+          filter:
+            prefix: archive/
+          transitions:
+            - days: 30
+              storageClass: IA  # Infrequent Access
+            - days: 90
+              storageClass: ARCHIVE
+        
+        - name: delete-temp
+          status: enabled
+          filter:
+            prefix: temp/
+          expiration:
+            days: 7
+    
+    monitoring:
+      enabled: true
+      trafficAnalysis: enabled
+    
+    cdn:
+      enabled: true
+      accelerationRegions:
+        - ap-southeast-1
+        - ap-northeast-1
+        - eu-west-1
+    
+    bucketPolicies:
+      - resource: "*"
+        effect: Allow
+        principal: "*"
+        action:
+          - oss:GetObject
+        condition:
+          ipAddress: "10.0.0.0/8"
+
+  # ─────────────────────────────────────────────────────────────
+  # LOGGING: ALIBABA CLOUD LOG SERVICE
+  # ─────────────────────────────────────────────────────────────
+  
+  logging:
+    service: alibaba-cloud-log-service
+    project: adforge
+    logStores:
+      - name: app-logs
+        shards: 2
+        retentionDays: 30
+        indexing: enabled
+      
+      - name: access-logs
+        shards: 1
+        retentionDays: 7
+        indexing: enabled
+      
+      - name: error-logs
+        shards: 2
+        retentionDays: 90
+        indexing: enabled
+    
+    dataProcessing:
+      enabled: true
+      rules:
+        - name: parse-json-logs
+          source: app-logs
+          script: |
+            e_json('content')
+        
+        - name: count-errors
+          source: error-logs
+          aggregation:
+            field: error_code
+            count: true
+    
+    alerting:
+      enabled: true
+      alerts:
+        - name: high-error-rate
+          logStore: error-logs
+          query: "| select count(*) as error_count"
+          condition: error_count > 100
+          interval: 300
+          notificationChannel: email
+        
+        - name: slow-queries
+          logStore: app-logs
+          query: 'level: ERROR AND duration_ms > 5000'
+          condition: count(*) > 10
+          interval: 600
+          notificationChannel: sms
+
+  # ─────────────────────────────────────────────────────────────
+  # SECRETS MANAGEMENT: ALIBABA CLOUD KMS
+  # ─────────────────────────────────────────────────────────────
+  
+  secrets:
+    service: alibaba-cloud-kms
+    keyId: key-xxxxxxxxxxxxx
+    
+    secretsManagement:
+      enabled: true
+      rotation:
+        enabled: true
+        rotationDays: 90
+    
+    secrets:
+      - name: rds-password
+        description: RDS master user password
+        secretType: generic
+      
+      - name: redis-password
+        description: Redis auth password
+        secretType: generic
+      
+      - name: api-keys
+        description: Third-party API keys
+        secretType: generic
+      
+      - name: jwt-secret
+        description: JWT signing secret
+        secretType: generic
+
+  # ─────────────────────────────────────────────────────────────
+  # SERVERLESS: ALIBABA CLOUD FUNCTION COMPUTE
+  # ─────────────────────────────────────────────────────────────
+  
+  serverless:
+    service: alibaba-cloud-function-compute
+    service: adforge-autonomous
+    
+    functions:
+      - name: optimize-campaigns
+        runtime: python3
+        handler: index.handler
+        codeSize: 256  # MB
+        memory: 512    # MB
+        timeout: 900   # seconds (15 minutes)
+        
+        trigger:
+          type: timing
+          schedule: "*/5 * * * *"  # Every 5 minutes
+          payload: '{"operation": "optimize_campaigns"}'
+        
+        environment:
+          RDS_ENDPOINT: ${RDS_ENDPOINT}
+          REDIS_ENDPOINT: ${REDIS_ENDPOINT}
+          OSS_BUCKET: ${OSS_BUCKET}
+        
+        vpc:
+          vpcId: vpc-xxxxxxxxxxxxx
+          subnetIds:
+            - vsw-xxxxxxxxxxxxx
+          securityGroupId: sg-xxxxxxxxxxxxx
+      
+      - name: cleanup-old-logs
+        runtime: python3
+        handler: index.cleanup_handler
+        memory: 256
+        timeout: 300
+        
+        trigger:
+          type: timing
+          schedule: "0 3 * * *"  # Daily at 3 AM
+        
+        environment:
+          LOG_PROJECT: adforge
+          RETENTION_DAYS: 30
+
+  # ─────────────────────────────────────────────────────────────
+  # MONITORING: ALIBABA CLOUD MONITOR
+  # ─────────────────────────────────────────────────────────────
+  
+  monitoring:
+    service: alibaba-cloud-monitor
+    enabled: true
+    
+    metrics:
+      - namespace: ecs
+        dimensions: ["InstanceId"]
+        metrics:
+          - CPUUtilization
+          - MemoryUtilization
+          - DiskReadBps
+          - DiskWriteBps
+          - NetworkIn
+          - NetworkOut
+      
+      - namespace: rds
+        dimensions: ["DBInstanceId"]
+        metrics:
+          - CPUUtilization
+          - MemoryUsage
+          - DiskUsage
+          - Connections
+          - QPS
+          - ReadLatency
+          - WriteLatency
+      
+      - namespace: redis
+        dimensions: ["InstanceId"]
+        metrics:
+          - MemoryUsage
+          - CpuUsage
+          - KeysCount
+          - ExpiredKeys
+          - CommandsPerSecond
+          - HitRate
+    
+    alarms:
+      - name: high-cpu
+        metric: CPUUtilization
+        threshold: 80
+        comparisonOperator: GreaterThanThreshold
+        evaluationPeriods: 2
+        period: 300  # 5 minutes
+        statistic: Average
+        alarmActions:
+          - type: scaling
+            action: scale_up
+          - type: notification
+            channels: [email, sms]
+      
+      - name: low-memory
+        metric: MemoryUtilization
+        threshold: 85
+        comparisonOperator: GreaterThanThreshold
+        evaluationPeriods: 3
+        period: 300
+        statistic: Average
+        alarmActions:
+          - type: notification
+            channels: [email]
+      
+      - name: high-error-rate
+        metric: ErrorRate
+        threshold: 1  # percent
+        comparisonOperator: GreaterThanThreshold
+        evaluationPeriods: 1
+        period: 60
+        statistic: Sum
+        alarmActions:
+          - type: notification
+            channels: [email, sms, dingtalk]
+    
+    dashboards:
+      - name: adforge-overview
+        widgets:
+          - type: metric
+            title: "CPU Utilization"
+            metrics:
+              - ecs.CPUUtilization
+          
+          - type: metric
+            title: "Memory Usage"
+            metrics:
+              - rds.MemoryUsage
+              - redis.MemoryUsage
+          
+          - type: metric
+            title: "Database QPS"
+            metrics:
+              - rds.QPS
+          
+          - type: logs
+            title: "Error Logs"
+            logStore: error-logs
+            query: 'level: ERROR'
+
+  # ─────────────────────────────────────────────────────────────
+  # NETWORKING: ALIBABA CLOUD VPC & API GATEWAY
+  # ─────────────────────────────────────────────────────────────
+  
+  networking:
+    vpc:
+      vpcId: vpc-xxxxxxxxxxxxx
+      cidrBlock: 10.0.0.0/8
+      description: AdForge production VPC
+    
+    subnets:
+      - subnetId: vsw-xxxxxxxxxxxxx
+        cidrBlock: 10.1.0.0/16
+        availabilityZone: ap-southeast-1a
+        description: Application subnet
+      
+      - subnetId: vsw-yyyyyyyyyyyyy
+        cidrBlock: 10.2.0.0/16
+        availabilityZone: ap-southeast-1b
+        description: Database subnet
+    
+    securityGroups:
+      - securityGroupId: sg-xxxxxxxxxxxxx
+        rules:
+          - protocol: tcp
+            portRange: 80/80
+            sourceIp: 0.0.0.0/0
+            description: HTTP
+          
+          - protocol: tcp
+            portRange: 443/443
+            sourceIp: 0.0.0.0/0
+            description: HTTPS
+          
+          - protocol: tcp
+            portRange: 8000/8000
+            sourceIp: 10.0.0.0/8
+            description: API service
+          
+          - protocol: tcp
+            portRange: 5432/5432
+            sourceIp: 10.0.0.0/8
+            description: PostgreSQL
+    
+    apiGateway:
+      enabled: true
+      apis:
+        - name: adforge-api
+          version: v1
+          basePath: /api/v1
+          
+          stages:
+            - name: prod
+              variables:
+                environment: production
+                rdsEndpoint: ${RDS_ENDPOINT}
+          
+          resources:
+            - path: /campaigns
+              method: GET
+              backend: http://adforge-api:8000
+            
+            - path: /campaigns/optimize
+              method: POST
+              backend: http://adforge-api:8000
+            
+            - path: /health
+              method: GET
+              backend: http://adforge-api:8000
+
+  # ─────────────────────────────────────────────────────────────
+  # CI/CD: ALIBABA CLOUD DEVOPS
+  # ─────────────────────────────────────────────────────────────
+  
+  cicd:
+    service: alibaba-cloud-devops
+    pipelines:
+      - name: deploy-adforge
+        trigger:
+          type: push
+          branch: main
+        
+        stages:
+          - name: build
+            steps:
+              - action: build-docker-image
+                dockerfile: Dockerfile
+                repository: registry.ap-southeast-1.aliyuncs.com/adforge/api
+                tag: latest
+          
+          - name: test
+            steps:
+              - action: run-tests
+                command: pytest
+              - action: run-linting
+                command: pylint src/
+          
+          - name: deploy
+            steps:
+              - action: push-to-acr
+                image: registry.ap-southeast-1.aliyuncs.com/adforge/api:latest
+              
+              - action: update-ecs
+                service: adforge-api-cluster
+                image: registry.ap-southeast-1.aliyuncs.com/adforge/api:latest
+                
+                rollout:
+                  strategy: canary
+                  percentage: 20  # 20% canary
+                  duration: 600   # 10 minutes
+                  autoRollback: true
+              
+              - action: smoke-tests
+                url: https://api.adforge.cloud/health
+                expectedStatus: 200
+          
+          - name: monitor
+            steps:
+              - action: verify-metrics
+                metrics:
+                  - errorRate < 1%
+                  - responseTime < 500ms
+                  - cpuUsage < 70%
+
+---
+
+# APPLICATION CONFIGURATION
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: adforge-config
+  namespace: production
+
+data:
+  ALIBABA_REGION: "ap-southeast-1"
+  LOG_LEVEL: "INFO"
+  ENVIRONMENT: "production"
+  ENABLE_MONITORING: "true"
+  AUTONOMOUS_CYCLE_INTERVAL: "300"
+
+---
+
+# ENVIRONMENT SECRETS
+apiVersion: v1
+kind: Secret
+metadata:
+  name: adforge-secrets
+  namespace: production
+
+type: Opaque
+
+data:
+  ALIBABA_ACCESS_KEY_ID: (base64-encoded)
+  ALIBABA_ACCESS_KEY_SECRET: (base64-encoded)
+  RDS_PASSWORD: (base64-encoded)
+  REDIS_PASSWORD: (base64-encoded)
+  JWT_SECRET: (base64-encoded)
+
+---
+
+# SERVICE DEFINITION
+apiVersion: v1
+kind: Service
+metadata:
+  name: adforge-api-service
+  namespace: production
+  labels:
+    app: adforge
+
+spec:
+  type: LoadBalancer
+  
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+    
+    - name: https
+      port: 443
+      targetPort: 8000
+  
+  selector:
+    app: adforge
+
+  # Load Balancer Configuration
+  loadBalancer:
+    type: slb  # Server Load Balancer
+    bandwidth: 100  # Mbps
+    
+    healthCheck:
+      enabled: true
+      path: /health
+      interval: 10  # seconds
+      timeout: 5    # seconds
+    
+    ssl:
+      enabled: true
+      certificate:
+        server: /path/to/server.crt
+        key: /path/to/server.key
