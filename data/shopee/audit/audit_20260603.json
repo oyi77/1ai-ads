@@ -1,0 +1,162 @@
+{
+  "report_date": "2026-06-03",
+  "generated_at": "2026-06-04T23:01:39.741318",
+  "summary": {
+    "total_bugs": 12,
+    "critical": 0,
+    "high": 2,
+    "medium": 10,
+    "low": 0,
+    "data_loaded": {
+      "clicks": 48,
+      "commissions": 5
+    }
+  },
+  "stats": {
+    "clicks": {
+      "total": 48,
+      "by_campaign": {
+        "studiolands-Leggingwanitacotton-fbads--": 40,
+        "studiolands-longsleeve-fbads--": 4,
+        "jerseymulimah-fbads---": 3,
+        "SONY-DHERBS---": 1
+      },
+      "by_source": {
+        "Facebook": 34,
+        "Websites": 1,
+        "Instagram": 4,
+        "Others": 9
+      }
+    },
+    "commissions": {
+      "total_orders": 5,
+      "total_value_rm": 76.81,
+      "total_komisen_rm": 3.3655,
+      "conversion_rate": 10.42,
+      "avg_order_value_rm": 15.36
+    }
+  },
+  "bugs": [
+    {
+      "bug_id": "BUG_3",
+      "severity": "MEDIUM",
+      "location": "Waktu Klik column",
+      "description": "16 clicks with timestamps before 21:00 UTC — possible previous-day spillover",
+      "fix": "Verify report date range matches claim. Implement report-generation-time validation."
+    },
+    {
+      "bug_id": "BUG_4",
+      "severity": "MEDIUM",
+      "location": "Perujuk column",
+      "description": "9 clicks from \"Others\" referrer — channel unknown",
+      "fix": "Expand referrer categories or add UTM parameter to \"Others\" traffic"
+    },
+    {
+      "bug_id": "BUG_8_SUMMARY",
+      "severity": "MEDIUM",
+      "location": "Commission Data (Waktu Selesai)",
+      "description": "5 orders without completion timestamp",
+      "fix": "Implement auto-monitor for order completion with 48h SLA alert"
+    },
+    {
+      "bug_id": "BUG_9",
+      "severity": "MEDIUM",
+      "location": "Id Pembelian column",
+      "description": "5 order IDs with unexpected format",
+      "fix": "Validate order IDs match regex ^\\d{6}[A-Z0-9]{7}$"
+    },
+    {
+      "bug_id": "BUG_6",
+      "severity": "MEDIUM",
+      "location": "XTRA Commission Rows",
+      "description": "5 XTRA orders with 0% MCN rate — verify if XTRA tier should have different MCN handling",
+      "fix": "Cross-check XTRA tier MCN rates with Shopee policy"
+    },
+    {
+      "bug_id": "BUG_10_SUMMARY",
+      "severity": "HIGH",
+      "location": "Cross-campaign attribution",
+      "description": "2 campaigns have clicks but zero attributed conversions: {'jerseymulimah', 'SONY'}",
+      "fix": "Audit UTM parameters, conversion pixel, and Shopee attribution for all campaigns"
+    },
+    {
+      "bug_id": "BUG_3",
+      "severity": "MEDIUM",
+      "location": "Waktu Klik column",
+      "description": "16 clicks with timestamps before 21:00 UTC — possible previous-day spillover",
+      "fix": "Verify report date range matches claim. Implement report-generation-time validation."
+    },
+    {
+      "bug_id": "BUG_4",
+      "severity": "MEDIUM",
+      "location": "Perujuk column",
+      "description": "9 clicks from \"Others\" referrer — channel unknown",
+      "fix": "Expand referrer categories or add UTM parameter to \"Others\" traffic"
+    },
+    {
+      "bug_id": "BUG_8_SUMMARY",
+      "severity": "MEDIUM",
+      "location": "Commission Data (Waktu Selesai)",
+      "description": "5 orders without completion timestamp",
+      "fix": "Implement auto-monitor for order completion with 48h SLA alert"
+    },
+    {
+      "bug_id": "BUG_9",
+      "severity": "MEDIUM",
+      "location": "Id Pembelian column",
+      "description": "5 order IDs with unexpected format",
+      "fix": "Validate order IDs match regex ^\\d{6}[A-Z0-9]{7}$"
+    },
+    {
+      "bug_id": "BUG_6",
+      "severity": "MEDIUM",
+      "location": "XTRA Commission Rows",
+      "description": "5 XTRA orders with 0% MCN rate — verify if XTRA tier should have different MCN handling",
+      "fix": "Cross-check XTRA tier MCN rates with Shopee policy"
+    },
+    {
+      "bug_id": "BUG_10_SUMMARY",
+      "severity": "HIGH",
+      "location": "Cross-campaign attribution",
+      "description": "2 campaigns have clicks but zero attributed conversions: {'jerseymulimah', 'SONY'}",
+      "fix": "Audit UTM parameters, conversion pixel, and Shopee attribution for all campaigns"
+    }
+  ],
+  "fix_instructions": [
+    {
+      "priority": "THIS_WEEK",
+      "bugs": [
+        "BUG_10_SUMMARY",
+        "BUG_10_SUMMARY"
+      ],
+      "action": "Fix within 7 days — data quality and tracking issues",
+      "automated_fixes": [
+        "BUG_2: Add fallback UTM tracking for unattributed clicks",
+        "BUG_7: Update commission formula for MCN deduction edge cases"
+      ]
+    },
+    {
+      "priority": "ONGOING",
+      "bugs": [
+        "BUG_3",
+        "BUG_4",
+        "BUG_8_SUMMARY",
+        "BUG_9",
+        "BUG_6",
+        "BUG_3",
+        "BUG_4",
+        "BUG_8_SUMMARY",
+        "BUG_9",
+        "BUG_6"
+      ],
+      "action": "Monitor trends and fix progressively",
+      "automated_fixes": [
+        "BUG_3: Implement report-time validation on CSV import",
+        "BUG_4: Expand referrer categorization",
+        "BUG_8: Auto-monitor order completion with 48h SLA",
+        "BUG_9: Add regex validation for order IDs",
+        "BUG_6: Cross-check XTRA MCN rates"
+      ]
+    }
+  ]
+}
