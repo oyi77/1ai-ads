@@ -56,5 +56,19 @@ if echo "$RESULT" | grep -q "BUG_10"; then
     echo "{\"campaign\":\"jerseymulimah-fbads\",\"issue\":\"zero_conversions\",\"detected\":\"$(date -Iseconds)\",\"action\":\"investigate_attribution\"}" > "$FLAG_FILE"
 fi
 
-echo "[$(date)] ✅ Audit complete" >> "$LOG_FILE"
+# ── TRIGGER DECISION ENGINE ──
+DECISION_ENGINE="$PROJECT_DIR/scripts/decision_engine.py"
+LATEST_AUDIT=$(ls -t "$DATA_DIR"/audit/audit_*.json 2>/dev/null | head -1)
+if [ -n "$LATEST_AUDIT" ] && [ -f "$LATEST_AUDIT" ]; then
+    echo "[$(date)] 🎯 Running Decision Engine on: $(basename $LATEST_AUDIT)" >> "$LOG_FILE"
+    DECISION_RESULT=$(python3 "$DECISION_ENGINE" --audit "$LATEST_AUDIT" --dry-run 2>&1)
+    echo "$DECISION_RESULT" >> "$LOG_FILE"
+    
+    # Alert if SCALE or REDUCE decisions found
+    if echo "$DECISION_RESULT" | grep -q "SCALE\|REDUCE\|INVESTIGATE"; then
+        echo "[$(date)] ⚡ DECISIONS PENDING: Check decision report!" >> "$LOG_FILE"
+    fi
+fi
+
+echo "[$(date)] ✅ Audit + Decision Engine complete" >> "$LOG_FILE"
 echo "---" >> "$LOG_FILE"
