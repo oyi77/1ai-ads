@@ -15,18 +15,75 @@ const DEFAULT_SEARCH_TYPE = 'KEYWORD_UNORDERED';
 
 const CACHE_TTL_MS = 30 * 60 * 1000;
 const STALE_TTL_MS = 24 * 60 * 60 * 1000;
+const PERSISTENT_KEY_PREFIX = 'adslib_cache:';
+const MAX_PERSISTENT_ENTRIES = 2000;
 
-const cache = new CacheService({ defaultTTL: CACHE_TTL_MS, maxSize: 500, staleTTL: STALE_TTL_MS });
+const memoryCache = new CacheService({ defaultTTL: CACHE_TTL_MS, maxSize: 500, staleTTL: STALE_TTL_MS });
+const inFlight = new Map();
+const stats = { freshHits: 0, staleHits: 0, misses: 0, graphqlSuccess: 0, graphqlFail: 0, scraperSuccess: 0, scraperFail: 0, lastSuccessAt: null, lastFailAt: null, lastFailReason: null };
 
 function cacheKey(query, country, adType, searchType) {
   const norm = `${query.trim().toLowerCase()}|${country}|${adType}|${searchType}`;
   return 'adslib:' + crypto.createHash('sha1').update(norm).digest('hex');
 }
 
+function persistentKey(sha1) {
+  return PERSISTENT_KEY_PREFIX + sha1;
+}
+
 function resolveCookies(settingsRepo) {
   const fromDb = settingsRepo?.get?.(COOKIES_KEY);
   if (fromDb && typeof fromDb === 'string' && fromDb.trim()) return fromDb;
   return process.env.ADS_LIBRARY_AI_COOKIES || null;
+}
+
+function savePersistent(settingsRepo, key, value) {
+  if (!settingsRepo) return;
+  prunePersistent(settingsRepo);
+  settingsRepo.set(persistentKey(key), value);
+}
+
+function loadPersistent(settingsRepo, key) {
+  if (!settingsRepo) return null;
+  return settingsRepo.get(persistentKey(key));
+}
+
+function prunePersistent(settingsRepo) {
+  if (!settingsRepo) return;
+  const all = settingsRepo.getAll?.() || {};
+  const entries = [];
+  for (const [k, v] of Object.entries(all)) {
+    if (!k.startsWith(PERSISTENT_KEY_PREFIX)) continue;
+    const ts = v?._cachedAt || 0;
+    if (Date.now() - ts > STALE_TTL_MS) {
+      settingsRepo.delete(k);
+    } else {
+      entries.push({ k, ts });
+    }
+  }
+  if (entries.length > MAX_PERSISTENT_ENTRIES) {
+    entries.sort((a, b) => a.ts - b.ts);
+    const toRemove = entries.slice(0, entries.length - MAX_PERSISTENT_ENTRIES);
+    for (const e of toRemove) settingsRepo.delete(e.k);
+  }
+}
+
+function lookupCache(settingsRepo, key) {
+  const mem = memoryCache.get(key);
+  if (mem && !mem._stale) return { value: mem, source: 'memory-fresh' };
+  const persistent = loadPersistent(settingsRepo, key);
+  if (!persistent) return { value: null, source: null };
+  const age = Date.now() - (persistent._cachedAt || 0);
+  if (age < CACHE_TTL_MS) return { value: persistent, source: 'persistent-fresh' };
+  if (age < STALE_TTL_MS) return { value: { ...persistent, _stale: true }, source: 'persistent-stale' };
+  return { value: null, source: null };
+}
+
+function storeCache(settingsRepo, key, payload) {
+  const enriched = { ...payload, _cachedAt: Date.now() };
+  memoryCache.set(key, enriched, CACHE_TTL_MS);
+  savePersistent(settingsRepo, key, enriched);
+  return enriched;
 }
 
 async function fetchFromGraphQL(cookies, { query, country, adType, searchType }) {
@@ -88,6 +145,15 @@ async function fetchFromScraper({ query, country, adType }) {
   }
 }
 
+async function withDedup(key, factory) {
+  if (inFlight.has(key)) {
+    return inFlight.get(key);
+  }
+  const p = factory().finally(() => inFlight.delete(key));
+  inFlight.set(key, p);
+  return p;
+}
+
 export function createAdsLibraryAiRouter(settingsRepo) {
   const router = Router();
 
@@ -103,13 +169,40 @@ export function createAdsLibraryAiRouter(settingsRepo) {
         defaults: { country: DEFAULT_COUNTRY, adType: DEFAULT_AD_TYPE, searchType: DEFAULT_SEARCH_TYPE },
         cacheTtlMs: CACHE_TTL_MS,
         staleTtlMs: STALE_TTL_MS,
-        note: 'Configure cookies in Settings > Ads Library AI. Falls back to /api/ads-library/search (Puppeteer scraper) if session expired. Results cached 30min fresh, 24h stale.',
+        note: 'Configure cookies in Settings > Ads Library AI. Falls back to /api/ads-library/search (Puppeteer scraper) if session expired. Results cached 30min fresh (memory+persistent), 24h stale.',
       },
     });
   });
 
-  router.put('/config', (req, res) => {
-    const { cookies } = req.body || {};
+  router.get('/health', async (_req, res) => {
+    const cookies = resolveCookies(settingsRepo);
+    const persistentCount = settingsRepo
+      ? Object.keys(settingsRepo.getAll?.() || {}).filter(k => k.startsWith(PERSISTENT_KEY_PREFIX)).length
+      : 0;
+    res.json({
+      success: true,
+      data: {
+        cookiesValid: stats.graphqlSuccess > 0 && (Date.now() - (stats.lastSuccessAt || 0)) < 60 * 60 * 1000,
+        lastSuccessAt: stats.lastSuccessAt,
+        lastFailAt: stats.lastFailAt,
+        lastFailReason: stats.lastFailReason,
+        cacheSize: persistentCount,
+        inFlight: inFlight.size,
+        stats: {
+          freshHits: stats.freshHits,
+          staleHits: stats.staleHits,
+          misses: stats.misses,
+          graphqlSuccess: stats.graphqlSuccess,
+          graphqlFail: stats.graphqlFail,
+          scraperSuccess: stats.scraperSuccess,
+          scraperFail: stats.scraperFail,
+        },
+      },
+    });
+  });
+
+  router.put('/config', async (req, res) => {
+    const { cookies, test = true } = req.body || {};
     if (!settingsRepo) {
       return res.status(500).json({ success: false, error: 'Settings repository not available' });
     }
@@ -120,8 +213,27 @@ export function createAdsLibraryAiRouter(settingsRepo) {
       return res.status(400).json({ success: false, error: 'cookies must be a non-empty string' });
     }
     settingsRepo.set(COOKIES_KEY, cookies.trim());
-    cache.clear();
-    res.json({ success: true, data: { saved: true, cacheCleared: true } });
+    memoryCache.clear();
+    prunePersistent(settingsRepo);
+
+    if (test) {
+      try {
+        await fetchFromGraphQL(cookies.trim(), { query: '__healthcheck__', country: DEFAULT_COUNTRY, adType: DEFAULT_AD_TYPE, searchType: DEFAULT_SEARCH_TYPE });
+        stats.graphqlSuccess++;
+        stats.lastSuccessAt = Date.now();
+        return res.json({ success: true, data: { saved: true, cacheCleared: true, cookieTest: 'ok' } });
+      } catch (err) {
+        stats.graphqlFail++;
+        stats.lastFailAt = Date.now();
+        stats.lastFailReason = err.message;
+        return res.json({
+          success: true,
+          data: { saved: true, cacheCleared: true, cookieTest: 'failed', cookieTestError: err.message },
+        });
+      }
+    }
+
+    res.json({ success: true, data: { saved: true, cacheCleared: true, cookieTest: 'skipped' } });
   });
 
   router.delete('/config', (_req, res) => {
@@ -129,7 +241,7 @@ export function createAdsLibraryAiRouter(settingsRepo) {
       return res.status(500).json({ success: false, error: 'Settings repository not available' });
     }
     settingsRepo.delete(COOKIES_KEY);
-    cache.clear();
+    memoryCache.clear();
     res.json({ success: true, data: { cleared: true, cacheCleared: true } });
   });
 
@@ -142,39 +254,63 @@ export function createAdsLibraryAiRouter(settingsRepo) {
     const key = cacheKey(query, country, adType, searchType);
 
     if (!forceFresh) {
-      const cached = cache.get(key);
-      if (cached && !cached._stale) {
-        return res.json({ success: true, data: cached, source: 'cache', cached: true });
+      const { value, source } = lookupCache(settingsRepo, key);
+      if (value) {
+        if (source.endsWith('-fresh')) stats.freshHits++;
+        else if (source.endsWith('-stale')) stats.staleHits++;
+        return res.json({
+          success: true,
+          data: value,
+          source: source.startsWith('memory') ? 'cache' : source.split('-')[0],
+          cached: true,
+          stale: !!value._stale,
+        });
       }
     }
 
-    const cookies = resolveCookies(settingsRepo);
-    let graphqlSucceeded = false;
+    stats.misses++;
 
-    if (cookies) {
-      try {
-        const payload = await fetchFromGraphQL(cookies, { query, country, adType, searchType });
-        const enriched = { ...payload, _cachedAt: Date.now() };
-        cache.set(key, enriched, CACHE_TTL_MS);
-        graphqlSucceeded = true;
-        return res.json({ success: true, data: enriched, source: 'graphql', cached: false });
-      } catch (err) {
-        log.warn('GraphQL fetch failed, attempting fallback', { error: err.message, status: err.statusCode });
-        if (err.statusCode === 401) {
-          return res.status(401).json({
-            success: false,
-            error: err.message,
-            fallback: 'scraper',
-          });
+    try {
+      const result = await withDedup(key, async () => {
+        const cookies = resolveCookies(settingsRepo);
+        if (cookies) {
+          try {
+            const payload = await fetchFromGraphQL(cookies, { query, country, adType, searchType });
+            stats.graphqlSuccess++;
+            stats.lastSuccessAt = Date.now();
+            return { payload, source: 'graphql' };
+          } catch (err) {
+            stats.graphqlFail++;
+            stats.lastFailAt = Date.now();
+            stats.lastFailReason = err.message;
+            log.warn('GraphQL fetch failed', { error: err.message, status: err.statusCode });
+            if (err.statusCode === 401) {
+              const err2 = new Error(err.message);
+              err2.statusCode = 401;
+              err2.fallback = 'scraper';
+              throw err2;
+            }
+          }
         }
+        return { payload: null, source: null };
+      });
+
+      if (result?.payload) {
+        const stored = storeCache(settingsRepo, key, result.payload);
+        return res.json({ success: true, data: stored, source: result.source, cached: false });
+      }
+    } catch (err) {
+      if (err.statusCode === 401) {
+        return res.status(401).json({ success: false, error: err.message, fallback: err.fallback });
       }
     }
 
-    const stale = cache.get(key);
+    const { value: stale } = lookupCache(settingsRepo, key);
     if (stale && stale._cachedAt && Date.now() - stale._cachedAt < STALE_TTL_MS) {
+      stats.staleHits++;
       return res.json({
         success: true,
-        data: { ...stale, _stale: true },
+        data: stale,
         source: 'stale-cache',
         cached: true,
         stale: true,
@@ -184,13 +320,15 @@ export function createAdsLibraryAiRouter(settingsRepo) {
 
     const scraperResult = await fetchFromScraper({ query, country, adType });
     if (scraperResult) {
+      stats.scraperSuccess++;
       return res.json({ success: true, data: scraperResult, source: 'scraper-fallback', cached: false });
     }
+    stats.scraperFail++;
 
-    if (!graphqlSucceeded && !cookies) {
+    if (!resolveCookies(settingsRepo)) {
       return res.status(400).json({
         success: false,
-        error: 'No cookies configured and scraper fallback unavailable. Configure cookies in Settings > Ads Library AI, or ensure Puppeteer dependencies are installed for the scraper fallback.',
+        error: 'No cookies configured and scraper fallback unavailable. Configure cookies in Settings > Ads Library AI, or ensure Puppeteer dependencies are installed.',
       });
     }
 
@@ -198,8 +336,19 @@ export function createAdsLibraryAiRouter(settingsRepo) {
   });
 
   router.delete('/cache', (_req, res) => {
-    cache.clear();
-    res.json({ success: true, data: { cleared: true } });
+    memoryCache.clear();
+    if (settingsRepo) {
+      const all = settingsRepo.getAll?.() || {};
+      let removed = 0;
+      for (const k of Object.keys(all)) {
+        if (k.startsWith(PERSISTENT_KEY_PREFIX)) {
+          settingsRepo.delete(k);
+          removed++;
+        }
+      }
+      return res.json({ success: true, data: { cleared: true, memoryCleared: true, persistentRemoved: removed } });
+    }
+    res.json({ success: true, data: { cleared: true, memoryCleared: true, persistentRemoved: 0 } });
   });
 
   return router;

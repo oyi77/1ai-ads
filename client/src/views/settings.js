@@ -746,12 +746,20 @@ export async function renderSettings(el) {
       e.preventDefault();
       const cookies = el.querySelector('#adslib-cookies').value.trim();
       const result = el.querySelector('#adslib-result');
-      result.textContent = 'Saving…';
+      result.textContent = 'Saving & testing…';
       result.className = 'text-xs text-slate-400';
       try {
-        await api.put('/ads-library-ai/config', { cookies });
-        result.textContent = '✓ saved';
-        result.className = 'text-xs text-emerald-400';
+        const { data } = await api.put('/ads-library-ai/config', { cookies });
+        if (data.cookieTest === 'ok') {
+          result.textContent = '✓ saved + cookie test passed';
+          result.className = 'text-xs text-emerald-400';
+        } else if (data.cookieTest === 'failed') {
+          result.innerHTML = `⚠ saved but cookie test failed: <span class="text-red-300">${esc(data.cookieTestError || 'unknown')}</span>`;
+          result.className = 'text-xs text-amber-300';
+        } else {
+          result.textContent = '✓ saved (test skipped)';
+          result.className = 'text-xs text-emerald-400';
+        }
         const status = await api.get('/ads-library-ai/status');
         const statusEl = document.getElementById('adslib-status');
         if (statusEl) statusEl.innerHTML = `<span class="text-emerald-400">✓ configured (source: ${esc(status.data.source)})</span>`;
