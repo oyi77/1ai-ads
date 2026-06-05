@@ -12,7 +12,10 @@ import { createApp, startServices } from './server/app.js';
 import { LLMClient } from './server/services/llm-client.js';
 import { MCPClientManager } from './server/services/mcp-client.js';
 import { seedDemoData } from './db/seed.js';
-import config from './server/config/index.js';
+import config, { validateConfig } from './server/config/index.js';
+
+// Validate required configuration before starting
+validateConfig();
 
 backupDatabase(config.dbPath, __dirname);
 
@@ -31,12 +34,19 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`1ai-ads running on ${PORT}`);
 });
 
-app.locals.realtimeService.attach(server);
-
 startServices(app);
 
+// Attach realtime service after services are started
+if (app.locals.realtimeService) {
+  app.locals.realtimeService.attach(server);
+}
+
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received (ignored)');
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
 
 process.on('SIGINT', () => {

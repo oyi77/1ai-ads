@@ -1,10 +1,10 @@
 const config = {
-  get port() { return parseInt(process.env.PORT || '3001', 10); },
+  get port() { return parseInt(process.env.PORT || '5000', 10); },
   get dbPath() { return process.env.DB_PATH || './db/1ai-ads.db'; },
   get corsOrigin() { return process.env.CORS_ORIGIN || 'http://localhost:5173'; },
   get jwtSecret() { return process.env.JWT_SECRET || ''; },
   get nodeEnv() { return process.env.NODE_ENV || 'development'; },
-  get metaApiVersion() { return 'v21.0'; },
+  get metaApiVersion() { return 'v22.0'; },
   get fbAppId() { return process.env.FB_APP_ID || ''; },
   get fbAppSecret() { return process.env.FB_APP_SECRET || ''; },
   get fbSystemToken() { return process.env.FB_SYSTEM_TOKEN || ''; },

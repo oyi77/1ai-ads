@@ -1,4 +1,4 @@
-📊 *ADS DASHBOARD* — 03 Jun 2026 13:44 WIB
+📊 *ADS DASHBOARD* — 04 Jun 2026 22:47 WIB
 
 ❌ *Selow ID 1041*
   ├─ 0/0 kampanye aktif
@@ -30,7 +30,12 @@
   ├─ Spend hari ini: Rp0
   └─ Konversi: —
 
+❌ *GlowScent*
+  ├─ 0/0 kampanye aktif
+  ├─ Spend hari ini: Rp0
+  └─ Konversi: —
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💰 *Total Spend:* Rp0
 📈 *Total Aktif:* 0/0 kampanye
-⏱️  *Last updated:* 03 Jun 2026 13:44 WIB
+⏱️  *Last updated:* 04 Jun 2026 22:47 WIB

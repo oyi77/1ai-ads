@@ -9,6 +9,7 @@ import { AdIntelligenceService } from '../../../server/services/ad-intelligence.
 describe('AdIntelligenceService', () => {
   let db;
   let service;
+  let competitorsRepo;
 
   beforeEach(() => {
     db = new Database(':memory:');
@@ -22,7 +23,16 @@ describe('AdIntelligenceService', () => {
         captured_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    service = new AdIntelligenceService(db);
+    competitorsRepo = {
+      create: (data) => {
+        const id = `snap_${Date.now()}`;
+        const snapshot_type = data.snapshotType || data.snapshot_type || 'api';
+        const stmt = db.prepare('INSERT INTO competitor_snapshots (id, url, platform, ad_data, snapshot_type) VALUES (?, ?, ?, ?, ?)');
+        stmt.run(id, data.url, data.platform || null, JSON.stringify(data.adData || data), snapshot_type);
+        return { id, url: data.url, platform: data.platform, snapshot_type, ad_data: data.adData || data, captured_at: new Date().toISOString() };
+      },
+    };
+    service = new AdIntelligenceService(db, competitorsRepo);
   });
 
   describe('getCompetitorAds', () => {

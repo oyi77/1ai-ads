@@ -1,77 +1,61 @@
 import { safeFetch } from '../lib/platform-client.js';
 import config from '../config/index.js';
-import { createLogger } from '../lib/logger.js';
+import { BasePlatformApiClient } from '../lib/base-platform-api.js';
 import { ConfigurationError, PlatformError } from '../lib/errors.js';
 
-const log = createLogger('meta-api');
+const log = config.log?.metaApi ? undefined : undefined; // will use base class logger
 const BASE = `https://graph.facebook.com/${config.metaApiVersion}`;
 
-export class MetaAdsAPI {
+export class MetaAdsAPI extends BasePlatformApiClient {
+  /**
+   * @param {object|string} settingsRepoOrToken - SettingsRepo instance or explicit token string
+   */
   constructor(settingsRepoOrToken) {
     // Support both: new MetaAdsAPI(settingsRepo) AND new MetaAdsAPI('token-string')
+    const settingsRepo = typeof settingsRepoOrToken === 'string' ? null : settingsRepoOrToken;
+    super('meta', settingsRepo, { baseUrl: BASE });
     if (typeof settingsRepoOrToken === 'string') {
       this._explicitToken = settingsRepoOrToken;
-      this.settingsRepo = null;
-    } else {
-      this.settingsRepo = settingsRepoOrToken;
-      this._explicitToken = null;
     }
-    this._activeAccountId = null; // For multi-account context
   }
 
   /**
-   * Set active account context for multi-Facebook-account support.
-   * After calling this, all subsequent API calls use that account's token.
+   * Factory method for creating a MetaAdsAPI with an explicit token.
+   * Prefer this over the dual constructor for clarity.
    */
-  setActiveAccount(accountId, accessToken) {
-    this._activeAccountId = accountId;
-    this._explicitToken = accessToken;
+  static withToken(token) {
+    return new MetaAdsAPI(token);
   }
 
-  /**
-   * Clear active account, fall back to default resolution.
-   */
-  clearActiveAccount() {
-    this._activeAccountId = null;
-    this._explicitToken = null;
-  }
-
+  // Meta uses access_token as query param, not Bearer header
   _getToken() {
     // 1. Explicit token (set via constructor or setActiveAccount)
-    if (this._explicitToken) {
-      return this._explicitToken;
-    }
+    if (this._explicitToken) return this._explicitToken;
     // 2. System token from .env (backward compat)
-    if (config.fbSystemToken) {
-      return config.fbSystemToken;
-    }
+    if (config.fbSystemToken) return config.fbSystemToken;
     // 3. Active platform account from platform_accounts table
     if (this.settingsRepo) {
       const creds = this.settingsRepo.getCredentials('meta');
-      if (creds?.access_token) {
-        return creds.access_token;
-      }
+      if (creds?.access_token) return creds.access_token;
     }
     throw new ConfigurationError('Meta access token not configured. Connect a Facebook account in Settings.');
   }
 
+  // Override: Meta uses access_token as query param, not Authorization header
   async _get(path, params = {}) {
-    const token = this._getToken();
-    const url = new URL(`${BASE}${path}`);
-    url.searchParams.set('access_token', token);
+    const url = new URL(`${this._baseUrl}${path}`);
+    url.searchParams.set('access_token', this._getToken());
     for (const [k, v] of Object.entries(params)) {
       url.searchParams.set(k, v);
     }
-
     const res = await safeFetch('meta', url.toString());
     return await res.json();
   }
 
+  // Override: Meta uses access_token as query param
   async _post(path, body = {}) {
-    const token = this._getToken();
-    const url = new URL(`${BASE}${path}`);
-    url.searchParams.set('access_token', token);
-
+    const url = new URL(`${this._baseUrl}${path}`);
+    url.searchParams.set('access_token', this._getToken());
     const res = await safeFetch('meta', url.toString(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -80,14 +64,13 @@ export class MetaAdsAPI {
     return await res.json();
   }
 
-  // Aliases for better code compatibility with orchestrator/agent
+  // Aliases for backward compatibility with orchestrator/agent
   async apiGet(path, params) { return this._get(path, params); }
   async apiPost(path, body) { return this._post(path, body); }
   async apiUpdate(path, body) { return this._post(path, body); }
   async apiDelete(path) {
-    const token = this._getToken();
-    const url = new URL(`${BASE}${path}`);
-    url.searchParams.set('access_token', token);
+    const url = new URL(`${this._baseUrl}${path}`);
+    url.searchParams.set('access_token', this._getToken());
     const res = await safeFetch('meta', url.toString(), { method: 'DELETE' });
     return await res.json();
   }

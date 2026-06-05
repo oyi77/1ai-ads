@@ -31,6 +31,9 @@ export function createApp(params) {
   app.locals.adResearchService = services.adResearchService;
   app.locals.db = db;
 
+  // Trust proxy for correct req.protocol behind Cloudflare/nginx
+  app.set('trust proxy', 1);
+
   app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');

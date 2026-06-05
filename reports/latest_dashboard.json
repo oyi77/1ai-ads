@@ -58,5 +58,15 @@
     "status": "\u274c",
     "top_campaigns": [],
     "error": "(#200) Provide valid app ID"
+  },
+  {
+    "label": "GlowScent",
+    "id": "act_2125021885010866",
+    "campaigns": 0,
+    "active": 0,
+    "spend_today": 0,
+    "status": "\u274c",
+    "top_campaigns": [],
+    "error": "(#200) Provide valid app ID"
   }
 ]

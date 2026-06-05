@@ -22,16 +22,19 @@ export function createRepositories(db) {
 
   const contentSchedulerQueueRepo = new ContentSchedulerQueueRepository(db);
 
+  // Create platformAccountsRepo first since SettingsRepository delegates to it
+  const platformAccountsRepo = new PlatformAccountsRepository(db);
+
   return {
     usersRepo: new UsersRepository(db),
     refreshTokensRepo: new RefreshTokensRepository(db),
-    settingsRepo: new SettingsRepository(db),
+    settingsRepo: new SettingsRepository(db, platformAccountsRepo),
     landingRepo: new LandingRepository(db),
     campaignsRepo: new CampaignsRepository(db),
     adsRepo: new AdsRepository(db),
     templatesRepo: new TemplatesRepository(db),
     competitorsRepo: new CompetitorsRepository(db),
-    platformAccountsRepo: new PlatformAccountsRepository(db),
+    platformAccountsRepo,
     suggestionsRepo: new AiSuggestionsRepository(db),
     webhookEventsRepo: new WebhookEventsRepository(db),
     rulesRepo: new RulesRepository(db),

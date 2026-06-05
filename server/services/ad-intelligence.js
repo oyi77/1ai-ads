@@ -9,7 +9,6 @@
 
 import config from '../config/index.js';
 import { createLogger } from '../lib/logger.js';
-import { CompetitorsRepository } from '../repositories/competitors.js';
 
 const log = createLogger('ad-intelligence');
 
@@ -21,7 +20,7 @@ const REQUEST_TIMEOUT = 30000;
 export class AdIntelligenceService {
   constructor(db, competitorsRepo = null) {
     this.db = db;
-    this.competitorsRepo = competitorsRepo || new CompetitorsRepository(db);
+    this.competitorsRepo = competitorsRepo;
     this.apiKey = config.similarwebApiKey || null;
     this.requestCount = 0;
     this.lastRequestTime = null;
@@ -144,6 +143,9 @@ export class AdIntelligenceService {
    * @returns {Promise<Object>} Created snapshot
    */
   saveSnapshot(data) {
+    if (!this.competitorsRepo) {
+      throw new Error('CompetitorsRepository is required for saveSnapshot. Pass it in the constructor.');
+    }
     return this.competitorsRepo.create({
       url: data.domain,
       platform: data.platform || null,

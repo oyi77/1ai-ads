@@ -174,16 +174,31 @@
             </div>
             <div class="modal-body p-4">
 
-                <!-- METHOD 1: OAuth - Connect with Facebook -->
-                <div class="oauth-section">
-                    <h3>Connect with Facebook</h3>
-                    <p>Login dengan Facebook kamu — otomatis connect, tanpa perlu copy-paste token manual.</p>
-                    <button class="oauth-btn" onclick="startOAuth()">
-                        <i class="bi bi-facebook"></i> Connect with Facebook
-                    </button>
-                    <div style="margin-top: 12px; font-size: 0.8rem; color: rgba(255,255,255,0.6);">
-                        ✅ Facebook App sudah approved · Bisa connect ke banyak akun
+                <!-- METHOD 1: Simple Token Input (PRIMARY) -->
+                <div class="oauth-section" style="background: linear-gradient(135deg, var(--bg-card) 0%, #28a745 100%);">
+                    <h3>🔑 Connect with Token</h3>
+                    <p>Cukup paste token Meta Ads kamu — gak perlu login OAuth yang ribet.</p>
+                    
+                    <div style="max-width: 500px; margin: 0 auto; text-align: left;">
+                        <div class="mb-3">
+                            <label class="form-label text-white small fw-bold">ACCOUNT NAME</label>
+                            <input type="text" id="simpleAccName" class="form-control" 
+                                   placeholder="e.g. Nyamiresep Dapur" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff;">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-white small fw-bold">META ACCESS TOKEN</label>
+                            <textarea id="simpleToken" class="form-control" rows="3" 
+                                      placeholder="EAAKA2OT1FroB..." 
+                                      style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff;"></textarea>
+                            <div class="form-text mt-2" style="color: rgba(255,255,255,0.7);">
+                                Dapatkan dari <a href="https://developers.facebook.com/tools/explorer" target="_blank" style="color: #fff; text-decoration: underline;">Graph API Explorer</a> — pilih app, generate token.
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-light w-100" onclick="connectWithToken()" style="font-weight: 600;">
+                            ⚡ Connect & Auto-Detect Accounts
+                        </button>
                     </div>
+                    <div id="simpleTokenResult" style="display:none; margin-top: 16px;"></div>
                 </div>
 
                 <!-- METHOD 2: System User Auto-Detect -->
@@ -196,31 +211,14 @@
                     <div id="sysUserResult" style="display:none;"></div>
                 </div>
 
-                <!-- METHOD 3: Manual Token (Collapsible) -->
+                <!-- METHOD 3: OAuth (legacy, kalau perlu) -->
                 <details class="manual-section">
-                    <summary>🔧 Manual Token Entry <span style="font-size:0.8rem;">(Hanya jika OAuth tidak bisa dipakai)</span></summary>
-                    <div style="padding-top: 16px;">
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">ACCOUNT NAME</label>
-                            <input type="text" id="accName" class="form-control border-secondary" placeholder="e.g. nor haenah">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">PLATFORM</label>
-                            <select id="accPlatform" class="form-select border-secondary">
-                                <option value="meta">Meta (Facebook/Instagram)</option>
-                                <option value="google">Google Ads</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">ACCESS TOKEN</label>
-                            <textarea id="accToken" class="form-control border-secondary" rows="3" placeholder="Paste your Long-lived User Access Token or System User Token here"></textarea>
-                            <div class="form-text text-muted mt-2">
-                                Token bisa didapat dari <a href="https://developers.facebook.com" target="_blank">Meta Developers Portal</a>.
-                            </div>
-                        </div>
-                        <button type="button" class="btn btn-outline-primary" onclick="submitManualAccount()">
-                            Connect with Token
+                    <summary>🔧 Facebook OAuth Login <span style="font-size:0.8rem;">(Legacy - mungkin gagal)</span></summary>
+                    <div style="padding-top: 16px; text-align: center;">
+                        <button class="oauth-btn" onclick="startOAuth()">
+                            <i class="bi bi-facebook"></i> Connect with Facebook
                         </button>
+                        <p class="text-muted" style="font-size: 0.8rem; margin-top: 8px;">Butuh HTTPS & Facebook App ID yang valid.</p>
                     </div>
                 </details>
 
@@ -232,7 +230,61 @@
 
 {% block scripts %}
 <script>
-// =============== METHOD 1: OAuth ===============
+// =============== METHOD 1: Simple Token Connect ===============
+async function connectWithToken() {
+    const name = document.getElementById('simpleAccName').value.trim();
+    const token = document.getElementById('simpleToken').value.trim();
+    const resultDiv = document.getElementById('simpleTokenResult');
+    
+    if (!token) {
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = '<div class="alert alert-danger py-2 px-3 mb-0">❌ Token wajib diisi!</div>';
+        return;
+    }
+    
+    const btn = event.currentTarget;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Connecting...';
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '<div class="text-center text-white py-2"><div class="spinner-border spinner-border-sm me-2"></div>Verifying token & detecting accounts...</div>';
+    
+    try {
+        const res = await fetch('/api/auth/connect-meta-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ access_token: token, account_name: name || null })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success py-2 px-3 mb-0" style="font-size:0.9rem;">
+                    ✅ <strong>${data.message}</strong><br>
+                    <small>Connected as: ${data.data.user_name} | Ad Accounts: ${data.data.ad_accounts_count}</small>
+                </div>
+            `;
+            // Reload after 2s
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger py-2 px-3 mb-0" style="font-size:0.9rem;">
+                    ❌ ${data.error || 'Unknown error'}
+                </div>
+            `;
+        }
+    } catch (e) {
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger py-2 px-3 mb-0" style="font-size:0.9rem;">
+                ❌ Connection failed: ${e.message}
+            </div>
+        `;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '⚡ Connect & Auto-Detect Accounts';
+    }
+}
+
+// =============== METHOD 2: OAuth ===============
 function startOAuth() {
     // Show loading
     const btn = event.currentTarget;
@@ -397,41 +449,6 @@ async function connectAllSystemUserAccounts() {
         alert('Error: ' + e.message);
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-link-45deg me-1"></i> Connect All';
-    }
-}
-
-// =============== METHOD 3: Manual Token ===============
-async function submitManualAccount() {
-    const name = document.getElementById('accName').value;
-    const platform = document.getElementById('accPlatform').value;
-    const token = document.getElementById('accToken').value;
-
-    if (!name || !token) {
-        alert('Please fill all fields');
-        return;
-    }
-
-    const btn = event.target;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Connecting...';
-
-    try {
-        const res = await fetch('/api/accounts/add', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, platform, token })
-        });
-        const data = await res.json();
-        if (data.success) {
-            location.reload();
-        } else {
-            alert('Failed: ' + (data.error || 'Unknown error'));
-        }
-    } catch (e) {
-        alert('Failed to connect: ' + e.message);
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = 'Connect with Token';
     }
 }
 </script>

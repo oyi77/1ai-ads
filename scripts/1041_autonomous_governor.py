@@ -189,10 +189,15 @@ def run():
             skip_count += 1
             continue
         
-        # ── RULE: Spend > 0 but 0 clicks → DEAD ──
+        # ── RULE: Spend > 0 but 0 clicks → DEAD (AUTO-PAUSE) ──
         if spend > 0 and clicks == 0:
-            log(f"  💀 DEAD | {name[:55]} | Spend Rp{spend:,.0f} | 0 clicks")
-            dead_count += 1
+            r = api_post(f"{cid}", {"status": "PAUSED"})
+            if r.get("success"):
+                log(f"  💀 DEAD | {name[:55]} | Spend Rp{spend:,.0f} | 0 clicks | AUTO-PAUSED")
+                dead_count += 1
+            else:
+                log(f"  💀 DEAD | {name[:55]} | Spend Rp{spend:,.0f} | 0 clicks | PAUSE FAILED")
+                dead_count += 1
             continue
         
         # ── RULE: CPC > 130 → REM (PAUSE) ──

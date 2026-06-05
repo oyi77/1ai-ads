@@ -231,6 +231,101 @@ export function createSettingsRouter(settingsRepo, llmClient, db, metaApi) {
     }
   });
 
+  // --- SIMPLE TOKEN CONNECT (no OAuth needed) ---
+  router.post('/accounts/connect-token', async (req, res) => {
+    const { access_token, account_name } = req.body;
+    if (!access_token) {
+      return res.status(400).json({ success: false, error: 'access_token is required' });
+    }
+
+    try {
+      // Verify token works
+      const meRes = await fetch(`https://graph.facebook.com/${config.metaApiVersion}/me?access_token=${encodeURIComponent(access_token)}&fields=id,name`);
+      const meData = await meRes.json();
+      if (meData.error) {
+        return res.status(400).json({ success: false, error: `Invalid token: ${meData.error.message}` });
+      }
+
+      const userName = account_name || meData.name || 'Meta Account';
+      
+      // Auto-detect ad accounts
+      let adAccounts = [];
+      try {
+        const accRes = await fetch(`https://graph.facebook.com/${config.metaApiVersion}/me/adaccounts?access_token=${encodeURIComponent(access_token)}&fields=name,account_id,account_status,currency&limit=50`);
+        const accData = await accRes.json();
+        if (accData.data) {
+          adAccounts = accData.data.filter(a => a.account_status === 1).map(a => ({
+            id: `act_${a.account_id}`,
+            name: a.name,
+            account_id: a.account_id,
+            currency: a.currency,
+            status: 'active'
+          }));
+        }
+      } catch (e) {
+        console.error('Failed to detect ad accounts:', e.message);
+      }
+
+      // Save main account with token
+      const existingAccounts = settingsRepo.getAccounts('meta');
+      const existing = existingAccounts.find(a => 
+        a.account_name === userName || 
+        (a.credentials?.access_token === access_token)
+      );
+
+      let mainId;
+      if (existing) {
+        settingsRepo.updateAccount(existing.id, { 
+          credentials: { access_token, user_name: meData.name, user_id: meData.id } 
+        });
+        mainId = existing.id;
+      } else {
+        const id = uuid();
+        settingsRepo.addAccount({
+          id,
+          user_id: req.user?.id || 'admin',
+          platform: 'meta',
+          account_name: userName,
+          credentials: { access_token, user_name: meData.name, user_id: meData.id },
+          is_active: existingAccounts.length === 0 ? 1 : 0
+        });
+        mainId = id;
+      }
+
+      // Also save each ad account
+      let connectedCount = 0;
+      for (const adAcc of adAccounts) {
+        const adExisting = existingAccounts.find(a => a.account_name === adAcc.id || a.account_name === adAcc.name);
+        if (!adExisting) {
+          settingsRepo.addAccount({
+            id: uuid(),
+            user_id: req.user?.id || 'admin',
+            platform: 'meta',
+            account_name: adAcc.id,
+            credentials: { access_token, ad_account_id: adAcc.account_id, ad_account_name: adAcc.name },
+            is_active: 0
+          });
+          connectedCount++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Connected as ${meData.name}! Found ${adAccounts.length} ad accounts, ${connectedCount} new connected.`,
+        data: {
+          id: mainId,
+          user_name: meData.name,
+          user_id: meData.id,
+          ad_accounts_count: adAccounts.length,
+          new_connected: connectedCount,
+          ad_accounts: adAccounts
+        }
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // --- Legacy Support (for existing frontend calls) ---
 
   router.get('/credentials/:platform', (req, res) => {

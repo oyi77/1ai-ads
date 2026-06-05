@@ -36,17 +36,50 @@ WIB = timezone(timedelta(hours=7))
 WORKSPACE = Path(__file__).parent.parent
 LOG_FILE = WORKSPACE / "logs" / "glowscent_681_engine.log"
 STATE_FILE = WORKSPACE / "data" / "glowscent_681_state.json"
-TOKEN_FILE = Path("/tmp/fb_token_glowscent_681.txt")
+TOKEN_FILE = Path("/tmp/meta_token.txt")  # Shared token file with 1041 governor
 os.makedirs(WORKSPACE / "logs", exist_ok=True)
 os.makedirs(WORKSPACE / "data", exist_ok=True)
 
 def load_token():
+    """Load token from file. Tries /tmp/fb_token.txt first, then .env fallback."""
     try:
         if TOKEN_FILE.exists():
-            return TOKEN_FILE.read_text().strip()
+            token = TOKEN_FILE.read_text().strip()
+            if token:
+                return token
+    except:
+        pass
+    # Fallback: try .env file
+    env_file = WORKSPACE / ".env"
+    try:
+        if env_file.exists():
+            for line in env_file.read_text().splitlines():
+                if line.startswith("META_ACCESS_TOKEN="):
+                    token = line.split("=", 1)[1].strip()
+                    if token:
+                        return token
     except:
         pass
     return None
+
+def validate_token(token):
+    """Validate token with a lightweight API call. Returns True if valid."""
+    if not token:
+        return False
+    try:
+        url = f"{API}/act_2125021885010866?fields=id&access_token={token}"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+            if "id" in data:
+                return True
+            if data.get("error", {}).get("code") == 190:  # Token expired
+                log("TOKEN EXPIRED — needs refresh", "CRITICAL")
+                return False
+            return False
+    except Exception as e:
+        log(f"Token validation failed: {e}", "WARN")
+        return False
 
 ACCESS_TOKEN = load_token()
 API = "https://graph.facebook.com/v19.0"
@@ -208,10 +241,17 @@ def run_cycle(verbose=False):
     dead_zone = (0 <= hour < 4)
     reactivate_time = (hour == 4)
     
+    # ── SAFETY: Validate token first ──
+    if not ACCESS_TOKEN or not validate_token(ACCESS_TOKEN):
+        log("🚨 TOKEN INVALID — cannot manage campaigns!", "CRITICAL")
+        return {"total_spend": 0, "active_count": 0, "hard_cap_percent": 0, 
+                "hard_cap_breached": False, "actions": ["TOKEN_INVALID"], 
+                "alerts": ["🚨 TOKEN INVALID - campaigns unmanaged!"], "dead_zone": dead_zone}
+    
     camps = get_all_campaigns()
     if not camps:
         log("No campaigns returned", "WARN")
-        return {"total_spend": 0, "actions": [], "alerts": [], "dead_zone": dead_zone}
+        return {"total_spend": 0, "active_count": 0, "hard_cap_percent": 0, "hard_cap_breached": False, "actions": [], "alerts": [], "dead_zone": dead_zone}
     
     active = [c for c in camps if c.get("status") == "ACTIVE"]
     paused_non_off = [c for c in camps if c.get("status") == "PAUSED" and "OFF_" not in c.get("name", "")]
@@ -345,11 +385,22 @@ if __name__ == "__main__":
         log(f"   Rules: CPC>{CPC_WARN}=pause | CTR<{CTR_MIN}%=pause | Cap=Rp{HARD_CAP:,}")
         log(f"   Token: {'✅ Loaded' if ACCESS_TOKEN else '❌ MISSING'}")
         
+        # Validate token before entering loop
+        if not ACCESS_TOKEN or not validate_token(ACCESS_TOKEN):
+            log("🚨 CRITICAL: Token invalid at startup — enter monitor anyway with alerts", "CRITICAL")
+        
         cycle = 0
+        last_token_check = datetime.now(WIB)
         while True:
             try:
                 cycle += 1
                 now = datetime.now(WIB)
+                
+                # Re-validate token every 30 minutes
+                if (now - last_token_check).total_seconds() > 1800:
+                    last_token_check = now
+                    if ACCESS_TOKEN and not validate_token(ACCESS_TOKEN):
+                        log("🚨 TOKEN EXPIRED mid-run — campaigns may be unmanaged!", "CRITICAL")
                 
                 # Determine check interval based on time of day
                 hour = now.hour
@@ -360,18 +411,26 @@ if __name__ == "__main__":
                 
                 state = run_cycle(verbose=(cycle % 10 == 0))  # verbose every 10th cycle
                 
-                summary = f"[#{cycle}] 💰 Rp{int(state['total_spend']):,} | "
-                summary += f"Active: {state['active_count']} | "
-                summary += f"Cap: {state['hard_cap_percent']}% | "
-                summary += f"Actions: {len(state['actions'])}"
+                # DEFENSIVE: safe .get() with defaults to prevent KeyError crashes
+                total_spend = int(state.get('total_spend', 0))
+                active_count = state.get('active_count', 0)
+                cap_pct = state.get('hard_cap_percent', 0)
+                breached = state.get('hard_cap_breached', False)
+                actions_len = len(state.get('actions', []))
+                alerts_len = len(state.get('alerts', []))
                 
-                if state["alerts"]:
-                    summary += f" | ⚠️ {len(state['alerts'])} alerts"
+                summary = f"[#{cycle}] 💰 Rp{total_spend:,} | "
+                summary += f"Active: {active_count} | "
+                summary += f"Cap: {cap_pct}% | "
+                summary += f"Actions: {actions_len}"
+                
+                if alerts_len > 0:
+                    summary += f" | ⚠️ {alerts_len} alerts"
                 
                 log(summary)
                 
                 # Alert on critical conditions
-                if state["hard_cap_breached"]:
+                if breached:
                     log("🚨 HARD CAP BREACH — ALL PAUSED", "CRITICAL")
                 
                 time.sleep(interval)
@@ -386,4 +445,7 @@ if __name__ == "__main__":
     
     if not any([args.once, args.monitor, args.status]):
         state = run_cycle(verbose=True)
-        print(f"\n💰 Total: Rp{int(state['total_spend']):,} | Active: {state['active_count']} | Actions: {len(state['actions'])}")
+        total_spend = int(state.get('total_spend', 0))
+        active_count = state.get('active_count', 0)
+        actions_len = len(state.get('actions', []))
+        print(f"\n💰 Total: Rp{total_spend:,} | Active: {active_count} | Actions: {actions_len}")

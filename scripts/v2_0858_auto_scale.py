@@ -202,7 +202,7 @@ for camp in winning_camps[:2]:
                 "name": new_name,
                 "objective": "OUTCOME_TRAFFIC",
                 "status": "ACTIVE",
-                "special_ad_categories": "NONE",
+                "special_ad_categories": [],
                 "is_adset_budget_sharing_enabled": False,
             },
         )

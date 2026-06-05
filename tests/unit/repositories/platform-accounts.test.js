@@ -51,14 +51,14 @@ describe('PlatformAccountsRepository', () => {
     it('changes credentials and re-fetched row has updated credentials', () => {
       const row = repo.create(makeAccount(userId));
 
-      const newCreds = JSON.stringify({ token: 'newtoken' });
+      const newCreds = { token: 'newtoken' };
       const updated = repo.update(row.id, { credentials: newCreds });
 
       expect(updated).not.toBeNull();
-      expect(updated.credentials).toBe(newCreds);
+      expect(updated.credentials).toEqual(newCreds);
 
       const refetched = repo.findActiveByUserAndPlatform(userId, 'meta');
-      expect(refetched.credentials).toBe(newCreds);
+      expect(refetched.credentials).toEqual(newCreds);
     });
   });
 

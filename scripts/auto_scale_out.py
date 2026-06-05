@@ -38,7 +38,11 @@ def load_env():
     return env
 
 ENV = load_env()
-TOKEN = os.environ.get('META_ACCESS_TOKEN', '')
+TOKEN = (
+    os.environ.get('META_ACCESS_TOKEN', '')
+    or ENV.get('META_ACCESS_TOKEN', '')
+    or Path('/tmp/meta_token.txt').read_text().strip() if Path('/tmp/meta_token.txt').exists() else ''
+)
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID', '157228659')
 
@@ -262,12 +266,19 @@ def get_existing_interest_ids(campaign_id):
 def scale_out(campaign_id, campaign_name, budget):
     """Simple scale-out: copy campaign → rename → expand audience"""
     
-    # 1. Deep copy the campaign
+    # 1. Copy the campaign (try deep_copy first, fallback to shallow if deprecated standard enhancements)
     log(f"  📋 Copying campaign...")
     copy_result = api_post(f'{campaign_id}/copies', {
         'deep_copy': True,
         'status_option': 'PAUSED',
     })
+    
+    # Meta v19+ deprecated standard_enhancement → retry without deep_copy
+    if isinstance(copy_result, dict) and copy_result.get('error', {}).get('error_subcode') == 3858504:
+        log(f"  ⚠️ Standard enhancements deprecated — retrying without deep copy")
+        copy_result = api_post(f'{campaign_id}/copies', {
+            'status_option': 'PAUSED',
+        })
 
     new_id = copy_result.get('copied_campaign_id', '')
     if not new_id:

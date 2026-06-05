@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <title>AdForge - Ads Management</title>
+  <meta name="facebook-domain-verification" content="ak7sbqrg315zt4d5a0x8l3y76dko20" />
+  
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-5MXPQQRT');</script>
+  
+  <!-- Google Analytics 4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-V9C14XZ9SG"></script>
+  <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-V9C14XZ9SG');</script>
+  
+  <!-- Meta Pixel -->
+  <script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','771021905629860');fbq('track','PageView');</script>
+  <!-- Meta Pixel noscript moved to body -->
+  
+  <!-- TikTok Pixel -->
+  <script>!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"];ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{};ttq._i[e]=[];ttq._i[e]._u=i;ttq._t=ttq._t||{};ttq._t[e]=+new Date;ttq._o=ttq._o||{};ttq._o[e]=n||{};var o=document.createElement("script");o.type="text/javascript";o.async=!0;o.src=i+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};ttq.load('D6IA84RC77UCTB9KG9OG');ttq.page()}(window,document,'ttq');</script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Responsive nav */
+    @media (max-width: 767px) {
+      #nav-links { display: none; flex-direction: column; width: 100%; padding: 8px 0; }
+      #nav-links.nav-open { display: flex; }
+    }
+    @media (min-width: 768px) {
+      #nav-links { display: flex !important; }
+      #menu-toggle { display: none !important; }
+    }
+    .hidden { display: none !important; }
+
+    /* ═══ Toast Notifications ═══ */
+    @keyframes vnSlideIn { from{opacity:0;transform:translateX(80px)} to{opacity:1;transform:translateX(0)} }
+    @keyframes vnSlideOut { from{opacity:1;transform:translateX(0)} to{opacity:0;transform:translateX(80px)} }
+    .vn-toast-container { position:fixed; top:16px; right:16px; z-index:10000; display:flex; flex-direction:column; gap:8px; max-width:360px; }
+    .vn-toast { display:flex; align-items:flex-start; gap:10px; padding:12px 16px; background:#0d1117; border:1px solid #30363d; border-radius:8px; box-shadow:0 8px 32px rgba(0,0,0,.5); animation:vnSlideIn .25s ease; cursor:pointer; font-size:13px; color:#e8ecf4; font-family:'Inter',sans-serif; }
+    .vn-toast.removing { animation:vnSlideOut .15s ease forwards; }
+    .vn-toast-icon { font-size:1.1rem; flex-shrink:0; }
+    .vn-toast-body { flex:1; }
+    .vn-toast-title { font-weight:700; }
+    .vn-toast-msg { font-size:.75rem; color:#8b949e; margin-top:2px; }
+    .vn-toast-close { background:none; border:none; color:#8b949e; cursor:pointer; font-size:.9rem; padding:0; line-height:1; }
+    .vn-toast-close:hover { color:#e8ecf4; }
+
+    /* ═══ Better Scrollbar ═══ */
+    ::-webkit-scrollbar { width:5px; height:5px; }
+    ::-webkit-scrollbar-track { background:#0d1117; }
+    ::-webkit-scrollbar-thumb { background:#30363d; border-radius:3px; }
+    ::-webkit-scrollbar-thumb:hover { background:#6366f1; }
+
+    /* ═══ Page transitions ═══ */
+    @keyframes vnFadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+    .animate-fadeIn { animation:vnFadeIn .3s ease; }
+  </style>
+</head>
+<body class="min-h-screen font-sans">
+  <!-- Navigation - Modern Glass Interface -->
+  <nav class="sticky top-0 z-50 bg-[#0d1117]/80 backdrop-blur-xl border-b border-[#1c2128]">
+    <div class="max-w-[1600px] mx-auto px-6 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-8">
+          <a href="#/" class="flex items-center gap-3 group">
+            <div class="w-8 h-8 bg-gradient-to-br from-sky-400 to-indigo-600 rounded-lg flex items-center justify-center font-black text-black text-lg transition-transform group-hover:rotate-12">A</div>
+            <span class="font-black text-xl tracking-tighter text-white">ADFORGE<span class="text-sky-500">.AI</span></span>
+          </a>
+          
+          <div id="nav-links" class="hidden xl:flex items-center gap-1"></div>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <a href="#/ads/create" class="hidden sm:flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-xs font-black hover:bg-sky-400 transition-all uppercase tracking-widest shadow-lg shadow-white/5">
+             <span>+ New Campaign</span>
+          </a>
+          <button id="menu-toggle" class="xl:hidden p-2 text-slate-400 hover:text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div class="h-8 w-[1px] bg-[#1c2128] mx-2 hidden sm:block"></div>
+          <a href="#/settings" class="w-10 h-10 rounded-xl bg-[#161b22] border border-[#30363d] flex items-center justify-center hover:border-sky-500 transition-colors">⚙️</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div id="app" class="animate-fadeIn"></div>
+
+  <script>
+    function renderTopNavItem(label, hash) {
+      const active = window.location.hash === hash || (hash === '#/' && (window.location.hash === '' || window.location.hash === '#'));
+      return `<a href="${hash}" class="px-4 py-2 rounded-lg text-xs font-bold transition-all ${active ? 'bg-sky-500/10 text-sky-400' : 'text-slate-500 hover:text-white hover:bg-[#161b22]'} uppercase tracking-widest">${label}</a>`;
+    }
+    (function renderTopNav() {
+      const el = document.getElementById('nav-links');
+      if (!el) return;
+      el.innerHTML = [
+        renderTopNavItem('Dashboard', '#/'),
+        renderTopNavItem('Campaigns', '#/campaigns'),
+        renderTopNavItem('Creatives', '#/ads'),
+        renderTopNavItem('Landing', '#/landing'),
+        renderTopNavItem('Analytics', '#/analytics'),
+        renderTopNavItem('Trending', '#/trending'),
+        renderTopNavItem('Spy', '#/competitor-spy'),
+        renderTopNavItem('Global', '#/global-ads'),
+        renderTopNavItem('Meta AI', '#/meta-ai'),
+        renderTopNavItem('Ad Library', '#/ads-library-ai'),
+      ].join('');
+    })();
+  </script>
+  <div id="app"></div>
+
+  <!-- Cookie Consent Banner (global) -->
+  <div id="cookie-banner" class="fixed bottom-0 left-0 right-0 bg-[#0d1117] border-t border-[#30363d] p-4 z-50 flex flex-wrap justify-between items-center shadow-[0_-4px_20px_rgba(0,0,0,0.5)]" style="display: none;">
+    <p class="text-sm text-slate-300 mr-4 mb-2 md:mb-0 flex-1 min-w-[280px]">
+      We use cookies to enhance your browsing experience, serve personalized ads or content, and analyze our traffic. By clicking "Accept All", you consent to our use of cookies. Read our <a href="#/privacy" class="text-sky-400 hover:underline">Privacy Policy</a>.
+    </p>
+    <div class="flex gap-3">
+      <button id="decline-cookies" class="px-4 py-2 border border-slate-600 text-slate-300 rounded hover:bg-slate-800 transition-colors text-sm">Decline</button>
+      <button id="accept-cookies" class="px-4 py-2 bg-[#58a6ff] text-white rounded hover:bg-[#79c0ff] transition-colors text-sm font-semibold">Accept All</button>
+    </div>
+  </div>
+
+  <!-- Global Footer -->
+  <footer class="bg-slate-800 border-t border-slate-700 py-8 px-4 text-center text-slate-500 text-sm">
+    <div class="flex flex-wrap justify-center gap-4 sm:gap-6 mb-4">
+      <a href="#/privacy" class="hover:text-sky-400 transition-colors">Privacy Policy</a>
+      <a href="#/terms" class="hover:text-sky-400 transition-colors">Terms &amp; Service</a>
+      <a href="#/gdpr" class="hover:text-sky-400 transition-colors">GDPR</a>
+      <a href="#/docs" class="hover:text-sky-400 transition-colors">Docs</a>
+    </div>
+    <p>&copy; 2026 AdForge AI. All rights reserved. Powered by OmniRoute.</p>
+  </footer>
+
+  <script>
+    // Global cookie consent handler
+    (function() {
+      var banner = document.getElementById('cookie-banner');
+      if (banner && !localStorage.getItem('adforge_cookie_consent')) {
+        banner.style.display = 'flex';
+        document.getElementById('accept-cookies').addEventListener('click', function() {
+          localStorage.setItem('adforge_cookie_consent', 'accepted');
+          banner.style.display = 'none';
+        });
+        document.getElementById('decline-cookies').addEventListener('click', function() {
+          localStorage.setItem('adforge_cookie_consent', 'declined');
+          banner.style.display = 'none';
+        });
+      }
+    })();
+  </script>
+
+  <script type="module" src="/src/app.js"></script>
+  <!-- ═══ Toast Notification System ═══ -->
+  <div class="vn-toast-container" id="vnToastContainer"></div>
+  <script>
+    window.VN = {
+      toast(title, msg, type, dur) {
+        dur = dur || 4000;
+        var icons = {success:'✅',error:'❌',warning:'⚠️',info:'ℹ️',revenue:'💰'};
+        var t = document.createElement('div');
+        t.className = 'vn-toast';
+        t.innerHTML = '<span class="vn-toast-icon">'+(icons[type]||icons.info)+'</span><div class="vn-toast-body"><div class="vn-toast-title">'+title+'</div><div class="vn-toast-msg">'+msg+'</div></div><button class="vn-toast-close" onclick="this.parentElement.remove()">✕</button>';
+        if(dur>0) setTimeout(function(){ t.classList.add('removing'); setTimeout(function(){ t.remove(); },150); }, dur);
+        var c = document.getElementById('vnToastContainer');
+        while(c.children.length >= 5) c.firstChild.remove();
+        c.appendChild(t);
+        return t;
+      },
+      success: function(msg,title){ return this.toast(title||'Success',msg,'success'); },
+      error: function(msg,title){ return this.toast(title||'Error',msg,'error',0); },
+      warn: function(msg,title){ return this.toast(title||'Warning',msg,'warning'); },
+      info: function(msg,title){ return this.toast(title||'Info',msg,'info'); }
+    };
+  </script>
+</body>
+</html>

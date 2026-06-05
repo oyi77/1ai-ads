@@ -54,7 +54,7 @@ export class FacebookConnectionService {
    * Discover Facebook accounts (personal + business).
    */
   async getFacebookAccounts(accessToken) {
-    const metaApi = new MetaAdsAPI(accessToken);
+    const metaApi = MetaAdsAPI.withToken(accessToken);
     const userResponse = await metaApi.apiGet('/me/accounts', { fields: 'id,name,access_token,perms' });
     const businessResponse = await metaApi.apiGet('/me/businesses', { fields: 'id,name' });
 

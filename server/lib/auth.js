@@ -1,11 +1,13 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
 
-// Generate random secret if none provided, but warn loudly
+// JWT secret must be provided via environment — no random fallback
+// Tokens created with a random secret would be invalidated on every restart
 const secret = process.env.JWT_SECRET || (() => {
-  console.error('[CRITICAL] JWT_SECRET not set! Using random fallback. Tokens will be invalid on restart. Set JWT_SECRET environment variable!');
-  return crypto.randomBytes(64).toString('hex');
+  if (process.env.NODE_ENV === 'test') {
+    return 'test-secret-do-not-use-in-production';
+  }
+  throw new Error('FATAL: JWT_SECRET environment variable is required. Set it in .env before starting the server.');
 })();
 const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '30d';

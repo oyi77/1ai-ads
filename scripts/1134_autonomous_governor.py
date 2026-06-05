@@ -56,6 +56,9 @@ SCALE_COOLDOWN_HOURS = 2
 QUIET_START = 23  # 11 PM WIB
 QUIET_END = 5     # 5 AM WIB
 
+REPORTING_DELAY_DAYS = 1  # Shopee affiliate report has H+1 delay (WIB)
+SHOPEE_CSV_DIR = Path.home() / "projects/1ai-ads/data/shopee"
+
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # ── LOAD TOKEN ──────────────────────────────────────────
@@ -205,10 +208,15 @@ def run():
             skip_count += 1
             continue
 
-        # ── Spend > 0 but 0 clicks → DEAD ──
+        # ── Spend > 0 but 0 clicks → DEAD (AUTO-PAUSE) ──
         if spend > 0 and clicks == 0:
-            log(f"  💀 DEAD | {name[:55]} | Spend Rp{spend:,.0f} | 0 clicks")
-            dead_count += 1
+            r = api_post(f"{cid}", {"status": "PAUSED"})
+            if r.get("success"):
+                log(f"  💀 DEAD | {name[:55]} | Spend Rp{spend:,.0f} | 0 clicks | AUTO-PAUSED")
+                dead_count += 1
+            else:
+                log(f"  💀 DEAD | {name[:55]} | Spend Rp{spend:,.0f} | 0 clicks | PAUSE FAILED")
+                dead_count += 1
             continue
 
         # ── CPC > Rp 500 → REM ──

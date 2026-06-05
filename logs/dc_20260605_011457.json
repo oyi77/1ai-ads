@@ -1,0 +1,94 @@
+{
+  "timestamp": "2026-06-05T01:14:57.859196",
+  "dry_run": true,
+  "results": [
+    {
+      "account": "0858",
+      "name": "Selow 0858",
+      "act_id": "act_435670549443081",
+      "analyzed": 20,
+      "wins": 0,
+      "bons": 15,
+      "paused": [],
+      "scaled": [],
+      "skipped_cooldown": [],
+      "skipped_quiet": [],
+      "skipped_data": [],
+      "errors": [],
+      "recommendations": [
+        {
+          "aksi": "OPTIMIZE",
+          "tag": "organizer_organizerpullout_broad2",
+          "roas": 0.0,
+          "detail": "Spend sudah jalan tapi belum ada order — cek attribution delay",
+          "camp_count": 1
+        },
+        {
+          "aksi": "PAUSE",
+          "tag": "geo_rakpiringpengering_int",
+          "roas": 0.0,
+          "detail": "ROAS 0.0x — tag ga converting, re-evaluate atau ganti tag",
+          "camp_count": 4
+        },
+        {
+          "aksi": "PAUSE",
+          "tag": "organizer_organizerpullout_travel",
+          "roas": 0.0,
+          "detail": "ROAS 0.0x — tag ga converting, re-evaluate atau ganti tag",
+          "camp_count": 1
+        },
+        {
+          "aksi": "PAUSE",
+          "tag": "rakdapur3",
+          "roas": 0.0,
+          "detail": "ROAS 0.0x — tag ga converting, re-evaluate atau ganti tag",
+          "camp_count": 8
+        },
+        {
+          "aksi": "PAUSE",
+          "tag": "rakpiring_rakpiringpengering_broad",
+          "roas": 0.0,
+          "detail": "ROAS 0.0x — tag ga converting, re-evaluate atau ganti tag",
+          "camp_count": 1
+        },
+        {
+          "aksi": "PAUSE",
+          "tag": "rakpiring_rakpiringpengering_shopping",
+          "roas": 0.0,
+          "detail": "ROAS 0.0x — tag ga converting, re-evaluate atau ganti tag",
+          "camp_count": 1
+        },
+        {
+          "aksi": "PAUSE",
+          "tag": "rakpiring_rakpiringpengering_winner",
+          "roas": 0.0,
+          "detail": "ROAS 0.0x — tag ga converting, re-evaluate atau ganti tag",
+          "camp_count": 1
+        },
+        {
+          "aksi": "TUNGGU",
+          "tag": "organizer_organizerpullout_broad",
+          "roas": 0.0,
+          "detail": "Data belum cukup — lanjutkan test",
+          "camp_count": 1
+        },
+        {
+          "aksi": "TUNGGU",
+          "tag": "organizer_organizerpullout_resep",
+          "roas": 0.0,
+          "detail": "Data belum cukup — lanjutkan test",
+          "camp_count": 1
+        },
+        {
+          "aksi": "TUNGGU",
+          "tag": "organizer_organizerpullout_shopping",
+          "roas": 0.0,
+          "detail": "Data belum cukup — lanjutkan test",
+          "camp_count": 1
+        }
+      ],
+      "_pause_count": 0,
+      "_scale_count": 0
+    }
+  ]
+}

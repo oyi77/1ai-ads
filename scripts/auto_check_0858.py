@@ -30,7 +30,7 @@ from collections import defaultdict
 # === CONFIG ===
 ACCESS_TOKEN = open('/tmp/fb_token.txt').read().strip()
 if not ACCESS_TOKEN:
-    ACCESS_TOKEN = os.environ.get('META_TOKEN', '')
+    ACCESS_TOKEN = os.environ.get('META_ACCESS_TOKEN', os.environ.get('META_TOKEN', ''))
 
 API_BASE = 'https://graph.facebook.com/v19.0'
 ACCOUNT_ID = 'act_435670549443081'

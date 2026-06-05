@@ -9,6 +9,7 @@ import { MetaAdsAPI } from './meta-api.js';
 import { GoogleAdsAPI } from './google-ads-api.js';
 import { TikTokAdsAPI } from './tiktok-api.js';
 import { createLogger } from '../lib/logger.js';
+import { OPERATORS, compare } from '../lib/operators.js';
 
 const log = createLogger('rule-evaluator');
 
@@ -74,18 +75,8 @@ export class RuleEvaluator {
     return this._compare(getMetric(campaign), condition.operator, condition.value);
   }
 
-  static OPERATORS = {
-    '>': (a, b) => a > b,
-    '>=': (a, b) => a >= b,
-    '<': (a, b) => a < b,
-    '<=': (a, b) => a <= b,
-    '===': (a, b) => a === b,
-    '!==': (a, b) => a !== b,
-  };
-
   _compare(value, operator, target) {
-    const op = RuleEvaluator.OPERATORS[operator];
-    return op ? op(value, target) : false;
+    return compare(value, operator, target);
   }
 
   async _executeAction(action, campaign) {

@@ -1,0 +1,190 @@
+{
+  "timestamp": "2026-06-05T12:01:21.207526",
+  "dry_run": false,
+  "results": [
+    {
+      "account": "1041",
+      "name": "Nyamiresep",
+      "act_id": "act_380721031313330",
+      "analyzed": 66,
+      "wins": 13,
+      "bons": 2,
+      "paused": [],
+      "scaled": [],
+      "skipped_cooldown": [],
+      "skipped_quiet": [],
+      "skipped_data": [],
+      "errors": [],
+      "recommendations": [
+        {
+          "aksi": "GAS",
+          "tag": "dressanakperempuan",
+          "roas": 8.591505491881568,
+          "detail": "ROAS 8.6x — scale semua campaign +50%",
+          "camp_count": 2
+        },
+        {
+          "aksi": "GAS+CREATIVE",
+          "tag": "rakdapur",
+          "roas": 3.5013935827854676,
+          "detail": "GAS tapi 1 creative fatigue — ganti creative dulu lalu scale",
+          "camp_count": 6
+        },
+        {
+          "aksi": "STABIL",
+          "tag": "rakdapur3",
+          "roas": 1.683256923010154,
+          "detail": "ROAS 1.7x — pertahankan, monitor ketat",
+          "camp_count": 45
+        },
+        {
+          "aksi": "OPTIMIZE",
+          "tag": "atayasetelankaosanak",
+          "roas": 1.0471891220144594,
+          "detail": "Break-even / marginal — cek CPC, optimasi targeting/creative",
+          "camp_count": 12
+        },
+        {
+          "aksi": "OPTIMIZE",
+          "tag": "general_general_general",
+          "roas": 0.0,
+          "detail": "Spend sudah jalan tapi belum ada order — cek attribution delay",
+          "camp_count": 1
+        }
+      ],
+      "_pause_count": 0,
+      "_scale_count": 0
+    },
+    {
+      "account": "0858",
+      "name": "Selow 0858",
+      "act_id": "act_435670549443081",
+      "analyzed": 21,
+      "wins": 0,
+      "bons": 15,
+      "paused": [
+        "BIDCAP_GEO_rakpiringpengering_INT04 | ROAS 0.00x",
+        "BIDCAP_GEO_rakpiringpengering_INT08 | ROAS 0.00x",
+        "BIDCAP_GEO_rakpiringpengering_INT10 | ROAS 0.00x",
+        "BIDCAP_GEO_rakpiringpengering_INT07 | ROAS 0.00x",
+        "BIDCAP_Organizer_organizerpullout_Travel | ROAS 0.00x"
+      ],
+      "scaled": [],
+      "skipped_cooldown": [],
+      "skipped_quiet": [],
+      "skipped_data": [],
+      "errors": [],
+      "recommendations": [
+        {
+          "aksi": "OPTIMIZE",
+          "tag": "organizer_organizerpullout_broad2",
+          "roas": 0.0,
+          "detail": "Spend sudah jalan tapi belum ada order — cek attribution delay",
+          "camp_count": 1
+        },
+        {
+          "aksi": "PAUSE",
+          "tag": "geo_rakpiringpengering_int",
+          "roas": 0.0,
+          "detail": "ROAS 0.0x — tag ga converting, re-evaluate atau ganti tag",
+          "camp_count": 4
+        },
+        {
+          "aksi": "PAUSE",
+          "tag": "organizer_organizerpullout_travel",
+          "roas": 0.0,
+          "detail": "ROAS 0.0x — tag ga converting, re-evaluate atau ganti tag",
+          "camp_count": 1
+        },
+        {
+          "aksi": "PAUSE",
+          "tag": "rakdapur3",
+          "roas": 0.0,
+          "detail": "ROAS 0.0x — tag ga converting, re-evaluate atau ganti tag",
+          "camp_count": 8
+        },
+        {
+          "aksi": "PAUSE",
+          "tag": "rakpiring_rakpiringpengering_broad",
+          "roas": 0.0,
+          "detail": "ROAS 0.0x — tag ga converting, re-evaluate atau ganti tag",
+          "camp_count": 1
+        },
+        {
+          "aksi": "PAUSE",
+          "tag": "rakpiring_rakpiringpengering_shopping",
+          "roas": 0.0,
+          "detail": "ROAS 0.0x — tag ga converting, re-evaluate atau ganti tag",
+          "camp_count": 1
+        },
+        {
+          "aksi": "PAUSE",
+          "tag": "rakpiring_rakpiringpengering_winner",
+          "roas": 0.0,
+          "detail": "ROAS 0.0x — tag ga converting, re-evaluate atau ganti tag",
+          "camp_count": 1
+        },
+        {
+          "aksi": "TUNGGU",
+          "tag": "kakriput_rakpiringpengering_pinterest",
+          "roas": 0.0,
+          "detail": "Data belum cukup — lanjutkan test",
+          "camp_count": 1
+        },
+        {
+          "aksi": "TUNGGU",
+          "tag": "organizer_organizerpullout_broad",
+          "roas": 0.0,
+          "detail": "Data belum cukup — lanjutkan test",
+          "camp_count": 1
+        },
+        {
+          "aksi": "TUNGGU",
+          "tag": "organizer_organizerpullout_resep",
+          "roas": 0.0,
+          "detail": "Data belum cukup — lanjutkan test",
+          "camp_count": 1
+        },
+        {
+          "aksi": "TUNGGU",
+          "tag": "organizer_organizerpullout_shopping",
+          "roas": 0.0,
+          "detail": "Data belum cukup — lanjutkan test",
+          "camp_count": 1
+        }
+      ],
+      "_pause_count": 5,
+      "_scale_count": 0
+    },
+    {
+      "account": "1208",
+      "name": "Herbal",
+      "act_id": "act_1439536310038458",
+      "analyzed": 0,
+      "wins": 0,
+      "bons": 0,
+      "paused": [],
+      "scaled": [],
+      "skipped_cooldown": [],
+      "skipped_quiet": [],
+      "skipped_data": [],
+      "errors": [],
+      "recommendations": []
+    },
+    {
+      "account": "1134",
+      "name": "Selow 1134",
+      "act_id": "act_1773760133153789",
+      "analyzed": 0,
+      "wins": 0,
+      "bons": 0,
+      "paused": [],
+      "scaled": [],
+      "skipped_cooldown": [],
+      "skipped_quiet": [],
+      "skipped_data": [],
+      "errors": [],
+      "recommendations": []
+    }
+  ]
+}

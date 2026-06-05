@@ -4,7 +4,7 @@ import { createLogger } from '../lib/logger.js';
 const log = createLogger('data-cleanup');
 
 export class DataCleanup {
-  constructor(db, cleanupRepo = null) {
+  constructor(db, cleanupRepo = undefined) {
     this.cleanupRepo = cleanupRepo || new CleanupRepository(db);
     this._interval = null;
   }

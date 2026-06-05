@@ -1,0 +1,7 @@
+{
+  "hard_cap": 300000,
+  "cpc_kill": 150,
+  "cpc_warn": 100,
+  "ctr_min": 3.0,
+  "scale_up_pct": 20
+}

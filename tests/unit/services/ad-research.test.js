@@ -6,7 +6,7 @@ describe('AdResearchService', () => {
     getCredentials: vi.fn(),
   };
 
-  const service = new AdResearchService(mockSettingsRepo);
+  const service = new AdResearchService({ settingsRepo: mockSettingsRepo });
 
   it('should create an AdResearchService instance with settings repo', () => {
     expect(service).toBeInstanceOf(AdResearchService);
@@ -228,7 +228,7 @@ describe('AdResearchService', () => {
       currency: 'IDR',
     };
 
-    const formatted = service._formatAd(rawAd);
+    const formatted = service._formatDirectAd(rawAd);
 
     expect(formatted.id).toBe('ad_123');
     expect(formatted.pageName).toBe('Test Page');
@@ -248,7 +248,7 @@ describe('AdResearchService', () => {
       page_id: 'page_minimal',
     };
 
-    const formatted = service._formatAd(minimalAd);
+    const formatted = service._formatDirectAd(minimalAd);
 
     expect(formatted.id).toBe('ad_minimal');
     expect(formatted.bodies).toEqual([]);
