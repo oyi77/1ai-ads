@@ -1,10 +1,6 @@
 import { api } from '../lib/api.js';
 import { esc } from '../lib/escape.js';
-
-const fmtIdr = (n) => {
-  if (n == null || n === 0) return '-';
-  return n.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
-};
+import { fmtIdr } from '../lib/currency.js';
 
 export async function renderCampaignsList(el) {
   let campaigns = [];

@@ -48,7 +48,7 @@ export function createRouters({ app, repos, services }) {
 
   const mcpClient = services.mcpClient;
 
-  app.use('/api/auth', publicRateLimit, createAuthRouter(repos.usersRepo, repos.refreshTokensRepo));
+  app.use('/api/auth', publicRateLimit, createAuthRouter(repos.usersRepo, repos.refreshTokensRepo, repos.settingsRepo));
   app.use('/api/trending', publicRateLimit, createTrendingRouter(services.trendingService));
   app.use('/api/campaigns', requireAuth, createCampaignsRouter(services.orchestrator, services.metaApi, services.creativeStudio, repos.campaignsRepo));
   app.use('/api/ads', requireAuth, createAdsRouter(repos.adsRepo, services.creativeStudio));

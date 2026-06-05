@@ -8,7 +8,6 @@
 
 import config from '../config/index.js';
 import { createLogger } from '../lib/logger.js';
-import { CompetitorsRepository } from '../repositories/competitors.js';
 
 const log = createLogger('competitor-spy');
 
@@ -17,7 +16,7 @@ export class CompetitorSpyService {
     this.db = db;
     this.adIntelligence = adIntelligence;
     this.adSpireAdapter = adSpireAdapter;
-    this.competitorsRepo = competitorsRepo || new CompetitorsRepository(db);
+    this.competitorsRepo = competitorsRepo;
   }
 
   /**

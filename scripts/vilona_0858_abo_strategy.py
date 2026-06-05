@@ -199,7 +199,7 @@ def run_strategy():
         'name': f'ABO_JENDRALBOT_Rp100rb_BIDCAP130_{now_ts}',
         'objective': 'OUTCOME_TRAFFIC',
         'status': 'ACTIVE',
-        'special_ad_categories': 'NONE',
+        'special_ad_categories': [],
         'buying_type': 'AUCTION',
         'is_adset_budget_sharing_enabled': False,  # ABO mode (no campaign budget)
     })

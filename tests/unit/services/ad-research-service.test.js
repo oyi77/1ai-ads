@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AdResearchService } from '../../../server/services/ad-research-service.js';
+import { AdResearchService } from '../../../server/services/ad-research.js';
 
 describe('AdResearchService', () => {
   const mockMetaApi = {
@@ -126,7 +126,7 @@ describe('AdResearchService', () => {
       expect(result.success).toBe(true);
       expect(result.data.source).toBe('page_search');
       expect(result.data.totalAds).toBe(0);
-      expect(result.data.note).toContain('Ads Archive');
+      expect(result.data.note).toContain('Ads Library');
     });
 
     it('should handle API error', async () => {

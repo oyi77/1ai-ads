@@ -7,7 +7,7 @@ import { v4 as uuid } from 'uuid';
 
 const log = createLogger('auth-routes');
 
-export function createAuthRouter(usersRepo, refreshTokensRepo) {
+export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = null) {
   const router = Router();
 
   const authLimiter = rateLimit({
@@ -23,13 +23,14 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
   // --- Facebook OAuth routes (public) ---
   router.get('/facebook/login', (req, res) => {
     const { redirect_uri } = req.query;
-    const hostname = req.get('host');
+    const hostname = req.get('host') || '';
+    const isLocal = hostname.includes('localhost') || hostname.includes('127.0.0.1');
     const callbackUrl = redirect_uri || (() => {
-      // In production, always use domain URL
-      if (process.env.NODE_ENV === 'production' || hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
-        return 'https://adforge.aitradepulse.com/api/auth/facebook/callback';
+      // Always use HTTPS except for localhost dev
+      if (isLocal) {
+        return `${req.protocol}://${hostname}/api/auth/facebook/callback`;
       }
-      return `${req.protocol}://${hostname}/api/auth/facebook/callback`;
+      return 'https://adforge.aitradepulse.com/api/auth/facebook/callback';
     })();
     
     // Load FB credentials from environment (dotenv already loaded in server.js)
@@ -58,7 +59,14 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
     
     const fbAppId = process.env.FB_APP_ID;
     const fbSecret = process.env.FB_APP_SECRET;
-    const callbackUrl = redirect_uri || `${req.protocol}://${req.get('host')}/api/auth/facebook/callback`;
+    const callbackUrl = redirect_uri || (() => {
+      const hostname = req.get('host') || '';
+      const isLocal = hostname.includes('localhost') || hostname.includes('127.0.0.1');
+      if (isLocal) {
+        return `${req.protocol}://${hostname}/api/auth/facebook/callback`;
+      }
+      return 'https://adforge.aitradepulse.com/api/auth/facebook/callback';
+    })();
     
     if (!fbAppId || !fbSecret) {
       return res.status(500).json({ success: false, error: 'FB_APP_ID or FB_APP_SECRET not configured' });
@@ -145,6 +153,104 @@ export function createAuthRouter(usersRepo, refreshTokensRepo) {
     } catch (err) {
       console.error('Facebook OAuth callback failed', { error: err.message });
       res.status(500).json({ success: false, error: 'OAuth callback failed: ' + err.message });
+    }
+  });
+
+  // --- Simple Token Connect (public, no OAuth needed) ---
+  router.post('/connect-meta-token', async (req, res) => {
+    const { access_token, account_name } = req.body;
+    if (!access_token) {
+      return res.status(400).json({ success: false, error: 'access_token is required' });
+    }
+    if (!settingsRepo) {
+      return res.status(500).json({ success: false, error: 'Settings repository not available' });
+    }
+
+    try {
+      // Verify token works
+      const meRes = await fetch(`https://graph.facebook.com/${config.metaApiVersion}/me?access_token=${encodeURIComponent(access_token)}&fields=id,name`);
+      const meData = await meRes.json();
+      if (meData.error) {
+        return res.status(400).json({ success: false, error: `Invalid token: ${meData.error.message}` });
+      }
+
+      const userName = account_name || meData.name || 'Meta Account';
+      
+      // Auto-detect ad accounts
+      let adAccounts = [];
+      try {
+        const accRes = await fetch(`https://graph.facebook.com/${config.metaApiVersion}/me/adaccounts?access_token=${encodeURIComponent(access_token)}&fields=name,account_id,account_status,currency&limit=50`);
+        const accData = await accRes.json();
+        if (accData.data) {
+          adAccounts = accData.data.filter(a => a.account_status === 1).map(a => ({
+            id: `act_${a.account_id}`,
+            name: a.name,
+            account_id: a.account_id,
+            currency: a.currency,
+            status: 'active'
+          }));
+        }
+      } catch (e) {
+        log.info('Ad account detection skipped', { error: e.message });
+      }
+
+      // Save to platform_accounts
+      const existingAccounts = settingsRepo.getAccounts('meta');
+      const existing = existingAccounts.find(a => 
+        a.account_name === userName || 
+        (a.credentials?.access_token === access_token)
+      );
+
+      let mainId;
+      if (existing) {
+        settingsRepo.updateAccount(existing.id, { 
+          credentials: { access_token, user_name: meData.name, user_id: meData.id } 
+        });
+        mainId = existing.id;
+      } else {
+        const id = uuid();
+        settingsRepo.addAccount({
+          id,
+          user_id: 'admin',
+          platform: 'meta',
+          account_name: userName,
+          credentials: { access_token, user_name: meData.name, user_id: meData.id },
+          is_active: existingAccounts.length === 0 ? 1 : 0
+        });
+        mainId = id;
+      }
+
+      // Save each ad account
+      let connectedCount = 0;
+      for (const adAcc of adAccounts) {
+        const adExisting = existingAccounts.find(a => a.account_name === adAcc.id);
+        if (!adExisting) {
+          settingsRepo.addAccount({
+            id: uuid(),
+            user_id: 'admin',
+            platform: 'meta',
+            account_name: adAcc.id,
+            credentials: { access_token, ad_account_id: adAcc.account_id, ad_account_name: adAcc.name },
+            is_active: 0
+          });
+          connectedCount++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Connected as ${meData.name}! Found ${adAccounts.length} ad accounts, ${connectedCount} new connected.`,
+        data: {
+          id: mainId,
+          user_name: meData.name,
+          user_id: meData.id,
+          ad_accounts_count: adAccounts.length,
+          new_connected: connectedCount,
+          ad_accounts: adAccounts
+        }
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
     }
   });
 

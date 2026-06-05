@@ -7,133 +7,323 @@
   <title>AdForge - Ads Management</title>
   <meta name="facebook-domain-verification" content="ak7sbqrg315zt4d5a0x8l3y76dko20" />
   
-  <!-- Google Tag Manager -->
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-  })(window,document,'script','dataLayer','GTM-5MXPQQRT');</script>
-  
-  <!-- Google Analytics 4 -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-V9C14XZ9SG"></script>
-  <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-V9C14XZ9SG');</script>
-  
-  <!-- Meta Pixel -->
-  <script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','771021905629860');fbq('track','PageView');</script>
-  <!-- Meta Pixel noscript moved to body -->
-  
-  <!-- TikTok Pixel -->
-  <script>!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"];ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{};ttq._i[e]=[];ttq._i[e]._u=i;ttq._t=ttq._t||{};ttq._t[e]=+new Date;ttq._o=ttq._o||{};ttq._o[e]=n||{};var o=document.createElement("script");o.type="text/javascript";o.async=!0;o.src=i+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};ttq.load('D6IA84RC77UCTB9KG9OG');ttq.page()}(window,document,'ttq');</script>
-  
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Responsive nav */
-    @media (max-width: 767px) {
-      #nav-links { display: none; flex-direction: column; width: 100%; padding: 8px 0; }
-      #nav-links.nav-open { display: flex; }
+    /* ─── RESPONSIVE NAVIGATION SYSTEM ─── */
+    
+    /* Base nav styles */
+    #nav-links {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      padding: 0;
+      list-style: none;
+      margin: 0;
+      width: 100%;
     }
-    @media (min-width: 768px) {
-      #nav-links { display: flex !important; }
-      #menu-toggle { display: none !important; }
+
+    /* Mobile: Hidden by default */
+    @media (max-width: 1023px) {
+      #nav-links {
+        position: fixed;
+        top: 64px;
+        left: 0;
+        right: 0;
+        background: linear-gradient(to bottom, #0d1117, #161b22);
+        border-bottom: 1px solid #30363d;
+        padding: 0.5rem 0;
+        max-height: calc(100vh - 64px);
+        overflow-y: auto;
+        z-index: 40;
+        transform: translateY(-100%);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      }
+
+      #nav-links.nav-open {
+        transform: translateY(0);
+        opacity: 1;
+        pointer-events: auto;
+      }
     }
-    .hidden { display: none !important; }
+
+    /* Desktop: Always visible, horizontal */
+    @media (min-width: 1024px) {
+      #nav-links {
+        flex-direction: row !important;
+        position: static !important;
+        width: auto !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        transform: none !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        gap: 0.25rem;
+        display: flex !important;
+      }
+    }
+
+    /* Nav item styling */
+    #nav-links a {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      color: #8b949e;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-radius: 0.5rem;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    #nav-links a:hover {
+      color: #ffffff;
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    #nav-links a.nav-active {
+      color: #ffffff;
+      background: linear-gradient(135deg, #6366f1 0%, #22d3ee 100%);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    /* Mobile menu toggle button */
+    #menu-toggle {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      width: 2rem;
+      height: 2rem;
+      padding: 0.4rem;
+      background: transparent;
+      border: 1px solid #30363d;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #menu-toggle:hover {
+      border-color: #6366f1;
+      background-color: rgba(99, 102, 241, 0.1);
+    }
+
+    #menu-toggle span {
+      display: block;
+      width: 1.2rem;
+      height: 0.15rem;
+      background-color: #8b949e;
+      border-radius: 0.1rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #menu-toggle.menu-open span:nth-child(1) {
+      transform: rotate(45deg) translate(0.5rem, 0.5rem);
+    }
+
+    #menu-toggle.menu-open span:nth-child(2) {
+      opacity: 0;
+    }
+
+    #menu-toggle.menu-open span:nth-child(3) {
+      transform: rotate(-45deg) translate(0.35rem, -0.35rem);
+    }
+
+    @media (max-width: 1023px) {
+      #menu-toggle {
+        display: flex !important;
+      }
+    }
+
+    /* Desktop: Hide hamburger button (defined in media query below) */
+
+    /* Mobile backdrop */
+    #nav-backdrop {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 35;
+    }
+
+    #nav-backdrop.show {
+      display: block;
+    }
+
+    @media (min-width: 1024px) {
+      #nav-backdrop {
+        display: none !important;
+      }
+    }
   </style>
+
+  <!-- Keep all other head content from original -->
+  <script>
+    // Global notification system
+    window.vn = {
+      toast: function(title, msg, type, dur) {
+        type = type || 'info';
+        dur = dur === undefined ? 3000 : dur;
+        var icons = {success:'✅',error:'❌',warning:'⚠️',info:'ℹ️',revenue:'💰'};
+        var t = document.createElement('div');
+        t.className = 'vn-toast vn-toast-' + type;
+        t.innerHTML = '<span class="vn-toast-icon">'+(icons[type]||icons.info)+'</span><div class="vn-toast-body"><div class="vn-toast-title">'+title+'</div><div class="vn-toast-msg">'+msg+'</div></div><button class="vn-toast-close" onclick="this.parentElement.remove()">✕</button>';
+        if(dur>0) setTimeout(function(){ t.classList.add('removing'); setTimeout(function(){ t.remove(); },150); }, dur);
+        var c = document.getElementById('vnToastContainer');
+        while(c.children.length >= 5) c.firstChild.remove();
+        c.appendChild(t);
+        return t;
+      },
+      success: function(msg,title){ return this.toast(title||'Success',msg,'success'); },
+      error: function(msg,title){ return this.toast(title||'Error',msg,'error',0); },
+      warn: function(msg,title){ return this.toast(title||'Warning',msg,'warning'); },
+      info: function(msg,title){ return this.toast(title||'Info',msg,'info'); }
+    };
+  </script>
 </head>
-<body class="min-h-screen font-sans">
+<body>
+  <!-- Mobile Backdrop -->
+  <div id="nav-backdrop"></div>
+
+  <!-- Mobile Backdrop -->
+  <div id="nav-backdrop"></div>
+
   <!-- Navigation - Modern Glass Interface -->
   <nav class="sticky top-0 z-50 bg-[#0d1117]/80 backdrop-blur-xl border-b border-[#1c2128]">
-    <div class="max-w-[1600px] mx-auto px-6 py-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-8">
-          <a href="#/" class="flex items-center gap-3 group">
-            <div class="w-8 h-8 bg-gradient-to-br from-sky-400 to-indigo-600 rounded-lg flex items-center justify-center font-black text-black text-lg transition-transform group-hover:rotate-12">A</div>
-            <span class="font-black text-xl tracking-tighter text-white">ADFORGE<span class="text-sky-500">.AI</span></span>
-          </a>
-          
-          <div id="nav-links" class="hidden xl:flex items-center gap-1"></div>
-        </div>
-
-        <div class="flex items-center gap-4">
-          <a href="#/ads/create" class="hidden sm:flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-xs font-black hover:bg-sky-400 transition-all uppercase tracking-widest shadow-lg shadow-white/5">
-             <span>+ New Campaign</span>
-          </a>
-          <button id="menu-toggle" class="xl:hidden p-2 text-slate-400 hover:text-white">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-          </button>
-          <div class="h-8 w-[1px] bg-[#1c2128] mx-2 hidden sm:block"></div>
-          <a href="#/settings" class="w-10 h-10 rounded-xl bg-[#161b22] border border-[#30363d] flex items-center justify-center hover:border-sky-500 transition-colors">⚙️</a>
-        </div>
+    <div class="flex items-center justify-between px-4 py-4">
+      <a href="#/" class="flex items-center gap-3 group">
+        <div class="w-8 h-8 bg-gradient-to-br from-sky-400 to-indigo-600 rounded-lg flex items-center justify-center font-black text-black text-lg transition-transform group-hover:rotate-12">A</div>
+        <span class="hidden sm:inline text-white font-bold">AdForge</span>
+      </a>
+      <ul id="nav-links" class="hidden xl:flex items-center gap-1"></ul>
+      <div class="flex items-center gap-4">
+        <a href="#/ads/create" class="hidden sm:flex items-center gap-2 bg-white text-black px-4 py-2 rounded-xl text-xs font-black hover:bg-sky-400 transition-all uppercase tracking-widest shadow-lg shadow-white/5">+ Create</a>
+        <a href="#/settings" class="w-10 h-10 rounded-xl bg-[#161b22] border border-[#30363d] flex items-center justify-center hover:border-sky-500 transition-colors">⚙️</a>
+        <button id="menu-toggle" class="xl:hidden p-2 text-slate-400 hover:text-white" aria-label="Toggle navigation menu" aria-expanded="false">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
       </div>
     </div>
   </nav>
 
-  <div id="app" class="animate-fadeIn"></div>
-
-  <script>
-    function renderTopNavItem(label, hash) {
-      const active = window.location.hash === hash || (hash === '#/' && (window.location.hash === '' || window.location.hash === '#'));
-      return `<a href="${hash}" class="px-4 py-2 rounded-lg text-xs font-bold transition-all ${active ? 'bg-sky-500/10 text-sky-400' : 'text-slate-500 hover:text-white hover:bg-[#161b22]'} uppercase tracking-widest">${label}</a>`;
-    }
-    (function renderTopNav() {
-      const el = document.getElementById('nav-links');
-      if (!el) return;
-      el.innerHTML = [
-        renderTopNavItem('Dashboard', '#/'),
-        renderTopNavItem('Campaigns', '#/campaigns'),
-        renderTopNavItem('Creatives', '#/ads'),
-        renderTopNavItem('Landing', '#/landing'),
-        renderTopNavItem('Analytics', '#/analytics'),
-        renderTopNavItem('Trending', '#/trending'),
-        renderTopNavItem('Spy', '#/competitor-spy'),
-        renderTopNavItem('Global', '#/global-ads'),
-        renderTopNavItem('Meta AI', '#/meta-ai'),
-        renderTopNavItem('Ad Library', '#/ads-library-ai'),
-      ].join('');
-    })();
-  </script>
+  <!-- Main App Container -->
   <div id="app"></div>
 
-  <!-- Cookie Consent Banner (global) -->
-  <div id="cookie-banner" class="fixed bottom-0 left-0 right-0 bg-[#0d1117] border-t border-[#30363d] p-4 z-50 flex flex-wrap justify-between items-center shadow-[0_-4px_20px_rgba(0,0,0,0.5)]" style="display: none;">
-    <p class="text-sm text-slate-300 mr-4 mb-2 md:mb-0 flex-1 min-w-[280px]">
-      We use cookies to enhance your browsing experience, serve personalized ads or content, and analyze our traffic. By clicking "Accept All", you consent to our use of cookies. Read our <a href="#/privacy" class="text-sky-400 hover:underline">Privacy Policy</a>.
-    </p>
-    <div class="flex gap-3">
-      <button id="decline-cookies" class="px-4 py-2 border border-slate-600 text-slate-300 rounded hover:bg-slate-800 transition-colors text-sm">Decline</button>
-      <button id="accept-cookies" class="px-4 py-2 bg-[#58a6ff] text-white rounded hover:bg-[#79c0ff] transition-colors text-sm font-semibold">Accept All</button>
-    </div>
-  </div>
+  <!-- Toast Container -->
+  <div id="vnToastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
-  <!-- Global Footer -->
-  <footer class="bg-slate-800 border-t border-slate-700 py-8 px-4 text-center text-slate-500 text-sm">
-    <div class="flex flex-wrap justify-center gap-4 sm:gap-6 mb-4">
-      <a href="#/privacy" class="hover:text-sky-400 transition-colors">Privacy Policy</a>
-      <a href="#/terms" class="hover:text-sky-400 transition-colors">Terms &amp; Service</a>
-      <a href="#/gdpr" class="hover:text-sky-400 transition-colors">GDPR</a>
-      <a href="#/docs" class="hover:text-sky-400 transition-colors">Docs</a>
-    </div>
-    <p>&copy; 2026 AdForge AI. All rights reserved. Powered by OmniRoute.</p>
-  </footer>
-
-  <script>
-    // Global cookie consent handler
-    (function() {
-      var banner = document.getElementById('cookie-banner');
-      if (banner && !localStorage.getItem('adforge_cookie_consent')) {
-        banner.style.display = 'flex';
-        document.getElementById('accept-cookies').addEventListener('click', function() {
-          localStorage.setItem('adforge_cookie_consent', 'accepted');
-          banner.style.display = 'none';
-        });
-        document.getElementById('decline-cookies').addEventListener('click', function() {
-          localStorage.setItem('adforge_cookie_consent', 'declined');
-          banner.style.display = 'none';
-        });
-      }
-    })();
-  </script>
-
+  <!-- App Script -->
   <script type="module" src="/src/app.js"></script>
+
+  <!-- Menu Initialization Script -->
+  <script>
+  (function initializeMenu() {
+    const navLinks = document.getElementById('nav-links');
+    const menuToggle = document.getElementById('menu-toggle');
+    const navBackdrop = document.getElementById('nav-backdrop');
+    
+    // CRITICAL: Check all 3 elements exist
+    if (!navLinks || !menuToggle || !navBackdrop) {
+      console.error('Menu elements not found in DOM');
+      return;
+    }
+
+    const menuItems = [
+      { label: '📊 Dashboard', href: '#/' },
+      { label: '📢 Campaigns', href: '#/campaigns' },
+      { label: '🎨 Creatives', href: '#/ads' },
+      { label: '📄 Landing', href: '#/landing' },
+      { label: '📈 Analytics', href: '#/analytics' },
+      { label: '🔥 Trending', href: '#/trending' },
+      { label: '🕵️ Spy', href: '#/competitor-spy' },
+      { label: '🌍 Global', href: '#/global-ads' },
+      { label: '🤖 Meta AI', href: '#/meta-ai' },
+      { label: '📚 Ad Library', href: '#/ads-library-ai' },
+      { label: '⚡ Research', href: '#/research' },
+      { label: '👤 Creator', href: '#/creator' },
+    ];
+
+    function renderMenu() {
+      navLinks.innerHTML = menuItems
+        .map(item => 
+          `<li><a href="${item.href}" class="nav-item">${item.label}</a></li>`
+        )
+        .join('');
+      
+      // FIX: Use event delegation to prevent memory leaks
+      // Remove old click listener if exists
+      navLinks.removeEventListener('click', handleNavLinkClick);
+      // Add single delegated listener
+      navLinks.addEventListener('click', handleNavLinkClick);
+    }
+    
+    // Event delegation handler for nav links
+    function handleNavLinkClick(e) {
+      if (e.target.tagName === 'A') {
+        closeMenu();
+        // Don't call updateActiveLink here - let hashchange event do it
+      }
+    }
+
+    function closeMenu() {
+      navLinks.classList.remove('nav-open');
+      menuToggle.classList.remove('menu-open');
+      navBackdrop?.classList.remove('show');  // FIX: Optional chaining
+      menuToggle.setAttribute('aria-expanded', 'false');  // Already string
+    }
+
+    function toggleMenu() {
+      const isOpen = navLinks.classList.toggle('nav-open');
+      menuToggle.classList.toggle('menu-open');
+      navBackdrop?.classList.toggle('show');  // FIX: Optional chaining
+      // FIX: Convert boolean to string for ARIA attribute
+      menuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+
+    function updateActiveLink() {
+      const currentHash = window.location.hash || '#/';
+      navLinks.querySelectorAll('a').forEach(link => {
+        link.classList.toggle('nav-active', link.getAttribute('href') === currentHash);
+      });
+    }
+
+    menuToggle.addEventListener('click', toggleMenu);
+    // FIX: Optional chaining - backdrop may not exist in future
+    navBackdrop?.addEventListener('click', closeMenu);
+
+    // FIX: Debounce resize event to prevent excessive function calls
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        if (window.innerWidth >= 1024) closeMenu();
+      }, 150);
+    });
+
+    window.addEventListener('hashchange', updateActiveLink);
+
+    const observer = new MutationObserver(() => {
+      const isMenuOpen = navLinks.classList.contains('nav-open');
+      document.body.style.overflow = isMenuOpen ? 'hidden' : 'auto';
+    });
+
+    observer.observe(navLinks, { attributes: true, attributeFilter: ['class'] });
+
+    renderMenu();
+    updateActiveLink();
+  })();
+  </script>
 </body>
 </html>

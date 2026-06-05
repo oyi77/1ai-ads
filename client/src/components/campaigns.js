@@ -1,4 +1,5 @@
 import { api } from '../lib/api.js';
+import { formatCurrency } from '../lib/currency.js';
 
 export function renderCampaignsList(campaigns, platform) {
   if (!campaigns || campaigns.length === 0) {
@@ -112,9 +113,7 @@ export function pauseCampaign(id) {
     .catch(err => alert('Failed to pause: ' + err.message));
 }
 
-export function formatCurrency(amount) {
-  return new Intl.NumberFormat('id-ID').format(amount);
-}
+export { formatCurrency } from '../lib/currency.js';
 
 export function formatNumber(amount) {
   return new Intl.NumberFormat('id-ID').format(amount);

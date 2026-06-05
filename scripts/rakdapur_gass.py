@@ -245,7 +245,7 @@ def create_meta_campaign(product, index):
             "name": campaign_name,
             "objective": "OUTCOME_TRAFFIC",
             "status": "ACTIVE",
-            "special_ad_categories": ["NONE"],
+            "special_ad_categories": [],
             "access_token": META_TOKEN,
         }
         r = requests.post(url, params=params, timeout=15)

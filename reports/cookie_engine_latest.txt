@@ -1,0 +1,24 @@
+🍪 *Shopee Cookie Engine — Daily Report*
+📅 2026-06-04 22:02 WIB
+
+*Selow ID (1340)* 🔴
+Spend Rp505,520 | Orders 0 | Komisi Rp0 | ROAS 0.00x
+🔍 Top Kandidat: SCALE_bajuanak (2739 klik, CTR 5.5%)
+
+*Selow ID (1134)* 🔴
+Spend Rp8,214 | Orders 0 | Komisi Rp0 | ROAS 0.00x
+
+*Herbalisme (1208)* 🔴
+Spend Rp0 | Orders 0 | Komisi Rp0 | ROAS 0.00x
+
+*Nyamiresep Dapur (1041)* 🔴
+Spend Rp129,331 | Orders 0 | Komisi Rp0 | ROAS 0.00x
+🔍 Top Kandidat: BIDCAP_Nyamiresep_Atayasetelankaosanak_atayasetela (127 klik, CTR 6.9%)
+
+*JENDRALBOT (0858)* 🔴
+Spend Rp328,774 | Orders 0 | Komisi Rp0 | ROAS 0.00x
+🔍 Top Kandidat: BIDCAP_Rakpiring_rakpiringpengering_Winner_0603 (808 klik, CTR 3.8%)
+
+💰 *Total:* Spend Rp971,839 | Komisi Rp0 | ROAS 0.00x
+
+⚠️ ROAS < 1x — fokus naikkan CTR konten!

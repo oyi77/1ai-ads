@@ -76,8 +76,49 @@ def load_cookies(country="id"):
     return pw_cookies
 
 
+# Shopee relocated the affiliate report page in 2026. Old /conversion_report now
+# 404s. Try current candidates in order; first one with real table data wins.
+AFFILIATE_REPORT_PATHS = [
+    "/dashboard",
+    "/dashboard/income",
+    "/conversion_report",  # legacy fallback
+]
+
+# Markers that identify Shopee's "page not found" interstitial.
+NOT_FOUND_MARKERS = (
+    "page you are visiting does not exist",
+    "Back to homepage",
+    "404",
+)
+
+
+def _extract_page_content(page):
+    """Pull body text + any table rows from the current page."""
+    return page.evaluate("""() => {
+        const tables = document.querySelectorAll('table');
+        const results = [];
+        for (const table of tables) {
+            const rows = table.querySelectorAll('tr');
+            for (const row of rows) {
+                const cells = Array.from(row.querySelectorAll('td, th'));
+                results.push(cells.map(c => c.innerText.trim()));
+            }
+        }
+        return {
+            fullText: document.body.innerText.substring(0, 5000),
+            tableData: results.slice(0, 100)
+        };
+    }""")
+
+
+def _is_not_found(content):
+    """True when the page is Shopee's 404 interstitial."""
+    body = (content or {}).get("fullText", "")
+    return any(marker in body for marker in NOT_FOUND_MARKERS)
+
+
 def scrape_affiliate_orders(country="id"):
-    """Scrape affiliate conversion report."""
+    """Scrape affiliate conversion report, trying current report paths in order."""
     from cloakbrowser import launch
 
     domain = SHOPEE_DOMAINS.get(country, SHOPEE_DOMAINS["id"])
@@ -90,24 +131,29 @@ def scrape_affiliate_orders(country="id"):
         page.context.add_cookies([c])
 
     try:
-        page.goto(f"https://{domain['affiliate']}/conversion_report", timeout=60000)
-        page.wait_for_timeout(8000)
+        content = None
+        used_path = None
+        for report_path in AFFILIATE_REPORT_PATHS:
+            page.goto(
+                f"https://{domain['affiliate']}{report_path}", timeout=60000
+            )
+            page.wait_for_timeout(8000)
+            candidate = _extract_page_content(page)
 
-        content = page.evaluate("""() => {
-            const tables = document.querySelectorAll('table');
-            const results = [];
-            for (const table of tables) {
-                const rows = table.querySelectorAll('tr');
-                for (const row of rows) {
-                    const cells = Array.from(row.querySelectorAll('td, th'));
-                    results.push(cells.map(c => c.innerText.trim()));
-                }
-            }
-            return {
-                fullText: document.body.innerText.substring(0, 5000),
-                tableData: results.slice(0, 100)
-            };
-        }""")
+            if _is_not_found(candidate):
+                print(f"Affiliate path 404: {report_path} — trying next")
+                continue
+
+            content = candidate
+            used_path = report_path
+            break
+
+        if content is None:
+            print(
+                "Affiliate scrape failed: all report paths 404. "
+                "Cookies may be stale or Shopee changed the dashboard again."
+            )
+            return None
 
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         out_file = (
@@ -116,7 +162,7 @@ def scrape_affiliate_orders(country="id"):
         with open(out_file, "w") as f:
             json.dump(content, f, indent=2, ensure_ascii=False)
 
-        print(f"Affiliate data saved: {out_file}")
+        print(f"Affiliate data saved via {used_path}: {out_file}")
         return content
 
     except Exception as e:

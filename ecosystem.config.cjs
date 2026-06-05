@@ -5,7 +5,7 @@ module.exports = {
     cwd: __dirname,
     env: {
       NODE_ENV: 'production',
-      PORT: 5173,
+      PORT: 5000,
       JWT_SECRET: process.env.JWT_SECRET,
       FB_SYSTEM_TOKEN: process.env.FB_SYSTEM_TOKEN
     },

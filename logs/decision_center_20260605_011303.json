@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-06-05T01:13:03.661574",
+  "dry_run": true,
+  "notify_only": false,
+  "results": [
+    {
+      "account": "0858",
+      "name": "Selow 0858",
+      "analyzed": 0,
+      "paused": [],
+      "scaled": [],
+      "skipped_cooldown": [],
+      "skipped_quiet": [],
+      "skipped_data": [],
+      "errors": [],
+      "off_skipped": 0
+    }
+  ]
+}

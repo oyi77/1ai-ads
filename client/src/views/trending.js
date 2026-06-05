@@ -1,10 +1,6 @@
 import { api } from '../lib/api.js';
 import { esc } from '../lib/escape.js';
-
-const fmtIdr = (n) => {
-  if (n == null) return 'N/A';
-  return n.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
-};
+import { fmtIdr } from '../lib/currency.js';
 
 const getTrendArrow = (trend) => {
   if (!trend || trend === 'up') return '<span class="text-emerald-400">↑</span>';

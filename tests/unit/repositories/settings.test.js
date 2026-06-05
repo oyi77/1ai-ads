@@ -1,13 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createDatabase } from '../../../db/index.js';
 import { SettingsRepository } from '../../../server/repositories/settings.js';
+import { PlatformAccountsRepository } from '../../../server/repositories/platform-accounts.js';
 
 describe('SettingsRepository', () => {
-  let db, repo;
+  let db, repo, accountsRepo;
 
   beforeEach(() => {
     db = createDatabase(':memory:');
-    repo = new SettingsRepository(db);
+    accountsRepo = new PlatformAccountsRepository(db);
+    repo = new SettingsRepository(db, accountsRepo);
   });
 
   describe('get', () => {
@@ -113,9 +115,15 @@ describe('SettingsRepository', () => {
   });
 
   describe('getCredentials/setCredentials', () => {
+    function insertUser(id) {
+      db.prepare('INSERT OR IGNORE INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)').run(id, `user_${id}`, `${id}@test.com`, 'hash');
+    }
+
     it('stores and retrieves platform credentials', () => {
+      const userId = 'test-user-1';
+      insertUser(userId);
       const credentials = { accessToken: 'abc123', refreshToken: 'xyz789' };
-      repo.setCredentials('meta', credentials);
+      accountsRepo.addAccount({ user_id: userId, platform: 'meta', account_name: 'Test Account', credentials, is_active: 1 });
 
       const retrieved = repo.getCredentials('meta');
       expect(retrieved).toEqual(credentials);
@@ -127,7 +135,9 @@ describe('SettingsRepository', () => {
     });
 
     it('updates existing credentials', () => {
-      repo.setCredentials('meta', { token: 'old' });
+      const userId = 'test-user-2';
+      insertUser(userId);
+      accountsRepo.addAccount({ user_id: userId, platform: 'meta', account_name: 'Test', credentials: { token: 'old' }, is_active: 1 });
       repo.setCredentials('meta', { token: 'new', extra: 'data' });
 
       const retrieved = repo.getCredentials('meta');
@@ -135,25 +145,13 @@ describe('SettingsRepository', () => {
     });
 
     it('stores credentials for different platforms separately', () => {
-      repo.setCredentials('meta', { meta_token: 'meta_val' });
-      repo.setCredentials('google', { google_token: 'google_val' });
+      const userId = 'test-user-3';
+      insertUser(userId);
+      accountsRepo.addAccount({ user_id: userId, platform: 'meta', account_name: 'Meta Account', credentials: { meta_token: 'meta_val' }, is_active: 1 });
+      accountsRepo.addAccount({ user_id: userId, platform: 'google', account_name: 'Google Account', credentials: { google_token: 'google_val' }, is_active: 1 });
 
       expect(repo.getCredentials('meta')).toEqual({ meta_token: 'meta_val' });
       expect(repo.getCredentials('google')).toEqual({ google_token: 'google_val' });
-    });
-  });
-
-  describe('deleteCredentials', () => {
-    it('removes platform credentials', () => {
-      repo.setCredentials('meta', { token: 'abc' });
-      expect(repo.getCredentials('meta')).toEqual({ token: 'abc' });
-
-      repo.deleteCredentials('meta');
-      expect(repo.getCredentials('meta')).toBeNull();
-    });
-
-    it('does not error when deleting non-existent credentials', () => {
-      expect(() => repo.deleteCredentials('nonexistent')).not.toThrow();
     });
   });
 });

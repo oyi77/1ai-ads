@@ -1,15 +1,15 @@
 import { safeFetch } from '../lib/platform-client.js';
-import { createLogger } from '../lib/logger.js';
+import { BasePlatformApiClient } from '../lib/base-platform-api.js';
 import { ConfigurationError, PlatformError } from '../lib/errors.js';
 
-const log = createLogger('google-ads-api');
 const BASE = 'https://googleads.googleapis.com/v18';
 
-export class GoogleAdsAPI {
+export class GoogleAdsAPI extends BasePlatformApiClient {
   constructor(settingsRepo) {
-    this.settingsRepo = settingsRepo;
+    super('google', settingsRepo, { baseUrl: BASE });
   }
 
+  // Override: Google uses multiple auth headers
   _getConfig() {
     const creds = this.settingsRepo.getCredentials('google');
     if (!creds?.developer_token) {
@@ -91,7 +91,7 @@ export class GoogleAdsAPI {
   }
 
   async getCampaigns(customerId) {
-    log.debug('Fetching Google Ads campaigns', { customerId });
+    this.log.debug('Fetching Google Ads campaigns', { customerId });
     return this._query(customerId, `
       SELECT campaign.id, campaign.name, campaign.status, campaign_budget.amount_micros,
              campaign.advertising_channel_type
@@ -146,7 +146,7 @@ export class GoogleAdsAPI {
   }
 
   async createCampaign(customerId, { name, status = 'PAUSED', dailyBudgetMicros, advertisingChannelType = 'SEARCH' }) {
-    log.info('Creating Google Ads campaign', { customerId, name });
+    this.log.info('Creating Google Ads campaign', { customerId, name });
     const result = await this._mutate(customerId, 'campaigns', [{
       create: {
         name,
@@ -155,12 +155,12 @@ export class GoogleAdsAPI {
         campaignBudget: `customers/${customerId}/campaignBudgets/-1`,
       },
     }]);
-    log.info('Google Ads campaign created', { campaignId: result.results?.[0]?.resourceName });
+    this.log.info('Google Ads campaign created', { campaignId: result.results?.[0]?.resourceName });
     return { resourceName: result.results?.[0]?.resourceName };
   }
 
   async updateCampaign(customerId, campaignId, { name, status }) {
-    log.info('Updating Google Ads campaign', { customerId, campaignId });
+    this.log.info('Updating Google Ads campaign', { customerId, campaignId });
     const updateMask = [];
     const updateFields = {};
     if (name) { updateFields.name = name; updateMask.push('name'); }
@@ -173,7 +173,7 @@ export class GoogleAdsAPI {
       },
       updateMask: updateMask.join(','),
     }]);
-    log.info('Google Ads campaign updated', { campaignId });
+    this.log.info('Google Ads campaign updated', { campaignId });
     return { resourceName: result.results?.[0]?.resourceName };
   }
 }

@@ -106,7 +106,7 @@ def load_pages():
 
 def refresh_page_tokens():
     """Get fresh page tokens via app token"""
-    app_token = os.environ.get('META_TOKEN', '')
+    app_token = os.environ.get('META_ACCESS_TOKEN', os.environ.get('META_TOKEN', ''))
     if not app_token:
         # Try to get from env file
         env_file = BASE_DIR / '.env'

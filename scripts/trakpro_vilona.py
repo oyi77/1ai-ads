@@ -19,7 +19,15 @@ if ENV_FILE.exists():
                 k, v = line.split('=', 1)
                 ENV[k.strip()] = v.strip()
 
-TOKEN = ENV.get('META_ACCESS_TOKEN', os.environ.get('META_ACCESS_TOKEN', ''))
+# Token: prefer shared token files (governor keeps these fresh), then .env fallback
+TOKEN = ''
+for tf in [Path('/tmp/meta_token.txt'), Path('/tmp/fb_token.txt')]:
+    if tf.exists():
+        TOKEN = tf.read_text().strip()
+        if TOKEN:
+            break
+if not TOKEN:
+    TOKEN = ENV.get('META_ACCESS_TOKEN', os.environ.get('META_ACCESS_TOKEN', ''))
 TG_TOKEN = ENV.get('TELEGRAM_BOT_TOKEN', os.environ.get('TELEGRAM_BOT_TOKEN', ''))
 TG_CHAT = ENV.get('TELEGRAM_CHAT_ID', os.environ.get('TELEGRAM_CHAT_ID', ''))
 
@@ -51,6 +59,84 @@ def api(p, params=None):
     if params: pp.update(params)
     try: return requests.get(u, params=pp, timeout=20).json()
     except: return {"error": "timeout"}
+
+def api_post(p, data=None):
+    """Write to Facebook API — pause, scale, etc."""
+    u = f"https://graph.facebook.com/v19.0/{p}"
+    pp = {"access_token": TOKEN}
+    try:
+        r = requests.post(u, params=pp, data=data, timeout=15)
+        result = r.json()
+        if "success" in result:
+            return result
+        if "id" in result:
+            return {"success": True, "id": result["id"]}
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+def execute_rekomendasi(reko, acc_key, dry_run=False):
+    """Execute PAUSE and GAS actions from recommendations via Facebook API.
+    Returns: dict with executed/paused/scaled counts"""
+    a = ACCOUNTS.get(acc_key)
+    if not a or not reko:
+        return {"executed": 0, "paused": 0, "scaled": 0, "errors": []}
+    
+    paused = 0
+    scaled = 0
+    errors = []
+    
+    for rc in reko.get('reco', []):
+        aksi = rc.get('aksi', '')
+        tag = rc.get('tag', '')
+        camps = rc.get('camps', [])
+        
+        if aksi == 'PAUSE':
+            for c in camps:
+                cid = c.get('id', '')
+                if not cid:
+                    continue
+                if dry_run:
+                    print(f"  [DRY RUN] Would PAUSE: {c.get('name', '?')[:50]}")
+                    paused += 1
+                else:
+                    r = api_post(f"{cid}", {"status": "PAUSED"})
+                    if r.get("success"):
+                        print(f"  ✅ PAUSED: {c.get('name', '?')[:50]}")
+                        paused += 1
+                    else:
+                        err = r.get('error', {}).get('message', str(r)[:80])
+                        print(f"  ❌ PAUSE FAILED: {c.get('name', '?')[:40]} — {err}")
+                        errors.append(f"PAUSE {c.get('name','?')[:30]}: {err}")
+        
+        elif aksi in ('GAS', 'GAS+CREATIVE'):
+            for c in camps:
+                cid = c.get('id', '')
+                budget = c.get('budget', 0)
+                if not cid or budget <= 0:
+                    continue
+                new_budget = int(budget * 1.2)
+                if new_budget <= budget:
+                    new_budget = budget + 10000
+                if dry_run:
+                    print(f"  [DRY RUN] Would SCALE: {c.get('name', '?')[:40]} | Rp{budget:,} → Rp{new_budget:,}")
+                    scaled += 1
+                else:
+                    r = api_post(f"{cid}", {"daily_budget": new_budget})
+                    if r.get("success"):
+                        print(f"  🔥 SCALED: {c.get('name', '?')[:40]} | Rp{budget:,} → Rp{new_budget:,}")
+                        scaled += 1
+                    else:
+                        err = r.get('error', {}).get('message', str(r)[:80])
+                        print(f"  ❌ SCALE FAILED: {c.get('name', '?')[:40]} — {err}")
+                        errors.append(f"SCALE {c.get('name','?')[:30]}: {err}")
+    
+    return {
+        "executed": paused + scaled,
+        "paused": paused,
+        "scaled": scaled,
+        "errors": errors
+    }
 
 def load_shopee(csv_label, days=3):
     """Load Shopee orders — auto-detects ID format (Tag_link) vs MY format (Sub_id)."""
@@ -306,7 +392,9 @@ def rekomendasi(results, acc_key, days=3):
         camp_details = []
         for c in sorted(camps, key=lambda x: -x['spend']):
             camp_details.append({
+                'id': c.get('id', ''),
                 'name': c['name'],
+                'budget': c.get('budget', 0),
                 'spend': c['spend'],
                 'profit': c['profit'],
                 'roas': c['roas'],
@@ -728,6 +816,8 @@ def main():
     p.add_argument('--telegram', action='store_true')
     p.add_argument('--interval', type=int, default=3600)
     p.add_argument('--json', action='store_true')
+    p.add_argument('--dry-run', action='store_true', help='Show actions without executing')
+    p.add_argument('--execute', action='store_true', help='Execute recommendations (PAUSE + GAS)')
     args = p.parse_args()
     
     if not TOKEN:
@@ -749,11 +839,21 @@ def main():
                 all_camps = r['wins']+r['bons']+r['scales']+r['watch']+r['pend']
                 reko = rekomendasi(all_camps, args.account, args.days)
                 
-                # Morning: Full package (Daily + SOP + Rekomendasi)
+                # Morning: Full package + AUTO-EXECUTE safe actions
                 if 7 <= h < 9 and (not last_am or last_am.date() < now.date()):
                     daily = fmt_telegram(r, 'daily')
                     sop = fmt_cli(r, 'sop')
                     reko_text = fmt_rekomendasi(r, reko) if reko else ''
+                    
+                    # AUTO-EXECUTE: PAUSE losers, GAS winners
+                    exe_result = execute_rekomendasi(reko, args.account) if reko else None
+                    exe_line = ''
+                    if exe_result and exe_result['executed'] > 0:
+                        exe_line = f"\n⚡ AUTO-EXECUTED: {exe_result['paused']} paused, {exe_result['scaled']} scaled"
+                        if exe_result['errors']:
+                            exe_line += f"\n⚠️ {len(exe_result['errors'])} errors"
+                        print(f"[{now:%H:%M}] Executed: {exe_result}")
+                    
                     full = (
                         f"<b>☀️ MORNING BRIEFING — {a['nm']}</b>\n\n"
                         f"{daily}\n\n"
@@ -767,6 +867,8 @@ def main():
                             icon = {'GAS':'🚀','GAS+CREATIVE':'🚀🎨','STABIL':'✅','OPTIMIZE':'⚙️','PAUSE':'⏸️','TUNGGU':'⏳'}.get(rc['aksi'],'📌')
                             rec_lines.append(f"{icon} {rc['tag']}: {rc['aksi']} — ROAS {rc['roas']:.1f}x | {rc['detail']}")
                         full += f"<b>🎯 REKOMENDASI</b>\n" + '\n'.join(rec_lines)
+                    if exe_line:
+                        full += f"\n{exe_line}"
                     send_tg(full)
                     last_am = now
                     print(f"[{now:%H:%M}] Morning package sent")
@@ -815,6 +917,35 @@ def main():
         if args.telegram:
             ok = send_tg(fmt_telegram(r, 'decide'))
             print(f"\nTelegram: {'OK' if ok else 'FAIL (not configured)'}")
+        return
+    
+    # ── DECIDE: Analyze + EXECUTE actions ──
+    if args.cmd == 'decide':
+        all_camps = r['wins'] + r['bons'] + r['scales'] + r['watch'] + r['pend']
+        reko = rekomendasi(all_camps, args.account, args.days)
+        
+        # Print analysis
+        print(fmt_cli(r, args.cmd))
+        if reko:
+            print(f"\n📋 REKOMENDASI:")
+            print(fmt_rekomendasi(r, reko))
+            
+            # EXECUTE safe actions (PAUSE losers, GAS winners)
+            print(f"\n⚡ EXECUTING ACTIONS...")
+            result = execute_rekomendasi(reko, args.account, dry_run=args.dry_run)
+            print(f"\n✅ EXECUTED: {result['paused']} paused, {result['scaled']} scaled")
+            if result['errors']:
+                print(f"⚠️  {len(result['errors'])} errors:")
+                for e in result['errors'][:5]:
+                    print(f"   {e}")
+        
+        # Telegram notification
+        if args.telegram:
+            tg = fmt_telegram(r, 'decide')
+            if reko:
+                exe = f"\n\n⚡ AUTO-EXECUTED: {result.get('paused',0)} paused, {result.get('scaled',0)} scaled"
+                tg += exe
+            send_tg(tg)
         return
     
     if args.json:

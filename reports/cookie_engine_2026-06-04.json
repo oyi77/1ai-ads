@@ -1,0 +1,1065 @@
+[
+  {
+    "account": "Selow ID (1340)",
+    "act_id": "act_1181078009580337",
+    "date": "2026-06-04",
+    "total_spend": 505520.0,
+    "total_clicks": 7101,
+    "total_impressions": 124236,
+    "total_orders": 0,
+    "total_commission": 0,
+    "avg_cpc": 71.18997324320519,
+    "avg_ctr": 5.715734569689944,
+    "campaigns": [
+      {
+        "id": "120241349269960187",
+        "name": "SCALE_bajuanak",
+        "spend": 193827.0,
+        "clicks": 2739,
+        "impressions": 49697,
+        "ctr": 5.511399,
+        "cpc": 70.765608,
+        "link_clicks": 1644,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 23,
+        "verdict": "kandidat",
+        "reasons": [
+          "KANDIDAT: 2739 klik, 0 order, CTR 5.5%, CPC Rp71"
+        ]
+      },
+      {
+        "id": "120241792113360187",
+        "name": "Scale_bajuanak_Bayi",
+        "spend": 71322.0,
+        "clicks": 962,
+        "impressions": 12789,
+        "ctr": 7.522089,
+        "cpc": 74.139293,
+        "link_clicks": 612,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 14,
+        "verdict": "kandidat",
+        "reasons": [
+          "KANDIDAT: 962 klik, 0 order, CTR 7.5%, CPC Rp74"
+        ]
+      },
+      {
+        "id": "120242326304410187",
+        "name": "test_hijab",
+        "spend": 172189.0,
+        "clicks": 2677,
+        "impressions": 41340,
+        "ctr": 6.475568,
+        "cpc": 64.321629,
+        "link_clicks": 1807,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 7,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-7: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120242625949270187",
+        "name": "SCALE_DECORATION",
+        "spend": 68182.0,
+        "clicks": 723,
+        "impressions": 20410,
+        "ctr": 3.542381,
+        "cpc": 94.304288,
+        "link_clicks": 681,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-3: monitor, belum bisa dinilai"
+        ]
+      }
+    ],
+    "unmatched_orders": 0,
+    "summary": {
+      "winner": 0,
+      "kandidat": 2,
+      "monitor": 2,
+      "belum": 0
+    },
+    "roas": 0.0
+  },
+  {
+    "account": "Selow ID (1134)",
+    "act_id": "act_1773760133153789",
+    "date": "2026-06-04",
+    "total_spend": 8214.0,
+    "total_clicks": 40,
+    "total_impressions": 317,
+    "total_orders": 0,
+    "total_commission": 0,
+    "avg_cpc": 205.35,
+    "avg_ctr": 12.618296529968454,
+    "campaigns": [
+      {
+        "id": "120244473683940148",
+        "name": "Test_Longslave_Atasan",
+        "spend": 5281.0,
+        "clicks": 29,
+        "impressions": 202,
+        "ctr": 14.356436,
+        "cpc": 182.103448,
+        "link_clicks": 18,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 6,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-6: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120244474587860148",
+        "name": "Test_Longslave_Social media _TC",
+        "spend": 1128.0,
+        "clicks": 10,
+        "impressions": 50,
+        "ctr": 20.0,
+        "cpc": 112.8,
+        "link_clicks": 8,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 6,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-6: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120244866432350148",
+        "name": "Test_SonyMY_fashion_anak",
+        "spend": 1805.0,
+        "clicks": 1,
+        "impressions": 65,
+        "ctr": 1.538462,
+        "cpc": 1805.0,
+        "link_clicks": 1,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 2,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (1)"
+        ]
+      }
+    ],
+    "unmatched_orders": 0,
+    "summary": {
+      "winner": 0,
+      "kandidat": 0,
+      "monitor": 3,
+      "belum": 0
+    },
+    "roas": 0.0
+  },
+  {
+    "account": "Herbalisme (1208)",
+    "act_id": "act_1439536310038458",
+    "date": "2026-06-04",
+    "total_spend": 0,
+    "total_clicks": 0,
+    "total_impressions": 0,
+    "total_orders": 0,
+    "total_commission": 0,
+    "avg_cpc": 0,
+    "avg_ctr": 0,
+    "campaigns": [],
+    "unmatched_orders": 0,
+    "summary": {
+      "winner": 0,
+      "kandidat": 0,
+      "monitor": 0,
+      "belum": 0
+    },
+    "roas": 0
+  },
+  {
+    "account": "Nyamiresep Dapur (1041)",
+    "act_id": "act_380721031313330",
+    "date": "2026-06-04",
+    "total_spend": 129331.0,
+    "total_clicks": 1523,
+    "total_impressions": 20720,
+    "total_orders": 0,
+    "total_commission": 0,
+    "avg_cpc": 84.91858174655286,
+    "avg_ctr": 7.3503861003861,
+    "campaigns": [
+      {
+        "id": "120245688602090121",
+        "name": "TC_Nyamiresep_General_general_DramaMovies_0306_90121",
+        "spend": 167.0,
+        "clicks": 1,
+        "impressions": 33,
+        "ctr": 3.030303,
+        "cpc": 167.0,
+        "link_clicks": 1,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 23,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (1)"
+        ]
+      },
+      {
+        "id": "120245814350950121",
+        "name": "BIDCAP_Nyamiresep_Rakdapur3_rakdapur3_DramaMovies_0306",
+        "spend": 218.0,
+        "clicks": 2,
+        "impressions": 59,
+        "ctr": 3.389831,
+        "cpc": 109.0,
+        "link_clicks": 2,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 22,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (2)"
+        ]
+      },
+      {
+        "id": "120246461738850121",
+        "name": "TC_Nyamiresep_General_general_Dapur_0306_50121",
+        "spend": 474.0,
+        "clicks": 2,
+        "impressions": 95,
+        "ctr": 2.105263,
+        "cpc": 237.0,
+        "link_clicks": 1,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 13,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (2)"
+        ]
+      },
+      {
+        "id": "120246606770070121",
+        "name": "BIDCAP_Nyamiresep_Atayasetelankaosanak_atayasetelankaosanak_Anak_0306_70121",
+        "spend": 12572.0,
+        "clicks": 127,
+        "impressions": 1841,
+        "ctr": 6.898425,
+        "cpc": 98.992126,
+        "link_clicks": 87,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 11,
+        "verdict": "kandidat",
+        "reasons": [
+          "KANDIDAT: 127 klik, 0 order, CTR 6.9%, CPC Rp99"
+        ]
+      },
+      {
+        "id": "120246607418410121",
+        "name": "TC_Nyamiresep_Dressanakperempuan_dressanakperempuan_Fashion_0306",
+        "spend": 933.0,
+        "clicks": 9,
+        "impressions": 145,
+        "ctr": 6.206897,
+        "cpc": 103.666667,
+        "link_clicks": 6,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 10,
+        "verdict": "kandidat",
+        "reasons": [
+          "KANDIDAT: 9 klik, 0 order, CTR 6.2%, CPC Rp104"
+        ]
+      },
+      {
+        "id": "120246684890490121",
+        "name": "TC_Nyamiresep_General_general_Dapur_0306_90490121",
+        "spend": 165.0,
+        "clicks": 3,
+        "impressions": 23,
+        "ctr": 13.043478,
+        "cpc": 55.0,
+        "link_clicks": 2,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 10,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (3)"
+        ]
+      },
+      {
+        "id": "120246684907160121",
+        "name": "TC_Nyamiresep_General_general_Dapur_0306_60121",
+        "spend": 263.0,
+        "clicks": 1,
+        "impressions": 50,
+        "ctr": 2.0,
+        "cpc": 263.0,
+        "link_clicks": 0,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 10,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (1)"
+        ]
+      },
+      {
+        "id": "120246684918410121",
+        "name": "TC_Nyamiresep_General_general_Dapur_0306_18410121",
+        "spend": 149.0,
+        "clicks": 0,
+        "impressions": 20,
+        "ctr": 0.0,
+        "cpc": 0.0,
+        "link_clicks": 0,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 10,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (0)"
+        ]
+      },
+      {
+        "id": "120246684934080121",
+        "name": "TC_Nyamiresep_General_general_Dapur_0306_80121",
+        "spend": 103.0,
+        "clicks": 0,
+        "impressions": 18,
+        "ctr": 0.0,
+        "cpc": 0.0,
+        "link_clicks": 0,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 10,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (0)"
+        ]
+      },
+      {
+        "id": "120246978309700121",
+        "name": "BC_Nyamiresep_General_general_Dapur_0306_00121",
+        "spend": 324.0,
+        "clicks": 2,
+        "impressions": 45,
+        "ctr": 4.444444,
+        "cpc": 162.0,
+        "link_clicks": 2,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 7,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (2)"
+        ]
+      },
+      {
+        "id": "120246978310040121",
+        "name": "TC_Nyamiresep_General_general_Fashion_0306",
+        "spend": 8845.0,
+        "clicks": 89,
+        "impressions": 1239,
+        "ctr": 7.183212,
+        "cpc": 99.382022,
+        "link_clicks": 80,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 7,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-7: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120246978310060121",
+        "name": "TC_Nyamiresep_Pertanian_pertanian_Dapur_0306",
+        "spend": 386.0,
+        "clicks": 2,
+        "impressions": 58,
+        "ctr": 3.448276,
+        "cpc": 193.0,
+        "link_clicks": 2,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 7,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (2)"
+        ]
+      },
+      {
+        "id": "120246978310090121",
+        "name": "BC_Nyamiresep_Rakdapur3_rakdapur3_DramaMovies_0306_90121",
+        "spend": 561.0,
+        "clicks": 4,
+        "impressions": 113,
+        "ctr": 3.539823,
+        "cpc": 140.25,
+        "link_clicks": 4,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 7,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (4)"
+        ]
+      },
+      {
+        "id": "120246978310100121",
+        "name": "TC_Nyamiresep_General_general_Dapur_0306_00121",
+        "spend": 204.0,
+        "clicks": 1,
+        "impressions": 44,
+        "ctr": 2.272727,
+        "cpc": 204.0,
+        "link_clicks": 1,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 7,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (1)"
+        ]
+      },
+      {
+        "id": "120246992724880121",
+        "name": "BC_Nyamiresep_Fashion_fashion_Fashion_0306",
+        "spend": 14778.0,
+        "clicks": 140,
+        "impressions": 2398,
+        "ctr": 5.838199,
+        "cpc": 105.557143,
+        "link_clicks": 122,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 7,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-7: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120246992724900121",
+        "name": "LC_Nyamiresep_Atayasetelankaosanak_atayasetelankaosanak_Anak_0306",
+        "spend": 546.0,
+        "clicks": 4,
+        "impressions": 61,
+        "ctr": 6.557377,
+        "cpc": 136.5,
+        "link_clicks": 3,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 7,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (4)"
+        ]
+      },
+      {
+        "id": "120247042406850121",
+        "name": "BC_Nyamiresep_General_general_Dapur_0306_50121",
+        "spend": 207.0,
+        "clicks": 1,
+        "impressions": 33,
+        "ctr": 3.030303,
+        "cpc": 207.0,
+        "link_clicks": 1,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 6,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (1)"
+        ]
+      },
+      {
+        "id": "120247272252830121",
+        "name": "BIDCAP_Nyamiresep_Atayasetelankaosanak_atayasetelankaosanak_Anak_0306_52830121",
+        "spend": 258.0,
+        "clicks": 2,
+        "impressions": 46,
+        "ctr": 4.347826,
+        "cpc": 129.0,
+        "link_clicks": 1,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (2)"
+        ]
+      },
+      {
+        "id": "120247272252840121",
+        "name": "BIDCAP_Nyamiresep_Atayasetelankaosanak_atayasetelankaosanak_Anak_0306_52840121",
+        "spend": 4539.0,
+        "clicks": 64,
+        "impressions": 738,
+        "ctr": 8.672087,
+        "cpc": 70.921875,
+        "link_clicks": 44,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-3: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120247272253100121",
+        "name": "BIDCAP_Nyamiresep_Atayasetelankaosanak_atayasetelankaosanak_Anak_0306_00121",
+        "spend": 921.0,
+        "clicks": 8,
+        "impressions": 138,
+        "ctr": 5.797101,
+        "cpc": 115.125,
+        "link_clicks": 6,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-3: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120247272253110121",
+        "name": "BIDCAP_Nyamiresep_Atayasetelankaosanak_atayasetelankaosanak_Anak_0306_53110121",
+        "spend": 29750.0,
+        "clicks": 403,
+        "impressions": 4702,
+        "ctr": 8.570821,
+        "cpc": 73.82134,
+        "link_clicks": 289,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-3: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120247272253120121",
+        "name": "BIDCAP_Nyamiresep_Atayasetelankaosanak_atayasetelankaosanak_Anak_0306_20121",
+        "spend": 10003.0,
+        "clicks": 137,
+        "impressions": 1511,
+        "ctr": 9.066843,
+        "cpc": 73.014599,
+        "link_clicks": 92,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-3: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120247272253130121",
+        "name": "BIDCAP_Nyamiresep_Atayasetelankaosanak_atayasetelankaosanak_Anak_0306_53130121",
+        "spend": 287.0,
+        "clicks": 0,
+        "impressions": 48,
+        "ctr": 0.0,
+        "cpc": 0.0,
+        "link_clicks": 0,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (0)"
+        ]
+      },
+      {
+        "id": "120247272253140121",
+        "name": "BIDCAP_Nyamiresep_Atayasetelankaosanak_atayasetelankaosanak_Anak_0306_53140121",
+        "spend": 3248.0,
+        "clicks": 38,
+        "impressions": 681,
+        "ctr": 5.580029,
+        "cpc": 85.473684,
+        "link_clicks": 31,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-3: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120247272253160121",
+        "name": "BIDCAP_Nyamiresep_Atayasetelankaosanak_atayasetelankaosanak_Anak_0306_60121",
+        "spend": 2172.0,
+        "clicks": 26,
+        "impressions": 389,
+        "ctr": 6.683805,
+        "cpc": 83.538462,
+        "link_clicks": 19,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-3: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120247272253210121",
+        "name": "BIDCAP_Nyamiresep_Atayasetelankaosanak_atayasetelankaosanak_Anak_0306_53210121",
+        "spend": 16216.0,
+        "clicks": 235,
+        "impressions": 2970,
+        "ctr": 7.912458,
+        "cpc": 69.004255,
+        "link_clicks": 155,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-3: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120247272253240121",
+        "name": "BIDCAP_Nyamiresep_Atayasetelankaosanak_atayasetelankaosanak_Anak_0306_53240121",
+        "spend": 382.0,
+        "clicks": 1,
+        "impressions": 93,
+        "ctr": 1.075269,
+        "cpc": 382.0,
+        "link_clicks": 1,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (1)"
+        ]
+      },
+      {
+        "id": "120247272253380121",
+        "name": "LC_Nyamiresep_General_general_DramaMovies_0306",
+        "spend": 298.0,
+        "clicks": 1,
+        "impressions": 45,
+        "ctr": 2.222222,
+        "cpc": 298.0,
+        "link_clicks": 1,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (1)"
+        ]
+      },
+      {
+        "id": "120247272257570121",
+        "name": "LC_Nyamiresep_General_general_General_0306",
+        "spend": 1174.0,
+        "clicks": 16,
+        "impressions": 241,
+        "ctr": 6.639004,
+        "cpc": 73.375,
+        "link_clicks": 11,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-3: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120247272267060121",
+        "name": "LC_Nyamiresep_General_general_Fashion_0306_67060121",
+        "spend": 85.0,
+        "clicks": 2,
+        "impressions": 16,
+        "ctr": 12.5,
+        "cpc": 42.5,
+        "link_clicks": 1,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (2)"
+        ]
+      },
+      {
+        "id": "120247272335490121",
+        "name": "LC_Nyamiresep_Rakdapur3_rakdapur3_DramaMovies_0306_35490121",
+        "spend": 715.0,
+        "clicks": 7,
+        "impressions": 108,
+        "ctr": 6.481481,
+        "cpc": 102.142857,
+        "link_clicks": 6,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-3: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120247330930460121",
+        "name": "BC_Nyamiresep_Rakdapur3_rakdapur3_DramaMovies_0306_60121",
+        "spend": 652.0,
+        "clicks": 5,
+        "impressions": 110,
+        "ctr": 4.545455,
+        "cpc": 130.4,
+        "link_clicks": 5,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 2,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-2: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120247331036930121",
+        "name": "LC_Nyamiresep_Rakdapur3_rakdapur3_DramaMovies_0306_30121",
+        "spend": 324.0,
+        "clicks": 2,
+        "impressions": 46,
+        "ctr": 4.347826,
+        "cpc": 162.0,
+        "link_clicks": 1,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 2,
+        "verdict": "monitor",
+        "reasons": [
+          "klik rendah (2)"
+        ]
+      },
+      {
+        "id": "120247331108190121",
+        "name": "LC_Nyamiresep_Rakdapur3_rakdapur3_DramaMovies_0306_08190121",
+        "spend": 1519.0,
+        "clicks": 14,
+        "impressions": 254,
+        "ctr": 5.511811,
+        "cpc": 108.5,
+        "link_clicks": 13,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 2,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-2: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120247331116360121",
+        "name": "LC_Nyamiresep_General_general_Fashion_0306_16360121",
+        "spend": 823.0,
+        "clicks": 14,
+        "impressions": 109,
+        "ctr": 12.844037,
+        "cpc": 58.785714,
+        "link_clicks": 9,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 2,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-2: monitor, belum bisa dinilai"
+        ]
+      }
+    ],
+    "unmatched_orders": 0,
+    "summary": {
+      "winner": 0,
+      "kandidat": 2,
+      "monitor": 33,
+      "belum": 0
+    },
+    "roas": 0.0
+  },
+  {
+    "account": "JENDRALBOT (0858)",
+    "act_id": "act_435670549443081",
+    "date": "2026-06-04",
+    "total_spend": 328774.0,
+    "total_clicks": 2135,
+    "total_impressions": 53582,
+    "total_orders": 0,
+    "total_commission": 0,
+    "avg_cpc": 153.99250585480092,
+    "avg_ctr": 3.9845470493822552,
+    "campaigns": [
+      {
+        "id": "120248404118800416",
+        "name": "BIDCAP_Rakpiring_rakpiringpengering_Winner_0603",
+        "spend": 126988.0,
+        "clicks": 808,
+        "impressions": 21100,
+        "ctr": 3.829384,
+        "cpc": 157.163366,
+        "link_clicks": 751,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 23,
+        "verdict": "kandidat",
+        "reasons": [
+          "KANDIDAT: 808 klik, 0 order, CTR 3.8%, CPC Rp157"
+        ]
+      },
+      {
+        "id": "120249205714820416",
+        "name": "BIDCAP_Rakpiring_rakpiringpengering_Shopping_0603",
+        "spend": 39227.0,
+        "clicks": 234,
+        "impressions": 6685,
+        "ctr": 3.500374,
+        "cpc": 167.636752,
+        "link_clicks": 220,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 13,
+        "verdict": "kandidat",
+        "reasons": [
+          "KANDIDAT: 234 klik, 0 order, CTR 3.5%, CPC Rp168"
+        ]
+      },
+      {
+        "id": "120249209669800416",
+        "name": "BIDCAP_Organizer_organizerpullout_Dapur_0603",
+        "spend": 57789.0,
+        "clicks": 470,
+        "impressions": 9341,
+        "ctr": 5.031581,
+        "cpc": 122.955319,
+        "link_clicks": 373,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 13,
+        "verdict": "kandidat",
+        "reasons": [
+          "KANDIDAT: 470 klik, 0 order, CTR 5.0%, CPC Rp123"
+        ]
+      },
+      {
+        "id": "120249722735720416",
+        "name": "BIDCAP_Organizer_organizerpullout_Travel_0603",
+        "spend": 15524.0,
+        "clicks": 97,
+        "impressions": 2553,
+        "ctr": 3.799452,
+        "cpc": 160.041237,
+        "link_clicks": 84,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 7,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-7: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120249727183880416",
+        "name": "LC_Organizer_organizerpullout_Dapur_0603_CLONE1",
+        "spend": 22129.0,
+        "clicks": 153,
+        "impressions": 3378,
+        "ctr": 4.529307,
+        "cpc": 144.633987,
+        "link_clicks": 121,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 7,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-7: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120249941008950416",
+        "name": "BIDCAP_Rakpiring_rakpiringpengering_Broad_0603",
+        "spend": 10017.0,
+        "clicks": 47,
+        "impressions": 1528,
+        "ctr": 3.075916,
+        "cpc": 213.12766,
+        "link_clicks": 48,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 4,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-4: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120250009839170416",
+        "name": "BIDCAP_Organizer_organizerpullout_Fashion_0603",
+        "spend": 5493.0,
+        "clicks": 32,
+        "impressions": 590,
+        "ctr": 5.423729,
+        "cpc": 171.65625,
+        "link_clicks": 30,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 4,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-4: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120250055874900416",
+        "name": "BIDCAP_GEO_rakpiringpengering_INT04",
+        "spend": 18714.0,
+        "clicks": 126,
+        "impressions": 3540,
+        "ctr": 3.559322,
+        "cpc": 148.52381,
+        "link_clicks": 121,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-3: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120250055874940416",
+        "name": "BIDCAP_GEO_rakpiringpengering_INT08",
+        "spend": 18888.0,
+        "clicks": 99,
+        "impressions": 2876,
+        "ctr": 3.442281,
+        "cpc": 190.787879,
+        "link_clicks": 88,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-3: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120250055875130416",
+        "name": "BIDCAP_GEO_rakpiringpengering_INT07",
+        "spend": 2450.0,
+        "clicks": 11,
+        "impressions": 310,
+        "ctr": 3.548387,
+        "cpc": 222.727273,
+        "link_clicks": 11,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-3: monitor, belum bisa dinilai"
+        ]
+      },
+      {
+        "id": "120250055875150416",
+        "name": "BIDCAP_GEO_rakpiringpengering_INT10",
+        "spend": 11555.0,
+        "clicks": 58,
+        "impressions": 1681,
+        "ctr": 3.450327,
+        "cpc": 199.224138,
+        "link_clicks": 56,
+        "orders": 0,
+        "commission": 0,
+        "roas": 0.0,
+        "age_days": 3,
+        "verdict": "monitor",
+        "reasons": [
+          "hari ke-3: monitor, belum bisa dinilai"
+        ]
+      }
+    ],
+    "unmatched_orders": 0,
+    "summary": {
+      "winner": 0,
+      "kandidat": 3,
+      "monitor": 8,
+      "belum": 0
+    },
+    "roas": 0.0
+  }
+]

@@ -1,0 +1,71 @@
+{
+  "account": "act_380721031313330",
+  "campaigns": [
+    {
+      "campaign_id": "120247272252840121",
+      "campaign_name": "BIDCAP_Nyamiresep_Atayasetelankaosanak_atayasetelankaosanak_Anak_0306_52840121",
+      "effective_status": "ACTIVE",
+      "adsets": 200,
+      "ads": 200,
+      "creative_ids": [
+        "2197236177776308",
+        "2029208987694093",
+        "1320351770245269",
+        "2462362937588563",
+        "987983204027552",
+        "789704794131956",
+        "2211157506332112",
+        "1019793993819129",
+        "1260951992525517",
+        "1314325976886180"
+      ],
+      "tag_hits": [
+        "misc"
+      ]
+    },
+    {
+      "campaign_id": "120247042406850121",
+      "campaign_name": "BC_ rakdapur_0306_50121",
+      "effective_status": "ACTIVE",
+      "adsets": 0,
+      "ads": 200,
+      "creative_ids": [],
+      "tag_hits": [
+        "misc"
+      ]
+    },
+    {
+      "campaign_id": "120246461738850121",
+      "campaign_name": "TC_ General_rakdapur_0306_50121",
+      "effective_status": "ACTIVE",
+      "adsets": 0,
+      "ads": 200,
+      "creative_ids": [],
+      "tag_hits": [
+        "misc"
+      ]
+    },
+    {
+      "campaign_id": "120245814350950121",
+      "campaign_name": "BIDCAP_ rakdapur_DramaMovies_0306",
+      "effective_status": "ACTIVE",
+      "adsets": 0,
+      "ads": 200,
+      "creative_ids": [],
+      "tag_hits": [
+        "misc"
+      ]
+    },
+    {
+      "campaign_id": "120245688602090121",
+      "campaign_name": "TC_ rakdapur_DramaMovies_0306_90121",
+      "effective_status": "ACTIVE",
+      "adsets": 0,
+      "ads": 200,
+      "creative_ids": [],
+      "tag_hits": [
+        "misc"
+      ]
+    }
+  ]
+}

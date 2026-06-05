@@ -6,6 +6,7 @@
  */
 
 import { createLogger } from '../lib/logger.js';
+import { OPERATORS, compare } from '../lib/operators.js';
 
 const log = createLogger('auto-optimizer');
 
@@ -45,6 +46,10 @@ export class AutoOptimizer {
   }
 
   async _evaluateRule(rule) {
+    if (!rule.campaign_id || rule.campaign_id === 'undefined') {
+      log.debug('Skipping rule - no valid campaign_id', { ruleId: rule.id, name: rule.name });
+      return null;
+    }
     let insights;
     try {
       insights = await this.meta.getCampaignInsights(rule.campaign_id, { datePreset: 'last_7d' });
@@ -77,18 +82,9 @@ export class AutoOptimizer {
     return map[metric] !== undefined ? map[metric] : null;
   }
 
-  static OPERATORS = {
-    '>': (a, b) => a > b,
-    '<': (a, b) => a < b,
-    '>=': (a, b) => a >= b,
-    '<=': (a, b) => a <= b,
-    '==': (a, b) => a === b,
-  };
-
   _evaluateCondition(value, operator, threshold) {
     if (value === null) return false;
-    const op = AutoOptimizer.OPERATORS[operator];
-    return op ? op(value, threshold) : false;
+    return compare(value, operator, threshold);
   }
 
   async _executeAction(campaignId, action, actionValue, insights) {

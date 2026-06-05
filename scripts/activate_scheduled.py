@@ -8,12 +8,17 @@ import sys, json, requests, os
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / ".openclaw" / "workspace" / "scripts"))
-try:
-    from ads_dashboard import ACCESS_TOKEN as TOKEN
-except:
-    print("❌ Cannot load token")
-    sys.exit(1)
+sys.path.insert(0, str(Path.home() / ".openclaw" / "workspace" / "scripts"))
+
+# Load token from shared file first, env var fallback
+TOKEN_FILE = Path("/tmp/fb_token.txt")
+if TOKEN_FILE.exists():
+    TOKEN = TOKEN_FILE.read_text().strip()
+else:
+    try:
+        from ads_dashboard import ACCESS_TOKEN as TOKEN
+    except:
+        TOKEN = os.environ.get('META_ACCESS_TOKEN', os.environ.get('META_TOKEN', ''))
 
 API = 'https://graph.facebook.com/v19.0'
 SCHEDULE_FILE = Path(__file__).resolve().parent.parent / 'data' / 'scheduled_0858.json'

@@ -1,15 +1,12 @@
 import { createLogger } from '../lib/logger.js';
-import { createDatabase } from '../../db/index.js';
+import { safeParse } from '../lib/safe-parse.js';
 
 const log = createLogger('rules-repo');
 
 export class RulesRepository {
-  constructor(dbOrPath = './db/adforge.db') {
-    if (typeof dbOrPath === 'string') {
-      this.db = createDatabase(dbOrPath);
-    } else {
-      this.db = dbOrPath;
-    }
+  constructor(db) {
+    if (!db) throw new Error('RulesRepository requires a database instance');
+    this.db = db;
     this.table = 'autonomous_rules';
     this._ensureTable();
   }
@@ -88,8 +85,8 @@ export class RulesRepository {
       id: r.id,
       user_id: r.user_id,
       name: r.name,
-      condition: this._safeParse(r.condition),
-      action: this._safeParse(r.action),
+      condition: safeParse(r.condition),
+      action: safeParse(r.action),
       priority: r.priority,
       enabled: r.enabled === 1,
       created_at: r.created_at,
@@ -97,18 +94,13 @@ export class RulesRepository {
     }));
   }
 
-  _safeParse(value) {
-    if (typeof value !== 'string') return value;
-    try { return JSON.parse(value); } catch { return value; }
-  }
-
   getAllEnabled(userId) {
     return this.db.prepare(`SELECT * FROM ${this.table} WHERE user_id = ? AND enabled = 1`).all(userId).map(r => ({
       id: r.id,
       user_id: r.user_id,
       name: r.name,
-      condition: JSON.parse(r.condition),
-      action: JSON.parse(r.action),
+      condition: safeParse(r.condition),
+      action: safeParse(r.action),
       priority: r.priority,
       enabled: true
     }));
@@ -129,10 +121,26 @@ export class RulesRepository {
       id: r.id,
       user_id: r.user_id,
       name: r.name,
-      condition: JSON.parse(r.condition),
-      action: JSON.parse(r.action),
+      condition: safeParse(r.condition),
+      action: safeParse(r.action),
       priority: r.priority,
       enabled: r.enabled === 1,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    }));
+  }
+
+  findActive() {
+    const rows = this.db.prepare(`SELECT * FROM ${this.table} WHERE enabled = 1 ORDER BY priority DESC`).all();
+    return rows.map(r => ({
+      id: r.id,
+      user_id: r.user_id,
+      name: r.name,
+      condition: safeParse(r.condition),
+      action: safeParse(r.action),
+      priority: r.priority,
+      enabled: true,
+      campaign_id: r.campaign_id,
       created_at: r.created_at,
       updated_at: r.updated_at,
     }));

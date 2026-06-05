@@ -1,15 +1,15 @@
 import { safeFetch } from '../lib/platform-client.js';
-import { createLogger } from '../lib/logger.js';
+import { BasePlatformApiClient } from '../lib/base-platform-api.js';
 import { ConfigurationError, PlatformError } from '../lib/errors.js';
 
-const log = createLogger('tiktok-api');
 const BASE = 'https://business-api.tiktok.com/open_api/v1.3';
 
-export class TikTokAdsAPI {
+export class TikTokAdsAPI extends BasePlatformApiClient {
   constructor(settingsRepo) {
-    this.settingsRepo = settingsRepo;
+    super('tiktok', settingsRepo, { baseUrl: BASE });
   }
 
+  // Override: TikTok uses Access-Token header, not Bearer
   _getToken() {
     const creds = this.settingsRepo.getCredentials('tiktok');
     if (!creds?.access_token) {
@@ -18,14 +18,25 @@ export class TikTokAdsAPI {
     return creds.access_token;
   }
 
+  // Override: TikTok returns data in nested { data: ... } structure
   async _get(path, params = {}) {
-    const token = this._getToken();
-    const url = new URL(`${BASE}${path}`);
+    const url = new URL(`${this._baseUrl}${path}`);
     for (const [k, v] of Object.entries(params)) {
       url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
     }
     const res = await safeFetch('tiktok', url.toString(), {
-      headers: { 'Access-Token': token },
+      headers: { 'Access-Token': this._getToken() },
+    });
+    const data = await res.json();
+    return data.data;
+  }
+
+  // Override: TikTok uses Access-Token header
+  async _post(path, body = {}) {
+    const res = await safeFetch('tiktok', `${this._baseUrl}${path}`, {
+      method: 'POST',
+      headers: { 'Access-Token': this._getToken(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
     });
     const data = await res.json();
     return data.data;
@@ -80,7 +91,7 @@ export class TikTokAdsAPI {
   }
 
   async getCampaigns(advertiserId, { page = 1, pageSize = 50 } = {}) {
-    log.debug('Fetching TikTok campaigns', { advertiserId, page });
+    this.log.debug('Fetching TikTok campaigns', { advertiserId, page });
     return this._get('/campaign/get/', {
       advertiser_id: advertiserId,
       page,
@@ -132,7 +143,7 @@ export class TikTokAdsAPI {
   }
 
   async createCampaign(advertiserId, { name, objectiveType = 'CONVERSIONS', budget, status = 'DISABLE' }) {
-    log.info('Creating TikTok campaign', { advertiserId, name });
+    this.log.info('Creating TikTok campaign', { advertiserId, name });
     const data = await this._post('/campaign/create/', {
       advertiser_id: advertiserId,
       campaign_name: name,
@@ -141,19 +152,19 @@ export class TikTokAdsAPI {
       budget_mode: budget ? 'BUDGET_MODE_DAY' : 'BUDGET_MODE_INFINITE',
       status,
     });
-    log.info('TikTok campaign created', { campaignId: data.campaign_id });
+    this.log.info('TikTok campaign created', { campaignId: data.campaign_id });
     return { campaignId: data.campaign_id };
   }
 
   async updateCampaign(advertiserId, campaignId, { name, status, budget }) {
-    log.info('Updating TikTok campaign', { advertiserId, campaignId });
+    this.log.info('Updating TikTok campaign', { advertiserId, campaignId });
     const updateFields = { advertiser_id: advertiserId, campaign_ids: [campaignId] };
     if (name) updateFields.campaign_name = name;
     if (status) updateFields.status = status;
     if (budget !== undefined) updateFields.budget = budget;
 
     await this._post('/campaign/update/', updateFields);
-    log.info('TikTok campaign updated', { campaignId });
+    this.log.info('TikTok campaign updated', { campaignId });
     return { campaignId };
   }
 }

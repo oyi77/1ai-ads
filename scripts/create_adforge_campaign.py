@@ -13,7 +13,7 @@ def create_direct_wa_campaign():
         "name": "ADFORGE_Purwoceng_LeadGen_V1",
         "objective": "OUTCOME_LEADS",
         "status": "PAUSED",
-        "special_ad_categories": ["NONE"],
+        "special_ad_categories": [],
         "daily_budget": 100000,
         "access_token": ACCESS_TOKEN,
     }
