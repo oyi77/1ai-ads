@@ -47,7 +47,7 @@ export async function renderAdsLibraryAiView(el) {
             <input type="checkbox" id="force-fresh" class="rounded">
             Force fresh (bypass cache, hit Meta directly)
           </label>
-          <p class="text-xs text-slate-500 mt-2">Results cached 30min fresh, 24h stale. Falls back to scraper if cookies expired.</p>
+          <p class="text-xs text-slate-500 mt-2">Results cached 30min fresh (memory+persistent), 24h stale. Falls back to scraper if cookies expired.</p>
         </form>
 
         <div id="result-meta" class="text-sm text-slate-400 mb-3"></div>
@@ -64,22 +64,6 @@ export async function renderAdsLibraryAiView(el) {
   const metaEl = el.querySelector('#result-meta');
   const statusPill = el.querySelector('#status-pill');
   const setupBanner = el.querySelector('#setup-banner');
-
-  let lastResults = [];
-
-  async function checkStatus() {
-    try {
-      const { data } = await api.get('/ads-library-ai/status');
-      statusPill.textContent = data.configured ? `✓ ${data.source}` : '⚠ not configured';
-      statusPill.className = data.configured
-        ? 'text-xs px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300'
-        : 'text-xs px-3 py-1 rounded-full bg-amber-500/20 text-amber-300';
-      setupBanner.classList.toggle('hidden', data.configured);
-    } catch (e) {
-      statusPill.textContent = 'error';
-      statusPill.className = 'text-xs px-3 py-1 rounded-full bg-red-500/20 text-red-300';
-    }
-  }
 
   function renderAd(ad, index) {
     const pageName = ad.pageName || ad.page_name || ad.advertiser || 'Unknown page';
@@ -113,6 +97,28 @@ export async function renderAdsLibraryAiView(el) {
     return `<details class="bg-[#0d1117] border border-[#1c2128] rounded-xl p-4"><summary class="cursor-pointer text-sm font-bold text-slate-300">Raw response (debug)</summary><pre class="text-xs text-slate-400 mt-3 overflow-x-auto whitespace-pre-wrap">${esc(JSON.stringify(payload, null, 2)).slice(0, 8000)}</pre></details>`;
   }
 
+  function sourceBadge(source) {
+    if (source === 'cache') return '<span class="text-xs px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded">cache</span>';
+    if (source === 'stale-cache') return '<span class="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded">stale cache</span>';
+    if (source === 'scraper-fallback') return '<span class="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded">scraper</span>';
+    if (source === 'graphql') return '<span class="text-xs px-2 py-0.5 bg-sky-500/20 text-sky-300 rounded">live</span>';
+    return '';
+  }
+
+  async function checkStatus() {
+    try {
+      const { data } = await api.get('/ads-library-ai/status');
+      statusPill.textContent = data.configured ? `✓ ${data.source}` : '⚠ not configured';
+      statusPill.className = data.configured
+        ? 'text-xs px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300'
+        : 'text-xs px-3 py-1 rounded-full bg-amber-500/20 text-amber-300';
+      setupBanner.classList.toggle('hidden', data.configured);
+    } catch (e) {
+      statusPill.textContent = 'error';
+      statusPill.className = 'text-xs px-3 py-1 rounded-full bg-red-500/20 text-red-300';
+    }
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const query = qInput.value.trim();
@@ -124,17 +130,11 @@ export async function renderAdsLibraryAiView(el) {
     resultsEl.innerHTML = '';
     metaEl.innerHTML = 'Searching…';
     try {
-      const { data, source, cached, stale, notice } = await api.post('/ads-library-ai/search', { query, country, forceFresh });
+      const { data, source, stale, notice } = await api.post('/ads-library-ai/search', { query, country, forceFresh });
       const raw = data;
       const ads = raw?.ads || raw?.results || raw?.data?.ads || raw?.ad_library_search?.ads || raw?.adLibrarySearch?.ads || (Array.isArray(raw) ? raw : []);
 
-      const sourceBadge = source === 'cache' ? '<span class="text-xs px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded">cache</span>'
-        : source === 'stale-cache' ? '<span class="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded">stale cache</span>'
-        : source === 'scraper-fallback' ? '<span class="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded">scraper</span>'
-        : source === 'graphql' ? '<span class="text-xs px-2 py-0.5 bg-sky-500/20 text-sky-300 rounded">live</span>'
-        : '';
-
-      metaEl.innerHTML = `${ads.length > 0 ? `${ads.length} ads` : `0 ads`} for "${query}" in ${country} ${sourceBadge}`;
+      metaEl.innerHTML = `${ads.length > 0 ? `${ads.length} ads` : `0 ads`} for "${query}" in ${country} ${sourceBadge(source)}`;
 
       if (stale && notice) {
         metaEl.innerHTML += ` <span class="text-xs text-amber-300 ml-2">${esc(notice)}</span>`;
