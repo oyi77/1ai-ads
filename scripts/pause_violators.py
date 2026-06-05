@@ -2,11 +2,8 @@
 import json, requests
 
 def get_token():
-    with open('/home/openclaw/projects/1ai-ads/.env') as f:
-        for line in f:
-            if 'META_ACCESS_TOKEN' in line:
-                return line.strip().split('=', 1)[1]
-    return None
+    import os
+    return os.environ.get('META_ACCESS_TOKEN', '').strip() or None
 
 TOKEN = get_token()
 if not TOKEN:

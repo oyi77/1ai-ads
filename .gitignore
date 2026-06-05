@@ -26,3 +26,8 @@ backups/
 adforge.db
 .env
 .fb_token_0858
+
+outputs/
+logs/
+ops/*.log
+ops/*.json

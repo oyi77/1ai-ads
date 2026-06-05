@@ -26,7 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = REPO_ROOT / "outputs" / "jendralbot_autoscaler"
 REPORTS_LOG = OUTPUT_DIR / "autoscaler_report.log"
 LEGACY_MEDIA = REPO_ROOT / "media" / "inbound"
-DATA_DIR_COMPAT = os.environ.get("AIBIC_MEDIA_DIR") or REPO_ROOT / "data" / "shopee"
+DATA_DIR = REPO_ROOT / "data" / "shopee"
 REPORTS_LOG = OUTPUT_DIR / "autoscaler_report.log"
 TAGLINK_MAP_PATH = DATA_DIR / "taglink_mapping_2026-06-04.json"
 
