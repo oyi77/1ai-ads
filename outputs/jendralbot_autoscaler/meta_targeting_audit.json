@@ -1,0 +1,2050 @@
+{
+  "account": "act_380721031313330",
+  "api_version": "v19.0",
+  "total_active_campaigns": 5,
+  "total_adsets": 6,
+  "campaigns": [
+    {
+      "id": "120247272252840121",
+      "name": "BIDCAP_Nyamiresep_Atayasetelankaosanak_atayasetelankaosanak_Anak_0306_52840121",
+      "status": "ACTIVE",
+      "adsets": [
+        {
+          "id": "120247272252940121",
+          "name": "Anak",
+          "status": "ACTIVE",
+          "targeting": {
+            "genders": [
+              2
+            ],
+            "age_min": 25,
+            "age_max": 65,
+            "publisher_platforms": [
+              "facebook",
+              "instagram",
+              "threads"
+            ],
+            "flexible_spec_interests": [
+              {
+                "id": "6003053088645",
+                "name": "Online marketplace"
+              },
+              {
+                "id": "6003263791114",
+                "name": "Belanja (ritel)"
+              },
+              {
+                "id": "6003346592981",
+                "name": "Belanja online (ritel)"
+              },
+              {
+                "id": "6003345696474",
+                "name": "Anak (anak & pengasuhan anak)"
+              }
+            ],
+            "flexible_spec_interests_count": 4,
+            "geo_locations": {
+              "countries": [],
+              "countries_count": 0,
+              "regions": [],
+              "regions_count": 0,
+              "cities": [
+                {
+                  "key": "1002881",
+                  "name": "Yogyakarta City",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "2687160",
+                  "name": "Batam",
+                  "region": "Riau Islands Province",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "2906066",
+                  "name": "Canggu",
+                  "region": "Bali",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "3009211",
+                  "name": "South Tangerang",
+                  "region": "Banten",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "947857",
+                  "name": "Ambarawa",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "948927",
+                  "name": "Badung",
+                  "region": "Bali",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "949414",
+                  "name": "Balikpapan",
+                  "region": "East Kalimantan",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "949797",
+                  "name": "Bandung",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "950015",
+                  "name": "Banjarmasin",
+                  "region": "South Kalimantan",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "950016",
+                  "name": "Bandar Lampung",
+                  "region": "Lampung",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "950236",
+                  "name": "Bantul",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "951390",
+                  "name": "Bekasi",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "953142",
+                  "name": "Bogor",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "953146",
+                  "name": "Bogorsero",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "955179",
+                  "name": "Cianjur Regency",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "955404",
+                  "name": "Cibinong",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "956411",
+                  "name": "Cimahi",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "956891",
+                  "name": "Cirebon",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957883",
+                  "name": "Denpasar",
+                  "region": "Bali",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957890",
+                  "name": "Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957895",
+                  "name": "Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957896",
+                  "name": "Depok",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957897",
+                  "name": "Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957898",
+                  "name": "Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957905",
+                  "name": "Depok Satu",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "961615",
+                  "name": "Gresik",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "961616",
+                  "name": "Gresik",
+                  "region": "South Sumatra",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "964380",
+                  "name": "Kalasan",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "966980",
+                  "name": "Kediri",
+                  "region": "Bali",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "966981",
+                  "name": "Kediri",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "966982",
+                  "name": "Kediri",
+                  "region": "West Nusa Tenggara",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "969141",
+                  "name": "Kotagede",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "973751",
+                  "name": "Makassar",
+                  "region": "South Sulawesi",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "973850",
+                  "name": "Malang",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "974074",
+                  "name": "Manado",
+                  "region": "North Sulawesi",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "974078",
+                  "name": "Manadotua Satu",
+                  "region": "North Sulawesi",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "975054",
+                  "name": "Mataram-baru",
+                  "region": "Lampung",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "975057",
+                  "name": "Mataram",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "975058",
+                  "name": "Mataram",
+                  "region": "West Nusa Tenggara",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "975253",
+                  "name": "Medan",
+                  "region": "North Sumatra",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "979675",
+                  "name": "Padang",
+                  "region": "West Sumatra",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "980311",
+                  "name": "Palembang",
+                  "region": "South Sumatra",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "981553",
+                  "name": "Parangtritis",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "982781",
+                  "name": "Pedurenan Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "982868",
+                  "name": "Pekanbaru",
+                  "region": "Riau",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "983898",
+                  "name": "Pinggirrawa Timur",
+                  "region": "Jakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "984861",
+                  "name": "Pontianak",
+                  "region": "West Kalimantan",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "988013",
+                  "name": "Samarinda",
+                  "region": "East Kalimantan",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "989399",
+                  "name": "Semarang",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "990083",
+                  "name": "Sewon",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "990262",
+                  "name": "Sidoarjo",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "992533",
+                  "name": "Sumber",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "992534",
+                  "name": "Sumber",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "992951",
+                  "name": "Surabaya",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "992961",
+                  "name": "Surakarta",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "994587",
+                  "name": "Tangerang",
+                  "region": "Banten",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "995894",
+                  "name": "Teluknaga",
+                  "region": "Banten",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                }
+              ],
+              "cities_count": 57,
+              "unique_regions_from_cities": [
+                "Bali",
+                "Banten",
+                "Central Java",
+                "East Java",
+                "East Kalimantan",
+                "Jakarta",
+                "Lampung",
+                "North Sulawesi",
+                "North Sumatra",
+                "Riau",
+                "Riau Islands Province",
+                "South Kalimantan",
+                "South Sulawesi",
+                "South Sumatra",
+                "Special Region of Yogyakarta",
+                "West Java",
+                "West Kalimantan",
+                "West Nusa Tenggara",
+                "West Sumatra"
+              ],
+              "location_types": [
+                "home",
+                "recent"
+              ]
+            },
+            "advantage_audience": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "120247042406850121",
+      "name": "BC_ rakdapur_0306_50121",
+      "status": "ACTIVE",
+      "adsets": [
+        {
+          "id": "120247042407050121",
+          "name": "IG_Rakdapur_Furnitur_Masak",
+          "status": "ACTIVE",
+          "targeting": {
+            "genders": [
+              2
+            ],
+            "age_min": 25,
+            "age_max": 55,
+            "publisher_platforms": [
+              "facebook",
+              "instagram",
+              "threads"
+            ],
+            "flexible_spec_interests": [
+              {
+                "id": "6003053088645",
+                "name": "Online marketplace"
+              },
+              {
+                "id": "6003132926214",
+                "name": "Perabotan (furnitur rumah)"
+              },
+              {
+                "id": "6003346592981",
+                "name": "Belanja online (ritel)"
+              },
+              {
+                "id": "6003000774850",
+                "name": "Makan (bagian atau fungsi tubuh)"
+              },
+              {
+                "id": "6003134986700",
+                "name": "Memanggang (memasak)"
+              },
+              {
+                "id": "6003276833410",
+                "name": "Peralatan memasak & memanggang kue (dapur & ruang makan)"
+              },
+              {
+                "id": "6003659420716",
+                "name": "Memasak (makanan & minuman)"
+              }
+            ],
+            "flexible_spec_interests_count": 7,
+            "geo_locations": {
+              "countries": [],
+              "countries_count": 0,
+              "regions": [],
+              "regions_count": 0,
+              "cities": [
+                {
+                  "key": "1002881",
+                  "name": "Yogyakarta City",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "2687160",
+                  "name": "Batam",
+                  "region": "Riau Islands Province",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "2906066",
+                  "name": "Canggu",
+                  "region": "Bali",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "3009211",
+                  "name": "South Tangerang",
+                  "region": "Banten",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "947857",
+                  "name": "Ambarawa",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "948927",
+                  "name": "Badung",
+                  "region": "Bali",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "949414",
+                  "name": "Balikpapan",
+                  "region": "East Kalimantan",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "949797",
+                  "name": "Bandung",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "950015",
+                  "name": "Banjarmasin",
+                  "region": "South Kalimantan",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "950016",
+                  "name": "Bandar Lampung",
+                  "region": "Lampung",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "950236",
+                  "name": "Bantul",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "951390",
+                  "name": "Bekasi",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "953142",
+                  "name": "Bogor",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "953146",
+                  "name": "Bogorsero",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "955179",
+                  "name": "Cianjur Regency",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "955404",
+                  "name": "Cibinong",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "956411",
+                  "name": "Cimahi",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "956891",
+                  "name": "Cirebon",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957883",
+                  "name": "Denpasar",
+                  "region": "Bali",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957890",
+                  "name": "Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957895",
+                  "name": "Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957896",
+                  "name": "Depok",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957897",
+                  "name": "Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957898",
+                  "name": "Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957905",
+                  "name": "Depok Satu",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "961615",
+                  "name": "Gresik",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "961616",
+                  "name": "Gresik",
+                  "region": "South Sumatra",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "964380",
+                  "name": "Kalasan",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "966980",
+                  "name": "Kediri",
+                  "region": "Bali",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "966981",
+                  "name": "Kediri",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "966982",
+                  "name": "Kediri",
+                  "region": "West Nusa Tenggara",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "969141",
+                  "name": "Kotagede",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "973751",
+                  "name": "Makassar",
+                  "region": "South Sulawesi",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "973850",
+                  "name": "Malang",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "974074",
+                  "name": "Manado",
+                  "region": "North Sulawesi",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "974078",
+                  "name": "Manadotua Satu",
+                  "region": "North Sulawesi",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "975054",
+                  "name": "Mataram-baru",
+                  "region": "Lampung",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "975057",
+                  "name": "Mataram",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "975058",
+                  "name": "Mataram",
+                  "region": "West Nusa Tenggara",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "975253",
+                  "name": "Medan",
+                  "region": "North Sumatra",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "979675",
+                  "name": "Padang",
+                  "region": "West Sumatra",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "980311",
+                  "name": "Palembang",
+                  "region": "South Sumatra",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "981553",
+                  "name": "Parangtritis",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "982781",
+                  "name": "Pedurenan Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "982868",
+                  "name": "Pekanbaru",
+                  "region": "Riau",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "983898",
+                  "name": "Pinggirrawa Timur",
+                  "region": "Jakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "984861",
+                  "name": "Pontianak",
+                  "region": "West Kalimantan",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "988013",
+                  "name": "Samarinda",
+                  "region": "East Kalimantan",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "989399",
+                  "name": "Semarang",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "990083",
+                  "name": "Sewon",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "990262",
+                  "name": "Sidoarjo",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "992533",
+                  "name": "Sumber",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "992534",
+                  "name": "Sumber",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "992951",
+                  "name": "Surabaya",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "992961",
+                  "name": "Surakarta",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "994587",
+                  "name": "Tangerang",
+                  "region": "Banten",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "995894",
+                  "name": "Teluknaga",
+                  "region": "Banten",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                }
+              ],
+              "cities_count": 57,
+              "unique_regions_from_cities": [
+                "Bali",
+                "Banten",
+                "Central Java",
+                "East Java",
+                "East Kalimantan",
+                "Jakarta",
+                "Lampung",
+                "North Sulawesi",
+                "North Sumatra",
+                "Riau",
+                "Riau Islands Province",
+                "South Kalimantan",
+                "South Sulawesi",
+                "South Sumatra",
+                "Special Region of Yogyakarta",
+                "West Java",
+                "West Kalimantan",
+                "West Nusa Tenggara",
+                "West Sumatra"
+              ],
+              "location_types": [
+                "home",
+                "recent"
+              ]
+            },
+            "advantage_audience": 0
+          }
+        },
+        {
+          "id": "120247042406900121",
+          "name": "Rakdapur_Jabar_Jateng_Yogya_4",
+          "status": "ACTIVE",
+          "targeting": {
+            "genders": [
+              2
+            ],
+            "age_min": 25,
+            "age_max": 55,
+            "publisher_platforms": [
+              "facebook",
+              "instagram",
+              "threads"
+            ],
+            "flexible_spec_interests": [
+              {
+                "id": "6003053088645",
+                "name": "Online marketplace"
+              },
+              {
+                "id": "6003132926214",
+                "name": "Perabotan (furnitur rumah)"
+              },
+              {
+                "id": "6003346592981",
+                "name": "Belanja online (ritel)"
+              },
+              {
+                "id": "6002884645822",
+                "name": "Kue pernikahan (pernikahan)"
+              },
+              {
+                "id": "6002969885729",
+                "name": "Cincin pertunangan (perhiasan)"
+              },
+              {
+                "id": "6003394662531",
+                "name": "Undangan pernikahan (pernikahan)"
+              },
+              {
+                "id": "6003659420716",
+                "name": "Memasak (makanan & minuman)"
+              }
+            ],
+            "flexible_spec_interests_count": 7,
+            "geo_locations": {
+              "countries": [],
+              "countries_count": 0,
+              "regions": [],
+              "regions_count": 0,
+              "cities": [
+                {
+                  "key": "1002881",
+                  "name": "Yogyakarta City",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "2687160",
+                  "name": "Batam",
+                  "region": "Riau Islands Province",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "2906066",
+                  "name": "Canggu",
+                  "region": "Bali",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "3009211",
+                  "name": "South Tangerang",
+                  "region": "Banten",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "947857",
+                  "name": "Ambarawa",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "948927",
+                  "name": "Badung",
+                  "region": "Bali",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "949414",
+                  "name": "Balikpapan",
+                  "region": "East Kalimantan",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "949797",
+                  "name": "Bandung",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "950015",
+                  "name": "Banjarmasin",
+                  "region": "South Kalimantan",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "950016",
+                  "name": "Bandar Lampung",
+                  "region": "Lampung",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "950236",
+                  "name": "Bantul",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "951390",
+                  "name": "Bekasi",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "953142",
+                  "name": "Bogor",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "953146",
+                  "name": "Bogorsero",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "955179",
+                  "name": "Cianjur Regency",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "955404",
+                  "name": "Cibinong",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "956411",
+                  "name": "Cimahi",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "956891",
+                  "name": "Cirebon",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957883",
+                  "name": "Denpasar",
+                  "region": "Bali",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957890",
+                  "name": "Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957895",
+                  "name": "Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957896",
+                  "name": "Depok",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957897",
+                  "name": "Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957898",
+                  "name": "Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957905",
+                  "name": "Depok Satu",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "961615",
+                  "name": "Gresik",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "961616",
+                  "name": "Gresik",
+                  "region": "South Sumatra",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "964380",
+                  "name": "Kalasan",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "966980",
+                  "name": "Kediri",
+                  "region": "Bali",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "966981",
+                  "name": "Kediri",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "966982",
+                  "name": "Kediri",
+                  "region": "West Nusa Tenggara",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "969141",
+                  "name": "Kotagede",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "973751",
+                  "name": "Makassar",
+                  "region": "South Sulawesi",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "973850",
+                  "name": "Malang",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "974074",
+                  "name": "Manado",
+                  "region": "North Sulawesi",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "974078",
+                  "name": "Manadotua Satu",
+                  "region": "North Sulawesi",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "975054",
+                  "name": "Mataram-baru",
+                  "region": "Lampung",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "975057",
+                  "name": "Mataram",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "975058",
+                  "name": "Mataram",
+                  "region": "West Nusa Tenggara",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "975253",
+                  "name": "Medan",
+                  "region": "North Sumatra",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "979675",
+                  "name": "Padang",
+                  "region": "West Sumatra",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "980311",
+                  "name": "Palembang",
+                  "region": "South Sumatra",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "981553",
+                  "name": "Parangtritis",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "982781",
+                  "name": "Pedurenan Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "982868",
+                  "name": "Pekanbaru",
+                  "region": "Riau",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "983898",
+                  "name": "Pinggirrawa Timur",
+                  "region": "Jakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "984861",
+                  "name": "Pontianak",
+                  "region": "West Kalimantan",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "988013",
+                  "name": "Samarinda",
+                  "region": "East Kalimantan",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "989399",
+                  "name": "Semarang",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "990083",
+                  "name": "Sewon",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "990262",
+                  "name": "Sidoarjo",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "992533",
+                  "name": "Sumber",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "992534",
+                  "name": "Sumber",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "992951",
+                  "name": "Surabaya",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "992961",
+                  "name": "Surakarta",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "994587",
+                  "name": "Tangerang",
+                  "region": "Banten",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "995894",
+                  "name": "Teluknaga",
+                  "region": "Banten",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                }
+              ],
+              "cities_count": 57,
+              "unique_regions_from_cities": [
+                "Bali",
+                "Banten",
+                "Central Java",
+                "East Java",
+                "East Kalimantan",
+                "Jakarta",
+                "Lampung",
+                "North Sulawesi",
+                "North Sumatra",
+                "Riau",
+                "Riau Islands Province",
+                "South Kalimantan",
+                "South Sulawesi",
+                "South Sumatra",
+                "Special Region of Yogyakarta",
+                "West Java",
+                "West Kalimantan",
+                "West Nusa Tenggara",
+                "West Sumatra"
+              ],
+              "location_types": [
+                "home",
+                "recent"
+              ]
+            },
+            "advantage_audience": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "120246461738850121",
+      "name": "TC_ General_rakdapur_0306_50121",
+      "status": "ACTIVE",
+      "adsets": [
+        {
+          "id": "120246461738630121",
+          "name": "Tourism _Rakdapur3",
+          "status": "ACTIVE",
+          "targeting": {
+            "genders": [
+              2
+            ],
+            "age_min": 23,
+            "age_max": 55,
+            "publisher_platforms": [],
+            "flexible_spec_interests": [],
+            "flexible_spec_interests_count": 0,
+            "geo_locations": {
+              "countries": [],
+              "countries_count": 0,
+              "regions": [
+                {
+                  "key": "1662",
+                  "name": "Bali"
+                },
+                {
+                  "key": "1664",
+                  "name": "Jakarta"
+                },
+                {
+                  "key": "1666",
+                  "name": "Central Java"
+                },
+                {
+                  "key": "1667",
+                  "name": "East Java"
+                },
+                {
+                  "key": "1669",
+                  "name": "Special Region of Yogyakarta"
+                },
+                {
+                  "key": "1685",
+                  "name": "West Java"
+                }
+              ],
+              "regions_count": 6,
+              "cities": [],
+              "cities_count": 0,
+              "unique_regions_from_cities": [],
+              "location_types": [
+                "home",
+                "recent"
+              ]
+            },
+            "advantage_audience": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "120245814350950121",
+      "name": "BIDCAP_ rakdapur_DramaMovies_0306",
+      "status": "ACTIVE",
+      "adsets": [
+        {
+          "id": "120245814351440121",
+          "name": "Thriller movies (movies)",
+          "status": "ACTIVE",
+          "targeting": {
+            "genders": [
+              2
+            ],
+            "age_min": 18,
+            "age_max": 65,
+            "publisher_platforms": [
+              "facebook",
+              "instagram"
+            ],
+            "flexible_spec_interests": [
+              {
+                "id": "6003346592981",
+                "name": "Belanja online (ritel)"
+              },
+              {
+                "id": "6003225325061",
+                "name": "Film thriller (film)"
+              }
+            ],
+            "flexible_spec_interests_count": 2,
+            "geo_locations": {
+              "countries": [],
+              "countries_count": 0,
+              "regions": [],
+              "regions_count": 0,
+              "cities": [
+                {
+                  "key": "1002881",
+                  "name": "Yogyakarta City",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "2687160",
+                  "name": "Batam",
+                  "region": "Riau Islands Province",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "2906066",
+                  "name": "Canggu",
+                  "region": "Bali",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "3009211",
+                  "name": "South Tangerang",
+                  "region": "Banten",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "947857",
+                  "name": "Ambarawa",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "948927",
+                  "name": "Badung",
+                  "region": "Bali",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "949414",
+                  "name": "Balikpapan",
+                  "region": "East Kalimantan",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "949797",
+                  "name": "Bandung",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "950015",
+                  "name": "Banjarmasin",
+                  "region": "South Kalimantan",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "950016",
+                  "name": "Bandar Lampung",
+                  "region": "Lampung",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "950236",
+                  "name": "Bantul",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "951390",
+                  "name": "Bekasi",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "953142",
+                  "name": "Bogor",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "953146",
+                  "name": "Bogorsero",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "955179",
+                  "name": "Cianjur Regency",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "955404",
+                  "name": "Cibinong",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "956411",
+                  "name": "Cimahi",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "956891",
+                  "name": "Cirebon",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957883",
+                  "name": "Denpasar",
+                  "region": "Bali",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957890",
+                  "name": "Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957895",
+                  "name": "Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957896",
+                  "name": "Depok",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957897",
+                  "name": "Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957898",
+                  "name": "Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "957905",
+                  "name": "Depok Satu",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "961615",
+                  "name": "Gresik",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "961616",
+                  "name": "Gresik",
+                  "region": "South Sumatra",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "964380",
+                  "name": "Kalasan",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "966980",
+                  "name": "Kediri",
+                  "region": "Bali",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "966981",
+                  "name": "Kediri",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "966982",
+                  "name": "Kediri",
+                  "region": "West Nusa Tenggara",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "969141",
+                  "name": "Kotagede",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "973751",
+                  "name": "Makassar",
+                  "region": "South Sulawesi",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "973850",
+                  "name": "Malang",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "974074",
+                  "name": "Manado",
+                  "region": "North Sulawesi",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "974078",
+                  "name": "Manadotua Satu",
+                  "region": "North Sulawesi",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "975054",
+                  "name": "Mataram-baru",
+                  "region": "Lampung",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "975057",
+                  "name": "Mataram",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "975058",
+                  "name": "Mataram",
+                  "region": "West Nusa Tenggara",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "975253",
+                  "name": "Medan",
+                  "region": "North Sumatra",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "979675",
+                  "name": "Padang",
+                  "region": "West Sumatra",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "980311",
+                  "name": "Palembang",
+                  "region": "South Sumatra",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "981553",
+                  "name": "Parangtritis",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "982781",
+                  "name": "Pedurenan Depok",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "982868",
+                  "name": "Pekanbaru",
+                  "region": "Riau",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "983898",
+                  "name": "Pinggirrawa Timur",
+                  "region": "Jakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "984861",
+                  "name": "Pontianak",
+                  "region": "West Kalimantan",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "988013",
+                  "name": "Samarinda",
+                  "region": "East Kalimantan",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "989399",
+                  "name": "Semarang",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "990083",
+                  "name": "Sewon",
+                  "region": "Special Region of Yogyakarta",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "990262",
+                  "name": "Sidoarjo",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "992533",
+                  "name": "Sumber",
+                  "region": "West Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "992534",
+                  "name": "Sumber",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "992951",
+                  "name": "Surabaya",
+                  "region": "East Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "992961",
+                  "name": "Surakarta",
+                  "region": "Central Java",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "994587",
+                  "name": "Tangerang",
+                  "region": "Banten",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                },
+                {
+                  "key": "995894",
+                  "name": "Teluknaga",
+                  "region": "Banten",
+                  "radius": 40,
+                  "distance_unit": "kilometer"
+                }
+              ],
+              "cities_count": 57,
+              "unique_regions_from_cities": [
+                "Bali",
+                "Banten",
+                "Central Java",
+                "East Java",
+                "East Kalimantan",
+                "Jakarta",
+                "Lampung",
+                "North Sulawesi",
+                "North Sumatra",
+                "Riau",
+                "Riau Islands Province",
+                "South Kalimantan",
+                "South Sulawesi",
+                "South Sumatra",
+                "Special Region of Yogyakarta",
+                "West Java",
+                "West Kalimantan",
+                "West Nusa Tenggara",
+                "West Sumatra"
+              ],
+              "location_types": [
+                "home",
+                "recent"
+              ]
+            },
+            "advantage_audience": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "120245688602090121",
+      "name": "TC_ rakdapur_DramaMovies_0306_90121",
+      "status": "ACTIVE",
+      "adsets": [
+        {
+          "id": "120245688601890121",
+          "name": "Thriller movies (movies)",
+          "status": "ACTIVE",
+          "targeting": {
+            "genders": [
+              2
+            ],
+            "age_min": 23,
+            "age_max": 55,
+            "publisher_platforms": [
+              "facebook",
+              "instagram",
+              "threads"
+            ],
+            "flexible_spec_interests": [],
+            "flexible_spec_interests_count": 0,
+            "geo_locations": {
+              "countries": [],
+              "countries_count": 0,
+              "regions": [
+                {
+                  "key": "1662",
+                  "name": "Bali"
+                },
+                {
+                  "key": "1664",
+                  "name": "Jakarta"
+                },
+                {
+                  "key": "1666",
+                  "name": "Central Java"
+                },
+                {
+                  "key": "1667",
+                  "name": "East Java"
+                },
+                {
+                  "key": "1669",
+                  "name": "Special Region of Yogyakarta"
+                },
+                {
+                  "key": "1685",
+                  "name": "West Java"
+                }
+              ],
+              "regions_count": 6,
+              "cities": [],
+              "cities_count": 0,
+              "unique_regions_from_cities": [],
+              "location_types": [
+                "home",
+                "recent"
+              ]
+            },
+            "advantage_audience": null
+          }
+        }
+      ]
+    }
+  ]
+}
