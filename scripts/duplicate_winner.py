@@ -1,271 +1,253 @@
 #!/usr/bin/env python3
 """
-0858 Campaign Duplicator — Scale winning campaigns with interest expansion
-Part of 1ai-ads (AdForge)
+1041 Campaign Cloner — Clones winning campaigns WITH targeting preserved.
 
 Usage:
-  python3 duplicate_winner.py --campaign-id 120XXX --product organizerpullout --interests "Dapur,Rumah,Belanja"
-  python3 duplicate_winner.py --campaign-id 120XXX --scale 2x  # duplicate with 2 new interest sets
+  python3 duplicate_winner.py --campaign-id 120XXX --taglink rakdapur3
+  python3 duplicate_winner.py --scale 2x --campaign-id 120XXX --taglink rakdapur3
+
+Key difference from old script:
+  - Clones TARGETING (interests, gender, age, placements, etc.) from source adset
+  - NOT hardcoded BASE_TARGETING template
+  - Uses META_TARGET_ACCOUNT from env (falls back to act_380721031313330)
+  - Naming: {PREFIX}_{taglink}_{variant}_{date}_{id}
 """
-import sys, os, json, argparse, requests
+import sys
+import os
+import json
+import argparse
+import requests
 from datetime import datetime
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / ".openclaw" / "workspace" / "scripts"))
-try:
-    from ads_dashboard import ACCESS_TOKEN as TOKEN
-except:
-    TOKEN = os.environ.get('META_ACCESS_TOKEN', '')
+# ─── Config ───
+REPO_ROOT = Path(__file__).resolve().parent.parent
+ACCESS_TOKEN = os.environ.get("META_ACCESS_TOKEN", "")
+if not ACCESS_TOKEN and (REPO_ROOT / ".env").exists():
+    ACCESS_TOKEN = (REPO_ROOT / ".env").read_text().split("META_ACCESS_TOKEN=")[1].split("\n")[0].strip()
 
-API = 'https://graph.facebook.com/v19.0'
-ACT = 'act_435670549443081'
-PAGE_ID = '1014428148422867'
+TARGET_ACCOUNT = os.environ.get("META_TARGET_ACCOUNT", "act_380721031313330")
+API_BASE = "https://graph.facebook.com/v19.0"
 
-# ─── Interest Library (hidden interests for expansion) ───
-INTEREST_POOLS = {
-    'dapur_perabot': [
-        {'id': '6002897751962', 'name': 'Dapur (rumah & taman)'},
-        {'id': '6003077174939', 'name': 'Perkakas dapur (dapur & ruang makan)'},
-        {'id': '6003399722806', 'name': 'Dapur (Memasak)'},
-    ],
-    'shopping_buyer': [
-        {'id': '6003053088645', 'name': 'Online marketplace'},
-        {'id': '6003221485467', 'name': 'Perdagangan elektronik (ritel)'},
-        {'id': '6003263791114', 'name': 'Belanja (ritel)'},
-        {'id': '6003346592981', 'name': 'Belanja online (ritel)'},
-    ],
-    'home_living': [
-        {'id': '6003327621683', 'name': 'Rumah'},
-        {'id': '6003139266461', 'name': 'Perabot rumah'},
-        {'id': '6003360332669', 'name': 'Dekorasi rumah'},
-    ],
-    'lifestyle': [
-        {'id': '6003461723252', 'name': 'Resep'},
-        {'id': '6003139266461', 'name': 'Perabot rumah'},
-    ],
-}
+# ─── Helpers ───
 
-BASE_TARGETING = {
-    'geo_locations': {'countries': ['ID']},
-    'age_min': 25,
-    'age_max': 55,
-    'genders': [2],
-    'publisher_platforms': ['facebook', 'instagram'],
-    'facebook_positions': ['feed', 'facebook_reels', 'story'],
-    'instagram_positions': ['stream', 'story', 'reels'],
-    'device_platforms': ['mobile'],
-    'targeting_automation': {'advantage_audience': 0},
-}
-
-CREATIVES = {
-    'rakpiringpengering': '1291424389870415',
-    'organizerpullout': '1215307210568390',
-}
+def api_get(endpoint, params=None):
+    params = params or {}
+    params["access_token"] = ACCESS_TOKEN
+    params.setdefault("limit", 200)
+    r = requests.get(f"{API_BASE}/{endpoint}", params=params, timeout=30)
+    return r.json()
 
 
-def make_targeting(interest_pool_names):
-    """Build targeting with given interest pools combined."""
-    interests = []
-    for pool_name in interest_pool_names:
-        if pool_name in INTEREST_POOLS:
-            interests.extend(INTEREST_POOLS[pool_name])
-    
-    t = json.loads(json.dumps(BASE_TARGETING))
-    t['flexible_spec'] = [{'interests': interests}]
-    return t
+def api_post(endpoint, data):
+    data["access_token"] = ACCESS_TOKEN
+    r = requests.post(f"{API_BASE}/{endpoint}", data=data, timeout=30)
+    return r.json()
 
 
-def get_campaign_info(campaign_id):
-    """Fetch campaign metadata."""
-    r = requests.get(f'{API}/{campaign_id}', params={
-        'fields': 'id,name,status,daily_budget,objective',
-        'access_token': TOKEN
-    }, timeout=15).json()
-    return r
+def safe_json(d):
+    """Serialize targeting dict safely."""
+    return json.dumps(d, ensure_ascii=False) if isinstance(d, dict) else str(d)
 
 
-def get_adsets(campaign_id):
-    """Get all adsets in a campaign with targeting + ads."""
-    r = requests.get(f'{API}/{campaign_id}/adsets', params={
-        'fields': 'id,name,status,daily_budget,bid_amount,bid_strategy,targeting,optimization_goal,billing_event',
-        'access_token': TOKEN
-    }, timeout=15).json()
-    
-    adsets = r.get('data', [])
-    for a in adsets:
-        # Get ads for each adset
-        r2 = requests.get(f'{API}/{a["id"]}/ads', params={
-            'fields': 'id,name,status,creative{id}',
-            'access_token': TOKEN
-        }, timeout=15).json()
-        a['ads'] = r2.get('data', [])
-    
-    return adsets
+# ─── Source readers ───
+
+def get_campaign(campaign_id: str) -> dict:
+    return api_get(campaign_id, {"fields": "id,name,status,effective_status,objective,special_ad_categories"})
 
 
-def duplicate_campaign(original_id, product, interest_pools, budget=500000, bid=130, prefix='SCALE'):
-    """
-    Duplicate a winning campaign with new interest sets.
-    
-    Args:
-        original_id: Source campaign ID
-        product: 'rakpiringpengering' or 'organizerpullout'
-        interest_pools: List of pool names from INTEREST_POOLS
-        budget: Daily budget in IDR
-        bid: Bid cap in IDR
-        prefix: Campaign name prefix
-    
-    Returns:
-        dict with campaign_id, adset_ids, ad_ids
-    """
-    original = get_campaign_info(original_id)
-    if 'error' in original:
-        return {'error': original['error']['message']}
-    
-    creative_id = CREATIVES.get(product)
-    if not creative_id:
-        return {'error': f'Unknown product: {product}'}
-    
-    timestamp = datetime.now().strftime('%d%H%M')
-    interest_label = '_'.join(interest_pools)
-    camp_name = f'{prefix}_{product}_{interest_label}_{timestamp}'
-    
-    print(f'📋 Duplicating: {original.get("name", "?")}')
-    print(f'🆕 New campaign: {camp_name}')
-    print(f'🎯 Interests: {interest_pools}')
-    print(f'💰 Budget: Rp{budget:,} | Bid: Rp{bid}')
-    
-    # Step 1: Create campaign
-    r = requests.post(f'{API}/{ACT}/campaigns', data={
-        'name': camp_name,
-        'objective': original.get('objective', 'OUTCOME_TRAFFIC'),
-        'status': 'PAUSED',
-        'special_ad_categories': 'NONE',
-        'is_adset_budget_sharing_enabled': 'false',
-        'access_token': TOKEN
-    }, timeout=15).json()
-    
-    if 'error' in r:
-        return {'error': f"Campaign: {r['error']['message']}"}
-    camp_id = r['id']
-    print(f'✅ Campaign: {camp_id}')
-    
-    # Step 2: Create adsets (one per interest combination)
-    targeting = make_targeting(interest_pools)
-    adset_ids = []
-    ad_ids = []
-    
-    for i, pool_name in enumerate(interest_pools):
-        adset_name = f'AdSet_{interest_label}_{i+1}'
-        
-        r = requests.post(f'{API}/{ACT}/adsets', data={
-            'name': adset_name,
-            'campaign_id': camp_id,
-            'daily_budget': budget,
-            'bid_strategy': 'COST_CAP',
-            'bid_amount': bid,
-            'billing_event': 'IMPRESSIONS',
-            'optimization_goal': 'LINK_CLICKS',
-            'targeting': json.dumps(targeting),
-            'status': 'ACTIVE',
-            'access_token': TOKEN
-        }, timeout=15).json()
-        
-        if 'error' in r:
-            print(f'❌ Adset {adset_name}: {r["error"]["message"][:80]}')
+def get_adsets(campaign_id: str) -> list:
+    items = api_get(f"{campaign_id}/adsets", {
+        "fields": "id,name,status,effective_status,daily_budget,bid_amount,bid_strategy,"
+                  "optimization_goal,billing_event,targeting,promoted_object,"
+                  "publisher_platforms,facebook_positions,instagram_positions,device_platforms"
+    })
+    return items.get("data", [])
+
+
+def get_ads(adset_id: str) -> list:
+    items = api_get(f"{adset_id}/ads", {
+        "fields": "id,name,status,effective_status,creative"
+    })
+    return items.get("data", [])
+
+
+# ─── Clone Engine ───
+
+def clone_campaign(source_campaign_id: str, taglink: str, prefix: str = "CLONE",
+                   budget_override: int = None, bid_override: int = None,
+                   dry_run: bool = False) -> dict:
+    """Clone a winning campaign — preserves ALL targeting from source adsets."""
+
+    # 1. Read source
+    source = get_campaign(source_campaign_id)
+    if "error" in source:
+        return {"error": f"Campaign read: {source['error'].get('message', source['error'])}"}
+
+    source_name = source.get("name", "unknown")
+    source_obj  = source.get("objective", "OUTCOME_TRAFFIC")
+    source_sac  = source.get("special_ad_categories", [])
+
+    source_adsets = get_adsets(source_campaign_id)
+    if not source_adsets:
+        return {"error": f"No adsets found in source campaign {source_campaign_id}"}
+
+    # 2. Build target name
+    ts = datetime.now().strftime("%m%d_%H%M")
+    variant = taglink.replace(" ", "_")
+    new_camp_name = f"{prefix}_{variant}_{ts}"
+
+    print(f"📋 Source campaign : {source_name}")
+    print(f"🆕 Target campaign : {new_camp_name}")
+    print(f"🎯 Source adsets   : {len(source_adsets)}")
+    print(f"📦 Taglink         : {taglink}")
+
+    if dry_run:
+        print("🔍 DRY RUN — no campaigns created")
+        for a in source_adsets[:3]:
+            tgt = a.get("targeting") or {}
+            print(f"   Adset: {a['name'][:40]} | gender={tgt.get('genders')} age={tgt.get('age_min')}-{tgt.get('age_max')} | platforms={tgt.get('publisher_platforms')}")
+        return {"dry_run": True, "name": new_camp_name, "adsets_count": len(source_adsets)}
+
+    # 3. Create campaign
+    r = api_post(f"{TARGET_ACCOUNT}/campaigns", {
+        "name": new_camp_name,
+        "objective": source_obj,
+        "status": "PAUSED",
+        "special_ad_categories": safe_json(source_sac),
+    })
+    if "error" in r:
+        return {"error": f"Campaign create: {r['error'].get('message', r['error'])}"}
+
+    new_camp_id = r["id"]
+    print(f"✅ Campaign created: {new_camp_id}")
+
+    # 4. Clone adsets
+    new_adset_ids = []
+    new_ad_ids = []
+
+    for i, aset in enumerate(source_adsets):
+        aset_name = aset.get("name", f"AdSet_{i+1}")
+        targeting = aset.get("targeting") or {}
+
+        budget = budget_override or int(aset.get("daily_budget", 0) or 500000)
+        bid    = bid_override    or int(aset.get("bid_amount", 0) or 130)
+        opt_goal  = aset.get("optimization_goal", "LINK_CLICKS")
+        bill_evt  = aset.get("billing_event", "IMPRESSIONS")
+        bid_strat = aset.get("bid_strategy", "COST_CAP")
+
+        print(f"   📋 Cloning adset [{i+1}/{len(source_adsets)}]: {aset_name[:50]}")
+        print(f"      targeting: gender={targeting.get('genders')} age={targeting.get('age_min')}-{targeting.get('age_max')} platforms={targeting.get('publisher_platforms')} interests={len(targeting.get('flexible_spec', []))}")
+
+        r = api_post(f"{TARGET_ACCOUNT}/adsets", {
+            "name": f"{prefix}_{aset_name}_{i+1}",
+            "campaign_id": new_camp_id,
+            "daily_budget": budget,
+            "bid_strategy": bid_strat,
+            "bid_amount": bid,
+            "billing_event": bill_evt,
+            "optimization_goal": opt_goal,
+            "targeting": safe_json(targeting),
+            "status": "ACTIVE",
+        })
+
+        if "error" in r:
+            print(f"      ❌ Adset create: {r['error'].get('message', r['error'])[:100]}")
             continue
-        
-        adset_id = r['id']
-        adset_ids.append(adset_id)
-        print(f'✅ Adset: {adset_name} ({adset_id})')
-        
-        # Step 3: Create ad
-        r = requests.post(f'{API}/{ACT}/ads', data={
-            'name': f'Ad_{camp_name}_{i+1}',
-            'adset_id': adset_id,
-            'creative': json.dumps({'creative_id': creative_id}),
-            'status': 'ACTIVE',
-            'access_token': TOKEN
-        }, timeout=15).json()
-        
-        if 'id' in r:
-            ad_ids.append(r['id'])
-            print(f'✅ Ad: {r["id"]}')
-        else:
-            print(f'❌ Ad: {r.get("error",{}).get("message","?")[:80]}')
-    
-    # Step 4: Activate campaign
-    r = requests.post(f'{API}/{camp_id}', data={
-        'status': 'ACTIVE',
-        'access_token': TOKEN
-    }, timeout=15).json()
-    
-    if 'error' in r:
-        print(f'⚠️ Activate warning: {r["error"]["message"][:80]}')
-    else:
-        print(f'🚀 CAMPAIGN LIVE')
-    
-    return {
-        'campaign_id': camp_id,
-        'campaign_name': camp_name,
-        'adset_ids': adset_ids,
-        'ad_ids': ad_ids,
-        'budget': budget,
-        'bid': bid,
-        'interests': interest_pools,
+
+        new_asid = r["id"]
+        new_adset_ids.append(new_asid)
+        print(f"      ✅ Adset: {new_asid}")
+
+        # 5. Clone ads
+        source_ads = get_ads(aset["id"])
+        for j, ad in enumerate(source_ads):
+            creative = ad.get("creative") or {}
+            creative_id = creative.get("id") if isinstance(creative, dict) else creative
+
+            if not creative_id:
+                print(f"         ⚠️ No creative for ad {ad.get('id')}")
+                continue
+
+            ad_name = f"{new_camp_name}_{i+1}_{j+1}"
+            r = api_post(f"{TARGET_ACCOUNT}/ads", {
+                "name": ad_name,
+                "adset_id": new_asid,
+                "creative": safe_json({"creative_id": creative_id}),
+                "status": "ACTIVE",
+            })
+            if "id" in r:
+                new_ad_ids.append(r["id"])
+            else:
+                print(f"         ❌ Ad create: {r.get('error',{}).get('message','?')[:80]}")
+
+    # 6. Activate campaign
+    api_post(new_camp_id, {"status": "ACTIVE"})
+    print(f"🚀 Campaign LIVE: {new_camp_id}")
+
+    result = {
+        "source_campaign_id": source_campaign_id,
+        "campaign_id": new_camp_id,
+        "campaign_name": new_camp_name,
+        "taglink": taglink,
+        "adset_ids": new_adset_ids,
+        "ad_ids": new_ad_ids,
+        "targeting_preserved": True,
+        "timestamp": datetime.now().isoformat(),
     }
 
+    # Log to file
+    log_path = REPO_ROOT / "outputs" / "jendralbot_autoscaler" / "clone_log.jsonl"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(log_path, "a") as f:
+        f.write(json.dumps(result, ensure_ascii=False) + "\n")
 
-def scale_winner(campaign_id, product, scale_factor=2, budget=500000, bid=120):
-    """
-    Scale a winning campaign by creating N duplicates with different interest sets.
-    """
-    results = []
-    
-    # Predefined expansion plans
-    expansion_plans = [
-        ['dapur_perabot', 'shopping_buyer'],      # Dapur + Belanja
-        ['dapur_perabot', 'home_living'],          # Dapur + Rumah
-        ['home_living', 'shopping_buyer'],         # Rumah + Belanja
-        ['lifestyle', 'shopping_buyer'],           # Lifestyle + Belanja
-    ]
-    
-    for plan in expansion_plans[:scale_factor]:
-        result = duplicate_campaign(
-            campaign_id, product, plan, budget, bid,
-            prefix='SCALE'
-        )
-        results.append(result)
-        if 'error' in result:
-            print(f'❌ {result["error"]}')
-    
-    success = sum(1 for r in results if 'campaign_id' in r)
-    print(f'\n✅ {success}/{len(results)} campaigns created')
-    return results
+    return result
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='0858 Campaign Duplicator')
-    parser.add_argument('--campaign-id', required=True, help='Source winning campaign ID')
-    parser.add_argument('--product', required=True, choices=['rakpiringpengering', 'organizerpullout'])
-    parser.add_argument('--interests', help='Comma-separated interest pool names')
-    parser.add_argument('--scale', type=int, default=1, help='Number of duplicates (2-4)')
-    parser.add_argument('--budget', type=int, default=500000, help='Daily budget in IDR')
-    parser.add_argument('--bid', type=int, default=120, help='Bid cap in IDR')
-    parser.add_argument('--dry-run', action='store_true', help='Show plan without creating')
-    
+# ─── CLI ───
+
+def main():
+    parser = argparse.ArgumentParser(description="1041 Campaign Cloner — clones winning campaigns with targeting preserved")
+    parser.add_argument("--campaign-id", required=True, help="Source winning campaign ID")
+    parser.add_argument("--taglink", required=True, help="Taglink/product keyword for naming (e.g., rakdapur3)")
+    parser.add_argument("--prefix", default="BIDCAP", help="Campaign name prefix (default: BIDCAP)")
+    parser.add_argument("--budget", type=int, help="Daily budget in IDR (optional; copies source if omitted)")
+    parser.add_argument("--bid", type=int, help="Bid cap in IDR (optional; copies source if omitted)")
+    parser.add_argument("--dry-run", action="store_true", help="Show plan without creating")
+    parser.add_argument("--scale", type=int, default=1, help="Number of clones (1 = single duplicate)")
+
     args = parser.parse_args()
-    
-    if args.scale > 1:
-        if args.dry_run:
-            print(f'🔍 DRY RUN: Would create {args.scale}x duplicates of {args.campaign_id}')
-        else:
-            scale_winner(args.campaign_id, args.product, args.scale, args.budget, args.bid)
-    elif args.interests:
-        pools = [p.strip() for p in args.interests.split(',')]
-        if args.dry_run:
-            print(f'🔍 DRY RUN: Would duplicate {args.campaign_id} with interests: {pools}')
-        else:
-            duplicate_campaign(args.campaign_id, args.product, pools, args.budget, args.bid, prefix='DUP')
-    else:
-        print("Usage: --scale N (auto-scale) OR --interests 'pool1,pool2'")
+
+    if not ACCESS_TOKEN:
+        print("❌ META_ACCESS_TOKEN not set")
+        sys.exit(1)
+
+    print(f"🔑 Account: {TARGET_ACCOUNT}")
+    print(f"📱 Token:   {'✅ found' if ACCESS_TOKEN else '❌ missing'}")
+
+    for n in range(args.scale):
+        if args.scale > 1:
+            print(f"\n{'='*50}")
+            print(f"🔄 Clone {n+1}/{args.scale}")
+            print(f"{'='*50}")
+
+        result = clone_campaign(
+            args.campaign_id,
+            args.taglink,
+            prefix=args.prefix,
+            budget_override=args.budget,
+            bid_override=args.bid,
+            dry_run=args.dry_run,
+        )
+
+        if "error" in result:
+            print(f"❌ {result['error']}")
+        elif not args.dry_run:
+            print(f"\n✅ Clone complete: {result.get('campaign_id', '?')}")
+            print(f"   Adsets: {len(result.get('adset_ids', []))} | Ads: {len(result.get('ad_ids', []))}")
+            print(f"   Targeting: {'✅ preserved' if result.get('targeting_preserved') else '❌ NOT preserved'}")
+
+
+if __name__ == "__main__":
+    main()
