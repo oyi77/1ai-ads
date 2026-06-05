@@ -27,11 +27,19 @@ OUTPUT_DIR = REPO_ROOT / "outputs" / "jendralbot_autoscaler"
 REPORTS_LOG = OUTPUT_DIR / "autoscaler_report.log"
 LEGACY_MEDIA = REPO_ROOT / "media" / "inbound"
 DATA_DIR_COMPAT = os.environ.get("AIBIC_MEDIA_DIR") or REPO_ROOT / "data" / "shopee"
-DATA_DIR = Path(DATA_DIR_COMPAT)
+REPORTS_LOG = OUTPUT_DIR / "autoscaler_report.log"
 TAGLINK_MAP_PATH = DATA_DIR / "taglink_mapping_2026-06-04.json"
 
 for path in (DATA_DIR, OUTPUT_DIR):
     path.mkdir(parents=True, exist_ok=True)
+
+
+def log(msg: str) -> None:
+    ts = datetime.now().isoformat()
+    line = f"{ts} | {msg}"
+    print(line)
+    with open(REPORTS_LOG, "a") as f:
+        f.write(line + "\n")
 
 DYNAMIC_CANCEL_THRESHOLD_HIGH = 12.0
 DYNAMIC_CANCEL_THRESHOLD_LOW = 3.0
