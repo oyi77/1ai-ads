@@ -1,0 +1,30 @@
+{
+  "scale_up": [
+    {
+      "product": "IC Regulator L7812 dengan Output 12v",
+      "commission": 279865,
+      "orders": 115,
+      "recommendation": "SCALE UP - High volume, low cancellation"
+    },
+    {
+      "product": "Gantungan Kunci Kost Homestay Penginapan Bahan Akr",
+      "commission": 70419,
+      "orders": 38,
+      "recommendation": "SCALE UP - High volume, low cancellation"
+    },
+    {
+      "product": "Satu Keluarga Gantungan Baju Belakang Pintu Multif",
+      "commission": 15636,
+      "orders": 12,
+      "recommendation": "SCALE UP - High volume, low cancellation"
+    }
+  ],
+  "pause": [],
+  "monitor": [],
+  "budget_recommendation": {
+    "top_5_products": 270519,
+    "top_10_products": 383235,
+    "test_budget": 67629,
+    "total_recommended": 450865
+  }
+}

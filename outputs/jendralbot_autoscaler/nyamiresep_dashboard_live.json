@@ -1,0 +1,20 @@
+{
+  "paused": 1,
+  "paused_platforms": [
+    "Threads"
+  ],
+  "last_pause_update": "2026-06-05T18:59:42.407185",
+  "in_grace": true,
+  "report_date": "2026-06-04",
+  "paused_rules": {
+    "Threads": {
+      "reasons": [
+        "Low volume (3 orders)"
+      ],
+      "orders": 3,
+      "cancel_rate": 0.0,
+      "conv_rate": 13.04,
+      "note": "Related active taglinks: rakpiringpengering"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-06-05T18:59:38.156727",
+  "total_clicks": 1422,
+  "total_orders": 197,
+  "completed_orders": 184,
+  "pending_orders": 184,
+  "canceled_orders": 5,
+  "completed_revenue": 441982,
+  "pending_revenue": 441982,
+  "canceled_revenue": 0,
+  "click_order_rate": 13.8537,
+  "top_platforms": {
+    "Instagram": 88,
+    "Facebook": 56,
+    "Others": 28,
+    "Websites": 22,
+    "Threads": 3
+  }
+}

@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 # === CONFIG ===
-ACCOUNT = 'act_380721031313330'
+ACCOUNT = os.getenv('META_TARGET_ACCOUNT', 'act_380721031313330')
 TEST_CPC_LIMIT = 200
 WINNER_CPC_LIMIT = 150
 MIN_CLICKS_FOR_JUDGMENT = 3  # need at least 3 clicks to judge CPC
@@ -68,7 +68,7 @@ log(f"  TEST limit: Rp {TEST_CPC_LIMIT} | WINNER limit: Rp {WINNER_CPC_LIMIT} | 
 insights = api(f'{ACCOUNT}/insights', {
     'level': 'campaign',
     'fields': 'campaign_id,campaign_name,spend,impressions,clicks,inline_link_clicks,cpc,ctr',
-    'time_range': json.dumps({'since': '2026-06-03', 'until': '2026-06-03'}),
+    'time_range': json.dumps({'since': (datetime.now() - __import__('datetime').timedelta(days=1)).strftime('%Y-%m-%d'), 'until': datetime.now().strftime('%Y-%m-%d')}),
 })
 
 campaigns = api(f'{ACCOUNT}/campaigns', {'fields': 'id,name,status,effective_status'})

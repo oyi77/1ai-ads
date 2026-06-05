@@ -1,0 +1,36 @@
+🔥 JENDRALBOT AUTOSCALER REPORT - 05 June 2026
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 CAMPAIGN METRICS
+📊 Website Clicks: 1,422
+📈 Click-to-Order Rate: 13.85%
+
+💰 SALES SUMMARY
+Total Orders: 197
+Pending: 184 (IDR 441,982)
+
+Platform Performance:
+  • Instagram: 88 orders
+  • Facebook: 56 orders
+  • Others: 28 orders
+  • Websites: 22 orders
+  • Threads: 3 orders
+
+🚀 OPTIMIZATION PLAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ SCALE UP:
+  • IC Regulator L7812 dengan Output 12... (orders 115)
+  • Gantungan Kunci Kost Homestay Pengi... (orders 38)
+  • Satu Keluarga Gantungan Baju Belaka... (orders 12)
+
+Ὃ0 BUDGET RECOMMENDATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total recommended: 450,865 IDR
+
+💡 NEXT ACTIONS:
+1. Scale winners from SCALE UP
+2. Pause high-cancel products
+3. Keep monitoring low volume
+4. Re-run after next report
+
+📅 Next analysis: 24 hours
