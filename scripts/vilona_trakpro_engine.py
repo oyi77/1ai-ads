@@ -742,26 +742,25 @@ def create_lc_clone(original_campaign, account_id, account_config):
                 audience = p.capitalize()
                 break
         
-        # Use account shopee name from config, not hardcoded
-        shopee_account = account_config.get("name", "shopee").lower().replace(" ","_")
+        # ─── COMPACT NAMING (2026-06-06 convention) ──────────────────────
+        # Format: {STRATEGY}_{TAGLINK}_{AUDIENCE}_{MMDD}
+        # No account name, no product duplication, no trailing IDs
         
-        # Find next clone number
+        # Build compact campaign name
+        camp_name = f"LC_{taglink}_{audience}_{today_str}"
+        adset_name = f"LC_{taglink}_{audience}_2555"
+        ad_name = f"{taglink}_Vdo1_v1"
+        
+        # Deduplicate: find existing clones by prefix
         existing = fb_get(f"{account_id}/campaigns",
             fields="name", limit="200")
-        clone_num = 1
-        for c in existing.get("data", []):
-            if f"{product}_{taglink}_{audience}" in c["name"]:
-                if "_CLONE" in c["name"]:
-                    try:
-                        num = int(c["name"].split("CLONE")[-1])
-                        clone_num = max(clone_num, num + 1)
-                    except:
-                        clone_num += 1
-        
-        # Build names per Veris convention
-        camp_name = f"LC_{product.capitalize()}_{taglink}_{audience}_{today_str}_CLONE{clone_num}"
-        adset_name = f"LC_{product.capitalize()}_{audience}_25-55"
-        ad_name = f"{shopee_account}_{product.capitalize()}_Video1_v1"
+        clone_suffix = ""
+        base = camp_name
+        n = 2
+        existing_names = {c.get("name", "") for c in existing.get("data", [])}
+        while camp_name in existing_names:
+            camp_name = f"{base}_v{n}"
+            n += 1
         
         # Create campaign
         camp_result = fb_post(f"{account_id}/campaigns",
