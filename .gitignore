@@ -24,3 +24,5 @@ data/shopee/*.json
 data/*.json
 backups/
 adforge.db
+.env
+.fb_token_0858
