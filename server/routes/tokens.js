@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { TokenService } from '../services/token-service.js';
 
-export default function createTokenRouter() {
+export function createTokenRouter() {
   const router = Router();
   const svc = new TokenService();
 

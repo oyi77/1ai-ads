@@ -1,10 +1,11 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import config from '../config/index.js';
 
 // JWT secret must be provided via environment — no random fallback
 // Tokens created with a random secret would be invalidated on every restart
-const secret = process.env.JWT_SECRET || (() => {
-  if (process.env.NODE_ENV === 'test') {
+const secret = config.jwtSecret || (() => {
+  if (config.nodeEnv === 'test') {
     return 'test-secret-do-not-use-in-production';
   }
   throw new Error('FATAL: JWT_SECRET environment variable is required. Set it in .env before starting the server.');

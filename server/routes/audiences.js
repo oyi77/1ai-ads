@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { AudienceService } from '../services/audience-service.js';
 
-export default function createAudienceRouter(metaApi) {
+export function createAudienceRouter(metaApi) {
   const router = Router();
   const svc = new AudienceService(metaApi);
 

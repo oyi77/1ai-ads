@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { PixelService } from '../services/pixel-service.js';
 
-export default function createPixelRouter(metaApi) {
+export function createPixelRouter(metaApi) {
   const router = Router();
   const svc = new PixelService(metaApi);
 

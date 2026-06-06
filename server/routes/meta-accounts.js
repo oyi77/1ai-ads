@@ -89,7 +89,7 @@ export function createMetaAccountsRouter(settingsRepo) {
 
       let decoded;
       try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET || (() => { throw new Error('JWT_SECRET not configured'); })());
+        decoded = jwt.verify(token, config.jwtSecret);
       } catch (e) {
         return res.status(401).json({ success: false, error: 'Invalid token' });
       }
@@ -140,7 +140,7 @@ export function createMetaAccountsRouter(settingsRepo) {
 
       let decoded;
       try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET || (() => { throw new Error('JWT_SECRET not configured'); })());
+        decoded = jwt.verify(token, config.jwtSecret);
       } catch (e) {
         return res.status(401).json({ success: false, error: 'Invalid token' });
       }
@@ -193,7 +193,7 @@ export function createMetaAccountsRouter(settingsRepo) {
 
       let decoded;
       try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET || (() => { throw new Error('JWT_SECRET not configured'); })());
+        decoded = jwt.verify(token, config.jwtSecret);
       } catch (e) {
         return res.status(401).json({ success: false, error: 'Invalid token' });
       }

@@ -3,7 +3,7 @@ import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('track-route');
 
-export default function createTrackRouter(repo, utmTagger) {
+export function createTrackRouter(repo, utmTagger) {
   const router = Router();
 
   router.get('/:ad_id', (req, res) => {

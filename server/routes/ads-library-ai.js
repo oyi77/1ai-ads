@@ -2,6 +2,7 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import { createLogger } from '../lib/logger.js';
 import { CacheService } from '../services/cache-service.js';
+import config from '../config/index.js';
 
 const log = createLogger('ads-library-ai');
 
@@ -34,7 +35,7 @@ function persistentKey(sha1) {
 function resolveCookies(settingsRepo) {
   const fromDb = settingsRepo?.get?.(COOKIES_KEY);
   if (fromDb && typeof fromDb === 'string' && fromDb.trim()) return fromDb;
-  return process.env.ADS_LIBRARY_AI_COOKIES || null;
+  return config.adsLibraryAiCookies;
 }
 
 function savePersistent(settingsRepo, key, value) {
@@ -163,7 +164,7 @@ export function createAdsLibraryAiRouter(settingsRepo) {
       success: true,
       data: {
         configured: Boolean(cookies),
-        source: settingsRepo?.get?.(COOKIES_KEY) ? 'database' : (process.env.ADS_LIBRARY_AI_COOKIES ? 'env' : 'none'),
+        source: settingsRepo?.get?.(COOKIES_KEY) ? 'database' : (config.adsLibraryAiCookies ? 'env' : 'none'),
         endpoint: GRAPHQL_ENDPOINT,
         docId: SEARCH_DOC_ID,
         defaults: { country: DEFAULT_COUNTRY, adType: DEFAULT_AD_TYPE, searchType: DEFAULT_SEARCH_TYPE },

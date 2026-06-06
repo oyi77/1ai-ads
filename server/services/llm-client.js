@@ -21,9 +21,9 @@ async function getAIPipeline() {
 
   _pipelineInstance = new _AIPipelineClass({
     mode: 'direct',
-    directUrl: process.env.AI_PIPELINE_DIRECT_URL || config.llm.url,
-    directApiKey: process.env.AI_PIPELINE_DIRECT_API_KEY || config.llm.apiKey,
-    defaultModel: process.env.AI_PIPELINE_DEFAULT_MODEL || config.llm.model,
+    directUrl: config.aiPipelineDirectUrl || config.llm.url,
+    directApiKey: config.aiPipelineDirectApiKey || config.llm.apiKey,
+    defaultModel: config.aiPipelineDefaultModel || config.llm.model,
     timeout: (config.llm.timeout || 30000),
   });
   return _pipelineInstance;

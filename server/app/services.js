@@ -50,12 +50,12 @@ export function createServices({ db, repos, params }) {
   const orchestrator = new CampaignOrchestrator(metaApi, creativeStudio);
   const realtimeService = new RealtimeService(metaApi, repos.campaignsRepo);
 
-  const contentBridgeUrl = repos.settingsRepo.getKey?.('content_bridge_url') || process.env.CONTENT_BRIDGE_URL || 'http://localhost:3000';
-  const contentBridgeApiKey = repos.settingsRepo.getKey?.('content_bridge_api_key') || process.env.CONTENT_BRIDGE_API_KEY || '';
+  const contentBridgeUrl = repos.settingsRepo.getKey?.('content_bridge_url') || config.contentBridgeUrl;
+  const contentBridgeApiKey = repos.settingsRepo.getKey?.('content_bridge_api_key') || config.contentBridgeApiKey;
   const contentBridge = new ContentBridge(contentBridgeUrl, contentBridgeApiKey);
 
-  const socialBridgeUrl = repos.settingsRepo.getKey?.('social_bridge_url') || process.env.SOCIAL_BRIDGE_URL || 'http://localhost:8200';
-  const socialBridgeApiKey = repos.settingsRepo.getKey?.('social_bridge_api_key') || process.env.SOCIAL_BRIDGE_API_KEY || '';
+  const socialBridgeUrl = repos.settingsRepo.getKey?.('social_bridge_url') || config.socialBridgeUrl;
+  const socialBridgeApiKey = repos.settingsRepo.getKey?.('social_bridge_api_key') || config.socialBridgeApiKey;
   const socialBridge = new SocialBridge(socialBridgeUrl, socialBridgeApiKey);
 
   const aiAgent = new AiAgent(repos.settingsRepo, repos.adsRepo, repos.campaignsRepo, llmClient, repos.suggestionsRepo, repos.landingRepo);

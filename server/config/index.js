@@ -35,6 +35,23 @@ const config = {
   get similarwebApiKey() { return process.env.SIMILARWEB_API_KEY || ''; },
   get rateLimitWindowMs() { return parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10); },
   get rateLimitMax() { return parseInt(process.env.RATE_LIMIT_MAX || '100', 10); },
+  get contentBridgeUrl() { return process.env.CONTENT_BRIDGE_URL || 'http://localhost:3000'; },
+  get contentBridgeApiKey() { return process.env.CONTENT_BRIDGE_API_KEY || ''; },
+  get socialBridgeUrl() { return process.env.SOCIAL_BRIDGE_URL || 'http://localhost:8200'; },
+  get socialBridgeApiKey() { return process.env.SOCIAL_BRIDGE_API_KEY || ''; },
+  get metaAiCookies() { return process.env.META_AI_COOKIES || null; },
+  get adsLibraryAiCookies() { return process.env.ADS_LIBRARY_AI_COOKIES || null; },
+ get telegramBotToken() { return process.env.TELEGRAM_BOT_TOKEN || ''; },
+ get telegramChatId() { return process.env.TELEGRAM_CHAT_ID || ''; },
+ get notificationWebhooks() { return process.env.NOTIFICATION_WEBHOOKS || ''; },
+ get webhookVerifyToken() { return process.env.WEBHOOK_VERIFY_TOKEN || ''; },
+ get aiPipelineDirectUrl() { return process.env.AI_PIPELINE_DIRECT_URL || ''; },
+ get aiPipelineDirectApiKey() { return process.env.AI_PIPELINE_DIRECT_API_KEY || ''; },
+ get aiPipelineDefaultModel() { return process.env.AI_PIPELINE_DEFAULT_MODEL || ''; },
+ get gcpServiceAccount() { return process.env.GCP_SERVICE_ACCOUNT || ''; },
+ get gcpProjectId() { return process.env.GCP_PROJECT_ID || ''; },
+ get bigqueryDataset() { return process.env.BIGQUERY_DATASET || 'adforge_reports'; },
+ get gcpServiceAccountEmail() { return process.env.GCP_SERVICE_ACCOUNT_EMAIL || ''; },
 };
 
 export function validateConfig() {

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-export default function createAttributionRouter(attributionService, attributionRepo) {
+export function createAttributionRouter(attributionService, attributionRepo) {
   const router = Router();
 
   router.get('/', (req, res) => {

@@ -1,3 +1,5 @@
+import { api } from '../lib/api.js';
+
 export function renderAutonomousSection() {
   return `
     <div class="space-y-6 animate-fadeIn">
@@ -137,6 +139,37 @@ export function renderAutonomousSection() {
       </div>
     </div>
   `;
+}
+
+export function bindAutonomousSection(el, state, { loadData, render }) {
+  const toggle = el.querySelector('#autonomy-toggle');
+  const startBtn = el.querySelector('#start-autonomous');
+  const feedback = el.querySelector('#autonomy-feedback');
+
+  if (toggle) {
+    toggle.checked = state.aiMode?.autonomy_level === 'full';
+    toggle.addEventListener('change', () => {
+      state.aiMode.autonomy_level = toggle.checked ? 'full' : 'off';
+      if (feedback) {
+        feedback.textContent = toggle.checked ? 'Engine Status: Armed' : 'Engine Status: Standby';
+      }
+    });
+  }
+
+  if (startBtn) {
+    startBtn.addEventListener('click', async () => {
+      startBtn.disabled = true;
+      startBtn.textContent = 'Activating...';
+      try {
+        await api.post('/ai-agent/toggle', { enabled: state.aiMode.autonomy_level === 'full' });
+        await loadData();
+        render();
+      } catch (e) {
+        startBtn.textContent = 'Activation Failed';
+        console.error('Autonomous activation failed', e);
+      }
+    });
+  }
 }
 
 function renderActionOption(value, label, desc) {

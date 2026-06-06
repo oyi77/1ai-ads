@@ -5,7 +5,7 @@ import config from '../config/index.js';
 
 const log = createLogger('webhooks');
 
-export default function createWebhookRouter(webhookEventsRepo) {
+export function createWebhookRouter(webhookEventsRepo) {
   const router = Router();
   const handler = new WebhookHandler();
   const VERIFY_TOKEN = config.webhookVerifyToken || 'adforge_webhook_2026';

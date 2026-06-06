@@ -33,9 +33,8 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
       return 'https://adforge.aitradepulse.com/api/auth/facebook/callback';
     })();
     
-    // Load FB credentials from environment (dotenv already loaded in server.js)
-    const fbAppId = process.env.FB_APP_ID;
-    const fbSecret = process.env.FB_APP_SECRET;
+    const fbAppId = config.fbAppId;
+    const fbSecret = config.fbAppSecret;
     
     if (!fbAppId || !fbSecret) {
       return res.status(500).json({ success: false, error: 'FB_APP_ID or FB_APP_SECRET not configured' });
@@ -57,8 +56,8 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
       return res.status(400).json({ success: false, error: 'Code parameter required' });
     }
     
-    const fbAppId = process.env.FB_APP_ID;
-    const fbSecret = process.env.FB_APP_SECRET;
+    const fbAppId = config.fbAppId;
+    const fbSecret = config.fbAppSecret;
     const callbackUrl = redirect_uri || (() => {
       const hostname = req.get('host') || '';
       const isLocal = hostname.includes('localhost') || hostname.includes('127.0.0.1');

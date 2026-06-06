@@ -1,12 +1,13 @@
 import { createLogger } from '../lib/logger.js';
+import appConfig from '../config/index.js';
 
 const log = createLogger('notification-service');
 
 export class NotificationService {
-  constructor(config = {}) {
-    this.telegramToken = config.telegramToken || process.env.TELEGRAM_BOT_TOKEN || '';
-    this.telegramChatId = config.telegramChatId || process.env.TELEGRAM_CHAT_ID || '';
-    this.webhookUrls = config.webhookUrls || (process.env.NOTIFICATION_WEBHOOKS || '').split(',').filter(Boolean);
+  constructor(options = {}) {
+    this.telegramToken = options.telegramToken || appConfig.telegramBotToken;
+    this.telegramChatId = options.telegramChatId || appConfig.telegramChatId;
+    this.webhookUrls = options.webhookUrls || (appConfig.notificationWebhooks || '').split(',').filter(Boolean);
   }
 
   async sendTelegram(message) {

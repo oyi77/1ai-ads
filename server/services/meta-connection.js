@@ -23,8 +23,8 @@ const API_VERSION = config.metaApiVersion;
  * @returns {{ accessToken: string, expiresIn: number }}
  */
 export async function exchangeCodeForToken(code, redirectUri) {
-  const fbAppId = process.env.FB_APP_ID;
-  const fbSecret = process.env.FB_APP_SECRET;
+  const fbAppId = config.fbAppId;
+  const fbSecret = config.fbAppSecret;
 
   if (!fbAppId || !fbSecret) {
     throw new Error('FB_APP_ID or FB_APP_SECRET not configured');

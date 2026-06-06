@@ -1,6 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { createLogger } from '../lib/logger.js';
+import config from '../config/index.js';
 
 const log = createLogger('adspirer-mcp-client');
 const MCP_URL = 'https://mcp.adspirer.com/mcp';
@@ -79,7 +80,7 @@ export class AdspirerMcpClient {
       body: new URLSearchParams({
         grant_type: 'refresh_token',
         refresh_token: creds.refresh_token,
-        client_id: process.env.ADSPIRER_CLIENT_ID || '',
+        client_id: config.adspirerClientId,
       }),
     });
     if (!resp.ok) throw new Error(`Token refresh failed (${resp.status}). Please reconnect Adspirer.`);

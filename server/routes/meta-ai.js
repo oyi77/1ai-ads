@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { createLogger } from '../lib/logger.js';
+import config from '../config/index.js';
 
 const log = createLogger('meta-ai');
 
@@ -12,7 +13,7 @@ const ACCOUNT_KEY = 'meta_ai_ad_account_id';
 function resolveCookies(settingsRepo) {
   const fromDb = settingsRepo?.get?.(COOKIES_KEY);
   if (fromDb && typeof fromDb === 'string' && fromDb.trim()) return fromDb;
-  return process.env.META_AI_COOKIES || null;
+  return config.metaAiCookies;
 }
 
 function resolveAdAccountId(settingsRepo, bodyValue) {
@@ -31,7 +32,7 @@ export function createMetaAiRouter(settingsRepo) {
       success: true,
       data: {
         configured: Boolean(cookies),
-        source: settingsRepo?.get?.(COOKIES_KEY) ? 'database' : (process.env.META_AI_COOKIES ? 'env' : 'none'),
+        source: settingsRepo?.get?.(COOKIES_KEY) ? 'database' : (config.metaAiCookies ? 'env' : 'none'),
         endpoint: MAIBA_ENDPOINT,
         docId: MAIBA_DOC_ID,
         adAccountId: settingsRepo?.get?.(ACCOUNT_KEY) || null,

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { BatchService } from '../services/batch-service.js';
 
-export default function createBatchRouter(metaApi) {
+export function createBatchRouter(metaApi) {
   const router = Router();
   const svc = new BatchService(metaApi);
 

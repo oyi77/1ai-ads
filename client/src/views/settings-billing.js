@@ -86,19 +86,11 @@ export function bindBillingSection(el, state, { loadData, render }) {
       const errorEl = el.querySelector('#billing-error');
       errorEl.classList.add('hidden');
       try {
-        const res = await fetch('/api/payments/create-checkout-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('1ai-ads_token')}`
-          },
-          body: JSON.stringify({ plan: 'pro' })
-        });
-        const data = await res.json();
-        if (data.success && data.sessionUrl) {
+        const data = await api.post('/payments/create-checkout-session', { plan: 'pro' });
+        if (data.sessionUrl) {
           window.location.href = data.sessionUrl;
         } else {
-          errorEl.textContent = data.error || 'Failed to create checkout session';
+          errorEl.textContent = 'Failed to create checkout session';
           errorEl.classList.remove('hidden');
         }
       } catch (err) {
@@ -112,18 +104,11 @@ export function bindBillingSection(el, state, { loadData, render }) {
       const errorEl = el.querySelector('#billing-error');
       errorEl.classList.add('hidden');
       try {
-        const res = await fetch('/api/payments/customer-portal', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('1ai-ads_token')}`
-          }
-        });
-        const data = await res.json();
-        if (data.success && data.portalUrl) {
+        const data = await api.post('/payments/customer-portal');
+        if (data.portalUrl) {
           window.location.href = data.portalUrl;
         } else {
-          errorEl.textContent = data.error || 'Failed to create customer portal session';
+          errorEl.textContent = 'Failed to create customer portal session';
           errorEl.classList.remove('hidden');
         }
       } catch (err) {

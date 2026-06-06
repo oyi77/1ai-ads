@@ -14,7 +14,7 @@ import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('routes:selow');
 
-export function createSelowRoutes(settingsRepo) {
+export function createSelowRouter(settingsRepo) {
   const router = Router();
 
   // Cache the SELOW API instance; only recreate when cookies change

@@ -22,7 +22,7 @@ const log = createLogger('ads-library-routes');
 // Create service instance
 const adsLibraryService = createUnifiedAdsLibraryService();
 
-export function createAdsLibraryRoutes() {
+export function createAdsLibraryRouter() {
   const router = Router();
 
   /**

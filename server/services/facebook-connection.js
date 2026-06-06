@@ -5,9 +5,10 @@
  * Handles only: OAuth token exchange, account discovery, platform linking.
  */
 
+import config from '../config/index.js';
 import { MetaAdsAPI } from './meta-api.js';
 
-const API_VERSION = 'v21.0';
+const API_VERSION = config.metaApiVersion;
 
 export class FacebookConnectionService {
   constructor(platformAccountsRepo) {
@@ -23,9 +24,9 @@ export class FacebookConnectionService {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        client_id: process.env.FB_APP_ID,
+        client_id: config.fbAppId,
         redirect_uri: redirectUri,
-        client_secret: process.env.FB_APP_SECRET,
+        client_secret: config.fbAppSecret,
         code: authCode,
       }),
     });
@@ -37,8 +38,8 @@ export class FacebookConnectionService {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         grant_type: 'fb_exchange_token',
-        client_id: process.env.FB_APP_ID,
-        client_secret: process.env.FB_APP_SECRET,
+        client_id: config.fbAppId,
+        client_secret: config.fbAppSecret,
         access_token: data.access_token,
       }),
     });

@@ -306,3 +306,17 @@ CREATE INDEX IF NOT EXISTS idx_schedules_time ON schedules(schedule_time);
 
 CREATE TRIGGER IF NOT EXISTS schedules_updated_at AFTER UPDATE ON schedules
 BEGIN UPDATE schedules SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
+
+CREATE TABLE IF NOT EXISTS ai_suggestions (
+ id TEXT PRIMARY KEY,
+ user_id TEXT NOT NULL,
+ type TEXT NOT NULL,
+ target_id TEXT,
+ target_type TEXT,
+ suggestion TEXT NOT NULL,
+ rationale TEXT,
+ status TEXT DEFAULT 'pending',
+ created_at TEXT DEFAULT (datetime('now')),
+ applied_at TEXT,
+ FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

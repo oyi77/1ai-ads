@@ -7,7 +7,7 @@ import { AdUtmMapRepository } from '../../../server/repositories/ad-utm-map.js';
 import { UtmTaggerService } from '../../../server/services/utm-tagger.js';
 import express from 'express';
 import request from 'supertest';
-import createTrackRouter from '../../../server/routes/track.js';
+import { createTrackRouter } from '../../../server/routes/track.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

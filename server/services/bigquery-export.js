@@ -1,6 +1,7 @@
 import { BigQuery } from '@google-cloud/bigquery';
 import fs from 'fs';
 import { createLogger } from '../lib/logger.js';
+import config from '../config/index.js';
 
 const log = createLogger('bigquery-export');
 
@@ -68,7 +69,7 @@ const TABLE_SCHEMAS = {
  */
 export class BigQueryExportService {
   static loadCredentials() {
-    const credentialPath = process.env.GCP_SERVICE_ACCOUNT;
+    const credentialPath = config.gcpServiceAccount;
     if (!credentialPath) { log.info('GCP_SERVICE_ACCOUNT not configured'); return null; }
     try {
       return JSON.parse(fs.readFileSync(credentialPath, 'utf8'));
@@ -79,8 +80,8 @@ export class BigQueryExportService {
   }
 
   constructor(projectId) {
-    this.projectId = projectId || process.env.GCP_PROJECT_ID;
-    this.datasetId = process.env.BIGQUERY_DATASET || 'adforge_reports';
+    this.projectId = projectId || config.gcpProjectId;
+    this.datasetId = config.bigqueryDataset;
     if (!this.projectId) { this.bigQuery = null; return; }
     const credentials = BigQueryExportService.loadCredentials();
     if (!credentials) { this.bigQuery = null; return; }
@@ -185,7 +186,7 @@ export class BigQueryExportService {
   getConnectionInfo() {
     return {
       projectId: this.projectId, datasetId: this.datasetId,
-      serviceAccountEmail: process.env.GCP_SERVICE_ACCOUNT_EMAIL,
+      serviceAccountEmail: config.gcpServiceAccountEmail,
       query: `SELECT * FROM \`${this.projectId}.${this.datasetId}.campaigns\` LIMIT 1000`,
     };
   }
