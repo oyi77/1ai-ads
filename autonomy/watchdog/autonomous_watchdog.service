@@ -1,0 +1,18 @@
+[Unit]
+Description=Autonomous Watchdog — 1ai-ads Anti-Mati
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/openclaw/projects/1ai-ads/autonomy/watchdog/autonomous_watchdog.py
+Restart=always
+RestartSec=15
+StartLimitBurst=10
+Environment=PYTHONUNBUFFERED=1
+WorkingDirectory=/home/openclaw/projects/1ai-ads
+StandardOutput=append:/home/openclaw/projects/1ai-ads/logs/watchdog.log
+StandardError=append:/home/openclaw/projects/1ai-ads/logs/watchdog.log
+
+[Install]
+WantedBy=default.target

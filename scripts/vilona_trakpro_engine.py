@@ -1286,8 +1286,8 @@ if Application is not None:
             lines.append(f"- {ts[:19]} | {it['action'].upper()} {it['campaign_id']} | status={it['status']}")
         await update.message.reply_text("\n".join(lines) if len(lines) > 1 else "No history")
 
-    async def callback_query_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        q = update.callback_query
+    async def callback_query_handler(update: Update, context: CallbackContext):
+        q: CallbackQuery = update.callback_query
         if not q:
             return
         data = q.data or ""

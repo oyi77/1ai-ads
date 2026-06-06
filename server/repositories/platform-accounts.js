@@ -9,7 +9,9 @@ export class PlatformAccountsRepository {
   // ── Single-record lookups ────────────────────────────────────
 
   findById(id) {
-    return this.db.prepare('SELECT * FROM platform_accounts WHERE id = ?').get(id) || null;
+    const row = this.db.prepare('SELECT * FROM platform_accounts WHERE id = ?').get(id);
+    if (!row) return null;
+    return { ...row, credentials: safeParse(row.credentials) };
   }
 
   findActiveByUserAndPlatform(userId, platform) {
