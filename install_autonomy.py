@@ -4,7 +4,7 @@ PILAR 2 + 3 — OS-level Autonomy: watchdog, notification, scheduler, self-repai
 """
 
 import os, sys, json, shutil, subprocess, tempfile
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -12,7 +12,7 @@ OPS = REPO / "ops"
 STATE = OPS / "os_autonomy_state.json"
 
 def utcnow_iso():
-    return datetime.utcnow().isoformat() + "Z"
+    return datetime.now(UTC).isoformat()
 
 def read_json(path, default):
     try:

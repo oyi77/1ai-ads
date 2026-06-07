@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 import shutil
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from pathlib import Path
 
 # ---- Konfigurasi ----
@@ -53,7 +53,7 @@ log = logging.getLogger("supervisor")
 # ---- Utilitas ----
 def touch_heartbeat():
     try:
-        HEARTBEAT_FILE.write_text(datetime.utcnow().isoformat() + "Z")
+        HEARTBEAT_FILE.write_text(datetime.now(UTC).isoformat())
     except Exception as e:
         log.error("Gagal update heartbeat: %s", e)
 
@@ -75,7 +75,7 @@ def save_state(state):
 def append_audit(entry: dict):
     try:
         with AUDIT_LOG.open("a") as f:
-            f.write(json.dumps({"ts": datetime.utcnow().isoformat() + "Z", **entry}) + "\n")
+            f.write(json.dumps({"ts": datetime.now(UTC).isoformat(), **entry}) + "\n")
     except Exception as e:
         log.error("Gagal menulis audit log: %s", e)
 
@@ -288,7 +288,7 @@ def try_self_heal(topic: str, errors: list[dict]) -> dict:
 def run_cycle():
     touch_heartbeat()
     state = load_state()
-    state["last_run"] = datetime.utcnow().isoformat() + "Z"
+    state["last_run"] = datetime.now(UTC).isoformat()
     summary = []
 
     for topic, files in LOG_PATTERNS.items():

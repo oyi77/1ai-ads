@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fetch all Meta campaigns for 1041 account + today's insights."""
 import os, sys, json, subprocess
-from datetime import datetime
+from datetime import datetime, date, UTC
 from pathlib import Path
 from collections import Counter
 import requests # Import the requests library
@@ -107,7 +107,7 @@ def main():
                     print(f"  {i.get('campaign_name','?')}")
                     print(f"    Spend: IDR {sp:,.0f} | Clicks: {cl} | CPC: {i.get('cpc','?')} | CTR: {i.get('ctr','?')}%")
                 print(f"\n  📊 TOTAL: IDR {ts:,.0f} | {tc} clicks")
-                out = {"fetched_at": datetime.utcnow().isoformat()+"Z", "account": acct,
+                out = {"fetched_at": datetime.now(UTC).isoformat(), "account": acct,
                         "today_insights": ins["data"]} # Save only insights data to `out` here
                 outdir = REPO / "outputs" / "jendralbot_autoscaler"
                 outdir.mkdir(parents=True, exist_ok=True)
@@ -127,7 +127,7 @@ def main():
         print(f"  ... +{len(paused)-30} lainnya")
 
     # 5. Save all campaign state (not insights)
-    out_campaigns = {"fetched_at": datetime.utcnow().isoformat()+"Z", "account": acct,
+    out_campaigns = {"fetched_at": datetime.now(UTC).isoformat(), "account": acct,
            "total": len(all_camps), "active": len(active), "paused": len(paused),
            "campaigns": all_camps}
     outdir_campaigns = REPO / "outputs" / "jendralbot_autoscaler"

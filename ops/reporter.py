@@ -6,7 +6,7 @@ Merangkum aktivitas harian tiap topik dan kirim ke Telegram.
 
 import os, sys, json, subprocess
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC, UTC
 import urllib.request
 import urllib.error
 
@@ -71,7 +71,7 @@ def build_report(since: datetime) -> str:
 
 
 def main():
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     since = now - timedelta(days=1)
     report = build_report(since)
     print(report)

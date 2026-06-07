@@ -1424,7 +1424,8 @@ if Application is not None:
         app.add_handler(CommandHandler("status", cmd_status))
         app.add_handler(CallbackQueryHandler(callback_query_handler))
         app.run_polling(close_loop=False, drop_pending_updates=True)
-else:
+
+if Application is None:
     def make_approve_keyboard(campaign_id: str):
         return None
     def start_telegram_router():
