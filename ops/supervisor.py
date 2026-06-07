@@ -87,7 +87,7 @@ def scan_for_errors(topic: str, paths: list[Path]) -> list[dict]:
     Returns list of {file, rule, line_no, snippet}
     """
     errors = []
-    cutoff = datetime.utcnow() - timedelta(hours=2)
+    cutoff = datetime.now(UTC) - timedelta(hours=2)
     error_patterns = [
         (re.compile(r"NameError: name '(\w+)' is not defined"), "nameerror"),
         (re.compile(r"SyntaxError:"), "syntaxerror"),
@@ -107,7 +107,7 @@ def scan_for_errors(topic: str, paths: list[Path]) -> list[dict]:
             })
             continue
         try:
-            mtime = datetime.utcfromtimestamp(path.stat().st_mtime)
+            mtime = datetime.fromtimestamp(path.stat().st_mtime, UTC)
             if mtime < cutoff and not path.exists():
                 continue
 
