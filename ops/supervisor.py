@@ -54,15 +54,16 @@ log = logging.getLogger("supervisor")
 def touch_heartbeat():
     try:
         HEARTBEAT_FILE.write_text(datetime.utcnow().isoformat() + "Z")
-    except Exception:
-        pass
+    except Exception as e:
+        log.error("Gagal update heartbeat: %s", e)
 
 
 def load_state():
     if STATE_FILE.exists():
         try:
             return json.loads(STATE_FILE.read_text())
-        except Exception:
+        except Exception as e:
+            log.error("Gagal load state: %s", e)
             return {}
     return {}
 
