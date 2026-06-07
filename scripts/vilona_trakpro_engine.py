@@ -699,14 +699,108 @@ def get_campaign_bid_strategy(campaign_id):
         log(f"Bid strategy check failed: {e}", "WARN")
         return ("UNKNOWN", 0)
 
+# ─── AUDIENCE DIVERSIFICATION POOL ───────────────────────────────────────────
+# Saat clone winner, WAJIB variasi audience agar tidak terjadi self-cannibalization.
+# Setiap clone mendapat interest group berbeda dari original.
+# Pool ini diputar round-robin berdasarkan jumlah clone yang sudah ada.
+AUDIENCE_POOL = {
+    "Belanja": [
+        {"id": "6003263791114", "name": "Belanja"},
+        {"id": "6003346592981", "name": "Belanja online"},
+    ],
+    "Dapur": [
+        {"id": "6003077174939", "name": "Perkakas dapur"},
+        {"id": "6003113941014", "name": "Kitchen"},
+        {"id": "6003206259061", "name": "Kitchenware"},
+    ],
+    "Fashion": [
+        {"id": "6003242077675", "name": "Baju"},
+        {"id": "6003456388203", "name": "Pakaian"},
+    ],
+    "IbuRumah": [
+        {"id": "6003107471210", "name": "Ibu rumah tangga"},
+    ],
+    "Diskon": [
+        {"id": "6003386553489", "name": "Kupon diskon"},
+    ],
+    "Travel": [
+        {"id": "6004078861067", "name": "Traveling"},
+    ],
+    "Interior": [
+        {"id": "6003384677038", "name": "Dekorasi rumah"},
+        {"id": "6003455765814", "name": "Perabotan rumah"},
+    ],
+    "Resep": [
+        {"id": "6003397425735", "name": "Resep masakan"},
+    ],
+    "Broad": [],  # Broad = hapus flexible_spec, biarkan Meta optimize
+}
+
+def _pick_diversified_audience(og_targeting, existing_clone_names, taglink):
+    """Pilih audience group yang BERBEDA dari original dan clone yang sudah ada.
+    
+    Logika:
+    1. Deteksi interest group yang dipakai original campaign
+    2. Deteksi interest group yang dipakai clone-clone yang sudah ada
+    3. Pilih group BARU yang belum terpakai (round-robin dari AUDIENCE_POOL)
+    4. Jika semua sudah terpakai → fallback ke Broad (hapus interest)
+    
+    Returns: (new_targeting_dict, audience_label_str)
+    """
+    # Deteksi interest IDs dari original targeting
+    og_interest_ids = set()
+    for spec in og_targeting.get("flexible_spec", []):
+        for interest in spec.get("interests", []):
+            og_interest_ids.add(interest.get("id", ""))
+    
+    # Deteksi audience groups yang sudah terpakai dari nama clone yang ada
+    used_audiences = set()
+    for cname in existing_clone_names:
+        for pool_name in AUDIENCE_POOL:
+            if pool_name.lower() in cname.lower():
+                used_audiences.add(pool_name)
+    
+    # Cek mana yang original pakai (match by interest ID)
+    for pool_name, pool_interests in AUDIENCE_POOL.items():
+        pool_ids = {i["id"] for i in pool_interests}
+        if pool_ids & og_interest_ids:
+            used_audiences.add(pool_name)
+    
+    # Pilih audience baru yang belum terpakai
+    available = [k for k in AUDIENCE_POOL if k not in used_audiences and k != "Broad"]
+    
+    if not available:
+        # Semua sudah terpakai → Broad targeting (hapus interest, max reach)
+        new_targeting = {k: v for k, v in og_targeting.items() if k != "flexible_spec"}
+        log(f"  🌐 Semua audience terpakai, fallback ke Broad targeting")
+        return new_targeting, "Broad"
+    
+    # Round-robin: pilih berdasarkan jumlah clone yang sudah ada
+    pick = available[len(existing_clone_names) % len(available)]
+    new_interests = AUDIENCE_POOL[pick]
+    
+    # Build targeting baru: base dari original, ganti flexible_spec
+    new_targeting = {k: v for k, v in og_targeting.items()}
+    if new_interests:
+        new_targeting["flexible_spec"] = [{"interests": new_interests}]
+    else:
+        new_targeting.pop("flexible_spec", None)
+    
+    log(f"  🎯 Audience diversifikasi: {pick} ({len(new_interests)} interest)")
+    return new_targeting, pick
+
 # ─── LC CLONE CREATOR ─────────────────────────────────────────────────────────
 def create_lc_clone(original_campaign, account_id, account_config):
-    """Create a LOWEST_COST clone from a winning COST_CAP campaign.
+    """Create a LOWEST_COST clone dari winning campaign DENGAN audience berbeda.
     
-    Naming Convention (Veris, 2026-06-03):
-    Campaign: {STRATEGI}_{PRODUK}_{TAGLINK}_{AUDIENCE}_{TANGGAL}_CLONE{n}
-    Adset:    {STRATEGI}_{PRODUK}_{INTEREST}_{UMUR}
-    Ad:       {Namaakunshopee}_{PRODUK}_{CREATIVE}_{VERSI}
+    Fix 2026-06-07: Tidak lagi copy-paste targeting 1:1 dari original.
+    Sekarang menggunakan _pick_diversified_audience() untuk memilih
+    interest group yang BERBEDA, mencegah self-cannibalization.
+    
+    Naming Convention (compact, 2026-06-06):
+    Campaign: LC_{TAGLINK}_{AUDIENCE}_{MMDD}
+    Adset:    LC_{TAGLINK}_{AUDIENCE}_2555
+    Ad:       {taglink}_Vdo1_v1
     """
     try:
         # Get original's adsets for targeting + ads
@@ -721,7 +815,7 @@ def create_lc_clone(original_campaign, account_id, account_config):
         og_adset = adsets["data"][0]
         today_str = datetime.now(WIB).strftime("%m%d")
         
-        # Parse original campaign name for product/taglink/audience
+        # Parse original campaign name for product/taglink
         og_name = original_campaign["name"]
         parts = og_name.split("_")
         
@@ -734,31 +828,33 @@ def create_lc_clone(original_campaign, account_id, account_config):
                     product = t
                     break
         taglink = product
-        audience = "Broad"
-        for p in parts:
-            if p.lower() in ("dapur", "travel", "shopping", "fashion", "broad", "tableware", 
-                             "pelancong", "rumah", "jewelry", "interior", "resep",
-                             "elektronik", "makanan", "minuman", "anak", "bayi"):
-                audience = p.capitalize()
-                break
+        
+        # ─── AUDIENCE DIVERSIFICATION (2026-06-07 fix) ───────────────────
+        # Cari clone yang sudah ada untuk menentukan audience mana yang terpakai
+        existing = fb_get(f"{account_id}/campaigns",
+            fields="name", limit="200")
+        existing_names = [c.get("name", "") for c in existing.get("data", [])]
+        
+        # Filter hanya clone dari taglink yang sama
+        clone_prefix = f"LC_{taglink}_"
+        existing_clones = [n for n in existing_names if n.startswith(clone_prefix)]
+        
+        # Pilih audience yang BERBEDA dari original dan clone yang sudah ada
+        og_targeting = og_adset.get("targeting", {})
+        diversified_targeting, audience = _pick_diversified_audience(
+            og_targeting, existing_clones, taglink
+        )
         
         # ─── COMPACT NAMING (2026-06-06 convention) ──────────────────────
-        # Format: {STRATEGY}_{TAGLINK}_{AUDIENCE}_{MMDD}
-        # No account name, no product duplication, no trailing IDs
-        
-        # Build compact campaign name
         camp_name = f"LC_{taglink}_{audience}_{today_str}"
         adset_name = f"LC_{taglink}_{audience}_2555"
         ad_name = f"{taglink}_Vdo1_v1"
         
-        # Deduplicate: find existing clones by prefix
-        existing = fb_get(f"{account_id}/campaigns",
-            fields="name", limit="200")
-        clone_suffix = ""
+        # Deduplicate nama campaign
+        existing_name_set = set(existing_names)
         base = camp_name
         n = 2
-        existing_names = {c.get("name", "") for c in existing.get("data", [])}
-        while camp_name in existing_names:
+        while camp_name in existing_name_set:
             camp_name = f"{base}_v{n}"
             n += 1
         
@@ -775,12 +871,11 @@ def create_lc_clone(original_campaign, account_id, account_config):
         
         new_camp_id = camp_result["id"]
         
-        # Create adset with LOWEST_COST_WITH_BID_CAP
-        targeting = og_adset.get("targeting", {})
+        # Create adset dengan targeting yang SUDAH DIDIVERSIFIKASI
         adset_result = fb_post(f"{account_id}/adsets",
             name=adset_name,
             campaign_id=new_camp_id,
-            targeting=json.dumps(targeting),
+            targeting=json.dumps(diversified_targeting),
             optimization_goal="LINK_CLICKS",
             billing_event="IMPRESSIONS",
             bid_strategy="LOWEST_COST_WITH_BID_CAP",

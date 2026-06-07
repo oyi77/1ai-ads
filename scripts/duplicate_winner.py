@@ -76,8 +76,13 @@ def get_ads(adset_id: str) -> list:
 
 def clone_campaign(source_campaign_id: str, taglink: str, prefix: str = "CLONE",
                    budget_override: int = None, bid_override: int = None,
-                   dry_run: bool = False) -> dict:
-    """Clone a winning campaign — preserves ALL targeting from source adsets."""
+                   dry_run: bool = False, audience_override: str = None) -> dict:
+    """Clone a winning campaign DENGAN audience diversification.
+    
+    Fix 2026-06-07: Tidak lagi copy-paste targeting 1:1.
+    Gunakan --audience untuk pilih group berbeda dari original.
+    Jika tidak diset, akan otomatis pilih audience yang belum terpakai.
+    """
 
     # 1. Read source
     source = get_campaign(source_campaign_id)
@@ -122,13 +127,70 @@ def clone_campaign(source_campaign_id: str, taglink: str, prefix: str = "CLONE",
     new_camp_id = r["id"]
     print(f"✅ Campaign created: {new_camp_id}")
 
-    # 4. Clone adsets
+    # 4. Clone adsets DENGAN audience diversification
     new_adset_ids = []
     new_ad_ids = []
+
+    # Import AUDIENCE_POOL dari engine untuk konsistensi
+    try:
+        from vilona_trakpro_engine import AUDIENCE_POOL, _pick_diversified_audience
+    except ImportError:
+        # Fallback pool jika engine tidak bisa di-import
+        AUDIENCE_POOL = {
+            "Belanja": [{"id": "6003263791114", "name": "Belanja"}, {"id": "6003346592981", "name": "Belanja online"}],
+            "Dapur": [{"id": "6003077174939", "name": "Perkakas dapur"}, {"id": "6003113941014", "name": "Kitchen"}],
+            "Fashion": [{"id": "6003242077675", "name": "Baju"}, {"id": "6003456388203", "name": "Pakaian"}],
+            "IbuRumah": [{"id": "6003107471210", "name": "Ibu rumah tangga"}],
+            "Diskon": [{"id": "6003386553489", "name": "Kupon diskon"}],
+            "Interior": [{"id": "6003384677038", "name": "Dekorasi rumah"}, {"id": "6003455765814", "name": "Perabotan rumah"}],
+        }
+        _pick_diversified_audience = None
+
+    # Cari existing clones untuk diversification
+    existing_camps = api_get(f"{TARGET_ACCOUNT}/campaigns", {"fields": "name", "limit": 200})
+    existing_names = [c.get("name", "") for c in existing_camps.get("data", [])]
+    clone_prefix = f"{prefix}_{taglink.replace(' ', '_')}_"
+    existing_clones = [n for n in existing_names if clone_prefix.lower() in n.lower()]
 
     for i, aset in enumerate(source_adsets):
         aset_name = aset.get("name", f"AdSet_{i+1}")
         targeting = aset.get("targeting") or {}
+
+        # ─── AUDIENCE DIVERSIFICATION (2026-06-07 fix) ───────────────
+        if audience_override and audience_override in AUDIENCE_POOL:
+            # Manual override: user pilih audience tertentu
+            new_interests = AUDIENCE_POOL[audience_override]
+            if new_interests:
+                targeting["flexible_spec"] = [{"interests": new_interests}]
+            else:
+                targeting.pop("flexible_spec", None)
+            audience_label = audience_override
+            print(f"   🎯 Audience OVERRIDE: {audience_label}")
+        elif _pick_diversified_audience:
+            # Auto: engine memilih audience yang belum terpakai
+            targeting, audience_label = _pick_diversified_audience(
+                targeting, existing_clones, taglink)
+            print(f"   🎯 Audience AUTO-diversified: {audience_label}")
+        else:
+            # Fallback: pilih audience yang belum terpakai secara sederhana
+            og_interest_ids = set()
+            for spec in targeting.get("flexible_spec", []):
+                for interest in spec.get("interests", []):
+                    og_interest_ids.add(interest.get("id", ""))
+            
+            used = set()
+            for pool_name, pool_items in AUDIENCE_POOL.items():
+                if {it["id"] for it in pool_items} & og_interest_ids:
+                    used.add(pool_name)
+            available = [k for k in AUDIENCE_POOL if k not in used]
+            if available:
+                pick = available[len(existing_clones) % len(available)]
+                targeting["flexible_spec"] = [{"interests": AUDIENCE_POOL[pick]}]
+                audience_label = pick
+            else:
+                targeting.pop("flexible_spec", None)
+                audience_label = "Broad"
+            print(f"   🎯 Audience FALLBACK-diversified: {audience_label}")
 
         budget = budget_override or int(aset.get("daily_budget", 0) or 500000)
         bid    = bid_override    or int(aset.get("bid_amount", 0) or 130)
@@ -137,10 +199,10 @@ def clone_campaign(source_campaign_id: str, taglink: str, prefix: str = "CLONE",
         bid_strat = aset.get("bid_strategy", "COST_CAP")
 
         print(f"   📋 Cloning adset [{i+1}/{len(source_adsets)}]: {aset_name[:50]}")
-        print(f"      targeting: gender={targeting.get('genders')} age={targeting.get('age_min')}-{targeting.get('age_max')} platforms={targeting.get('publisher_platforms')} interests={len(targeting.get('flexible_spec', []))}")
+        print(f"      targeting: gender={targeting.get('genders')} age={targeting.get('age_min')}-{targeting.get('age_max')} interests={audience_label}")
 
         r = api_post(f"{TARGET_ACCOUNT}/adsets", {
-            "name": f"{prefix}_{aset_name}_{i+1}",
+            "name": f"{prefix}_{aset_name}_{audience_label}_{i+1}",
             "campaign_id": new_camp_id,
             "daily_budget": budget,
             "bid_strategy": bid_strat,
@@ -216,6 +278,9 @@ def main():
     parser.add_argument("--bid", type=int, help="Bid cap in IDR (optional; copies source if omitted)")
     parser.add_argument("--dry-run", action="store_true", help="Show plan without creating")
     parser.add_argument("--scale", type=int, default=1, help="Number of clones (1 = single duplicate)")
+    parser.add_argument("--audience", type=str, default=None,
+                        help="Audience group override: Belanja, Dapur, Fashion, IbuRumah, Diskon, Interior, Travel, Resep, Broad. "
+                             "Jika tidak diset, otomatis pilih yang belum terpakai.")
 
     args = parser.parse_args()
 
@@ -225,6 +290,10 @@ def main():
 
     print(f"🔑 Account: {TARGET_ACCOUNT}")
     print(f"📱 Token:   {'✅ found' if ACCESS_TOKEN else '❌ missing'}")
+    if args.audience:
+        print(f"🎯 Audience: {args.audience} (manual override)")
+    else:
+        print(f"🎯 Audience: AUTO-diversify (pilih yang belum terpakai)")
 
     for n in range(args.scale):
         if args.scale > 1:
@@ -239,6 +308,7 @@ def main():
             budget_override=args.budget,
             bid_override=args.bid,
             dry_run=args.dry_run,
+            audience_override=args.audience,
         )
 
         if "error" in result:
@@ -246,7 +316,7 @@ def main():
         elif not args.dry_run:
             print(f"\n✅ Clone complete: {result.get('campaign_id', '?')}")
             print(f"   Adsets: {len(result.get('adset_ids', []))} | Ads: {len(result.get('ad_ids', []))}")
-            print(f"   Targeting: {'✅ preserved' if result.get('targeting_preserved') else '❌ NOT preserved'}")
+            print(f"   Targeting: {'🎯 diversified' if result.get('targeting_preserved') else '❌ NOT preserved'}")
 
 
 if __name__ == "__main__":
