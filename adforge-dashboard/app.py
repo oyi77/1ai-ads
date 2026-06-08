@@ -29,6 +29,11 @@ app = Flask(__name__, static_folder="static", template_folder="templates")
 app.secret_key = os.getenv("ADFORGE_DASHBOARD_SECRET", os.urandom(32).hex())
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=24)
 
+# ─── Register Blueprints ───────────────────────────────────────────────────────
+from shopee_bp import shopee_bp
+
+app.register_blueprint(shopee_bp)
+
 # ============ RATE LIMITER ============
 _rate_limits = defaultdict(list)
 

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdForge - Auto-Pause Campaigns</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .card-header h5 {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1><i class="bi bi-stop-circle"></i> Auto-Pause Campaigns</h1>
+                    <a href="/" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Auto-Pause Criteria:</strong>
+                    <ul class="mb-0">
+                        <li>Campaigns with Cancel Rate > 3%</li>
+                        <li>Campaigns with < 5 orders (low volume)</li>
+                        <li>Campaigns with Conversion Rate < 0.5%</li>
+                    </ul>
+                </div>
+
+                <div class="card shadow">
+                    <div class="card-header">
+                        <h5><i class="bi bi-list"></i> Underperforming Campaigns to Pause</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if pause_plan %}
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Platform</th>
+                                        <th>Orders</th>
+                                        <th>Completed</th>
+                                        <th>Canceled</th>
+                                        <th>Cancel Rate</th>
+                                        <th>Conv. Rate</th>
+                                        <th>Reasons</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in pause_plan %}
+                                    <tr>
+                                        <td><strong>{{ item.platform }}</strong></td>
+                                        <td>{{ item.orders|default(0) }}</td>
+                                        <td>{{ item.completed|default(0) }}</td>
+                                        <td><span class="badge bg-warning">{{ item.canceled|default(0) }}</span></td>
+                                        <td>{{ item.cancel_rate|default(0) | round(2) }}%</td>
+                                        <td>{{ item.conv_rate|default(0) | round(2) }}%</td>
+                                        <td>
+                                            {% for reason in item.reasons %}
+                                            <span class="badge bg-danger me-1">{{ reason }}</span>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-outline-danger btn-sm" onclick="confirmPause('{{ item.platform }}')">
+                                                <i class="bi bi-x-circle"></i> Pause
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Warning:</strong> These platforms should be paused to optimize budget.
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
+                            <h3>No campaigns need pausing</h3>
+                            <p>All campaigns are performing well.</p>
+                            <a href="/auto-pause" class="btn btn-primary">Refresh Analysis</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function confirmPause(platform) {
+            if (confirm(`Are you sure you want to pause all campaigns on ${platform}?`)) {
+                alert(`Pausing campaigns on ${platform}... (Simulation mode)`);
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
