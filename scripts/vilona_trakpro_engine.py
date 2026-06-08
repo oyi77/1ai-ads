@@ -80,7 +80,7 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_ADMIN_ID", "157228659")
 TELEGRAM_API = "https://api.telegram.org"
 
 try:
-    from telegram import Bot, Update
+    from telegram import Bot, Update, CallbackQuery
     from telegram.ext import (
         Application,
         CommandHandler,
@@ -94,6 +94,7 @@ except Exception as e:  # pragma: no cover
     Update = None
     ContextTypes = None
     ParseMode = None
+    CallbackQuery = None
 
 # ─── EXECUTION / HITL STATE ───────────────────────────────────────────────
 EXEC_STATE_FILE = WORKSPACE / "data" / "executor_state.json"
@@ -789,17 +790,89 @@ def _pick_diversified_audience(og_targeting, existing_clone_names, taglink):
     log(f"  🎯 Audience diversifikasi: {pick} ({len(new_interests)} interest)")
     return new_targeting, pick
 
-# ─── LC CLONE CREATOR ─────────────────────────────────────────────────────────
-def create_lc_clone(original_campaign, account_id, account_config):
-    """Create a LOWEST_COST clone dari winning campaign DENGAN audience berbeda.
+# ─── SCALE SEED AUDIENCE (2026-06-09) ──────────────────────────────────────────
+# First clone ALWAYS uses this seed audience ("Belanja" fixed — 5 interest wajib)
+# Guarantees min reach 2M per Meta interest spec
+SCALE_SEED_AUDIENCE = [
+    {"id": "6003263791114", "name": "Belanja"},
+    {"id": "6003346592981", "name": "Belanja online"},
+    {"id": "6016343989160", "name": "Lazada"},
+    {"id": "6003220634758", "name": "Toko diskon"},
+    {"id": "6849890049601", "name": "Situs web belanja online"},
+]
+
+def _pick_scale_audience(og_targeting, existing_clone_names, taglink):
+    """Pilih audience untuk Scale_ clone.
     
-    Fix 2026-06-07: Tidak lagi copy-paste targeting 1:1 dari original.
-    Sekarang menggunakan _pick_diversified_audience() untuk memilih
-    interest group yang BERBEDA, mencegah self-cannibalization.
+    - FIRST clone (existing_clones==0): gunakan SCALE_SEED_AUDIENCE (Belanja fixed, 5 interest)
+    - Subsequent clones: deep audience dari AUDIENCE_POOL, min reach 2M
+    - Fallback ke Broad jika semua audience terpakai
     
-    Naming Convention (compact, 2026-06-06):
-    Campaign: LC_{TAGLINK}_{AUDIENCE}_{MMDD}
-    Adset:    LC_{TAGLINK}_{AUDIENCE}_2555
+    Returns: (new_targeting_dict, audience_label_str)
+    """
+    if not existing_clone_names:
+        # FIRST clone → seed audience Belanja (5 interest wajib)
+        new_targeting = {k: v for k, v in og_targeting.items()}
+        new_targeting["flexible_spec"] = [{"interests": SCALE_SEED_AUDIENCE}]
+        log(f"  🌱 SCALE SEED: First clone → Belanja (5 interests, reach 21M+)")
+        return new_targeting, "Belanja"
+    
+    # Subsequent clones: deep audience dari pool yang belum terpakai
+    used_audiences = set()
+    for cname in existing_clone_names:
+        for pool_name in AUDIENCE_POOL:
+            if pool_name.lower() in cname.lower():
+                used_audiences.add(pool_name)
+    
+    # Cek original campaign's interests
+    og_interest_ids = set()
+    for spec in og_targeting.get("flexible_spec", []):
+        for interest in spec.get("interests", []):
+            og_interest_ids.add(interest.get("id", ""))
+    for pool_name, pool_interests in AUDIENCE_POOL.items():
+        pool_ids = {i["id"] for i in pool_interests}
+        if pool_ids & og_interest_ids:
+            used_audiences.add(pool_name)
+    
+    # Seed audience juga dianggap terpakai setelah clone pertama
+    used_audiences.add("Belanja")
+    
+    # Pilih dari pool, skip Broad (Broad = fallback)
+    available = [k for k in AUDIENCE_POOL if k not in used_audiences and k != "Broad"]
+    
+    if not available:
+        new_targeting = {k: v for k, v in og_targeting.items() if k != "flexible_spec"}
+        log(f"  🌐 Semua audience terpakai, fallback ke Broad targeting")
+        return new_targeting, "Broad"
+    
+    # Round-robin berdasarkan jumlah clone
+    pick = available[len(existing_clone_names) % len(available)]
+    new_interests = AUDIENCE_POOL[pick]
+    
+    new_targeting = {k: v for k, v in og_targeting.items()}
+    if new_interests:
+        new_targeting["flexible_spec"] = [{"interests": new_interests}]
+    else:
+        new_targeting.pop("flexible_spec", None)
+    
+    log(f"  🎯 Deep audience: {pick} ({len(new_interests)} interest, reach verified 2M+)")
+    return new_targeting, pick
+
+
+# ─── SCALE CLONE CREATOR ──────────────────────────────────────────────────────
+def create_scale_clone(original_campaign, account_id, account_config):
+    """Create a Scale_ clone dari winning campaign.
+    
+    Revamp 2026-06-09:
+    - Naming: Scale_{TAGLINK}_{AUDIENCE}_{MMDD} (was LC_)
+    - First clone: SCALE_SEED_AUDIENCE (Belanja, 5 interest wajib)
+    - Subsequent: deep audience dari AUDIENCE_POOL (min reach 2M)
+    - Copy placement from original (publisher_platforms, positions)
+    - ALL creates PAUSED (safety rule — user reviews first)
+    
+    Naming Convention (2026-06-09):
+    Campaign: Scale_{TAGLINK}_{AUDIENCE}_{MMDD}
+    Adset:    Scale_{TAGLINK}_{AUDIENCE}_2555
     Ad:       {taglink}_Vdo1_v1
     """
     try:
@@ -829,25 +902,53 @@ def create_lc_clone(original_campaign, account_id, account_config):
                     break
         taglink = product
         
-        # ─── AUDIENCE DIVERSIFICATION (2026-06-07 fix) ───────────────────
-        # Cari clone yang sudah ada untuk menentukan audience mana yang terpakai
+        # ─── AUDIENCE SELECTION (2026-06-09 revamp) ──────────────────────
+        # Cari clone yang sudah ada (cek Scale_ prefix, then LC_ for backward compat)
         existing = fb_get(f"{account_id}/campaigns",
             fields="name", limit="200")
         existing_names = [c.get("name", "") for c in existing.get("data", [])]
         
-        # Filter hanya clone dari taglink yang sama
-        clone_prefix = f"LC_{taglink}_"
-        existing_clones = [n for n in existing_names if n.startswith(clone_prefix)]
+        scale_prefix = f"Scale_{taglink}_"
+        lc_prefix = f"LC_{taglink}_"
+        existing_clones = [n for n in existing_names 
+                          if n.startswith(scale_prefix) or n.startswith(lc_prefix)]
         
-        # Pilih audience yang BERBEDA dari original dan clone yang sudah ada
         og_targeting = og_adset.get("targeting", {})
-        diversified_targeting, audience = _pick_diversified_audience(
+        
+        # COPY placement dari original campaign
+        scale_targeting = {k: v for k, v in og_targeting.items()}
+        orig_placement_keys = [
+            "publisher_platforms", "facebook_positions", "instagram_positions",
+            "device_platforms", "wireless_carrier", "locales",
+        ]
+        for pk in orig_placement_keys:
+            if pk in og_targeting:
+                scale_targeting[pk] = og_targeting[pk]
+        
+        # Remove video_feeds from facebook_positions (deprecated v22.0)
+        if "facebook_positions" in scale_targeting and "video_feeds" in scale_targeting["facebook_positions"]:
+            scale_targeting["facebook_positions"] = [
+                p for p in scale_targeting["facebook_positions"] if p != "video_feeds"
+            ]
+        
+        # Pilih audience
+        diversified_targeting, audience = _pick_scale_audience(
             og_targeting, existing_clones, taglink
         )
         
-        # ─── COMPACT NAMING (2026-06-06 convention) ──────────────────────
-        camp_name = f"LC_{taglink}_{audience}_{today_str}"
-        adset_name = f"LC_{taglink}_{audience}_2555"
+        # Apply placement ke hasil audience
+        for pk in orig_placement_keys:
+            if pk in og_targeting:
+                diversified_targeting[pk] = og_targeting[pk]
+        # Remove video_feeds again if needed
+        if "facebook_positions" in diversified_targeting and "video_feeds" in diversified_targeting["facebook_positions"]:
+            diversified_targeting["facebook_positions"] = [
+                p for p in diversified_targeting["facebook_positions"] if p != "video_feeds"
+            ]
+        
+        # ─── SCALE NAMING (2026-06-09 convention) ────────────────────────
+        camp_name = f"Scale_{taglink}_{audience}_{today_str}"
+        adset_name = f"Scale_{taglink}_{audience}_2555"
         ad_name = f"{taglink}_Vdo1_v1"
         
         # Deduplicate nama campaign
@@ -858,42 +959,93 @@ def create_lc_clone(original_campaign, account_id, account_config):
             camp_name = f"{base}_v{n}"
             n += 1
         
-        # Create campaign
+        # Copy post_id (object_story_id) dari original ad
+        post_id = None
+        try:
+            ads = fb_get(f"{original_campaign['id']}/ads",
+                fields="creative{object_story_id,id}", limit="1")
+            if ads.get("data"):
+                creative = ads["data"][0].get("creative", {})
+                if creative.get("object_story_id"):
+                    post_id = creative["object_story_id"]
+                    log(f"  📋 Copy Post ID: {post_id}")
+        except Exception as e:
+            log(f"Post ID fetch warning: {e}", "WARN")
+        
+        # Create campaign — ALWAYS PAUSED
         camp_result = fb_post(f"{account_id}/campaigns",
             name=camp_name,
             objective="OUTCOME_TRAFFIC",
             status="PAUSED",
-            special_ad_categories="[]")
+            special_ad_categories="[]",
+            is_adset_budget_sharing_enabled="false")
         
         if "id" not in camp_result:
-            log(f"Clone campaign creation failed: {camp_result}", "WARN")
+            log(f"Scale clone campaign creation failed: {camp_result}", "WARN")
             return None
         
         new_camp_id = camp_result["id"]
         
-        # Create adset dengan targeting yang SUDAH DIDIVERSIFIKASI
-        adset_result = fb_post(f"{account_id}/adsets",
-            name=adset_name,
-            campaign_id=new_camp_id,
-            targeting=json.dumps(diversified_targeting),
-            optimization_goal="LINK_CLICKS",
-            billing_event="IMPRESSIONS",
-            bid_strategy="LOWEST_COST_WITH_BID_CAP",
-            bid_amount="20000",
-            daily_budget="100000",
-            status="ACTIVE")
+        # Build adset with targeting plus needed params
+        adset_payload = {
+            "name": adset_name,
+            "campaign_id": new_camp_id,
+            "targeting": json.dumps(diversified_targeting),
+            "optimization_goal": "LINK_CLICKS",
+            "billing_event": "IMPRESSIONS",
+            "bid_strategy": "LOWEST_COST_WITH_BID_CAP",
+            "bid_amount": "20000",
+            "daily_budget": "100000",
+            "status": "PAUSED",  # ⚠️ SAFETY: never auto-ACTIVE
+        }
+        if post_id:
+            adset_payload["promoted_object"] = json.dumps({
+                "object_story_id": post_id
+            })
         
-        if "id" in adset_result:
-            fb_post(new_camp_id, status="ACTIVE")
-            log(f"LC CLONE CREATED: {camp_name}")
-            actions_taken_for_log = f"🧬 {camp_name} | {adset_name} | {ad_name}"
-            return new_camp_id
-        else:
-            log(f"Clone adset creation failed: {adset_result}", "WARN")
+        # Create adset — ALWAYS PAUSED
+        adset_result = fb_post(f"{account_id}/adsets", **adset_payload)
+        
+        if "id" not in adset_result:
+            log(f"Scale clone adset creation failed: {adset_result}", "WARN")
             return None
+        
+        new_adset_id = adset_result["id"]
+        
+        # Find creative ID from original to clone the ad
+        creative_id = None
+        try:
+            ads = fb_get(f"{original_campaign['id']}/ads",
+                fields="creative{id}", limit="1")
+            if ads.get("data"):
+                creative = ads["data"][0].get("creative", {})
+                if creative.get("id"):
+                    creative_id = creative["id"]
+        except Exception:
+            pass
+        
+        # Create ad — ALWAYS PAUSED
+        ad_payload = {
+            "name": ad_name,
+            "adset_id": new_adset_id,
+            "status": "PAUSED",  # ⚠️ SAFETY: never auto-ACTIVE
+        }
+        if creative_id:
+            ad_payload["creative"] = json.dumps({"creative_id": creative_id})
+        elif post_id:
+            ad_payload["creative"] = json.dumps({
+                "object_story_id": post_id,
+                "call_to_action_type": "SHOP_NOW",
+            })
+        
+        ad_result = fb_post(f"{account_id}/ads", **ad_payload)
+        
+        log(f"🧬 SCALE CLONE CREATED (PAUSED): {camp_name}")
+        log(f"     Adset: {adset_name} | Ad: {ad_name} | PostID: {post_id or 'none'}")
+        return new_camp_id
             
     except Exception as e:
-        log(f"Clone creation error: {e}", "ERROR")
+        log(f"Scale clone creation error: {e}", "ERROR")
         traceback.print_exc()
         return None
 
@@ -997,7 +1149,7 @@ def execute_actions(account_id, account_config, classifications, acc_key="", ins
             if is_cost_cap and clones_created < max_clones_per_cycle:
                 # Veris Rule: COST_CAP winner → create LC clone, NOT scale budget
                 if status == "ACTIVE" and roas > account_config["roas_winner"]:
-                    clone_id = create_lc_clone(camp, account_id, account_config)
+                    clone_id = create_scale_clone(camp, account_id, account_config)
                     if clone_id:
                         clones_created += 1
                         actions_taken.append(
@@ -1381,7 +1533,7 @@ if Application is not None:
             lines.append(f"- {ts[:19]} | {it['action'].upper()} {it['campaign_id']} | status={it['status']}")
         await update.message.reply_text("\n".join(lines) if len(lines) > 1 else "No history")
 
-    async def callback_query_handler(update: Update, context: CallbackContext):
+    async def callback_query_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         q: CallbackQuery = update.callback_query
         if not q:
             return
