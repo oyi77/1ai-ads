@@ -210,7 +210,9 @@ def clone_campaign(source_campaign_id: str, taglink: str, prefix: str = "CLONE",
             "billing_event": bill_evt,
             "optimization_goal": opt_goal,
             "targeting": safe_json(targeting),
-            "status": "ACTIVE",
+            # HARD SAFETY RULE (2026-06-07): never publish clones live.
+            # User reviews manually, then turns ON from Meta if approved.
+            "status": "PAUSED",
         })
 
         if "error" in r:
@@ -236,16 +238,17 @@ def clone_campaign(source_campaign_id: str, taglink: str, prefix: str = "CLONE",
                 "name": ad_name,
                 "adset_id": new_asid,
                 "creative": safe_json({"creative_id": creative_id}),
-                "status": "ACTIVE",
+                # HARD SAFETY RULE: ads are created paused for manual review.
+                "status": "PAUSED",
             })
             if "id" in r:
                 new_ad_ids.append(r["id"])
             else:
                 print(f"         ❌ Ad create: {r.get('error',{}).get('message','?')[:80]}")
 
-    # 6. Activate campaign
-    api_post(new_camp_id, {"status": "ACTIVE"})
-    print(f"🚀 Campaign LIVE: {new_camp_id}")
+    # 6. Keep campaign paused for manual review.
+    api_post(new_camp_id, {"status": "PAUSED"})
+    print(f"📝 Campaign DRAFT/PAUSED for review: {new_camp_id}")
 
     result = {
         "source_campaign_id": source_campaign_id,
@@ -255,6 +258,8 @@ def clone_campaign(source_campaign_id: str, taglink: str, prefix: str = "CLONE",
         "adset_ids": new_adset_ids,
         "ad_ids": new_ad_ids,
         "targeting_preserved": True,
+        "review_required": True,
+        "status": "PAUSED",
         "timestamp": datetime.now().isoformat(),
     }
 

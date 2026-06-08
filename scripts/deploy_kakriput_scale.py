@@ -18,7 +18,9 @@ def deploy_kakriput_scale():
         "access_token": ACCESS_TOKEN,
         "name": "CBO_Kakriput_WinningScale_BIDCAP180_VILONA",
         "objective": "OUTCOME_TRAFFIC",
-        "status": "ACTIVE",
+        # HARD SAFETY RULE (2026-06-07): create only as PAUSED draft.
+        # User reviews manually in Meta before turning ON.
+        "status": "PAUSED",
         "bid_strategy": "LOWEST_COST_WITH_BID_CAP",
         "daily_budget": 100000,
         "special_ad_categories": "[]",
@@ -52,7 +54,7 @@ def deploy_kakriput_scale():
         "access_token": ACCESS_TOKEN,
         "name": "Scale_Testing_BIDCAP180_VILONA",
         "campaign_id": new_cid,
-        "status": "ACTIVE",
+        "status": "PAUSED",
         "billing_event": "IMPRESSIONS",
         "optimization_goal": "LINK_CLICKS",
         "bid_amount": 180,
@@ -79,12 +81,12 @@ def deploy_kakriput_scale():
         "name": "Ad_Winner_Kakriput_VILONA",
         "adset_id": as_id,
         "creative": json.dumps({"creative_id": cr_id}),
-        "status": "ACTIVE",
+        "status": "PAUSED",
     }
     ad_res = requests.post(
         f"https://graph.facebook.com/v19.0/{AD_ACCOUNT_ID}/ads", data=ad_payload
     ).json()
-    print(f"AD DEPLOYED: {ad_res}")
+    print(f"AD DRAFT/PAUSED CREATED: {ad_res}")
 
 
 if __name__ == "__main__":

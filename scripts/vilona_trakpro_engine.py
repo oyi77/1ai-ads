@@ -993,9 +993,8 @@ def create_scale_clone(original_campaign, account_id, account_config):
             "targeting": json.dumps(diversified_targeting),
             "optimization_goal": "LINK_CLICKS",
             "billing_event": "IMPRESSIONS",
-            "bid_strategy": "LOWEST_COST_WITH_BID_CAP",
-            "bid_amount": "20000",
-            "daily_budget": "100000",
+            "bid_strategy": "LOWEST_COST_WITHOUT_CAP",  # ⚠️ CRITICAL: No bid cap! Rp20k cap caused 0.02% budget utilization
+            "daily_budget": "500000",  # Rp5,000/day in cents (existing Scale_ clones use this)
             "status": "PAUSED",  # ⚠️ SAFETY: never auto-ACTIVE
         }
         if post_id:
