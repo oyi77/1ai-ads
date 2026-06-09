@@ -2,71 +2,74 @@
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 style="font-weight:800;font-size:1.5rem;background:linear-gradient(135deg,#818cf8,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">AdForge Dashboard</h1>
-        <p class="text-muted mb-0">AI-Powered Ads Management &amp; Automation</p>
+<div class="loading-overlay" id="pageLoading" style="display:none">
+    <div style="text-align:center">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading your dashboard...</div>
     </div>
+</div>
+
+<div class="page-header">
     <div>
+        <h1>AdForge Dashboard</h1>
+        <p>AI-Powered Ads Management &amp; Automation — {{ username }}</p>
+    </div>
+    <div class="page-actions">
         <span class="badge badge-success"><i class="bi bi-check-circle"></i> System Online</span>
+        <button class="btn btn-outline btn-sm" onclick="location.reload()" title="Refresh data">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
     </div>
 </div>
 
 <!-- Stats Cards -->
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="stat-card accent">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <div class="stat-label">Total Campaigns</div>
-                    <div class="stat-value">{{ campaigns_count }}</div>
-                </div>
-                <div class="text-accent"><i class="bi bi-megaphone fs-3"></i></div>
+<div class="grid-4 mb-4">
+    <div class="stat-card accent">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <div class="stat-label">Total Campaigns</div>
+                <div class="stat-value">{{ campaigns_count }}</div>
             </div>
+            <div class="text-accent"><i class="bi bi-megaphone fs-3"></i></div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="stat-card warning">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <div class="stat-label">Pending Drafts</div>
-                    <div class="stat-value">{{ pending_drafts }}</div>
-                </div>
-                <div class="text-warning"><i class="bi bi-hourglass-split fs-3"></i></div>
+    <div class="stat-card warning">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <div class="stat-label">Pending Drafts</div>
+                <div class="stat-value">{{ pending_drafts }}</div>
             </div>
-            {% if pending_drafts > 0 %}
-            <a href="/drafts" class="btn btn-warning mt-2 w-100">Review Now</a>
-            {% endif %}
+            <div class="text-warning"><i class="bi bi-hourglass-split fs-3"></i></div>
+        </div>
+        {% if pending_drafts > 0 %}
+        <a href="/drafts" class="btn btn-warning mt-2 w-100">Review Now</a>
+        {% endif %}
+    </div>
+    <div class="stat-card success">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <div class="stat-label">Automation Rules</div>
+                <div class="stat-value">{{ rules|length }}</div>
+            </div>
+            <div class="text-success"><i class="bi bi-gear fs-3"></i></div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="stat-card success">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <div class="stat-label">Automation Rules</div>
-                    <div class="stat-value">{{ rules|length }}</div>
-                </div>
-                <div class="text-success"><i class="bi bi-gear fs-3"></i></div>
+    <div class="stat-card purple">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <div class="stat-label">Platform Accounts</div>
+                <div class="stat-value">{{ accounts|length }}</div>
             </div>
+            <div style="color:var(--purple)"><i class="bi bi-layers fs-3"></i></div>
         </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card purple">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <div class="stat-label">Platform Accounts</div>
-                    <div class="stat-value">{{ accounts|length }}</div>
-                </div>
-                <div style="color:var(--purple)"><i class="bi bi-layers fs-3"></i></div>
-            </div>
-            <small class="text-muted">{{ accounts|selectattr('platform')|list|length }} connected</small>
-            <a href="/accounts" class="btn btn-outline mt-2 w-100">Manage Accounts</a>
-        </div>
+        <small class="text-muted">{{ accounts|selectattr('platform')|list|length }} connected</small>
+        <a href="/accounts" class="btn btn-outline mt-2 w-100">Manage Accounts</a>
     </div>
 </div>
 
-<!-- Campaigns Table -->
+<!-- Main Content -->
 <div class="row g-3">
+    <!-- Campaigns Table -->
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
@@ -90,14 +93,16 @@
                             {% for campaign in campaigns %}
                             <tr>
                                 <td><strong style="color:var(--text)">{{ campaign.name }}</strong></td>
-                                <td>{{ campaign.platform }}</td>
+                                <td><span class="badge badge-info">{{ campaign.platform }}</span></td>
                                 <td>
                                     {% if campaign.status == 'ACTIVE' %}
                                     <span class="badge badge-success">Active</span>
                                     {% elif campaign.status == 'PAUSED' %}
                                     <span class="badge badge-warning">Paused</span>
+                                    {% elif campaign.status == 'KILL' %}
+                                    <span class="badge badge-danger">Killed</span>
                                     {% else %}
-                                    <span class="badge badge-info">{{ campaign.status }}</span>
+                                    <span class="badge badge-neutral">{{ campaign.status }}</span>
                                     {% endif %}
                                 </td>
                                 <td class="text-mono">Rp{{ "{:,.0f}".format(campaign.spend or 0) }}</td>
@@ -106,7 +111,14 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="6" class="text-center text-muted py-4">No campaigns found</td>
+                                <td colspan="6">
+                                    <div class="empty-state">
+                                        <i class="bi bi-megaphone"></i>
+                                        <h3>No Campaigns Yet</h3>
+                                        <p>Connect your ad accounts to start tracking campaigns automatically.</p>
+                                        <a href="/accounts" class="btn btn-primary mt-3">Connect Accounts</a>
+                                    </div>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -116,10 +128,12 @@
         </div>
     </div>
 
+    <!-- Sidebar -->
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
                 <h5><i class="bi bi-gear"></i> Automation Rules</h5>
+                <a href="/automation" class="btn btn-outline btn-sm">Manage</a>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -140,21 +154,24 @@
                                     {% if rule.is_active %}
                                     <span class="badge badge-success" style="font-size:.6rem">ON</span>
                                     {% else %}
-                                    <span class="badge" style="font-size:.6rem;color:var(--text3)">OFF</span>
+                                    <span class="badge badge-neutral" style="font-size:.6rem">OFF</span>
                                     {% endif %}
                                 </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="3" class="text-center text-muted py-3">No rules configured</td>
+                                <td colspan="3">
+                                    <div class="empty-state" style="padding:24px 16px">
+                                        <i class="bi bi-gear" style="font-size:2rem"></i>
+                                        <h3>No Rules</h3>
+                                        <p>Automation rules help optimize campaigns automatically.</p>
+                                    </div>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
-            </div>
-            <div class="card-footer text-center border-top-0">
-                <a href="/automation" class="btn btn-outline btn-sm w-100">Manage Rules</a>
             </div>
         </div>
 
@@ -173,10 +190,23 @@
                     <a href="/campaigns" class="btn btn-outline btn-sm">
                         <i class="bi bi-plus-circle"></i> View Campaigns
                     </a>
+                    <a href="/0858" class="btn btn-outline btn-sm">
+                        <i class="bi bi-graph-up"></i> 0858 Engine Dashboard
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Hide loading overlay
+    var loader = document.getElementById('pageLoading');
+    if (loader) setTimeout(function() { loader.style.display = 'none'; }, 200);
+});
+</script>
 {% endblock %}

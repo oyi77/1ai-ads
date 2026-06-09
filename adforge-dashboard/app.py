@@ -24,6 +24,8 @@ import time
 from collections import defaultdict
 import hashlib
 import shutil
+import bcrypt
+import re
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.secret_key = os.getenv("ADFORGE_DASHBOARD_SECRET", os.urandom(32).hex())
@@ -81,9 +83,9 @@ MASTER_DB = str(BASE_DIR / "adforge.db")
 USER_DB_DIR = str(BASE_DIR / "users")
 os.makedirs(USER_DB_DIR, exist_ok=True)
 
-API_URL = "http://127.0.0.1:3001"
-API_USER = "admin"
-API_PASS = "admin123"
+API_URL = os.getenv("ADFORGE_API_URL", "http://127.0.0.1:3001")
+API_USER = os.getenv("ADFORGE_API_USER", "admin")
+API_PASS = os.getenv("ADFORGE_API_PASS", "admin123")
 
 # Load FB config from .env
 ENV_PATH = os.path.join(
@@ -94,7 +96,7 @@ FB_APP_ID = ""
 
 
 def load_fb_config():
-    global FB_SYSTEM_TOKEN, FB_APP_ID
+    global FB_SYSTEM_TOKEN, FB_APP_ID, TRAKPRO_API_KEY
     try:
         with open(ENV_PATH) as f:
             for line in f:
@@ -103,6 +105,8 @@ def load_fb_config():
                     FB_SYSTEM_TOKEN = line.split("=", 1)[1].strip().strip("'\"")
                 elif line.startswith("FB_APP_ID="):
                     FB_APP_ID = line.split("=", 1)[1].strip().strip("'\"")
+                elif line.startswith("TRAKPRO_API_KEY="):
+                    TRAKPRO_API_KEY = line.split("=", 1)[1].strip().strip("'\"")
     except Exception:
         pass
 
@@ -160,7 +164,7 @@ def init_master_db():
     ).fetchone()
     if not admin:
         admin_id = str(uuid.uuid4())[:8]
-        pw_hash = hashlib.sha256("admin123".encode()).hexdigest()
+        pw_hash = bcrypt.hashpw(b"admin123", bcrypt.gensalt(rounds=10)).decode()
         c.execute(
             """
             INSERT INTO dashboard_users (id, username, password_hash, email, role)
@@ -287,22 +291,17 @@ def ensure_user_db(user_id):
 
 
 def hash_password(password):
-    """Hash password with salt using PBKDF2 (128k iterations)."""
-    salt = os.urandom(16)
-    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 128000)
-    return salt.hex() + ":" + key.hex()
+    """Hash password with bcrypt (10 rounds)."""
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=10)).decode()
 
 
 def verify_password(password, stored_hash):
-    """Verify password against stored PBKDF2 hash."""
-    parts = stored_hash.split(":")
-    if len(parts) == 2:
-        salt = bytes.fromhex(parts[0])
-        key = bytes.fromhex(parts[1])
-        new_key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 128000)
-        return new_key == key
-    # Legacy: plain SHA256 fallback for old passwords
-    return hashlib.sha256(password.encode()).hexdigest() == stored_hash
+    """Verify password against bcrypt hash."""
+    try:
+        return bcrypt.checkpw(password.encode(), stored_hash.encode())
+    except Exception:
+        # Legacy: plain SHA256 fallback for old passwords
+        return hashlib.sha256(password.encode()).hexdigest() == stored_hash
 
 
 def login_required(f):
@@ -319,6 +318,14 @@ def login_required(f):
 
 # ===================== AUTH ROUTES =====================
 
+
+# Disable caching for dashboard pages
+@app.after_request
+def add_no_cache(response):
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @app.route("/login", methods=["GET", "POST"])
 @rate_limit(max_attempts=10, window=300)
@@ -337,6 +344,7 @@ def login_page():
     conn.close()
 
     if user and verify_password(password, user["password_hash"]):
+        session.permanent = True
         session["user_id"] = user["id"]
         session["username"] = user["username"]
         session["role"] = user["role"]
@@ -371,6 +379,9 @@ def register_page():
     if not username or not password:
         return render_template("register.html", error="Username and password required")
 
+    if len(password) < 8:
+        return render_template("register.html", error="Password must be at least 8 characters")
+
     conn = get_master_db()
     existing = conn.execute(
         "SELECT id FROM dashboard_users WHERE username = ?", (username,)
@@ -394,6 +405,18 @@ def register_page():
 
     # Create their isolated database
     ensure_user_db(user_id)
+
+    # Sync user to Node backend so API bridge works
+    try:
+        sync = requests.post(
+            f"{API_URL}/api/auth/register",
+            json={"username": username, "password": password, "email": email or f"{username}@adforge.local"},
+            timeout=5,
+        )
+        if not sync.json().get("success"):
+            print(f"[register] Node sync warning: {sync.json().get('error', 'unknown')}")
+    except Exception as e:
+        print(f"[register] Node sync failed: {e}")
 
     session["user_id"] = user_id
     session["username"] = username
@@ -494,6 +517,10 @@ def dashboard():
 def campaigns():
     conn = get_user_db(session["user_id"])
     c = conn.cursor()
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 20))
+    page_size = min(max(page_size, 1), 100)  # Clamp between 1-100
+    offset = (page - 1) * page_size
     campaigns = c.execute("""
         SELECT id, name, platform, status, 
                COALESCE(spend, 0) as spend,
@@ -501,10 +528,13 @@ def campaigns():
                COALESCE(impressions, 0) as impressions
         FROM campaigns 
         ORDER BY created_at DESC
-    """).fetchall()
+        LIMIT ? OFFSET ?
+    """, (page_size, offset)).fetchall()
+    total = c.execute("SELECT COUNT(*) as cnt FROM campaigns").fetchone()["cnt"]
     conn.close()
     return render_template(
-        "campaigns.html", campaigns=campaigns, username=session.get("username")
+        "campaigns.html", campaigns=campaigns, username=session.get("username"),
+        page=page, page_size=page_size, total=total
     )
 
 
@@ -555,8 +585,8 @@ def settings_page():
                     json={"chat_id": chat_id, "text": msg},
                     timeout=5,
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[telegram] Test message send failed: {e}")
 
         conn.close()
         return redirect(url_for("settings_page", success=1))
@@ -1004,6 +1034,16 @@ def api_taglink_generate():
     if not url or not campaign:
         return jsonify({"success": False, "error": "URL and campaign required"}), 400
 
+    # Sanitize inputs - alphanumeric, hyphens, underscores only
+    safe_campaign = re.sub(r'[^a-zA-Z0-9_-]', '', campaign)
+    safe_adset = re.sub(r'[^a-zA-Z0-9_-]', '', adset)
+    # Sanitize subprocess inputs to prevent injection
+    campaign_safe = re.sub(r'[^a-zA-Z0-9_ -]', '', str(campaign))
+    url_safe = re.sub(r'[^a-zA-Z0-9_\-./:?=&%]', '', str(url))
+    adset_safe = re.sub(r'[^a-zA-Z0-9_ -]', '', str(adset))
+    ad_safe = re.sub(r'[^a-zA-Z0-9_ -]', '', str(ad))
+    account_safe = re.sub(r'[^a-zA-Z0-9_ -]', '', str(account))
+
     import subprocess
 
     result = subprocess.run(
@@ -1012,15 +1052,15 @@ def api_taglink_generate():
             "scripts/vilona_taglink_attribution.py",
             "generate",
             "--campaign",
-            campaign,
+            campaign_safe,
             "--url",
-            url,
+            url_safe,
             "--adset",
-            adset,
+            adset_safe,
             "--ad",
-            ad,
+            ad_safe,
             "--account",
-            account,
+            account_safe,
         ],
         capture_output=True,
         text=True,
@@ -1030,8 +1070,8 @@ def api_taglink_generate():
     try:
         output = json.loads(result.stdout)
         return jsonify({"success": True, "taglink": output})
-    except Exception:
-        return jsonify({"success": False, "error": result.stderr or result.stdout}), 500
+    except (json.JSONDecodeError, Exception) as e:
+        return jsonify({"success": False, "error": result.stderr or result.stdout or str(e)}), 500
 
 
 @app.route("/api/taglink/report")
@@ -1084,9 +1124,8 @@ def send_telegram_alert(user_id, text):
                 },
                 timeout=5,
             )
-        except Exception:
-            pass
-
+        except Exception as e:
+            print(f"[telegram] Send message failed: {e}")
 
 # ===================== INIT (lazy) =====================
 _db_initialized = False
@@ -1099,6 +1138,33 @@ def ensure_master_db():
     init_master_db()
     migrate_existing_users()
     _db_initialized = True
+
+
+@app.route("/health")
+def health_check():
+    """Health check endpoint for upstream monitoring."""
+    import subprocess
+    services = {
+        "flask": "ok",
+        "node_api": "unknown",
+    }
+    try:
+        r = requests.get(f"{API_URL}/health", timeout=3)
+        services["node_api"] = "ok" if r.status_code < 500 else "error"
+    except Exception:
+        services["node_api"] = "unreachable"
+    
+    try:
+        r = requests.get("http://127.0.0.1:5002/", timeout=3)
+        services["flask"] = "ok"
+    except Exception:
+        services["flask"] = "error"
+    
+    return jsonify({
+        "status": "ok" if all(v == "ok" for v in services.values()) else "degraded",
+        "services": services,
+        "timestamp": datetime.now().isoformat(),
+    })
 
 
 @app.before_request
@@ -1211,8 +1277,10 @@ def api_trakpro_status():
     """Return Trakpro engine state for dashboard integration.
     Accepts ?key=BerkahKarya2026! for non-session access."""
     # Allow API key bypass for dashboard integration
+    # Cek API key bypass untuk dashboard integration
     api_key = request.args.get("key", "")
-    if api_key != "BerkahKarya2026!":
+    env_key = os.getenv("TRAKPRO_API_KEY", "CHANGE_ME")
+    if api_key != env_key:
         if "user_id" not in session:
             return jsonify({"error": "Unauthorized", "success": False}), 401
     state = {}
@@ -1262,4 +1330,4 @@ if __name__ == "__main__":
     print("   http://127.0.0.1:5002")
     print("   Users: Each user has their OWN database file")
     print("=" * 60)
-    app.run(host="127.0.0.1", port=5002, debug=True, use_reloader=False)
+    app.run(host="127.0.0.1", port=5002, debug=False, use_reloader=False)

@@ -1,67 +1,153 @@
 {% extends "base.html" %}
 {% block title %}Settings{% endblock %}
 {% block content %}
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="bi bi-gear-fill"></i> System Settings & Integration</h5>
-                </div>
-                <div class="card-body">
-                    {% if success %}
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <strong>Success!</strong> Your settings have been saved.
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                    {% endif %}
 
-                    <form method="POST">
-                        <h6 class="border-bottom pb-2 mb-3"><i class="bi bi-telegram"></i> Telegram Bot Integration</h6>
-                        <p class="text-muted small">
-                            Register your bot with <a href="https://t.me/BotFather" target="_blank">@BotFather</a> to get a token. 
-                            This allows AdForge to send you real-time Meta Ads alerts and performance updates.
-                        </p>
-                        
-                        <div class="mb-3">
-                            <label for="telegram_bot_token" class="form-label font-weight-bold">Telegram Bot Token</label>
-                            <input type="password" class="form-control" id="telegram_bot_token" name="telegram_bot_token" 
-                                   value="{{ user.telegram_bot_token or '' }}" placeholder="123456789:ABCdefGhIjkLmNoPqRsTuVwXyZ">
-                            <div class="form-text">Your bot token from BotFather.</div>
-                        </div>
+<div class="page-header">
+    <div>
+        <h1>Settings</h1>
+        <p>Configure your AdForge dashboard preferences</p>
+    </div>
+</div>
 
-                        <div class="mb-3">
-                            <label for="telegram_chat_id" class="form-label font-weight-bold">Telegram Chat ID / User ID</label>
-                            <input type="text" class="form-control" id="telegram_chat_id" name="telegram_chat_id" 
-                                   value="{{ user.telegram_chat_id or '' }}" placeholder="157228659">
-                            <div class="form-text">Find your ID using <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a>.</div>
-                        </div>
+{% if success %}
+<div class="alert alert-success" style="animation:slideDown .3s ease;padding:14px 18px;border-radius:var(--radius-sm);margin-bottom:16px;background:var(--green-bg);border:1px solid rgba(34,197,94,.2);color:var(--green);display:flex;align-items:center;gap:10px">
+    <i class="bi bi-check-circle-fill"></i> Settings updated successfully!
+</div>
+{% endif %}
 
-                        <hr>
-
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-0">Profile Information</h6>
-                                <p class="text-muted small mb-0">Username: <strong>{{ user.username }}</strong></p>
-                            </div>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-save"></i> Save Settings
-                            </button>
-                        </div>
-                    </form>
-                </div>
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-telegram"></i> Telegram Integration</h5>
             </div>
+            <div class="card-body">
+                <form method="POST" action="/settings">
+                    <div class="mb-3">
+                        <label class="form-label">Bot Token</label>
+                        <input type="password" name="telegram_bot_token" class="form-control" 
+                               value="{{ user.telegram_bot_token or '' }}" 
+                               placeholder="123456:ABC-def_GHI">
+                        <div class="form-text">Get from <a href="https://t.me/BotFather" target="_blank">@BotFather</a> on Telegram</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Chat ID</label>
+                        <input type="text" name="telegram_chat_id" class="form-control" 
+                               value="{{ user.telegram_chat_id or '' }}" 
+                               placeholder="-1001234567890">
+                        <div class="form-text">Your Telegram chat ID (numeric). Use <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a> to find it.</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-check-lg"></i> Save Settings
+                    </button>
+                </form>
+            </div>
+        </div>
 
-            <div class="card mt-4 shadow-sm border-info">
-                <div class="card-body">
-                    <h6><i class="bi bi-info-circle text-info"></i> How it works</h6>
-                    <p class="small mb-0">
-                        Once linked, the <strong>AdForge Autonomous Agent</strong> will monitor your campaigns every 2 hours 
-                        and send snapshots directly to your Telegram. You can also trigger reports by chatting with your bot.
-                    </p>
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="bi bi-info-circle"></i> Account Info</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Username</span>
+                    <span class="fw-bold" style="color:var(--text)">{{ user.username }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Role</span>
+                    <span class="badge badge-info">{{ user.role }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Email</span>
+                    <span style="color:var(--text)">{{ user.email or 'Not set' }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Member Since</span>
+                    <span style="color:var(--text2)" class="text-sm">{{ user.created_at[:10] if user.created_at else 'N/A' }}</span>
                 </div>
             </div>
         </div>
     </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-shield-check"></i> System Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>Flask Dashboard</span>
+                    <span class="badge badge-success">Online</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>Node API Backend</span>
+                    <span class="badge badge-success">Connected</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>Facebook API</span>
+                    {% if user.telegram_bot_token %}
+                    <span class="badge badge-success">Connected</span>
+                    {% else %}
+                    <span class="badge badge-warning">Not Configured</span>
+                    {% endif %}
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Telegram Bot</span>
+                    <span id="telegramStatus" class="badge badge-neutral">Checking...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="bi bi-database"></i> Data Management</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-sm text-muted mb-3">Your data is stored in per-user isolated SQLite databases.</p>
+                <button class="btn btn-outline w-100 mb-2" onclick="testTelegram()">
+                    <i class="bi bi-send"></i> Test Telegram Connection
+                </button>
+                <a href="/logout" class="btn btn-danger w-100">
+                    <i class="bi bi-box-arrow-right"></i> Sign Out
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function testTelegram() {
+    showLoading('Sending test message...');
+    fetch('/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            telegram_bot_token: document.querySelector('[name="telegram_bot_token"]').value,
+            telegram_chat_id: document.querySelector('[name="telegram_chat_id"]').value
+        })
+    }).then(function() {
+        hideLoading();
+        showToast('Test Sent', 'Check your Telegram for a test message', 'info');
+    }).catch(function(err) {
+        hideLoading();
+        showToast('Error', 'Failed: ' + err.message, 'error');
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var token = document.querySelector('[name="telegram_bot_token"]');
+    var chatId = document.querySelector('[name="telegram_chat_id"]');
+    var status = document.getElementById('telegramStatus');
+    if (token && token.value && chatId && chatId.value) {
+        status.className = 'badge badge-success';
+        status.textContent = 'Configured';
+    } else {
+        status.className = 'badge badge-neutral';
+        status.textContent = 'Not Set';
+    }
+});
+</script>
 {% endblock %}
