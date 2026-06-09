@@ -41,7 +41,7 @@ ACCOUNTS = {
 }
 
 WIN_MIN_PROFIT = 5000; WIN_MIN_ROAS = 1.2
-BONCOS_MAX_ROAS = 0.8; SCALE_MIN_ROAS = 1.3; SCALE_MIN_CTR = 3.0
+BONCOS_MAX_ROAS = 0.3; SCALE_MIN_ROAS = 1.3; SCALE_MIN_CTR = 3.0
 PENDING_SPEND = 5000; PENDING_CLICK = 10
 FATIGUE_CTR_DROP = 0.3; FATIGUE_CPC_RISE = 0.3; FATIGUE_SPEND_RISE = 0.2
 EARLY_MAX_AGE = 3; EARLY_MIN_SPEND = 3000
@@ -51,7 +51,9 @@ TAGS = ['rakdapur','rakdapur3','atayasetelankaosanak','wallpaperdindingvinyl',
     'bajuanak','purwoceng','herbal','perabotan',
     # Malaysia 1134 tags
     'longslave','studiolands','leggingwanitacotton','longsleeve','jerseymulimah',
-    'atasan','celana','social media']
+    'atasan','celana','social media',
+    # Glowscent 1134 tags (PintuLipatGeser)
+    'pintulipatgeser','pintu','lemari','hijab','cepol']
 
 def api(p, params=None):
     u = f"https://graph.facebook.com/v19.0/{p}"
@@ -193,12 +195,15 @@ def extract_tag(name):
         'wallpaper': 'wallpaperdindingvinyl', 'stiker': 'wallpaperdindingvinyl',
         'elektronik': 'rakdapur3', 'belanja': 'rakdapur3',
         'organisir': 'rakdapur3', 'kecantikan': 'rakdapur3',
+        # Glowscent 1134 pintulipatgeser audience mapping
+        'pintulipatgeser': 'pintulipatgeser', 'pintu': 'pintulipatgeser', 'lipat': 'pintulipatgeser',
+        'geser': 'pintulipatgeser', 'lemari': 'lemari', 'hijab': 'hijab', 'cepol': 'hijab',
     }
     for audience, tag in AUDIENCE_TO_TAG.items():
         if audience in nl:
             return tag
     # Fallback: clean prefix and numbers
-    c = re.sub(r'^(abo_|bidcap|bc|tc|off_|lc_|scale_|nyamiresep_|test_|winner_?|selow_?|0858_?|1208_?|1134_?|1340_?)+','',nl,flags=re.I)
+    c = re.sub(r'^(abo_|bidcap|bc|tc|off_|lc_|scale_|nyamiresep_|test_|winner_?|selow_?|0858_?|1208_?|1134_?|1340_?|glw681_?|on_|on_cbo_|off_abo_)+','',nl,flags=re.I)
     return re.sub(r'\s*\d+$','',c).strip('_ -') or nl
 
 def match_tag_to_shopeetags(camp_tag, all_shopee_tags, acc_key=None):
@@ -210,6 +215,7 @@ def match_tag_to_shopeetags(camp_tag, all_shopee_tags, acc_key=None):
     # Account-specific mappings (campaign naming vs Shopee sub_id)
     ACC_MAP = {
         '1134': {'longslave': ['studiolands', 'leggingwanitacotton', 'longsleeve', 'jerseymulimah']},
+        'glowscent': {'pintulipatgeser': ['pintulipatgeser'], 'lemari': ['lemari'], 'hijab': ['hijab']},
     }
     if acc_key and acc_key in ACC_MAP:
         for k, v in ACC_MAP[acc_key].items():
@@ -355,6 +361,11 @@ def rekomendasi(results, acc_key, days=3):
         total_profit = total_comm - total_spend
         roas = total_comm / total_spend if total_spend > 0 else 0
         n_orders = sum(tag_orders.get(mt, 0) for mt in matched)
+        # ── CVR (conversion rate) from Shopee orders vs Meta clicks ──
+        total_clicks = sum(c['clicks'] for c in camps)
+        cvr = (n_orders / total_clicks) * 100 if total_clicks > 0 else 0
+        # pending_commission = total commission from orders for this taglink (approximates unpaid/pending)
+        pending_commission = total_comm
         
         # Determine recommendation
         if roas >= 2.0 and total_profit > 0:
@@ -388,6 +399,19 @@ def rekomendasi(results, acc_key, days=3):
             aksi = 'GAS+CREATIVE'
             detail = f'GAS tapi {len(fatigued)} creative fatigue — ganti creative dulu lalu scale'
         
+        # ── 0858 Account: CVR & pending_commission skip-pause ──
+        if acc_key == '0858' and aksi == 'PAUSE':
+            skip_reasons = []
+            if cvr > 5:
+                skip_reasons.append(f'CVR {cvr:.1f}% > 5%')
+            if pending_commission > 50000:
+                skip_reasons.append(f'pending comm Rp{pending_commission:,.0f} > 50K')
+            if n_orders > 0:
+                skip_reasons.append(f'{n_orders} completed order(s)')
+            if skip_reasons:
+                aksi = 'OPTIMIZE'
+                detail = ' | '.join(skip_reasons) + ' — skip-pause, keep optimizing'
+        
         # Camp details
         camp_details = []
         for c in sorted(camps, key=lambda x: -x['spend']):
@@ -415,6 +439,8 @@ def rekomendasi(results, acc_key, days=3):
             'total_comm_all': total_comm_all,
             'total_profit': total_profit,
             'roas': roas,
+            'cvr': round(cvr, 1),
+            'pending_commission': pending_commission,
             'aksi': aksi,
             'detail': detail,
             'prio': prio,

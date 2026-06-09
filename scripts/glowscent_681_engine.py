@@ -36,9 +36,58 @@ WIB = timezone(timedelta(hours=7))
 WORKSPACE = Path(__file__).parent.parent
 LOG_FILE = WORKSPACE / "logs" / "glowscent_681_engine.log"
 STATE_FILE = WORKSPACE / "data" / "glowscent_681_state.json"
+SHOPEE_DIR = WORKSPACE / "data" / "shopee"
 TOKEN_FILE = Path("/tmp/meta_token.txt")  # Shared token file with 1041 governor
 os.makedirs(WORKSPACE / "logs", exist_ok=True)
 os.makedirs(WORKSPACE / "data", exist_ok=True)
+
+# ─── ROAS / SHOPEE ───────────────────────────────────────────────────────────
+COMMISSION_CACHE = {"total": 0, "tag": {}, "loaded": None}
+
+def load_shopee_commission():
+    """Load Shopee commission data for Glowscent. Caches results."""
+    global COMMISSION_CACHE
+    now = datetime.now(WIB)
+    # Refresh cache every hour
+    if COMMISSION_CACHE["loaded"] and (now - COMMISSION_CACHE["loaded"]).seconds < 3600:
+        return COMMISSION_CACHE
+    
+    tag_comm = defaultdict(lambda: {"selesai": 0, "tertunda": 0, "total": 0})
+    total_comm = 0
+    
+    # Look for glowscent YYYY-MM-DD.csv files (last 7 days)
+    found_any = False
+    for i in range(7):
+        dt = (now - timedelta(days=i)).strftime("%Y-%m-%d")
+        p = SHOPEE_DIR / f"glowscent_{dt}.csv"
+        if p.exists():
+            found_any = True
+            try:
+                with open(p, 'r', encoding='utf-8-sig') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        tag = row.get('Tag_link1', '').strip().lower() or 'unknown'
+                        status = row.get('Status Pesanan', '')
+                        comm = 0
+                        try:
+                            comm = float(row.get('Komisi Bersih Affiliate (Rp)', '0').replace(',', '') or 0)
+                        except:
+                            pass
+                        
+                        total_comm += comm
+                        if status == 'Selesai':
+                            tag_comm[tag]["selesai"] += comm
+                            tag_comm[tag]["total"] += comm
+                        elif status == 'Tertunda':
+                            tag_comm[tag]["tertunda"] += comm
+                            tag_comm[tag]["total"] += comm
+            except Exception as e:
+                log(f"Shopee CSV read error ({p.name}): {e}", "WARN")
+    
+    COMMISSION_CACHE = {"total": total_comm, "tag": dict(tag_comm), "loaded": now}
+    if found_any:
+        log(f"Shopee: loaded {len(tag_comm)} tags, total comm Rp{total_comm:,.0f}", "INFO")
+    return COMMISSION_CACHE
 
 def load_token():
     """Load token from file. Tries /tmp/fb_token.txt first, then .env fallback."""
@@ -185,12 +234,13 @@ def get_campaign_insights(cid):
     """Get insights for a specific campaign."""
     result = fb_get(f"{cid}/insights",
                     fields="spend,impressions,clicks,ctr,cpm,actions",
-                    date_preset="last_7d")
+                    date_preset="last_3d")
     return result.get("data", [{}])[0] if result.get("data") else {}
 
 # ─── DECISION ENGINE ─────────────────────────────────────────────────────────
-def evaluate_campaign(camp, insights):
-    """Evaluate a single campaign and return action dict."""
+def evaluate_campaign(camp, insights, tag_comm=None):
+    """Evaluate a single campaign and return action dict.
+    Combines CPC/CTR + Shopee ROAS for smarter decisions."""
     name = camp.get("name", "Unknown")
     cid = camp.get("id", "")
     status = camp.get("status", "PAUSED")
@@ -201,36 +251,69 @@ def evaluate_campaign(camp, insights):
     ctr = float(insights.get("ctr", 0) or 0)
     cpc = spend / clicks if clicks > 0 else 999
     
+    # Extract tag from campaign name
+    nl = name.lower()
+    tag = 'unknown'
+    for t in ['pintulipatgeser', 'pintu', 'lemari', 'hijab', 'cepol']:
+        if t in nl:
+            tag = t
+            break
+    
+    # Calc ROAS from Shopee commission
+    comm_total = 0
+    comm_selesai = 0
+    if tag_comm and tag in tag_comm:
+        comm_total = tag_comm[tag].get('total', 0)
+        comm_selesai = tag_comm[tag].get('selesai', 0)
+    
+    # Conservative: use selesai-only commission + 30% of tertunda
+    comm_reliable = comm_selesai + max(0, comm_total - comm_selesai) * 0.3
+    roas = comm_total / spend if spend > 0 else 0
+    roas_reliable = comm_reliable / spend if spend > 0 else 0
+    profit = comm_total - spend
+    
     # OFF_ rule — NEVER TOUCH
     if "OFF_" in name:
-        return {"action": "SKIP", "reason": "OFF_ prefix"}
+        return {"action": "SKIP", "reason": "OFF_ prefix", "roas": roas, "profit": profit}
     
     if status != "ACTIVE":
-        return {"action": "NONE", "reason": "Not active"}
+        return {"action": "NONE", "reason": "Not active", "roas": roas, "profit": profit}
     
     # No spend yet = still ramping up
     if spend == 0:
-        return {"action": "JALAN", "reason": "No spend — learning"}
+        return {"action": "JALAN", "reason": "No spend — learning", "roas": 0, "profit": 0}
     
     # Zero clicks = bad creative/targeting
     if clicks == 0:
-        return {"action": "PAUSE", "reason": f"Spend Rp{int(spend):,}, 0 clicks"}
+        return {"action": "PAUSE", "reason": f"Spend Rp{int(spend):,}, 0 clicks", "roas": 0, "profit": -spend}
     
-    # CPC-based decisions
+    # ── ROAS-BASED OVERRIDES ──
+    if spend > 30000 and roas_reliable < 0.3 and tag_comm:
+        return {"action": "PAUSE", "reason": f"ROAS {roas:.2f}x (reliable {roas_reliable:.2f}x) — boncos",
+                "roas": roas, "profit": profit}
+    
+    # ── CPC-based decisions ──
     if cpc > CPC_KILL:
-        return {"action": "PAUSE", "reason": f"CPC Rp{int(cpc):,} > {CPC_KILL}"}
+        return {"action": "PAUSE", "reason": f"CPC Rp{int(cpc):,} > {CPC_KILL}", "roas": roas, "profit": profit}
     if cpc > CPC_WARN:
-        return {"action": "PAUSE", "reason": f"CPC Rp{int(cpc):,} > {CPC_WARN}"}
+        return {"action": "PAUSE", "reason": f"CPC Rp{int(cpc):,} > {CPC_WARN}", "roas": roas, "profit": profit}
     
-    # CTR-based decisions
+    # ── CTR-based decisions ──
     if impr >= 500 and ctr < CTR_KILL:
-        return {"action": "PAUSE", "reason": f"CTR {ctr:.1f}% < {CTR_KILL}%"}
+        return {"action": "PAUSE", "reason": f"CTR {ctr:.1f}% < {CTR_KILL}%", "roas": roas, "profit": profit}
     
-    # GAS conditions
+    # ── GAS conditions ──
+    # GAS by CPC/CTR
     if cpc <= CPC_GAS and ctr >= CTR_GAS and clicks >= 10:
-        return {"action": "GAS", "reason": f"CPC Rp{int(cpc)} + CTR {ctr:.1f}%"}
+        return {"action": "GAS", "reason": f"CPC Rp{int(cpc)} + CTR {ctr:.1f}%",
+                "roas": roas, "profit": profit}
+    # GAS by ROAS (even if CPC slightly high)
+    if roas_reliable >= 1.0 and clicks >= 10:
+        return {"action": "GAS", "reason": f"ROAS {roas:.1f}x (reliable {roas_reliable:.1f}x)",
+                "roas": roas, "profit": profit}
     
-    return {"action": "JALAN", "reason": f"CPC Rp{int(cpc)} CTR {ctr:.1f}%"}
+    return {"action": "JALAN", "reason": f"CPC Rp{int(cpc)} CTR {ctr:.1f}% ROAS {roas:.2f}x",
+            "roas": roas, "profit": profit}
 
 # ─── MAIN DECISION LOOP ──────────────────────────────────────────────────────
 def run_cycle(verbose=False):
@@ -283,6 +366,10 @@ def run_cycle(verbose=False):
     if not dead_zone:
         check_list = active + paused_non_off  # check paused too for reporting
         
+        # Load Shopee commission data for ROAS calculation
+        shopee_data = load_shopee_commission()
+        tag_comm = shopee_data.get("tag", {})
+        
         for camp in check_list:
             name = camp.get("name", "Unknown")
             cid = camp.get("id", "")
@@ -296,7 +383,7 @@ def run_cycle(verbose=False):
             spend = float(insights.get("spend", 0) or 0)
             total_spend += spend
             
-            result = evaluate_campaign(camp, insights)
+            result = evaluate_campaign(camp, insights, tag_comm)
             
             if result["action"] == "PAUSE" and status == "ACTIVE":
                 log(f"🔴 PAUSE: {name[:50]} — {result['reason']}")
@@ -308,6 +395,15 @@ def run_cycle(verbose=False):
                 log(f"🚀 GAS: {name[:50]} — {result['reason']}")
                 actions_taken.append(f"GAS {name[:40]}: {result['reason']}")
                 alerts.append(f"🚀 {name[:40]}: CPC winner!")
+                # Auto-scale budget by 20% each cycle, cap at Rp200k
+                camp_detail = fb_get(f"{cid}", fields="id,daily_budget")
+                curr_budget = int(camp_detail.get("daily_budget", 0) or 0)
+                if curr_budget > 0 and curr_budget < 200000:
+                    new_budget = min(curr_budget * 1.2, 200000)
+                    scale = fb_post(cid, daily_budget=int(new_budget))
+                    if not scale.get("error"):
+                        log(f"💰 SCALE: {name[:40]} Rp{curr_budget:,} → Rp{int(new_budget):,}", "INFO")
+                        actions_taken.append(f"SCALE {name[:30]}: Rp{curr_budget:,}→Rp{int(new_budget):,}")
             
             elif status == "ACTIVE" and verbose:
                 log(f"▶️  {name[:50]} — {result['reason']}")

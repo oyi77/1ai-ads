@@ -124,15 +124,15 @@ def main():
     # Load Meta campaign data and insights
     meta_campaign_metrics = load_json(META_CAMPAIGN_METRICS_PATH, {})
     # Map campaign_id to its full campaign object for name search
-    meta_campaigns_by_id = {c[\"id\"]: c for c in meta_campaign_metrics.get(\"campaigns\", [])}
+    meta_campaigns_by_id = {c["id"]: c for c in meta_campaign_metrics.get("campaigns", [])}
     # Map campaign_id to its daily insights (spend, clicks, ctr, etc.)
     meta_insights_by_campaign_id = {
-        i[\"campaign_id\"]: {
-            \"clicks\": int(i.get(\"clicks\", 0)),
-            \"ctr\": float(i.get(\"ctr\", 0)) / 100, # Convert % to decimal
-            \"spend\": float(i.get(\"spend\", 0)),
-            \"cpc\": float(i.get(\"cpc\", 0)),
-        } for i in meta_campaign_metrics.get(\"insights\", []) # Assuming insights key holds the daily data
+        i["campaign_id"]: {
+            "clicks": int(i.get("clicks", 0)),
+            "ctr": float(i.get("ctr", 0)) / 100, # Convert % to decimal
+            "spend": float(i.get("spend", 0)),
+            "cpc": float(i.get("cpc", 0)),
+        } for i in meta_campaign_metrics.get("insights", []) # Assuming insights key holds the daily data
     }
 
     for account_data in dashboard_data:
@@ -145,7 +145,7 @@ def main():
                 # Cari Meta campaign ID yang cocok dengan taglink ini
                 # Asumsi Meta campaign name mengandung taglink_name
                 matching_meta_campaigns = [
-                    c for c in meta_campaigns.values()
+                    c for c in meta_campaigns_by_id.values()
                     if taglink_name.lower() in c.get("name", "").lower()
                 ]
 

@@ -242,7 +242,7 @@ ACCOUNTS = {
         "cpc_safe_cbo": 100, "cpc_danger_cbo": 140,
         "cpc_safe_abo": 150, "cpc_danger_abo": 250,
         "budget_cap_per_camp": 300000,
-        "tags": ["rakdapur3", "multistorage"],
+        "tags": ["rakdapur3", "multistorage", "atayasetelankaosanak"],
     },
     "1208": {
         "id": "act_1439536310038458",
@@ -945,6 +945,9 @@ def create_scale_clone(original_campaign, account_id, account_config):
             diversified_targeting["facebook_positions"] = [
                 p for p in diversified_targeting["facebook_positions"] if p != "video_feeds"
             ]
+        # Meta API v22 requires explicit Advantage Audience flag in targeting.
+        diversified_targeting.setdefault("targeting_automation", {})
+        diversified_targeting["targeting_automation"]["advantage_audience"] = 0
         
         # ─── SCALE NAMING (2026-06-09 convention) ────────────────────────
         camp_name = f"Scale_{taglink}_{audience}_{today_str}"
@@ -997,10 +1000,9 @@ def create_scale_clone(original_campaign, account_id, account_config):
             "daily_budget": "500000",  # Rp5,000/day in cents (existing Scale_ clones use this)
             "status": "PAUSED",  # ⚠️ SAFETY: never auto-ACTIVE
         }
-        if post_id:
-            adset_payload["promoted_object"] = json.dumps({
-                "object_story_id": post_id
-            })
+        # Do NOT put object_story_id in adset promoted_object.
+        # The post/creative linkage belongs at ad level; v22 rejects object_story_id
+        # inside adset promoted_object for OUTCOME_TRAFFIC campaigns.
         
         # Create adset — ALWAYS PAUSED
         adset_result = fb_post(f"{account_id}/adsets", **adset_payload)
