@@ -1,0 +1,117 @@
+{
+  "patrol_date": "2026-06-10",
+  "patrol_time_wib": "04:08",
+  "account": "act_435670549443081",
+  "active_campaigns": 8,
+  "total_spend_today": 256,
+  "total_spend_7d": 328896,
+  "total_clicks_today": 3,
+  "paused_count": 0,
+  "kept_count": 8,
+  "total_completed_commission": 0,
+  "total_pending_commission": 6007676,
+  "to_pause": [],
+  "to_keep_summary": [
+    {
+      "name": "\ud83c\udf1f_ON__Kakriput_organizerpullout_INT10",
+      "taglink": "organizerpullout",
+      "spend_today": 40,
+      "decision": "KEEP",
+      "reason": "CVR 57.58% > 5.0% \u2192 KEEP"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_GEO_organizerpullout_INT08",
+      "taglink": "organizerpullout",
+      "spend_today": 0,
+      "decision": "KEEP",
+      "reason": "CVR 57.58% > 5.0% \u2192 KEEP"
+    },
+    {
+      "name": "\ud83c\udf1f_ON__Kakriput_organizerpullout_INT06",
+      "taglink": "organizerpullout",
+      "spend_today": 0,
+      "decision": "KEEP",
+      "reason": "CVR 57.58% > 5.0% \u2192 KEEP"
+    },
+    {
+      "name": "ON_GEO_organizerpullout_INT04",
+      "taglink": "organizerpullout",
+      "spend_today": 7,
+      "decision": "KEEP",
+      "reason": "CVR 57.58% > 5.0% \u2192 KEEP"
+    },
+    {
+      "name": "ON_GEO_organizerpullout_INT02",
+      "taglink": "organizerpullout",
+      "spend_today": 7,
+      "decision": "KEEP",
+      "reason": "CVR 57.58% > 5.0% \u2192 KEEP"
+    },
+    {
+      "name": "BIDCAP_Organizer_organizerpullout_Dapur_0603",
+      "taglink": "organizerpullout",
+      "spend_today": 202,
+      "decision": "KEEP",
+      "reason": "CVR 57.58% > 5.0% \u2192 KEEP"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_VILONA_organizerpullout_FBonly",
+      "taglink": "organizerpullout",
+      "spend_today": 0,
+      "decision": "KEEP",
+      "reason": "CVR 57.58% > 5.0% \u2192 KEEP"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_VILONA_organizerpullout_IGonly",
+      "taglink": "organizerpullout",
+      "spend_today": 0,
+      "decision": "KEEP",
+      "reason": "CVR 57.58% > 5.0% \u2192 KEEP"
+    }
+  ],
+  "pause_results": [],
+  "taglink_health": {
+    "rakpiringpengering": {
+      "cvr": 26.32,
+      "pending": 3418743,
+      "completed": 956,
+      "keep_on": true
+    },
+    "organizerpullout": {
+      "cvr": 57.58,
+      "pending": 1993520,
+      "completed": 569,
+      "keep_on": true
+    },
+    "setelanbajukaosmihugajah": {
+      "cvr": 7.14,
+      "pending": 514689,
+      "completed": 4,
+      "keep_on": true
+    },
+    "setelangajahthaialand": {
+      "cvr": 5.46,
+      "pending": 80724,
+      "completed": 0,
+      "keep_on": true
+    },
+    "gajahThailand": {
+      "cvr": 0,
+      "pending": 0,
+      "completed": 0,
+      "keep_on": false
+    },
+    "lemarirakdapur": {
+      "cvr": 0,
+      "pending": 0,
+      "completed": 0,
+      "keep_on": false
+    },
+    "rakdapur": {
+      "cvr": 0,
+      "pending": 0,
+      "completed": 0,
+      "keep_on": false
+    }
+  }
+}

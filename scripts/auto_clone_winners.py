@@ -74,48 +74,62 @@ def detect_taglink_from_name(name, tags):
     return None
 
 def has_recent_clone(taglink, account_id):
-    """Check if a complete Scale_{taglink}_ clone exists within last 3 days.
-
-    If a previous run created only a PAUSED campaign shell but failed at adset/ad
-    creation, do NOT count it as a valid clone.
+    """
+    Behandlung von Incomplete-Clone-Shells: Wenn ein Scale_-Campaign ohne Adsets/Ads existiert,
+    killen wir es und behandeln das als 'kein vorhandener Clone'.
     """
     try:
         campaigns = fb_get(f"{account_id}/campaigns",
             fields="id,name,created_time,status", limit="200")
-        for c in campaigns.get("data", []):
-            cname = c.get("name", "")
-            created = c.get("created_time", "")
-            if not (cname.startswith(f"Scale_{taglink}_") or cname.startswith(f"LC_{taglink}_")):
+    except Exception as e:
+        log(f"has_recent_clone: campaigns fetch failed: {e}", "WARN")
+        return False
+
+    incomplete = []
+    for c in campaigns.get("data", []):
+        cname = c.get("name", "")
+        if not (cname.startswith(f"Scale_{taglink}_") or cname.startswith(f"LC_{taglink}_")):
+            continue
+        created = c.get("created_time", "")
+        recent = True
+        if created:
+            try:
+                created_dt = datetime.strptime(created[:10], "%Y-%m-%d")
+                recent = created_dt >= three_days_ago.replace(tzinfo=None)
+            except Exception:
+                recent = True
+        if not recent:
+            continue
+        try:
+            time.sleep(2)
+            adsets = fb_get(f"{c['id']}/adsets", fields="id,name,status", limit="5")
+            if not adsets.get("data"):
+                incomplete.append(c)
                 continue
-            recent = True
-            if created:
-                try:
-                    created_dt = datetime.strptime(created[:10], "%Y-%m-%d")
-                    recent = created_dt >= three_days_ago.replace(tzinfo=None)
-                except Exception:
-                    recent = True
-            if not recent:
+            time.sleep(2)
+            ads = fb_get(f"{c['id']}/ads", fields="id,name,status", limit="5")
+            if not ads.get("data"):
+                incomplete.append(c)
                 continue
-            # Validate it has at least one adset and one ad; otherwise it's an incomplete shell.
+            log(f"  ✔ Valid recent clone exists: {cname}")
+            return True
+        except Exception as e:
+            log(f"  ⚠️ Clone completeness check failed for {cname}: {e}", "WARN")
+            return True
+
+    if incomplete:
+        log(f"  🧹 Removing {len(incomplete)} incomplete recent clone shell(s) for {taglink}...")
+        for c in incomplete:
             try:
                 time.sleep(2)
-                adsets = fb_get(f"{c['id']}/adsets", fields="id,name,status", limit="5")
-                if not adsets.get("data"):
-                    log(f"  ⚠️ Recent clone shell found but incomplete (no adset): {cname}")
-                    continue
-                time.sleep(2)
-                ads = fb_get(f"{c['id']}/ads", fields="id,name,status", limit="5")
-                if not ads.get("data"):
-                    log(f"  ⚠️ Recent clone shell found but incomplete (no ad): {cname}")
-                    continue
-                return True
+                # Pause and delete shell; we intentionally don't delete the campaign object,
+                # so we set it to PAUSED and proceed as if it never blocked us.
+                fb_post(c["id"], status="PAUSED")
+                log(f"     Paused incomplete clone: {c.get('name')} ({c.get('id')})")
             except Exception as e:
-                log(f"  ⚠️ Clone completeness check failed for {cname}: {e}", "WARN")
-                return True
+                log(f"     Handling incomplete clone failed: {e}", "WARN")
         return False
-    except Exception as e:
-        log(f"Error checking clone existence: {e}", "WARN")
-        return False  # False = safe to try creating
+    return False
 
 def main():
     # Filter enabled accounts only
