@@ -1,187 +1,190 @@
 {
   "0858": {
-    "last_cycle": "2026-06-06T20:30:37.042147+07:00",
+    "last_cycle": "2026-06-10T01:31:46.148240+07:00",
     "campaigns": {
       "120248404118800416": {
-        "name": "BIDCAP_Rakpiring_rakpiringpengering_Winner_0603",
-        "ctr": 4.415016,
-        "cpc": 128.266619,
+        "name": "\ud83c\udf1f_ON_Rakpiring_rakpiringpengering_Winner_0603",
+        "ctr": 4.4491,
+        "cpc": 131.604328,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:37.041939+07:00"
+        "last_seen": "2026-06-10T01:31:46.147913+07:00"
       },
       "120249205714820416": {
-        "name": "OFF_Rakpiring_rakpiringpengering_Shopping_0603",
-        "ctr": 3.999642,
-        "cpc": 133.011567,
+        "name": "\ud83c\udf1f_ON_Rakpiring_rakpiringpengering_Shopping_0603",
+        "ctr": 4.256519,
+        "cpc": 142.824641,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041993+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.147997+07:00"
       },
       "120249209669800416": {
         "name": "BIDCAP_Organizer_organizerpullout_Dapur_0603",
-        "ctr": 6.214134,
-        "cpc": 99.045655,
+        "ctr": 5.602581,
+        "cpc": 113.058989,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:37.042015+07:00"
+        "last_seen": "2026-06-10T01:31:46.148033+07:00"
       },
       "120249722735700416": {
-        "name": "TC_Kakriput_rakpiringpengering_Pinterest",
-        "ctr": 4.139962,
-        "cpc": 130.380753,
+        "name": "\ud83c\udf1f_TC_Kakriput_rakpiringpengering_Pinterest",
+        "ctr": 4.086389,
+        "cpc": 133.098859,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:37.042063+07:00"
+        "last_seen": "2026-06-10T01:31:46.148108+07:00"
       },
       "120249722735720416": {
-        "name": "OFF_Organizer_organizerpullout_Travel_0603",
-        "ctr": 4.184222,
-        "cpc": 150.520833,
-        "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042067+07:00"
-      },
-      "120249727183880416": {
-        "name": "OFF_LC_Organizer_organizerpullout_Dapur_0603_CLONE1",
-        "ctr": 4.694585,
-        "cpc": 140.5,
-        "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042072+07:00"
-      },
-      "120249941008950416": {
-        "name": "OFF_Rakpiring_rakpiringpengering_Broad_0603",
-        "ctr": 4.047531,
-        "cpc": 176.770642,
-        "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042093+07:00"
-      },
-      "120250009402690416": {
-        "name": "OFF_Organizer_organizerpullout_Broad2_0603",
-        "ctr": 4.209542,
-        "cpc": 139.511111,
-        "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042098+07:00"
-      },
-      "120250009830630416": {
-        "name": "BIDCAP_Organizer_organizerpullout_DapurShop_0603",
-        "ctr": 5.185185,
-        "cpc": 140.5,
+        "name": "\ud83c\udf1f_ON_Organizer_organizerpullout_Travel_0603",
+        "ctr": 4.161025,
+        "cpc": 150.943712,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:37.042100+07:00"
+        "last_seen": "2026-06-10T01:31:46.148115+07:00"
+      },
+      "120249727183880416": {
+        "name": "\ud83c\udf1f_ON_Organizer_organizerpullout_Dapur_0603_CLONE1",
+        "ctr": 4.613435,
+        "cpc": 142.60989,
+        "boncos_streak": 0,
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148122+07:00"
+      },
+      "120249941008950416": {
+        "name": "\ud83c\udf1f_ON_Rakpiring_rakpiringpengering_Broad_0603",
+        "ctr": 4.45815,
+        "cpc": 204.300395,
+        "boncos_streak": 0,
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148155+07:00"
+      },
+      "120250009402690416": {
+        "name": "\ud83c\udf1f_ON_Organizer_organizerpullout_Broad2_0603",
+        "ctr": 4.196816,
+        "cpc": 147.034483,
+        "boncos_streak": 0,
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148161+07:00"
+      },
+      "120250009830630416": {
+        "name": "\ud83c\udf1f_BIDCAP_Organizer_organizerpullout_DapurShop_0603",
+        "ctr": 7.334963,
+        "cpc": 127.588889,
+        "boncos_streak": 0,
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148165+07:00"
       },
       "120250009834770416": {
-        "name": "OFF_Organizer_organizerpullout_Shopping_0603",
-        "ctr": 3.797468,
-        "cpc": 210.666667,
+        "name": "\ud83c\udf1f_ON_Organizer_organizerpullout_Shopping_0603",
+        "ctr": 3.153153,
+        "cpc": 285.285714,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042102+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148168+07:00"
       },
       "120250009839170416": {
-        "name": "OFF_Organizer_organizerpullout_Fashion_0603",
-        "ctr": 5.967078,
-        "cpc": 144.155172,
+        "name": "\ud83c\udf1f_ON_Organizer_organizerpullout_FashiON_BIDCAP_0603",
+        "ctr": 6.109495,
+        "cpc": 136.266234,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042105+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148172+07:00"
       },
       "120250009843030416": {
-        "name": "OFF_Organizer_organizerpullout_Broad_0603",
-        "ctr": 4.255319,
-        "cpc": 178.25,
+        "name": "\ud83c\udf1f_ON_Organizer_organizerpullout_Broad_0603",
+        "ctr": 6.805173,
+        "cpc": 111.660436,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042107+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148175+07:00"
       },
       "120250009867060416": {
-        "name": "OFF_Organizer_organizerpullout_Rumah_0603",
-        "ctr": 5.405405,
-        "cpc": 162.5,
+        "name": "\ud83c\udf1f_ON_Organizer_organizerpullout_Rumah_0603",
+        "ctr": 5.691057,
+        "cpc": 167.714286,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042109+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148179+07:00"
       },
       "120250009872130416": {
-        "name": "OFF_Organizer_organizerpullout_Resep_0603",
-        "ctr": 3.67893,
-        "cpc": 213.818182,
+        "name": "\ud83c\udf1f_ON_Organizer_organizerpullout_Resep_0603",
+        "ctr": 4.195804,
+        "cpc": 211.333333,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042112+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148184+07:00"
       },
       "120250012602960416": {
-        "name": "OFF_TEST_gajahThailand_shoppingFashion_BID",
+        "name": "OFF_TEST_setelanbajukaosmihugajah_shoppingFashion",
         "ctr": 6.557377,
         "cpc": 92.4,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042114+07:00"
+        "last_seen": "2026-06-10T01:31:46.148187+07:00"
       },
       "120250015760320416": {
-        "name": "0858_gajahThailand_fashion_BID",
-        "ctr": 4.930589,
-        "cpc": 97.524272,
+        "name": "\ud83c\udf1f_ON_0858_setelanbajukaosmihugajah_fashion",
+        "ctr": 6.386599,
+        "cpc": 104.42623,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:37.042116+07:00"
+        "last_seen": "2026-06-10T01:31:46.148191+07:00"
       },
       "120250016047830416": {
-        "name": "0858_setelanbajukaosmihugajah_fashionShopping_BID",
-        "ctr": 5.889751,
-        "cpc": 84.488968,
+        "name": "\ud83c\udf1f_0858_setelanbajukaosmihugajah_fashionShopping_BID",
+        "ctr": 7.548638,
+        "cpc": 79.537504,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:37.042119+07:00"
+        "last_seen": "2026-06-10T01:31:46.148194+07:00"
       },
       "120250016058540416": {
-        "name": "0858_setelanbajukaosmihugajah_fashionBelanja_BID",
-        "ctr": 5.536213,
-        "cpc": 88.563665,
+        "name": "\ud83c\udf1f_ON_0858_setelanbajukaosmihugajah_fashionBelanja",
+        "ctr": 6.751252,
+        "cpc": 91.194863,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:37.042121+07:00"
+        "last_seen": "2026-06-10T01:31:46.148197+07:00"
       },
       "120250055874900416": {
-        "name": "OFF_GEO_rakpiringpengering_INT04",
-        "ctr": 3.843217,
-        "cpc": 135.629139,
+        "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT04",
+        "ctr": 4.172185,
+        "cpc": 173.349206,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042127+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148208+07:00"
       },
       "120250055874940416": {
-        "name": "OFF_GEO_rakpiringpengering_INT08",
-        "ctr": 3.424432,
-        "cpc": 188.894231,
+        "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT08",
+        "ctr": 3.983433,
+        "cpc": 178.596071,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042136+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148221+07:00"
       },
       "120250055875130416": {
-        "name": "OFF_GEO_rakpiringpengering_INT07",
-        "ctr": 4.091653,
-        "cpc": 165.3,
+        "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT07",
+        "ctr": 4.319756,
+        "cpc": 175.513976,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042140+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148228+07:00"
       },
       "120250055875150416": {
-        "name": "OFF_GEO_rakpiringpengering_INT10",
-        "ctr": 3.526735,
-        "cpc": 192.532258,
+        "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT10",
+        "ctr": 3.857868,
+        "cpc": 188.098684,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042143+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148231+07:00"
       },
       "120250273490640416": {
-        "name": "BIDCAP_Lemari_lemarirakdapur_Dapur_0605",
-        "ctr": 7.155026,
-        "cpc": 128.52381
+        "name": "OFF_Lemari_lemarirakdapur_Dapur_0605",
+        "ctr": 7.167832,
+        "cpc": 125.52439,
+        "boncos_streak": 0,
+        "is_winner": false,
+        "last_seen": "2026-06-10T01:31:46.148237+07:00"
       },
       "120247912073850416": {
         "name": "OFF_RULE_ABO_Testing",
@@ -189,7 +192,7 @@
         "cpc": 91.444795,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041921+07:00"
+        "last_seen": "2026-06-10T01:31:46.147891+07:00"
       },
       "120248077336370416": {
         "name": "OFF_ADFORGE_RULE_ABO_Testing_Rak",
@@ -197,15 +200,15 @@
         "cpc": 148.796119,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041934+07:00"
+        "last_seen": "2026-06-10T01:31:46.147904+07:00"
       },
       "120248315320250416": {
-        "name": "OFF_Kakriput_rakpengiring_BIDCAP180_VILONA",
+        "name": "OFF_Kakriput_rakpengiring180_VILONA",
         "ctr": 7.165504,
         "cpc": 137.030973,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041936+07:00"
+        "last_seen": "2026-06-10T01:31:46.147909+07:00"
       },
       "120248404308900416": {
         "name": "OFF_Dongkrakelektrik_Jelek",
@@ -213,7 +216,7 @@
         "cpc": 75.529572,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041942+07:00"
+        "last_seen": "2026-06-10T01:31:46.147916+07:00"
       },
       "120248442511790416": {
         "name": "OFF_OFF_0858_Test_GendonganAnjing_VILONA",
@@ -221,7 +224,7 @@
         "cpc": 51.077019,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041944+07:00"
+        "last_seen": "2026-06-10T01:31:46.147920+07:00"
       },
       "120248622975030416": {
         "name": "OFF_OFF_0858_tiplessalad_VILONA",
@@ -229,7 +232,7 @@
         "cpc": 87.441718,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041946+07:00"
+        "last_seen": "2026-06-10T01:31:46.147923+07:00"
       },
       "120248622985080416": {
         "name": "OFF_OFF_0858_kancingjepit_VILONA",
@@ -237,23 +240,23 @@
         "cpc": 125.018367,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041948+07:00"
+        "last_seen": "2026-06-10T01:31:46.147927+07:00"
       },
       "120248831530350416": {
-        "name": "OFF_VILONA_organizerpullout_IGonly",
+        "name": "\ud83c\udf1f_ON_VILONA_organizerpullout_IGonly",
         "ctr": 3.334008,
         "cpc": 367.939302,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041950+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.147931+07:00"
       },
       "120248831539690416": {
-        "name": "OFF_VILONA_organizerpullout_FBonly",
+        "name": "\ud83c\udf1f_ON_VILONA_organizerpullout_FBonly",
         "ctr": 5.122203,
         "cpc": 301.129032,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041953+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.147934+07:00"
       },
       "120248835386290416": {
         "name": "OFF_ABO_DongkrakElektrik_ScaleTest_BIDCAP130_VILONA",
@@ -261,7 +264,7 @@
         "cpc": 99.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041955+07:00"
+        "last_seen": "2026-06-10T01:31:46.147938+07:00"
       },
       "120248892724620416": {
         "name": "OFF_gendongananjing_FACEBOOK_Winning_BIDCAP130",
@@ -269,7 +272,7 @@
         "cpc": 98.076923,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041957+07:00"
+        "last_seen": "2026-06-10T01:31:46.147941+07:00"
       },
       "120248892726810416": {
         "name": "OFF_gendongananjing_INSTAGRAM_Winning_BIDCAP130",
@@ -277,7 +280,7 @@
         "cpc": 120.456853,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041959+07:00"
+        "last_seen": "2026-06-10T01:31:46.147944+07:00"
       },
       "120248892728250416": {
         "name": "OFF_P1_CPC147_Dongkrak_INSTAGRAM_Winning_BID",
@@ -285,7 +288,7 @@
         "cpc": 170.466667,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041961+07:00"
+        "last_seen": "2026-06-10T01:31:46.147947+07:00"
       },
       "120248892908710416": {
         "name": "PROFIT_CBO_rakpiring_FACEBOOK_Winning_BIDCAP130",
@@ -293,7 +296,7 @@
         "cpc": 98.857143,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:37.041963+07:00"
+        "last_seen": "2026-06-10T01:31:46.147950+07:00"
       },
       "120248892921410416": {
         "name": "PROFIT_CBO_PC252_rakpiring_INSTAGRAM_Winning_BI",
@@ -301,7 +304,7 @@
         "cpc": 152.666667,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:37.041965+07:00"
+        "last_seen": "2026-06-10T01:31:46.147954+07:00"
       },
       "120248892926670416": {
         "name": "OFF_gendongananjing_FACEBOOK_Winning_BIDCAP130",
@@ -309,7 +312,7 @@
         "cpc": 476.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041967+07:00"
+        "last_seen": "2026-06-10T01:31:46.147957+07:00"
       },
       "120248892932450416": {
         "name": "OFF_gendongananjing_INSTAGRAM_Winning_BIDCAP130",
@@ -317,7 +320,7 @@
         "cpc": 121.497006,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041969+07:00"
+        "last_seen": "2026-06-10T01:31:46.147960+07:00"
       },
       "120248892941600416": {
         "name": "DEAD_CPC149_Dongkrak_INSTAGRAM_Winnin",
@@ -325,7 +328,7 @@
         "cpc": 150.625,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:37.041971+07:00"
+        "last_seen": "2026-06-10T01:31:46.147963+07:00"
       },
       "120249137592030416": {
         "name": "CBO_Kakriput_rakpengiring_BIDCAP180_VILONA - Salin",
@@ -333,7 +336,7 @@
         "cpc": 0.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041974+07:00"
+        "last_seen": "2026-06-10T01:31:46.147967+07:00"
       },
       "120249137592060416": {
         "name": "CBO_Kakriput_rakpengiring_",
@@ -341,7 +344,7 @@
         "cpc": 0.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041976+07:00"
+        "last_seen": "2026-06-10T01:31:46.147971+07:00"
       },
       "120249137592070416": {
         "name": "CBO_Kakriput_rakpengiring_BIDCAP180_VILONA - Salin",
@@ -349,7 +352,7 @@
         "cpc": 0.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041978+07:00"
+        "last_seen": "2026-06-10T01:31:46.147974+07:00"
       },
       "120249137592080416": {
         "name": "CBO_Kakriput_rakpengiring_BIDCAP180_VILONA - Salin",
@@ -357,7 +360,7 @@
         "cpc": 0.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041981+07:00"
+        "last_seen": "2026-06-10T01:31:46.147977+07:00"
       },
       "120249205714570416": {
         "name": "OFF_rakpiring",
@@ -365,7 +368,7 @@
         "cpc": 115.75,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041983+07:00"
+        "last_seen": "2026-06-10T01:31:46.147981+07:00"
       },
       "120249205714780416": {
         "name": "OFF_rakpiring",
@@ -373,7 +376,7 @@
         "cpc": 202.666667,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041985+07:00"
+        "last_seen": "2026-06-10T01:31:46.147984+07:00"
       },
       "120249205714790416": {
         "name": "OFF_rakpiring",
@@ -381,7 +384,7 @@
         "cpc": 180.142857,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041987+07:00"
+        "last_seen": "2026-06-10T01:31:46.147987+07:00"
       },
       "120249205714800416": {
         "name": "OFF_rakpiring",
@@ -389,7 +392,7 @@
         "cpc": 387.666667,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041989+07:00"
+        "last_seen": "2026-06-10T01:31:46.147990+07:00"
       },
       "120249205714810416": {
         "name": "OFF_rakpiring",
@@ -397,7 +400,7 @@
         "cpc": 184.884615,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041991+07:00"
+        "last_seen": "2026-06-10T01:31:46.147993+07:00"
       },
       "120249205714830416": {
         "name": "OFF_rakpiring",
@@ -405,7 +408,7 @@
         "cpc": 151.7,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041995+07:00"
+        "last_seen": "2026-06-10T01:31:46.148000+07:00"
       },
       "120249205714840416": {
         "name": "OFF_rakpiring",
@@ -413,15 +416,15 @@
         "cpc": 309.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041996+07:00"
+        "last_seen": "2026-06-10T01:31:46.148003+07:00"
       },
       "120249205714850416": {
-        "name": "OFF_0858_rakpiring_travel_BID",
+        "name": "\ud83c\udf1f_ON_0858_rakpiring_travel",
         "ctr": 4.785358,
         "cpc": 118.621347,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.041998+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148006+07:00"
       },
       "120249205714860416": {
         "name": "OFF_rakpiring",
@@ -429,7 +432,7 @@
         "cpc": 154.744186,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042000+07:00"
+        "last_seen": "2026-06-10T01:31:46.148010+07:00"
       },
       "120249208283280416": {
         "name": "OFF_rakpiring",
@@ -437,7 +440,7 @@
         "cpc": 266.661017,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042002+07:00"
+        "last_seen": "2026-06-10T01:31:46.148013+07:00"
       },
       "120249208311270416": {
         "name": "OFF_rakpiring",
@@ -445,15 +448,15 @@
         "cpc": 1373.277778,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042004+07:00"
+        "last_seen": "2026-06-10T01:31:46.148016+07:00"
       },
       "120249208415970416": {
-        "name": "OFF_V2_OFF_organizerpullout_Belanja",
+        "name": "ON_V2_OFF_organizerpullout_Belanja",
         "ctr": 5.357143,
         "cpc": 186.666667,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042006+07:00"
+        "last_seen": "2026-06-10T01:31:46.148020+07:00"
       },
       "120249209653100416": {
         "name": "OFF_rakpiring",
@@ -461,7 +464,7 @@
         "cpc": 569.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042009+07:00"
+        "last_seen": "2026-06-10T01:31:46.148023+07:00"
       },
       "120249209657570416": {
         "name": "OFF_rakpiring",
@@ -469,31 +472,31 @@
         "cpc": 187.314286,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042011+07:00"
+        "last_seen": "2026-06-10T01:31:46.148027+07:00"
       },
       "120249209662940416": {
-        "name": "OFF_V2_Organizer_Belanja",
+        "name": "\ud83c\udf1f_ON_V2_Organizer_Belanja",
         "ctr": 5.963303,
         "cpc": 160.653846,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042013+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148030+07:00"
       },
       "120249502539430416": {
-        "name": "OFF_TC_GEO_rakpiringpengering_INT01",
+        "name": "\ud83c\udf1f_ON__GEO_rakpiringpengering_INT01",
         "ctr": 4.991905,
         "cpc": 169.562162,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042017+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148036+07:00"
       },
       "120249502541450416": {
-        "name": "OFF_GEO_organizerpullout_INT02",
+        "name": "ON_GEO_organizerpullout_INT02",
         "ctr": 2.777778,
         "cpc": 290.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042019+07:00"
+        "last_seen": "2026-06-10T01:31:46.148040+07:00"
       },
       "120249502543650416": {
         "name": "OFF_rakpiring",
@@ -501,15 +504,15 @@
         "cpc": 136.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042021+07:00"
+        "last_seen": "2026-06-10T01:31:46.148043+07:00"
       },
       "120249502545150416": {
-        "name": "OFF_GEO_organizerpullout_INT04",
+        "name": "ON_GEO_organizerpullout_INT04",
         "ctr": 4.761905,
         "cpc": 183.5,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042023+07:00"
+        "last_seen": "2026-06-10T01:31:46.148047+07:00"
       },
       "120249502546850416": {
         "name": "OFF_rakpiring",
@@ -517,31 +520,31 @@
         "cpc": 175.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042025+07:00"
+        "last_seen": "2026-06-10T01:31:46.148050+07:00"
       },
       "120249502548760416": {
-        "name": "OFF_TC_Kakriput_organizerpullout_INT06",
+        "name": "\ud83c\udf1f_ON__Kakriput_organizerpullout_INT06",
         "ctr": 12.389381,
         "cpc": 72.785714,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042028+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148054+07:00"
       },
       "120249502557800416": {
-        "name": "OFF_TC_Kakriput_rakpiringpengering_INT07",
+        "name": "\ud83c\udf1f_ON__Kakriput_rakpiringpengering_INT07",
         "ctr": 4.457339,
         "cpc": 124.887574,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042030+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148057+07:00"
       },
       "120249502559600416": {
-        "name": "OFF_GEO_organizerpullout_INT08",
+        "name": "\ud83c\udf1f_ON_GEO_organizerpullout_INT08",
         "ctr": 5.517241,
         "cpc": 142.75,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042032+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148061+07:00"
       },
       "120249502561440416": {
         "name": "OFF_rakpiring",
@@ -549,15 +552,15 @@
         "cpc": 185.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042034+07:00"
+        "last_seen": "2026-06-10T01:31:46.148064+07:00"
       },
       "120249502563790416": {
-        "name": "OFF_TC_Kakriput_organizerpullout_INT10",
+        "name": "\ud83c\udf1f_ON__Kakriput_organizerpullout_INT10",
         "ctr": 9.29368,
         "cpc": 85.88,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042037+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148067+07:00"
       },
       "120249612030570416": {
         "name": "OFF_rakpiring",
@@ -565,7 +568,7 @@
         "cpc": 231.375,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042039+07:00"
+        "last_seen": "2026-06-10T01:31:46.148071+07:00"
       },
       "120249612034440416": {
         "name": "OFF_KAKRIPUT_CBO_organizer_1559",
@@ -573,15 +576,15 @@
         "cpc": 257.5,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042041+07:00"
+        "last_seen": "2026-06-10T01:31:46.148074+07:00"
       },
       "120249712806010416": {
-        "name": "OFF_Kakriput_Test_Aksesori fashion_Jilbabcepol",
+        "name": "OFF_Kakriput_Test_Aksesori fashiON_BIDCAP_Jilbabcepol",
         "ctr": 2.351485,
         "cpc": 350.578947,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042043+07:00"
+        "last_seen": "2026-06-10T01:31:46.148078+07:00"
       },
       "120249717151190416": {
         "name": "OFF_Kakriput_Test_Kecantikan_Jilbabcepol",
@@ -589,7 +592,7 @@
         "cpc": 491.583333,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042046+07:00"
+        "last_seen": "2026-06-10T01:31:46.148081+07:00"
       },
       "120249718580760416": {
         "name": "OFF_Kakriput_Test_Perawatan kulit (kosmetik)_Jilbabcepol",
@@ -597,7 +600,7 @@
         "cpc": 198.454545,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042048+07:00"
+        "last_seen": "2026-06-10T01:31:46.148084+07:00"
       },
       "120249719025460416": {
         "name": "OFF_Kakriput_Test_Tutorial makeup_Jilbabcepol",
@@ -605,135 +608,135 @@
         "cpc": 155.125,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042050+07:00"
+        "last_seen": "2026-06-10T01:31:46.148088+07:00"
       },
       "120249722735480416": {
-        "name": "OFF_GEO_rakpiringpengering_Pengasuhan anak",
+        "name": "ON_GEO_rakpiringpengering_Pengasuhan anak",
         "ctr": 1.960784,
         "cpc": 185.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042052+07:00"
+        "last_seen": "2026-06-10T01:31:46.148091+07:00"
       },
       "120249722735620416": {
-        "name": "OFF_GEO_rakpiringpengering_Parenting",
+        "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_Parenting",
         "ctr": 3.148148,
         "cpc": 150.529412,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042054+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148094+07:00"
       },
       "120249722735650416": {
-        "name": "OFF_TC_Kakriput_rakpiringpengering_Jewelry",
+        "name": "\ud83c\udf1f_ON__Kakriput_rakpiringpengering_Jewelry",
         "ctr": 4.422944,
         "cpc": 154.84375,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042057+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148098+07:00"
       },
       "120249722735660416": {
-        "name": "OFF_GEO_rakpiringpengering_Gelang",
+        "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_Gelang",
         "ctr": 5.836237,
         "cpc": 148.358209,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042059+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148101+07:00"
       },
       "120249722735690416": {
-        "name": "OFF_GEO_rakpiringpengering_Pelancong",
+        "name": "ON_GEO_rakpiringpengering_Pelancong",
         "ctr": 3.125,
         "cpc": 188.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042061+07:00"
+        "last_seen": "2026-06-10T01:31:46.148105+07:00"
       },
       "120249722735710416": {
-        "name": "OFF_GEO_rakpiringpengering_E-commerce payment system",
+        "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_E-commerce payment system",
         "ctr": 5.084746,
         "cpc": 141.857143,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042065+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148111+07:00"
       },
       "120249722735730416": {
-        "name": "OFF_GEO_rakpiringpengering_Dapur",
+        "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_Dapur",
         "ctr": 3.897436,
         "cpc": 205.973684,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042069+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148118+07:00"
       },
       "120249727183890416": {
-        "name": "OFF_V2_CBO_organizerpullout_Furniture",
+        "name": "ON_V2_CBO_organizerpullout_Furniture",
         "ctr": 4.347826,
         "cpc": 83.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042074+07:00"
+        "last_seen": "2026-06-10T01:31:46.148125+07:00"
       },
       "120249727184040416": {
-        "name": "OFF_V2_CBO_organizerpullout_Online marketplace",
+        "name": "ON_V2_CBO_organizerpullout_Online marketplace",
         "ctr": 1.587302,
         "cpc": 211.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042076+07:00"
+        "last_seen": "2026-06-10T01:31:46.148128+07:00"
       },
       "120249727184110416": {
-        "name": "OFF_TC_Kakriput_organizerpullout_Fashion",
+        "name": "\ud83c\udf1f_ON__Kakriput_organizerpullout_Fashion",
         "ctr": 5.428875,
         "cpc": 104.341772,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042078+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148131+07:00"
       },
       "120249727184120416": {
-        "name": "OFF_V2_CBO_organizerpullout_Mobil",
+        "name": "ON_V2_CBO_organizerpullout_Mobil",
         "ctr": 1.449275,
         "cpc": 164.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042080+07:00"
+        "last_seen": "2026-06-10T01:31:46.148135+07:00"
       },
       "120249727184130416": {
-        "name": "OFF_V2_CBO_organizerpullout_Keuangan",
+        "name": "ON_V2_CBO_organizerpullout_Keuangan",
         "ctr": 1.470588,
         "cpc": 159.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042082+07:00"
+        "last_seen": "2026-06-10T01:31:46.148138+07:00"
       },
       "120249727184140416": {
-        "name": "OFF_0858_organizer_pelancong_EMPTY",
+        "name": "\ud83c\udf1f_ON_0858_organizer_pelancong",
         "ctr": 4.889049,
         "cpc": 104.536327,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042084+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148141+07:00"
       },
       "120249727184150416": {
-        "name": "OFF_0858_organizer_jewelry_EMPTY",
+        "name": "ON_0858_organizer_jewelry",
         "ctr": 2.34375,
         "cpc": 173.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042086+07:00"
+        "last_seen": "2026-06-10T01:31:46.148144+07:00"
       },
       "120249727184160416": {
-        "name": "OFF_0858_organizer_interior_design_EMPTY",
+        "name": "ON_0858_organizer_interior_design",
         "ctr": 0.952381,
         "cpc": 383.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042088+07:00"
+        "last_seen": "2026-06-10T01:31:46.148148+07:00"
       },
       "120249727184170416": {
-        "name": "OFF_0858_organizer_tableware_EMPTY",
+        "name": "\ud83c\udf1f_ON_0858_organizer_tableware",
         "ctr": 4.901961,
         "cpc": 149.066667,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042090+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148152+07:00"
       },
       "120249941045990416": {
         "name": "0858_organizer_broad_BID",
@@ -741,88 +744,124 @@
         "cpc": 104.666667,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042095+07:00"
+        "last_seen": "2026-06-10T01:31:46.148159+07:00"
       },
       "120250017839070416": {
-        "name": "OFF_0858_fashionWanitaPremium_shopping_BID_Test",
+        "name": "OFF_0858_fashionWanitaPremium_shopping_Test",
         "ctr": 0.0,
         "cpc": 0.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042123+07:00"
+        "last_seen": "2026-06-10T01:31:46.148200+07:00"
       },
       "120250055874890416": {
-        "name": "OFF_BIDCAP_GEO_rakpiringpengering_INT03",
-        "ctr": 5.555556,
-        "cpc": 86.333333,
+        "name": "\ud83c\udf1f_BIDCAP_GEO_rakpiringpengering_INT03",
+        "ctr": 6.530612,
+        "cpc": 131.5,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042126+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148204+07:00"
       },
       "120250055874910416": {
-        "name": "OFF_BIDCAP_GEO_rakpiringpengering_INT05",
+        "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT05",
         "ctr": 4.723347,
         "cpc": 129.6,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042130+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148211+07:00"
       },
       "120250055874920416": {
-        "name": "OFF_BIDCAP_GEO_rakpiringpengering_INT06",
+        "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT06",
         "ctr": 2.403846,
         "cpc": 318.0,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042132+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148215+07:00"
       },
       "120250055874930416": {
-        "name": "OFF_BIDCAP_GEO_rakpiringpengering_INT09",
+        "name": "ON_GEO_rakpiringpengering_INT09",
         "ctr": 2.307692,
         "cpc": 298.333333,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042134+07:00"
+        "last_seen": "2026-06-10T01:31:46.148218+07:00"
       },
       "120250055875080416": {
-        "name": "OFF_BIDCAP_GEO_rakpiringpengering_INT01",
+        "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT01",
         "ctr": 3.703704,
         "cpc": 180.727273,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042138+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148225+07:00"
       },
       "120250055875170416": {
-        "name": "OFF_BIDCAP_GEO_rakpiringpengering_INT02",
+        "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT02",
         "ctr": 4.61165,
         "cpc": 147.578947,
         "boncos_streak": 0,
-        "is_winner": false,
-        "last_seen": "2026-06-06T20:30:37.042145+07:00"
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:46.148234+07:00"
       }
     },
     "summary": {
-      "active": 1,
-      "total_campaigns": 71,
-      "spend_48h": 4223536,
-      "winners": 10,
+      "active": 8,
+      "total_campaigns": 122,
+      "spend_48h": 6421858,
+      "winners": 46,
       "boncos": 0,
       "winner_names": [
-        "BIDCAP_Rakpiring_rakpiringpengering_Winn",
+        "\ud83c\udf1f_ON_Rakpiring_rakpiringpengering_Winner",
+        "\ud83c\udf1f_ON_VILONA_organizerpullout_IGonly",
+        "\ud83c\udf1f_ON_VILONA_organizerpullout_FBonly",
         "PROFIT_CBO_rakpiring_FACEBOOK_Winning_BI",
         "PROFIT_CBO_PC252_rakpiring_INSTAGRAM_Win",
         "DEAD_CPC149_Dongkrak_INSTAGRAM_Winnin",
+        "\ud83c\udf1f_ON_Rakpiring_rakpiringpengering_Shoppi",
+        "\ud83c\udf1f_ON_0858_rakpiring_travel",
+        "\ud83c\udf1f_ON_V2_Organizer_Belanja",
         "BIDCAP_Organizer_organizerpullout_Dapur_",
-        "TC_Kakriput_rakpiringpengering_Pinterest",
-        "BIDCAP_Organizer_organizerpullout_DapurS",
-        "0858_gajahThailand_fashion_BID",
-        "0858_setelanbajukaosmihugajah_fashionSho",
-        "0858_setelanbajukaosmihugajah_fashionBel"
+        "\ud83c\udf1f_ON__GEO_rakpiringpengering_INT01",
+        "\ud83c\udf1f_ON__Kakriput_organizerpullout_INT06",
+        "\ud83c\udf1f_ON__Kakriput_rakpiringpengering_INT07",
+        "\ud83c\udf1f_ON_GEO_organizerpullout_INT08",
+        "\ud83c\udf1f_ON__Kakriput_organizerpullout_INT10",
+        "\ud83c\udf1f_ON_GEO_rakpiringpengering_Parenting",
+        "\ud83c\udf1f_ON__Kakriput_rakpiringpengering_Jewelr",
+        "\ud83c\udf1f_ON_GEO_rakpiringpengering_Gelang",
+        "\ud83c\udf1f_TC_Kakriput_rakpiringpengering_Pintere",
+        "\ud83c\udf1f_ON_GEO_rakpiringpengering_E-commerce p",
+        "\ud83c\udf1f_ON_Organizer_organizerpullout_Travel_0",
+        "\ud83c\udf1f_ON_GEO_rakpiringpengering_Dapur",
+        "\ud83c\udf1f_ON_Organizer_organizerpullout_Dapur_06",
+        "\ud83c\udf1f_ON__Kakriput_organizerpullout_Fashion",
+        "\ud83c\udf1f_ON_0858_organizer_pelancong",
+        "\ud83c\udf1f_ON_0858_organizer_tableware",
+        "\ud83c\udf1f_ON_Rakpiring_rakpiringpengering_Broad_",
+        "\ud83c\udf1f_ON_Organizer_organizerpullout_Broad2_0",
+        "\ud83c\udf1f_BIDCAP_Organizer_organizerpullout_Dapu",
+        "\ud83c\udf1f_ON_Organizer_organizerpullout_Shopping",
+        "\ud83c\udf1f_ON_Organizer_organizerpullout_FashiON_",
+        "\ud83c\udf1f_ON_Organizer_organizerpullout_Broad_06",
+        "\ud83c\udf1f_ON_Organizer_organizerpullout_Rumah_06",
+        "\ud83c\udf1f_ON_Organizer_organizerpullout_Resep_06",
+        "\ud83c\udf1f_ON_0858_setelanbajukaosmihugajah_fashi",
+        "\ud83c\udf1f_0858_setelanbajukaosmihugajah_fashionS",
+        "\ud83c\udf1f_ON_0858_setelanbajukaosmihugajah_fashi",
+        "\ud83c\udf1f_BIDCAP_GEO_rakpiringpengering_INT03",
+        "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT04",
+        "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT05",
+        "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT06",
+        "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT08",
+        "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT01",
+        "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT07",
+        "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT10",
+        "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT02"
       ],
       "boncos_names": []
     }
   },
   "1041": {
-    "last_cycle": "2026-06-06T20:30:42.477475+07:00",
+    "last_cycle": "2026-06-10T01:31:50.453655+07:00",
     "campaigns": {
       "120244354547360121": {
         "name": "OFF_OFF",
@@ -830,7 +869,7 @@
         "cpc": 104.990306,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477290+07:00"
+        "last_seen": "2026-06-10T01:31:50.453297+07:00"
       },
       "120244620090000121": {
         "name": "Awarnes",
@@ -838,7 +877,7 @@
         "cpc": 177.962963,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477300+07:00"
+        "last_seen": "2026-06-10T01:31:50.453314+07:00"
       },
       "120244638041710121": {
         "name": "OFF_OFF",
@@ -846,7 +885,7 @@
         "cpc": 408.791667,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477303+07:00"
+        "last_seen": "2026-06-10T01:31:50.453318+07:00"
       },
       "120244647026880121": {
         "name": "OFF_OFF",
@@ -854,7 +893,7 @@
         "cpc": 102.69905,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477304+07:00"
+        "last_seen": "2026-06-10T01:31:50.453322+07:00"
       },
       "120244707983700121": {
         "name": "OFF_OFF",
@@ -862,7 +901,7 @@
         "cpc": 126.088523,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477306+07:00"
+        "last_seen": "2026-06-10T01:31:50.453325+07:00"
       },
       "120244776291860121": {
         "name": "OFF_OFF",
@@ -870,7 +909,7 @@
         "cpc": 142.723456,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477308+07:00"
+        "last_seen": "2026-06-10T01:31:50.453329+07:00"
       },
       "120244846529030121": {
         "name": "OFF_OFF",
@@ -878,7 +917,7 @@
         "cpc": 205.344371,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477310+07:00"
+        "last_seen": "2026-06-10T01:31:50.453332+07:00"
       },
       "120244851429390121": {
         "name": "OFF_OFF",
@@ -886,7 +925,7 @@
         "cpc": 156.146382,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477312+07:00"
+        "last_seen": "2026-06-10T01:31:50.453335+07:00"
       },
       "120244856959600121": {
         "name": "OFF_OFF",
@@ -894,7 +933,7 @@
         "cpc": 151.933602,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477314+07:00"
+        "last_seen": "2026-06-10T01:31:50.453338+07:00"
       },
       "120244857140390121": {
         "name": "OFF_OFF",
@@ -902,7 +941,7 @@
         "cpc": 162.609929,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477315+07:00"
+        "last_seen": "2026-06-10T01:31:50.453341+07:00"
       },
       "120244857217310121": {
         "name": "OFF_OFF",
@@ -910,7 +949,7 @@
         "cpc": 188.914573,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477317+07:00"
+        "last_seen": "2026-06-10T01:31:50.453344+07:00"
       },
       "120244887106730121": {
         "name": "OFF_OFF",
@@ -918,7 +957,7 @@
         "cpc": 183.326633,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477319+07:00"
+        "last_seen": "2026-06-10T01:31:50.453347+07:00"
       },
       "120244892361940121": {
         "name": "OFF_OFF",
@@ -926,7 +965,7 @@
         "cpc": 186.117021,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477321+07:00"
+        "last_seen": "2026-06-10T01:31:50.453350+07:00"
       },
       "120244892455350121": {
         "name": "OFF_OFF",
@@ -934,7 +973,7 @@
         "cpc": 123.478392,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477322+07:00"
+        "last_seen": "2026-06-10T01:31:50.453353+07:00"
       },
       "120244912866180121": {
         "name": "DEAD_CBO_Scale_Multistorage_VILONA",
@@ -942,7 +981,7 @@
         "cpc": 108.21888,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477324+07:00"
+        "last_seen": "2026-06-10T01:31:50.453356+07:00"
       },
       "120244913736550121": {
         "name": "DEAD_CBO_Scale_Rak Dapur_2_VILONA",
@@ -950,7 +989,7 @@
         "cpc": 108.746687,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477326+07:00"
+        "last_seen": "2026-06-10T01:31:50.453359+07:00"
       },
       "120244919716960121": {
         "name": "DEAD_CBO_Scale_Rak Dapur_3_VILONA",
@@ -958,7 +997,7 @@
         "cpc": 96.277315,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477327+07:00"
+        "last_seen": "2026-06-10T01:31:50.453363+07:00"
       },
       "120244919779590121": {
         "name": "DEAD_OFF_Scale_Rak Dapur_4_VILONA",
@@ -966,7 +1005,7 @@
         "cpc": 114.589851,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477329+07:00"
+        "last_seen": "2026-06-10T01:31:50.453366+07:00"
       },
       "120244930367280121": {
         "name": "DEAD_OFF_Scale_Rak Dapur_4_LLA_Video_VILONA",
@@ -974,7 +1013,7 @@
         "cpc": 139.576503,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477331+07:00"
+        "last_seen": "2026-06-10T01:31:50.453369+07:00"
       },
       "120244930497130121": {
         "name": "OFF_OFF",
@@ -982,7 +1021,7 @@
         "cpc": 268.993369,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477332+07:00"
+        "last_seen": "2026-06-10T01:31:50.453372+07:00"
       },
       "120244937935260121": {
         "name": "DEAD_ABO_Scale_Rak Piring_VILONA",
@@ -990,7 +1029,7 @@
         "cpc": 228.276923,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477334+07:00"
+        "last_seen": "2026-06-10T01:31:50.453375+07:00"
       },
       "120244938720170121": {
         "name": "OFF_OFF",
@@ -998,7 +1037,7 @@
         "cpc": 208.308824,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477336+07:00"
+        "last_seen": "2026-06-10T01:31:50.453378+07:00"
       },
       "120245130539910121": {
         "name": "DEAD_OFF_Scale_Rak Dapur_4b_VILONA",
@@ -1006,7 +1045,7 @@
         "cpc": 117.951923,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477337+07:00"
+        "last_seen": "2026-06-10T01:31:50.453381+07:00"
       },
       "120245132163800121": {
         "name": "OFF_OFF",
@@ -1014,7 +1053,7 @@
         "cpc": 167.795407,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477339+07:00"
+        "last_seen": "2026-06-10T01:31:50.453384+07:00"
       },
       "120245132753700121": {
         "name": "DEAD_CBO_Scale_Rak Dapur_6_VILONA",
@@ -1022,7 +1061,7 @@
         "cpc": 101.835872,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477341+07:00"
+        "last_seen": "2026-06-10T01:31:50.453387+07:00"
       },
       "120245132802100121": {
         "name": "OFF_OFF",
@@ -1030,7 +1069,7 @@
         "cpc": 150.746055,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477343+07:00"
+        "last_seen": "2026-06-10T01:31:50.453391+07:00"
       },
       "120245158422890121": {
         "name": "DEAD_OFF_Scale_Lemari Laci_VILONA",
@@ -1038,7 +1077,7 @@
         "cpc": 262.0,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477345+07:00"
+        "last_seen": "2026-06-10T01:31:50.453395+07:00"
       },
       "120245421016000121": {
         "name": "DEAD_OFF_Gantunganputar_VILONA",
@@ -1046,7 +1085,7 @@
         "cpc": 159.056338,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477347+07:00"
+        "last_seen": "2026-06-10T01:31:50.453398+07:00"
       },
       "120245454833670121": {
         "name": "DEAD_OFF_Pernikahan_6_VILONA",
@@ -1054,7 +1093,7 @@
         "cpc": 166.736842,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477348+07:00"
+        "last_seen": "2026-06-10T01:31:50.453402+07:00"
       },
       "120245455213560121": {
         "name": "DEAD_OFF_Pernikahan_1_VILONA",
@@ -1062,7 +1101,7 @@
         "cpc": 155.326923,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477350+07:00"
+        "last_seen": "2026-06-10T01:31:50.453405+07:00"
       },
       "120245455213570121": {
         "name": "DEAD_OFF_Pernikahan_3_VILONA",
@@ -1070,7 +1109,7 @@
         "cpc": 166.72,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477351+07:00"
+        "last_seen": "2026-06-10T01:31:50.453408+07:00"
       },
       "120245455213580121": {
         "name": "DEAD_OFF_Pernikahan_2_VILONA",
@@ -1078,7 +1117,7 @@
         "cpc": 153.846154,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477353+07:00"
+        "last_seen": "2026-06-10T01:31:50.453412+07:00"
       },
       "120245455213590121": {
         "name": "DEAD_OFF_Pernikahan_5_VILONA",
@@ -1086,7 +1125,7 @@
         "cpc": 161.657895,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477355+07:00"
+        "last_seen": "2026-06-10T01:31:50.453415+07:00"
       },
       "120245455213600121": {
         "name": "DEAD_OFF_Pernikahan_4_VILONA",
@@ -1094,7 +1133,7 @@
         "cpc": 166.179012,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477356+07:00"
+        "last_seen": "2026-06-10T01:31:50.453418+07:00"
       },
       "120245455749660121": {
         "name": "DEAD_OFF_Family_Relations_1_VILONA",
@@ -1102,7 +1141,7 @@
         "cpc": 175.493421,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477358+07:00"
+        "last_seen": "2026-06-10T01:31:50.453422+07:00"
       },
       "120245455757120121": {
         "name": "DEAD_OFF_Family_Relations_2_VILONA",
@@ -1110,7 +1149,7 @@
         "cpc": 281.888889,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477360+07:00"
+        "last_seen": "2026-06-10T01:31:50.453425+07:00"
       },
       "120245455757130121": {
         "name": "DEAD_OFF_Family_Relations_3_VILONA",
@@ -1118,7 +1157,7 @@
         "cpc": 168.371429,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477362+07:00"
+        "last_seen": "2026-06-10T01:31:50.453429+07:00"
       },
       "120245455757150121": {
         "name": "DEAD_OFF_Family_Relations_4_VILONA",
@@ -1126,7 +1165,7 @@
         "cpc": 170.972028,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477363+07:00"
+        "last_seen": "2026-06-10T01:31:50.453432+07:00"
       },
       "120245455757160121": {
         "name": "DEAD_OFF_Family_Relations_5_VILONA",
@@ -1134,7 +1173,7 @@
         "cpc": 230.791667,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477365+07:00"
+        "last_seen": "2026-06-10T01:31:50.453435+07:00"
       },
       "120245455757190121": {
         "name": "DEAD_OFF_Family_Relations_6_VILONA",
@@ -1142,7 +1181,7 @@
         "cpc": 190.0,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477367+07:00"
+        "last_seen": "2026-06-10T01:31:50.453439+07:00"
       },
       "120245463627330121": {
         "name": "DEAD_OFF_Luxury_Goods_VILONA",
@@ -1150,7 +1189,7 @@
         "cpc": 171.498024,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477368+07:00"
+        "last_seen": "2026-06-10T01:31:50.453442+07:00"
       },
       "120245463705150121": {
         "name": "DEAD_OFF_Resor_Mewah_VILONA",
@@ -1158,7 +1197,7 @@
         "cpc": 163.327703,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477370+07:00"
+        "last_seen": "2026-06-10T01:31:50.453445+07:00"
       },
       "120245463705160121": {
         "name": "DEAD_OFF_Liontin_VILONA",
@@ -1166,7 +1205,7 @@
         "cpc": 184.436975,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477372+07:00"
+        "last_seen": "2026-06-10T01:31:50.453448+07:00"
       },
       "120245463705170121": {
         "name": "DEAD_OFF_Kendaraan_VILONA",
@@ -1174,7 +1213,7 @@
         "cpc": 193.208633,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477374+07:00"
+        "last_seen": "2026-06-10T01:31:50.453452+07:00"
       },
       "120245463705180121": {
         "name": "DEAD_OFF_Social_Media_VILONA",
@@ -1182,7 +1221,7 @@
         "cpc": 188.431373,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477375+07:00"
+        "last_seen": "2026-06-10T01:31:50.453456+07:00"
       },
       "120245463705190121": {
         "name": "DEAD_OFF_Jewelry_VILONA",
@@ -1190,7 +1229,7 @@
         "cpc": 187.0625,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477377+07:00"
+        "last_seen": "2026-06-10T01:31:50.453459+07:00"
       },
       "120245463948860121": {
         "name": "DEAD_OFF_Menikah_6_VILONA",
@@ -1198,7 +1237,7 @@
         "cpc": 189.812207,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477379+07:00"
+        "last_seen": "2026-06-10T01:31:50.453462+07:00"
       },
       "120245463966190121": {
         "name": "DEAD_OFF_Menikah_3_VILONA",
@@ -1206,7 +1245,7 @@
         "cpc": 199.064516,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477381+07:00"
+        "last_seen": "2026-06-10T01:31:50.453465+07:00"
       },
       "120245463966200121": {
         "name": "DEAD_OFF_Menikah_4_VILONA",
@@ -1214,7 +1253,7 @@
         "cpc": 192.076923,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477383+07:00"
+        "last_seen": "2026-06-10T01:31:50.453469+07:00"
       },
       "120245463966210121": {
         "name": "DEAD_OFF_Menikah_1_VILONA",
@@ -1222,7 +1261,7 @@
         "cpc": 178.37931,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477385+07:00"
+        "last_seen": "2026-06-10T01:31:50.453472+07:00"
       },
       "120245463966220121": {
         "name": "DEAD_OFF_Menikah_5_VILONA",
@@ -1230,7 +1269,7 @@
         "cpc": 173.313433,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477386+07:00"
+        "last_seen": "2026-06-10T01:31:50.453475+07:00"
       },
       "120245463966230121": {
         "name": "DEAD_OFF_Menikah_2_VILONA",
@@ -1238,7 +1277,7 @@
         "cpc": 148.45122,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477388+07:00"
+        "last_seen": "2026-06-10T01:31:50.453479+07:00"
       },
       "120245619456560121": {
         "name": "DEAD_OFF_Rak_Dapur_BIDCAP_180_VILONA",
@@ -1246,7 +1285,7 @@
         "cpc": 156.0,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477390+07:00"
+        "last_seen": "2026-06-10T01:31:50.453483+07:00"
       },
       "120245619549250121": {
         "name": "DEAD_OFF_RakDapur_BidCap180_v3_VILONA",
@@ -1254,7 +1293,7 @@
         "cpc": 864.322034,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477391+07:00"
+        "last_seen": "2026-06-10T01:31:50.453486+07:00"
       },
       "120245687035640121": {
         "name": "OFF_TC_1-3-1",
@@ -1262,7 +1301,7 @@
         "cpc": 125.669203,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477393+07:00"
+        "last_seen": "2026-06-10T01:31:50.453489+07:00"
       },
       "120245688454340121": {
         "name": "DEAD_OFF_Rakdapur3_Pernikahan_v0",
@@ -1270,7 +1309,7 @@
         "cpc": 149.617021,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477395+07:00"
+        "last_seen": "2026-06-10T01:31:50.453493+07:00"
       },
       "120245688502770121": {
         "name": "OFF_OFF",
@@ -1278,7 +1317,7 @@
         "cpc": 242.647211,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477396+07:00"
+        "last_seen": "2026-06-10T01:31:50.453496+07:00"
       },
       "120245688502780121": {
         "name": "DEAD_OFF_Rakdapur3_Pernikahan_v2",
@@ -1286,7 +1325,7 @@
         "cpc": 123.427046,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477398+07:00"
+        "last_seen": "2026-06-10T01:31:50.453500+07:00"
       },
       "120245688502790121": {
         "name": "OFF_OFF",
@@ -1294,7 +1333,7 @@
         "cpc": 286.259615,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477400+07:00"
+        "last_seen": "2026-06-10T01:31:50.453503+07:00"
       },
       "120245688502800121": {
         "name": "OFF_OFF",
@@ -1302,7 +1341,7 @@
         "cpc": 256.914365,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477402+07:00"
+        "last_seen": "2026-06-10T01:31:50.453507+07:00"
       },
       "120245688502940121": {
         "name": "OFF_OFF",
@@ -1310,7 +1349,7 @@
         "cpc": 236.363636,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477403+07:00"
+        "last_seen": "2026-06-10T01:31:50.453511+07:00"
       },
       "120245688503020121": {
         "name": "DEAD_OFF_Rakdapur3_Pernikahan_v6",
@@ -1318,7 +1357,7 @@
         "cpc": 146.690355,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477405+07:00"
+        "last_seen": "2026-06-10T01:31:50.453514+07:00"
       },
       "120245688503030121": {
         "name": "OFF_OFF",
@@ -1326,7 +1365,7 @@
         "cpc": 264.077975,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477407+07:00"
+        "last_seen": "2026-06-10T01:31:50.453517+07:00"
       },
       "120245688503040121": {
         "name": "OFF_OFF",
@@ -1334,7 +1373,7 @@
         "cpc": 216.285714,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477408+07:00"
+        "last_seen": "2026-06-10T01:31:50.453521+07:00"
       },
       "120245688503050121": {
         "name": "DEAD_OFF_Rakdapur3_Pernikahan_v9",
@@ -1342,7 +1381,7 @@
         "cpc": 132.739535,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477410+07:00"
+        "last_seen": "2026-06-10T01:31:50.453525+07:00"
       },
       "120245688503060121": {
         "name": "DEAD_OFF_Rakdapur3_Pernikahan_v10",
@@ -1350,7 +1389,7 @@
         "cpc": 141.958333,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477412+07:00"
+        "last_seen": "2026-06-10T01:31:50.453528+07:00"
       },
       "120245688535320121": {
         "name": "DEAD_OFF_Rakdapur3_Perabotan_FREQ_v1",
@@ -1358,7 +1397,7 @@
         "cpc": 160.587361,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477413+07:00"
+        "last_seen": "2026-06-10T01:31:50.453532+07:00"
       },
       "120245688553170121": {
         "name": "OFF_OFF",
@@ -1366,7 +1405,7 @@
         "cpc": 152.514286,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477415+07:00"
+        "last_seen": "2026-06-10T01:31:50.453536+07:00"
       },
       "120245688553310121": {
         "name": "DEAD_OFF_Rakdapur3_Perabotan_v3",
@@ -1374,7 +1413,7 @@
         "cpc": 148.545455,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477416+07:00"
+        "last_seen": "2026-06-10T01:31:50.453539+07:00"
       },
       "120245688553360121": {
         "name": "DEAD_OFF_Rakdapur3_Perabotan_v4",
@@ -1382,7 +1421,7 @@
         "cpc": 125.958333,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477418+07:00"
+        "last_seen": "2026-06-10T01:31:50.453543+07:00"
       },
       "120245688553370121": {
         "name": "DEAD_OFF_Rakdapur3_Perabotan_v5",
@@ -1390,7 +1429,7 @@
         "cpc": 149.12234,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477420+07:00"
+        "last_seen": "2026-06-10T01:31:50.453546+07:00"
       },
       "120245688553380121": {
         "name": "DEAD_OFF_Rakdapur3_Perabotan_v6",
@@ -1398,7 +1437,7 @@
         "cpc": 181.914286,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477422+07:00"
+        "last_seen": "2026-06-10T01:31:50.453550+07:00"
       },
       "120245688553390121": {
         "name": "DEAD_OFF_Rakdapur3_Perabotan_v7",
@@ -1406,7 +1445,7 @@
         "cpc": 138.447005,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477424+07:00"
+        "last_seen": "2026-06-10T01:31:50.453553+07:00"
       },
       "120245688553400121": {
         "name": "DEAD_OFF_Rakdapur3_Perabotan_v8",
@@ -1414,7 +1453,7 @@
         "cpc": 117.675,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477425+07:00"
+        "last_seen": "2026-06-10T01:31:50.453557+07:00"
       },
       "120245688553410121": {
         "name": "OFF_OFF",
@@ -1422,7 +1461,7 @@
         "cpc": 154.090909,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477427+07:00"
+        "last_seen": "2026-06-10T01:31:50.453561+07:00"
       },
       "120245688553420121": {
         "name": "OFF_OFF",
@@ -1430,15 +1469,15 @@
         "cpc": 134.83913,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477429+07:00"
+        "last_seen": "2026-06-10T01:31:50.453565+07:00"
       },
       "120245688589920121": {
         "name": "OFF_general_Movies_0306",
-        "ctr": 7.092714,
-        "cpc": 104.448869,
+        "ctr": 7.084302,
+        "cpc": 104.62847,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477430+07:00"
+        "last_seen": "2026-06-10T01:31:50.453568+07:00"
       },
       "120245688601990121": {
         "name": "OFF_OFF",
@@ -1446,7 +1485,7 @@
         "cpc": 176.252129,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477432+07:00"
+        "last_seen": "2026-06-10T01:31:50.453572+07:00"
       },
       "120245688602030121": {
         "name": "OFF_TC_rakdapur_Movies",
@@ -1454,7 +1493,7 @@
         "cpc": 102.878967,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477434+07:00"
+        "last_seen": "2026-06-10T01:31:50.453575+07:00"
       },
       "120245688602040121": {
         "name": "OFF_OFF",
@@ -1462,7 +1501,7 @@
         "cpc": 130.375,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477436+07:00"
+        "last_seen": "2026-06-10T01:31:50.453578+07:00"
       },
       "120245688602050121": {
         "name": "OFF_OFF",
@@ -1470,7 +1509,7 @@
         "cpc": 106.088602,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477437+07:00"
+        "last_seen": "2026-06-10T01:31:50.453582+07:00"
       },
       "120245688602060121": {
         "name": "OFF_OFF",
@@ -1478,7 +1517,7 @@
         "cpc": 119.334424,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477440+07:00"
+        "last_seen": "2026-06-10T01:31:50.453586+07:00"
       },
       "120245688602070121": {
         "name": "OFF_OFF",
@@ -1486,7 +1525,7 @@
         "cpc": 235.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477441+07:00"
+        "last_seen": "2026-06-10T01:31:50.453589+07:00"
       },
       "120245688602080121": {
         "name": "OFF_OFF",
@@ -1494,15 +1533,15 @@
         "cpc": 510.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477443+07:00"
+        "last_seen": "2026-06-10T01:31:50.453593+07:00"
       },
       "120245688602090121": {
-        "name": "ON_TC_rakdapur_Movies_0306",
-        "ctr": 7.783466,
-        "cpc": 99.794925,
+        "name": "\ud83c\udf1f_ON_TC_rakdapur_Movies_0306",
+        "ctr": 7.778752,
+        "cpc": 99.338115,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477445+07:00"
+        "last_seen": "2026-06-10T01:31:50.453597+07:00"
       },
       "120245688602100121": {
         "name": "OFF_OFF",
@@ -1510,7 +1549,7 @@
         "cpc": 202.666667,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477447+07:00"
+        "last_seen": "2026-06-10T01:31:50.453601+07:00"
       },
       "120245688634380121": {
         "name": "DEAD_OFF_Automobile_1_VILONA",
@@ -1518,7 +1557,7 @@
         "cpc": 185.395556,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477449+07:00"
+        "last_seen": "2026-06-10T01:31:50.453605+07:00"
       },
       "120245688662860121": {
         "name": "DEAD_OFF_Automobile_2_VILONA",
@@ -1526,7 +1565,7 @@
         "cpc": 165.910256,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477451+07:00"
+        "last_seen": "2026-06-10T01:31:50.453608+07:00"
       },
       "120245688663000121": {
         "name": "DEAD_OFF_Automobile_3_VILONA",
@@ -1534,7 +1573,7 @@
         "cpc": 182.222857,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477452+07:00"
+        "last_seen": "2026-06-10T01:31:50.453612+07:00"
       },
       "120245688663060121": {
         "name": "DEAD_OFF_Automobile_4_VILONA",
@@ -1542,7 +1581,7 @@
         "cpc": 197.376623,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477454+07:00"
+        "last_seen": "2026-06-10T01:31:50.453616+07:00"
       },
       "120245688663070121": {
         "name": "DEAD_OFF_Automobile_5_VILONA",
@@ -1550,7 +1589,7 @@
         "cpc": 193.529412,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477456+07:00"
+        "last_seen": "2026-06-10T01:31:50.453619+07:00"
       },
       "120245688663080121": {
         "name": "OFF_OFF",
@@ -1558,7 +1597,7 @@
         "cpc": 181.971831,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477458+07:00"
+        "last_seen": "2026-06-10T01:31:50.453623+07:00"
       },
       "120245688663090121": {
         "name": "DEAD_OFF_Automobile_7_VILONA",
@@ -1566,7 +1605,7 @@
         "cpc": 179.12069,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477460+07:00"
+        "last_seen": "2026-06-10T01:31:50.453627+07:00"
       },
       "120245688663100121": {
         "name": "DEAD_OFF_Automobile_8_VILONA",
@@ -1574,7 +1613,7 @@
         "cpc": 181.20765,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477462+07:00"
+        "last_seen": "2026-06-10T01:31:50.453630+07:00"
       },
       "120245688663110121": {
         "name": "DEAD_OFF_Automobile_9_VILONA",
@@ -1582,7 +1621,7 @@
         "cpc": 173.050562,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477464+07:00"
+        "last_seen": "2026-06-10T01:31:50.453634+07:00"
       },
       "120245688663120121": {
         "name": "DEAD_OFF_Automobile_10_VILONA",
@@ -1590,7 +1629,7 @@
         "cpc": 175.831395,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477466+07:00"
+        "last_seen": "2026-06-10T01:31:50.453637+07:00"
       },
       "120245688718600121": {
         "name": "DEAD_OFF_Fashion_Auto_1_VILONA",
@@ -1598,7 +1637,7 @@
         "cpc": 171.375758,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477467+07:00"
+        "last_seen": "2026-06-10T01:31:50.453641+07:00"
       },
       "120245688757220121": {
         "name": "OFF_OFF",
@@ -1606,7 +1645,7 @@
         "cpc": 188.986667,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477469+07:00"
+        "last_seen": "2026-06-10T01:31:50.453644+07:00"
       },
       "120245688757230121": {
         "name": "DEAD_OFF_Fashion_Auto_3_VILONA",
@@ -1614,7 +1653,7 @@
         "cpc": 171.039216,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:42.477471+07:00"
+        "last_seen": "2026-06-10T01:31:50.453649+07:00"
       },
       "120245688757240121": {
         "name": "OFF_OFF",
@@ -1622,13 +1661,13 @@
         "cpc": 185.633333,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:42.477473+07:00"
+        "last_seen": "2026-06-10T01:31:50.453652+07:00"
       }
     },
     "summary": {
-      "active": 10,
-      "total_campaigns": 191,
-      "spend_48h": 11276991,
+      "active": 24,
+      "total_campaigns": 200,
+      "spend_48h": 11295760,
       "winners": 61,
       "boncos": 0,
       "winner_names": [
@@ -1681,7 +1720,7 @@
         "DEAD_OFF_Rakdapur3_Perabotan_v6",
         "DEAD_OFF_Rakdapur3_Perabotan_v7",
         "DEAD_OFF_Rakdapur3_Perabotan_v8",
-        "ON_TC_rakdapur_Movies_0306",
+        "\ud83c\udf1f_ON_TC_rakdapur_Movies_0306",
         "DEAD_OFF_Automobile_1_VILONA",
         "DEAD_OFF_Automobile_2_VILONA",
         "DEAD_OFF_Automobile_3_VILONA",
@@ -2033,7 +2072,7 @@
     }
   },
   "1340": {
-    "last_cycle": "2026-06-06T20:30:54.350317+07:00",
+    "last_cycle": "2026-06-10T01:32:02.842603+07:00",
     "campaigns": {
       "120239558951210187": {
         "name": "BUSUK_Parenting_05/04/2026",
@@ -2041,7 +2080,7 @@
         "cpc": 344.352941,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350241+07:00"
+        "last_seen": "2026-06-10T01:32:02.842515+07:00"
       },
       "120239562719270187": {
         "name": "BUSUK_Parenting_05/04/2026_3",
@@ -2049,7 +2088,7 @@
         "cpc": 388.171875,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350253+07:00"
+        "last_seen": "2026-06-10T01:32:02.842529+07:00"
       },
       "120239562719280187": {
         "name": "BUSUK_Parenting_05/04/2026_2",
@@ -2057,7 +2096,7 @@
         "cpc": 457.721951,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350255+07:00"
+        "last_seen": "2026-06-10T01:32:02.842532+07:00"
       },
       "120239562719290187": {
         "name": "BUSUK_Parenting_05/04/2026_4",
@@ -2065,7 +2104,7 @@
         "cpc": 408.92,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350257+07:00"
+        "last_seen": "2026-06-10T01:32:02.842534+07:00"
       },
       "120239562719300187": {
         "name": "BUSUK_Parenting_05/04/2026_5",
@@ -2073,7 +2112,7 @@
         "cpc": 341.702602,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350260+07:00"
+        "last_seen": "2026-06-10T01:32:02.842536+07:00"
       },
       "120239648630470187": {
         "name": "CBO_Ebook istri sejati",
@@ -2081,15 +2120,15 @@
         "cpc": 820.641791,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350262+07:00"
+        "last_seen": "2026-06-10T01:32:02.842538+07:00"
       },
       "120239811007620187": {
         "name": "Istri Idaman Fresh - April 2026",
         "ctr": 1.315789,
         "cpc": 5996.0,
-        "boncos_streak": 30,
+        "boncos_streak": 77,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:54.350265+07:00"
+        "last_seen": "2026-06-10T01:32:02.842541+07:00"
       },
       "120239813049390187": {
         "name": "BUSUK_Parenting_New",
@@ -2097,7 +2136,7 @@
         "cpc": 1109.666667,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350267+07:00"
+        "last_seen": "2026-06-10T01:32:02.842543+07:00"
       },
       "120239857871590187": {
         "name": "Salah AI_SMP",
@@ -2105,7 +2144,7 @@
         "cpc": 1065.0,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350269+07:00"
+        "last_seen": "2026-06-10T01:32:02.842545+07:00"
       },
       "120239858534320187": {
         "name": "CBO_Guru Pintar AI_SD_new",
@@ -2113,7 +2152,7 @@
         "cpc": 816.714286,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350271+07:00"
+        "last_seen": "2026-06-10T01:32:02.842547+07:00"
       },
       "120239858558540187": {
         "name": "CBO_Guru Pintar AI_SMP_New",
@@ -2121,7 +2160,7 @@
         "cpc": 506.25,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350273+07:00"
+        "last_seen": "2026-06-10T01:32:02.842549+07:00"
       },
       "120239870531340187": {
         "name": "CBO_Nalaria_Ai Asisten",
@@ -2129,7 +2168,7 @@
         "cpc": 886.817308,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350275+07:00"
+        "last_seen": "2026-06-10T01:32:02.842551+07:00"
       },
       "120240823292570187": {
         "name": "OFF_SEPATUCEWEK",
@@ -2137,7 +2176,7 @@
         "cpc": 148.501873,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:54.350277+07:00"
+        "last_seen": "2026-06-10T01:32:02.842553+07:00"
       },
       "120240885950760187": {
         "name": "OFF_HOMELIVING",
@@ -2145,7 +2184,7 @@
         "cpc": 122.508091,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:54.350279+07:00"
+        "last_seen": "2026-06-10T01:32:02.842555+07:00"
       },
       "120240984562270187": {
         "name": "OFF_OFF_DECORATION",
@@ -2153,7 +2192,7 @@
         "cpc": 114.065041,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:54.350281+07:00"
+        "last_seen": "2026-06-10T01:32:02.842557+07:00"
       },
       "120241041992040187": {
         "name": "OFF_OFF_FASHION_CEWEK",
@@ -2161,7 +2200,7 @@
         "cpc": 70.892119,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:54.350282+07:00"
+        "last_seen": "2026-06-10T01:32:02.842560+07:00"
       },
       "120241052505520187": {
         "name": "OFF_SKINCARE",
@@ -2169,7 +2208,7 @@
         "cpc": 670.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:54.350284+07:00"
+        "last_seen": "2026-06-10T01:32:02.842562+07:00"
       },
       "120241068172810187": {
         "name": "OFF_OFF_KAMAR_MANDI",
@@ -2177,7 +2216,7 @@
         "cpc": 111.053498,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:54.350286+07:00"
+        "last_seen": "2026-06-10T01:32:02.842564+07:00"
       },
       "120241104522690187": {
         "name": "OFF_PARFUM_CEWEK",
@@ -2185,7 +2224,7 @@
         "cpc": 265.916667,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:54.350288+07:00"
+        "last_seen": "2026-06-10T01:32:02.842566+07:00"
       },
       "120241112424110187": {
         "name": "OFF_KESEHATAN_CEWEK",
@@ -2193,7 +2232,7 @@
         "cpc": 183.588235,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:54.350290+07:00"
+        "last_seen": "2026-06-10T01:32:02.842569+07:00"
       },
       "120241158002500187": {
         "name": "OFF_OFF_OTOMOTIF",
@@ -2201,7 +2240,7 @@
         "cpc": 132.81203,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:54.350292+07:00"
+        "last_seen": "2026-06-10T01:32:02.842570+07:00"
       },
       "120241197137690187": {
         "name": "OFF_Losepant_Scale",
@@ -2209,15 +2248,15 @@
         "cpc": 69.174409,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:54.350294+07:00"
+        "last_seen": "2026-06-10T01:32:02.842572+07:00"
       },
       "120241349269960187": {
-        "name": "SCALE_bajuanak",
-        "ctr": 4.515386,
-        "cpc": 61.821363,
+        "name": "\ud83c\udf1f_SCALE_bajuanak",
+        "ctr": 4.607421,
+        "cpc": 63.615607,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350295+07:00"
+        "last_seen": "2026-06-10T01:32:02.842575+07:00"
       },
       "120241487656950187": {
         "name": "OFF_ABO_FASHION2",
@@ -2225,47 +2264,47 @@
         "cpc": 82.559873,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:54.350297+07:00"
+        "last_seen": "2026-06-10T01:32:02.842577+07:00"
       },
       "120241792052700187": {
-        "name": "Scale_bajuanak_Books",
+        "name": "\ud83c\udf1f_Scale_bajuanak_Books",
         "ctr": 6.551074,
         "cpc": 83.880348,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350299+07:00"
+        "last_seen": "2026-06-10T01:32:02.842579+07:00"
       },
       "120241792113210187": {
-        "name": "Scale_bajuanak_Furniture",
-        "ctr": 7.300802,
-        "cpc": 72.06254,
+        "name": "\ud83c\udf1f_Scale_bajuanak_Furniture",
+        "ctr": 7.299529,
+        "cpc": 72.074479,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350301+07:00"
+        "last_seen": "2026-06-10T01:32:02.842581+07:00"
       },
       "120241792113220187": {
-        "name": "Scale_bajuanak_Aksesorifashion",
+        "name": "\ud83c\udf1f_Scale_bajuanak_Aksesorifashion",
         "ctr": 6.149341,
         "cpc": 96.068254,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350303+07:00"
+        "last_seen": "2026-06-10T01:32:02.842582+07:00"
       },
       "120241792113360187": {
-        "name": "Scale_bajuanak_Bayi",
-        "ctr": 7.319044,
-        "cpc": 70.122775,
+        "name": "\ud83c\udf1f_Scale_bajuanak_Bayi",
+        "ctr": 7.319437,
+        "cpc": 70.078427,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350305+07:00"
+        "last_seen": "2026-06-10T01:32:02.842584+07:00"
       },
       "120241792113380187": {
-        "name": "test_bajuover",
+        "name": "\ud83c\udf1f_test_bajuover",
         "ctr": 7.399326,
         "cpc": 83.469872,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350306+07:00"
+        "last_seen": "2026-06-10T01:32:02.842587+07:00"
       },
       "120242104854240187": {
         "name": "test33_kaoskicau",
@@ -2273,46 +2312,70 @@
         "cpc": 0.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:54.350308+07:00"
+        "last_seen": "2026-06-10T01:32:02.842589+07:00"
       },
       "120242326304410187": {
-        "name": "hijab",
-        "ctr": 6.692741,
-        "cpc": 56.797448,
+        "name": "\ud83c\udf1f_hijab",
+        "ctr": 6.947816,
+        "cpc": 61.511863,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350310+07:00"
+        "last_seen": "2026-06-10T01:32:02.842591+07:00"
       },
       "120242625949270187": {
-        "name": "SCALE_DECORATION",
-        "ctr": 2.745437,
-        "cpc": 92.098567,
+        "name": "\ud83c\udf1f_SCALE_DECORATION",
+        "ctr": 3.380811,
+        "cpc": 97.367729,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350312+07:00"
+        "last_seen": "2026-06-10T01:32:02.842593+07:00"
       },
       "120242636321530187": {
-        "name": "test_SEPATU_ADIDAS",
+        "name": "\ud83c\udf1f_test_SEPATU_ADIDAS",
         "ctr": 3.672316,
         "cpc": 140.384615,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350314+07:00"
+        "last_seen": "2026-06-10T01:32:02.842595+07:00"
       },
       "120242765651310187": {
-        "name": "TEST LIPCREAM",
-        "ctr": 0.744317,
-        "cpc": 1832.756757,
+        "name": "\ud83c\udf1f_TEST LIPCREAM",
+        "ctr": 0.776351,
+        "cpc": 1745.435897,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:54.350315+07:00"
+        "last_seen": "2026-06-10T01:32:02.842596+07:00"
+      },
+      "120242785252170187": {
+        "name": "TEST hijab_sekolah",
+        "ctr": 0.793651,
+        "cpc": 230.5,
+        "boncos_streak": 0,
+        "is_winner": false,
+        "last_seen": "2026-06-10T01:32:02.842598+07:00"
+      },
+      "120242842550900187": {
+        "name": "\ud83c\udf1f_SCALE_HIJAB_NONPET",
+        "ctr": 9.50783,
+        "cpc": 64.341176,
+        "boncos_streak": 0,
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:32:02.842600+07:00"
+      },
+      "120242907458370187": {
+        "name": "TEST hijab2",
+        "ctr": 4.545455,
+        "cpc": 88.0,
+        "boncos_streak": 0,
+        "is_winner": false,
+        "last_seen": "2026-06-10T01:32:02.842602+07:00"
       }
     },
     "summary": {
-      "active": 6,
-      "total_campaigns": 25,
-      "spend_48h": 7491200,
-      "winners": 21,
+      "active": 11,
+      "total_campaigns": 26,
+      "spend_48h": 8467914,
+      "winners": 22,
       "boncos": 1,
       "winner_names": [
         "BUSUK_Parenting_05/04/2026",
@@ -2326,16 +2389,17 @@
         "CBO_Guru Pintar AI_SD_new",
         "CBO_Guru Pintar AI_SMP_New",
         "CBO_Nalaria_Ai Asisten",
-        "SCALE_bajuanak",
-        "Scale_bajuanak_Books",
-        "Scale_bajuanak_Furniture",
-        "Scale_bajuanak_Aksesorifashion",
-        "Scale_bajuanak_Bayi",
-        "test_bajuover",
-        "hijab",
-        "SCALE_DECORATION",
-        "test_SEPATU_ADIDAS",
-        "TEST LIPCREAM"
+        "\ud83c\udf1f_SCALE_bajuanak",
+        "\ud83c\udf1f_Scale_bajuanak_Books",
+        "\ud83c\udf1f_Scale_bajuanak_Furniture",
+        "\ud83c\udf1f_Scale_bajuanak_Aksesorifashion",
+        "\ud83c\udf1f_Scale_bajuanak_Bayi",
+        "\ud83c\udf1f_test_bajuover",
+        "\ud83c\udf1f_hijab",
+        "\ud83c\udf1f_SCALE_DECORATION",
+        "\ud83c\udf1f_test_SEPATU_ADIDAS",
+        "\ud83c\udf1f_TEST LIPCREAM",
+        "\ud83c\udf1f_SCALE_HIJAB_NONPET"
       ],
       "boncos_names": [
         "Istri Idaman Fresh - April 2026"
@@ -2343,7 +2407,7 @@
     }
   },
   "1134": {
-    "last_cycle": "2026-06-06T20:30:46.125979+07:00",
+    "last_cycle": "2026-06-10T01:31:54.112932+07:00",
     "campaigns": {
       "120245193252560166": {
         "name": "Detergen - 2",
@@ -2351,7 +2415,7 @@
         "cpc": 303.727273,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:46.125927+07:00"
+        "last_seen": "2026-06-10T01:31:54.112831+07:00"
       },
       "120245323919990166": {
         "name": "Detergen - 1",
@@ -2359,7 +2423,7 @@
         "cpc": 281.775,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:46.125938+07:00"
+        "last_seen": "2026-06-10T01:31:54.112850+07:00"
       },
       "120247070000180166": {
         "name": "CBO_testing_1-2-6",
@@ -2367,7 +2431,7 @@
         "cpc": 272.465909,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:46.125941+07:00"
+        "last_seen": "2026-06-10T01:31:54.112855+07:00"
       },
       "120247170206470166": {
         "name": "CBO testing 3",
@@ -2375,7 +2439,7 @@
         "cpc": 234.546875,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:46.125943+07:00"
+        "last_seen": "2026-06-10T01:31:54.112858+07:00"
       },
       "120247313842370166": {
         "name": "OFF_ABO NEW OFFing 1-1-5",
@@ -2383,7 +2447,7 @@
         "cpc": 130.531616,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:46.125945+07:00"
+        "last_seen": "2026-06-10T01:31:54.112862+07:00"
       },
       "120247316211860166": {
         "name": "ABO testing 2 - 1-1-5",
@@ -2391,7 +2455,7 @@
         "cpc": 277.869565,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:46.125947+07:00"
+        "last_seen": "2026-06-10T01:31:54.112866+07:00"
       },
       "120247354266890166": {
         "name": "ABO testing 3- 1-1-5",
@@ -2399,7 +2463,7 @@
         "cpc": 439.585366,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:46.125949+07:00"
+        "last_seen": "2026-06-10T01:31:54.112869+07:00"
       },
       "120247355734040166": {
         "name": "ABO testing 4- 1-1-5",
@@ -2407,7 +2471,7 @@
         "cpc": 214.043478,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:46.125951+07:00"
+        "last_seen": "2026-06-10T01:31:54.112873+07:00"
       },
       "120247355734050166": {
         "name": "OFF_ABO OFFing 5- 1-1-5",
@@ -2415,7 +2479,7 @@
         "cpc": 146.893905,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:46.125953+07:00"
+        "last_seen": "2026-06-10T01:31:54.112877+07:00"
       },
       "120247423068820166": {
         "name": "ABO testing 6 - 1-1-5",
@@ -2423,7 +2487,7 @@
         "cpc": 164.584,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:46.125955+07:00"
+        "last_seen": "2026-06-10T01:31:54.112880+07:00"
       },
       "120247425469460166": {
         "name": "ABO testing 7- 1-1-5",
@@ -2431,7 +2495,7 @@
         "cpc": 278.145833,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:46.125957+07:00"
+        "last_seen": "2026-06-10T01:31:54.112884+07:00"
       },
       "120247441572580166": {
         "name": "ABO testing 8- 1-1-5",
@@ -2439,7 +2503,7 @@
         "cpc": 335.8,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:46.125959+07:00"
+        "last_seen": "2026-06-10T01:31:54.112887+07:00"
       },
       "120247442043390166": {
         "name": "ABO testing 9- 1-1-5",
@@ -2447,7 +2511,7 @@
         "cpc": 632.9375,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:46.125961+07:00"
+        "last_seen": "2026-06-10T01:31:54.112890+07:00"
       },
       "120247452132030166": {
         "name": "ABO testing 8- 1-1-5",
@@ -2455,7 +2519,7 @@
         "cpc": 136.638298,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:46.125963+07:00"
+        "last_seen": "2026-06-10T01:31:54.112894+07:00"
       },
       "120247594767960166": {
         "name": "OFF_NEWOFFing 2 - 1-1-5",
@@ -2463,15 +2527,15 @@
         "cpc": 82.688078,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:46.125965+07:00"
+        "last_seen": "2026-06-10T01:31:54.112897+07:00"
       },
       "120248505306690166": {
-        "name": "ON_CBO_LC_Pintulipatgeser",
-        "ctr": 9.295104,
-        "cpc": 48.673719,
+        "name": "OFF_CBO_LC_Pintulipatgeser_BONCOS",
+        "ctr": 9.093611,
+        "cpc": 50.847495,
         "boncos_streak": 0,
-        "is_winner": true,
-        "last_seen": "2026-06-06T20:30:46.125967+07:00"
+        "is_winner": false,
+        "last_seen": "2026-06-10T01:31:54.112901+07:00"
       },
       "120248877924470166": {
         "name": "OFF_ABO Perabotan 5- 1-1-5",
@@ -2479,53 +2543,69 @@
         "cpc": 317.526667,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:46.125969+07:00"
+        "last_seen": "2026-06-10T01:31:54.112904+07:00"
       },
       "120250255728700166": {
         "name": "OFF_Lemaridapur1_LC_Glowscet_0306",
-        "ctr": 1.428571,
-        "cpc": 660.0,
+        "ctr": 2.197802,
+        "cpc": 421.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:46.125970+07:00"
+        "last_seen": "2026-06-10T01:31:54.112908+07:00"
       },
       "120250256272030166": {
         "name": "OFF_Lemaridapur2_LC_Glowscet_0306",
-        "ctr": 12.727273,
-        "cpc": 88.428571,
+        "ctr": 6.10687,
+        "cpc": 164.75,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:46.125972+07:00"
+        "last_seen": "2026-06-10T01:31:54.112911+07:00"
       },
       "120250256398460166": {
         "name": "OFF_Lemaridapur3_LC_Glowscet_0306",
-        "ctr": 3.571429,
-        "cpc": 367.0,
+        "ctr": 1.851852,
+        "cpc": 765.0,
         "boncos_streak": 0,
         "is_winner": false,
-        "last_seen": "2026-06-06T20:30:46.125974+07:00"
+        "last_seen": "2026-06-10T01:31:54.112915+07:00"
       },
       "120250258818290166": {
-        "name": "GLW681_PintuLipatGeser_LC_0306",
-        "ctr": 6.071429,
-        "cpc": 149.941176,
+        "name": "\ud83c\udf1f_GLW681_PintuLipatGeser_LC_0306",
+        "ctr": 6.851385,
+        "cpc": 64.901654,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:46.125976+07:00"
+        "last_seen": "2026-06-10T01:31:54.112919+07:00"
       },
       "120250259268080166": {
-        "name": "Test_Pintulipatgeser_Glowscent_LC_0306",
-        "ctr": 8.833747,
-        "cpc": 52.202247,
+        "name": "\ud83c\udf1f_Test_Pintulipatgeser_Glowscent_LC_0306",
+        "ctr": 7.994284,
+        "cpc": 55.06397,
         "boncos_streak": 0,
         "is_winner": true,
-        "last_seen": "2026-06-06T20:30:46.125978+07:00"
+        "last_seen": "2026-06-10T01:31:54.112922+07:00"
+      },
+      "120250556375080166": {
+        "name": "OFF_Hijabcepol_LC_TEST_BONCOS",
+        "ctr": 3.947368,
+        "cpc": 219.333333,
+        "boncos_streak": 0,
+        "is_winner": false,
+        "last_seen": "2026-06-10T01:31:54.112925+07:00"
+      },
+      "120250561365340166": {
+        "name": "\ud83c\udf1f_ON_Handphone_LC_0606_TEST02",
+        "ctr": 4.262295,
+        "cpc": 123.461538,
+        "boncos_streak": 0,
+        "is_winner": true,
+        "last_seen": "2026-06-10T01:31:54.112929+07:00"
       }
     },
     "summary": {
-      "active": 5,
-      "total_campaigns": 12,
-      "spend_48h": 684549,
+      "active": 0,
+      "total_campaigns": 15,
+      "spend_48h": 796524,
       "winners": 15,
       "boncos": 0,
       "winner_names": [
@@ -2541,9 +2621,9 @@
         "ABO testing 8- 1-1-5",
         "ABO testing 9- 1-1-5",
         "ABO testing 8- 1-1-5",
-        "ON_CBO_LC_Pintulipatgeser",
-        "GLW681_PintuLipatGeser_LC_0306",
-        "Test_Pintulipatgeser_Glowscent_LC_0306"
+        "\ud83c\udf1f_GLW681_PintuLipatGeser_LC_0306",
+        "\ud83c\udf1f_Test_Pintulipatgeser_Glowscent_LC_0306",
+        "\ud83c\udf1f_ON_Handphone_LC_0606_TEST02"
       ],
       "boncos_names": []
     }

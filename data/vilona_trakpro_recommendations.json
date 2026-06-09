@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-06-06T20:30:56.730745+07:00",
-  "date": "2026-06-06",
+  "generated_at": "2026-06-10T01:32:05.140100+07:00",
+  "date": "2026-06-10",
   "account": "Kakriput",
   "sections": [
     {
@@ -8,105 +8,260 @@
       "type": "scores",
       "top_performers": [
         {
-          "name": "OFF_Organizer_organizerpullout_Broad_0603",
+          "name": "TC_Kakriput_rakpiringpengering_Musik populer (musik)",
+          "score": 92,
+          "note": "ROAS:1627.5x CPC:112 CTR:7.9% LC:38",
+          "spend": 5039.0,
+          "link_clicks": 38,
+          "cpc": 111.977778,
+          "ctr": 7.880911
+        },
+        {
+          "name": "ON_BIDCAP_rakpiringpengering_Parenting",
+          "score": 91,
+          "note": "ROAS:13227.1x CPC:78 CTR:9.2% LC:7",
+          "spend": 620.0,
+          "link_clicks": 7,
+          "cpc": 77.5,
+          "ctr": 9.195402
+        },
+        {
+          "name": "ON_BIDCAP_setelanbajukaosmihugajah_fashion",
+          "score": 90,
+          "note": "ROAS:767.7x CPC:76 CTR:6.7% LC:99",
+          "spend": 10683.0,
+          "link_clicks": 99,
+          "cpc": 76.307143,
+          "ctr": 6.721075
+        },
+        {
+          "name": "ON_V2_OFF_organizerpullout_Belanja",
           "score": 89,
-          "note": "ROAS:166.2x CPC:111 CTR:6.9% LC:236",
-          "spend": 35200.0,
-          "link_clicks": 236,
-          "cpc": 110.691824,
-          "ctr": 6.895056
+          "note": "ROAS:2589.5x CPC:102 CTR:9.2% LC:23",
+          "spend": 3167.0,
+          "link_clicks": 23,
+          "cpc": 102.16129,
+          "ctr": 9.22619
         },
         {
-          "name": "0858_gajahThailand_fashion_BID",
-          "score": 85,
-          "note": "ROAS:115.2x CPC:105 CTR:6.4% LC:361",
-          "spend": 50801.0,
-          "link_clicks": 361,
-          "cpc": 104.74433,
-          "ctr": 6.413647
-        },
-        {
-          "name": "0858_setelanbajukaosmihugajah_fashionShopping_BID",
-          "score": 85,
-          "note": "ROAS:84.0x CPC:89 CTR:9.1% LC:433",
-          "spend": 69701.0,
-          "link_clicks": 433,
-          "cpc": 89.01788,
-          "ctr": 9.126938
-        },
-        {
-          "name": "0858_setelanbajukaosmihugajah_fashionBelanja_BID",
-          "score": 85,
-          "note": "ROAS:56.4x CPC:94 CTR:8.9% LC:756",
-          "spend": 103780.0,
-          "link_clicks": 756,
-          "cpc": 94.431301,
-          "ctr": 8.890866
-        },
-        {
-          "name": "OFF_TEST_gajahThailand_shoppingFashion_BID",
-          "score": 82,
-          "note": "ROAS:3768.0x CPC:86 CTR:6.8% LC:12",
-          "spend": 1553.0,
-          "link_clicks": 12,
-          "cpc": 86.277778,
-          "ctr": 6.818182
+          "name": "BIDCAP_Organizer_organizerpullout_Dapur_0603",
+          "score": 89,
+          "note": "ROAS:2030.9x CPC:84 CTR:7.6% LC:42",
+          "spend": 4038.0,
+          "link_clicks": 42,
+          "cpc": 84.125,
+          "ctr": 7.631161
         }
       ],
-      "mid_performers": [],
-      "low_performers": [],
-      "summary": "23 TOP | 0 MID | 0 LOW"
+      "mid_performers": [
+        {
+          "name": "🌟_ON_0858_setelanbajukaosmihugajah_fashionBelanja",
+          "score": 59,
+          "note": "ROAS:1282.6x CPC:168 CTR:2.9% LC:25",
+          "spend": 6394.0,
+          "link_clicks": 25,
+          "cpc": 168.263158,
+          "ctr": 2.87226
+        },
+        {
+          "name": "ON_BIDCAP_rakpiringpengering_Shopping_0603",
+          "score": 59,
+          "note": "ROAS:48525.5x CPC:169 CTR:5.9% LC:1",
+          "spend": 169.0,
+          "link_clicks": 1,
+          "cpc": 169.0,
+          "ctr": 5.882353
+        },
+        {
+          "name": "🌟_ON_GEO_rakpiringpengering_INT05",
+          "score": 57,
+          "note": "ROAS:18470.3x CPC:222 CTR:7.4% LC:2",
+          "spend": 444.0,
+          "link_clicks": 2,
+          "cpc": 222.0,
+          "ctr": 7.407407
+        },
+        {
+          "name": "ON_Scale_BIDCAP_setelanbajukaosmihugajah_Fashion_0607",
+          "score": 57,
+          "note": "ROAS:26887.9x CPC:305 CTR:6.7% LC:1",
+          "spend": 305.0,
+          "link_clicks": 1,
+          "cpc": 305.0,
+          "ctr": 6.666667
+        },
+        {
+          "name": "🌟_BIDCAP_GEO_rakpiringpengering_INT03",
+          "score": 56,
+          "note": "ROAS:16080.0x CPC:510 CTR:2.3% LC:1",
+          "spend": 510.0,
+          "link_clicks": 1,
+          "cpc": 510.0,
+          "ctr": 2.325581
+        }
+      ],
+      "low_performers": [
+        {
+          "name": "🌟_ON_VILONA_organizerpullout_FBonly",
+          "score": 0,
+          "note": "Minimal delivery",
+          "spend": 94.0,
+          "link_clicks": 1,
+          "cpc": 47.0,
+          "ctr": 11.111111
+        },
+        {
+          "name": "🌟_ON__Kakriput_organizerpullout_INT10",
+          "score": 0,
+          "note": "Minimal delivery",
+          "spend": 91.0,
+          "link_clicks": 0,
+          "cpc": 0.0,
+          "ctr": 0.0
+        }
+      ],
+      "summary": "50 TOP | 16 MID | 2 LOW"
     },
     {
-      "title": "🏆 Early Winner Detector — 5 sinyal",
+      "title": "🏆 Early Winner Detector — 14 sinyal",
       "type": "early_winners",
       "winners": [
         {
-          "name": "OFF_LC_Organizer_organizerpullout_Dapur_0603_CLONE1",
-          "spend": 23390.0,
-          "link_clicks": 128,
-          "cpc": 145.279503,
-          "ctr": 4.494696,
-          "signal": "EARLY_WINNER",
-          "new_campaign": true,
-          "recommendation": "Winner signal confirmed — pantau 24 jam lagi untuk scale penuh"
-        },
-        {
-          "name": "BIDCAP_Organizer_organizerpullout_DapurShop_0603",
-          "spend": 9531.0,
-          "link_clicks": 62,
-          "cpc": 125.407895,
-          "ctr": 7.933194,
+          "name": "ON_V2_OFF_organizerpullout_Belanja",
+          "spend": 3167.0,
+          "link_clicks": 23,
+          "cpc": 102.16129,
+          "ctr": 9.22619,
           "signal": "EARLY_WINNER",
           "new_campaign": true,
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
         },
         {
-          "name": "OFF_Organizer_organizerpullout_Broad_0603",
-          "spend": 35200.0,
-          "link_clicks": 236,
-          "cpc": 110.691824,
-          "ctr": 6.895056,
-          "signal": "EARLY_WINNER",
-          "new_campaign": true,
-          "recommendation": "Winner signal confirmed — pantau 24 jam lagi untuk scale penuh"
-        },
-        {
-          "name": "OFF_TEST_gajahThailand_shoppingFashion_BID",
-          "spend": 1553.0,
-          "link_clicks": 12,
-          "cpc": 86.277778,
-          "ctr": 6.818182,
+          "name": "BIDCAP_Organizer_organizerpullout_Dapur_0603",
+          "spend": 4038.0,
+          "link_clicks": 42,
+          "cpc": 84.125,
+          "ctr": 7.631161,
           "signal": "EARLY_WINNER",
           "new_campaign": true,
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
         },
         {
-          "name": "OFF_Lemari_lemarirakdapur_Dapur_0605",
-          "spend": 10293.0,
-          "link_clicks": 64,
-          "cpc": 128.6625,
-          "ctr": 7.005254,
+          "name": "ON_V2_CBO_organizerpullout_Keuangan",
+          "spend": 1124.0,
+          "link_clicks": 7,
+          "cpc": 102.181818,
+          "ctr": 6.586826,
+          "signal": "EARLY_WINNER",
+          "new_campaign": true,
+          "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
+        },
+        {
+          "name": "🌟_ON_0858_organizer_pelancong",
+          "spend": 6334.0,
+          "link_clicks": 36,
+          "cpc": 137.695652,
+          "ctr": 7.278481,
+          "signal": "EARLY_WINNER",
+          "new_campaign": true,
+          "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
+        },
+        {
+          "name": "🌟_ON_Organizer_organizerpullout_FashiON_BIDCAP_0603",
+          "spend": 2086.0,
+          "link_clicks": 15,
+          "cpc": 104.3,
+          "ctr": 6.756757,
+          "signal": "EARLY_WINNER",
+          "new_campaign": true,
+          "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
+        },
+        {
+          "name": "🌟_ON_0858_setelanbajukaosmihugajah_fashion",
+          "spend": 1202.0,
+          "link_clicks": 6,
+          "cpc": 120.2,
+          "ctr": 5.128205,
+          "signal": "EARLY_WINNER",
+          "new_campaign": true,
+          "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
+        },
+        {
+          "name": "🌟_ON_GEO_rakpiringpengering_INT01",
+          "spend": 1583.0,
+          "link_clicks": 11,
+          "cpc": 131.916667,
+          "ctr": 8.510638,
+          "signal": "EARLY_WINNER",
+          "new_campaign": true,
+          "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
+        },
+        {
+          "name": "TC_Kakriput_rakpiringpengering_Netflix",
+          "spend": 2575.0,
+          "link_clicks": 19,
+          "cpc": 128.75,
+          "ctr": 8.510638,
+          "signal": "EARLY_WINNER",
+          "new_campaign": true,
+          "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
+        },
+        {
+          "name": "TC_Kakriput_rakpiringpengering_Musik populer (musik)",
+          "spend": 5039.0,
+          "link_clicks": 38,
+          "cpc": 111.977778,
+          "ctr": 7.880911,
+          "signal": "EARLY_WINNER",
+          "new_campaign": true,
+          "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
+        },
+        {
+          "name": "ON_BIDCAP_Organizer_FashiON_BIDCAP_0603",
+          "spend": 1287.0,
+          "link_clicks": 8,
+          "cpc": 117.0,
+          "ctr": 6.875,
+          "signal": "EARLY_WINNER",
+          "new_campaign": true,
+          "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
+        },
+        {
+          "name": "ON_BIDCAP_rakpiringpengering_06065",
+          "spend": 1014.0,
+          "link_clicks": 6,
+          "cpc": 144.857143,
+          "ctr": 7.0,
+          "signal": "EARLY_WINNER",
+          "new_campaign": true,
+          "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
+        },
+        {
+          "name": "ON_BIDCAP_Organizer_Broad2_0603",
+          "spend": 14557.0,
+          "link_clicks": 107,
+          "cpc": 129.973214,
+          "ctr": 5.941645,
+          "signal": "EARLY_WINNER",
+          "new_campaign": true,
+          "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
+        },
+        {
+          "name": "ON_BIDCAP_Organizer_Resep_0603",
+          "spend": 2607.0,
+          "link_clicks": 19,
+          "cpc": 118.5,
+          "ctr": 8.76494,
+          "signal": "EARLY_WINNER",
+          "new_campaign": true,
+          "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
+        },
+        {
+          "name": "ON_BIDCAP_setelanbajukaosmihugajah_fashion",
+          "spend": 10683.0,
+          "link_clicks": 99,
+          "cpc": 76.307143,
+          "ctr": 6.721075,
           "signal": "EARLY_WINNER",
           "new_campaign": true,
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
@@ -119,7 +274,7 @@
       "type": "scale_ladder",
       "ladders": [
         {
-          "campaign": "OFF_Organizer_organizerpullout_Broad_0603",
+          "campaign": "TC_Kakriput_rakpiringpengering_Musik populer (musik)",
           "current_budget": 500000,
           "target_budget": 500000,
           "steps": [
@@ -132,7 +287,7 @@
           ]
         },
         {
-          "campaign": "0858_gajahThailand_fashion_BID",
+          "campaign": "ON_BIDCAP_rakpiringpengering_Parenting",
           "current_budget": 500000,
           "target_budget": 500000,
           "steps": [
@@ -145,7 +300,7 @@
           ]
         },
         {
-          "campaign": "0858_setelanbajukaosmihugajah_fashionShopping_BID",
+          "campaign": "ON_BIDCAP_setelanbajukaosmihugajah_fashion",
           "current_budget": 500000,
           "target_budget": 500000,
           "steps": [
@@ -168,45 +323,45 @@
           "icon": "🔗",
           "category": "CEK MAPPING",
           "title": "Cek Mapping Campaign → Taglink",
-          "detail": "rakpiringpengering: 4 orders, Rp3,698,609 | organizerpullout: 3 orders, Rp2,063,940 | Dongkrakelektrik: 1 orders, Rp89,216",
+          "detail": "rakpiringpengering: 4 orders, Rp5,083,332 | organizerpullout: 4 orders, Rp2,939,045 | Dongkrakelektrik: 2 orders, Rp178,432",
           "action": "Upload CSV Shopee terbaru. Pastikan taglink sesuai."
         },
         {
           "priority": 0,
           "icon": "📋",
           "title": "Upload laporan Shopee terbaru",
-          "detail": "rakpiringpengering: 4 orders, Rp3,698,609 est. komisi | organizerpullout: 3 orders, Rp2,063,940 est. komisi | Dongkrakelektrik: 1 orders, Rp89,216 est. komisi",
+          "detail": "rakpiringpengering: 4 orders, Rp5,083,332 est. komisi | organizerpullout: 4 orders, Rp2,939,045 est. komisi | Dongkrakelektrik: 2 orders, Rp178,432 est. komisi",
           "action": "Upload CSV ke Telegram untuk cek detail"
         },
         {
           "priority": 1,
           "icon": "📈",
           "category": "SCALE",
-          "title": "Scale: OFF_Organizer_organizerpullout_Broad_060",
-          "detail": "Score 89/100 | ROAS:166.2x CPC:111 CTR:6.9% LC:236",
+          "title": "Scale: TC_Kakriput_rakpiringpengering_Musik pop",
+          "detail": "Score 92/100 | ROAS:1627.5x CPC:112 CTR:7.9% LC:38",
           "action": "Buat LC clone baru. Budget Rp100K, LOWEST_COST_WITH_BID_CAP @ Rp200."
         },
         {
           "priority": 1,
           "icon": "📈",
           "category": "SCALE",
-          "title": "Scale: 0858_gajahThailand_fashion_BID",
-          "detail": "Score 85/100 | ROAS:115.2x CPC:105 CTR:6.4% LC:361",
+          "title": "Scale: ON_BIDCAP_rakpiringpengering_Parenting",
+          "detail": "Score 91/100 | ROAS:13227.1x CPC:78 CTR:9.2% LC:7",
           "action": "Buat LC clone baru. Budget Rp100K, LOWEST_COST_WITH_BID_CAP @ Rp200."
         },
         {
           "priority": 1,
           "icon": "📈",
           "category": "SCALE",
-          "title": "Scale: 0858_setelanbajukaosmihugajah_fashionSho",
-          "detail": "Score 85/100 | ROAS:84.0x CPC:89 CTR:9.1% LC:433",
+          "title": "Scale: ON_BIDCAP_setelanbajukaosmihugajah_fashi",
+          "detail": "Score 90/100 | ROAS:767.7x CPC:76 CTR:6.7% LC:99",
           "action": "Buat LC clone baru. Budget Rp100K, LOWEST_COST_WITH_BID_CAP @ Rp200."
         },
         {
           "priority": 1,
           "icon": "🏆",
-          "title": "Scale pemenang: OFF_Organizer_organizerpullout_Broad_060",
-          "detail": "Score 89/100, ROAS:166.2x CPC:111 CTR:6.9% LC:236",
+          "title": "Scale pemenang: TC_Kakriput_rakpiringpengering_Musik pop",
+          "detail": "Score 92/100, ROAS:1627.5x CPC:112 CTR:7.9% LC:38",
           "action": "Naikkan budget 20% atau duplikasi ke audience baru"
         },
         {
@@ -216,6 +371,30 @@
           "title": "Tidak ada boncos",
           "detail": "Semua campaign sehat",
           "action": "Lanjutkan monitoring."
+        },
+        {
+          "priority": 3,
+          "icon": "👁️",
+          "category": "PANTAU",
+          "title": "Pantau: 🌟_ON_0858_setelanbajukaosmihugajah_fashi",
+          "detail": "Score 59/100 | ROAS:1282.6x CPC:168 CTR:2.9% LC:25",
+          "action": "Monitor 24 jam. Flag fatigue jika CPC naik/CTR turun."
+        },
+        {
+          "priority": 3,
+          "icon": "👁️",
+          "category": "PANTAU",
+          "title": "Pantau: ON_Scale_BIDCAP_organizerpullout_Broad_0",
+          "detail": "Score 55/100 | ROAS:1345.3x CPC:265 CTR:3.1% LC:20",
+          "action": "Monitor 24 jam. Flag fatigue jika CPC naik/CTR turun."
+        },
+        {
+          "priority": 3,
+          "icon": "👁️",
+          "category": "PANTAU",
+          "title": "Pantau: ON_Scale_BIDCAP_setelanbajukaosmihugajah",
+          "detail": "Score 55/100 | ROAS:1395.6x CPC:226 CTR:3.2% LC:20",
+          "action": "Monitor 24 jam. Flag fatigue jika CPC naik/CTR turun."
         }
       ]
     },

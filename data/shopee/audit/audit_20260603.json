@@ -1,35 +1,33 @@
 {
   "report_date": "2026-06-03",
-  "generated_at": "2026-06-07T12:00:02.118450",
+  "generated_at": "2026-06-10T00:00:01.592606",
   "summary": {
-    "total_bugs": 12,
+    "total_bugs": 22,
     "critical": 2,
-    "high": 2,
+    "high": 12,
     "medium": 8,
     "low": 0,
     "data_loaded": {
-      "clicks": 5151,
+      "clicks": 1970,
       "commissions": 5
     }
   },
   "stats": {
     "clicks": {
-      "total": 5151,
+      "total": 1970,
       "by_campaign": {},
       "by_source": {
-        "Facebook": 3574,
-        "Instagram": 937,
-        "Others": 500,
-        "Websites": 111,
-        "Threads": 28,
-        "EdgeBrowser": 1
+        "Facebook": 1607,
+        "Instagram": 225,
+        "Others": 137,
+        "Websites": 1
       }
     },
     "commissions": {
       "total_orders": 5,
       "total_value_rm": 76.81,
       "total_komisen_rm": 3.3655,
-      "conversion_rate": 0.1,
+      "conversion_rate": 0.25,
       "avg_order_value_rm": 15.36
     }
   },
@@ -45,22 +43,57 @@
       "bug_id": "BUG_2",
       "severity": "HIGH",
       "location": "Sub_id column",
-      "description": "5151 clicks have empty sub_id (----) — attribution broken",
+      "description": "1970 clicks have empty sub_id (----) — attribution broken",
       "fix": "Trace source of unattributed clicks. Add fallback UTM or pixel tracking."
     },
     {
       "bug_id": "BUG_3",
       "severity": "MEDIUM",
       "location": "Waktu Klik column",
-      "description": "4966 clicks with timestamps before 21:00 UTC — possible previous-day spillover",
+      "description": "1770 clicks with timestamps before 21:00 UTC — possible previous-day spillover",
       "fix": "Verify report date range matches claim. Implement report-generation-time validation."
     },
     {
       "bug_id": "BUG_4",
       "severity": "MEDIUM",
       "location": "Perujuk column",
-      "description": "500 clicks from \"Others\" referrer — channel unknown",
+      "description": "137 clicks from \"Others\" referrer — channel unknown",
       "fix": "Expand referrer categories or add UTM parameter to \"Others\" traffic"
+    },
+    {
+      "bug_id": "BUG_8_2",
+      "severity": "HIGH",
+      "location": "Commission Row 2 (Order: 260601VQ2V138C)",
+      "description": "Order pending 8 days — exceeds 7 day threshold",
+      "fix": "Flag order 260601VQ2V138C as potentially stuck. Check with Shopee or buyer."
+    },
+    {
+      "bug_id": "BUG_8_3",
+      "severity": "HIGH",
+      "location": "Commission Row 3 (Order: 260601VQ2V138C)",
+      "description": "Order pending 8 days — exceeds 7 day threshold",
+      "fix": "Flag order 260601VQ2V138C as potentially stuck. Check with Shopee or buyer."
+    },
+    {
+      "bug_id": "BUG_8_4",
+      "severity": "HIGH",
+      "location": "Commission Row 4 (Order: 260601VQ2V138B)",
+      "description": "Order pending 8 days — exceeds 7 day threshold",
+      "fix": "Flag order 260601VQ2V138B as potentially stuck. Check with Shopee or buyer."
+    },
+    {
+      "bug_id": "BUG_8_5",
+      "severity": "HIGH",
+      "location": "Commission Row 5 (Order: 260601VQ2V138B)",
+      "description": "Order pending 8 days — exceeds 7 day threshold",
+      "fix": "Flag order 260601VQ2V138B as potentially stuck. Check with Shopee or buyer."
+    },
+    {
+      "bug_id": "BUG_8_6",
+      "severity": "HIGH",
+      "location": "Commission Row 6 (Order: 260601VQ2V138A)",
+      "description": "Order pending 8 days — exceeds 7 day threshold",
+      "fix": "Flag order 260601VQ2V138A as potentially stuck. Check with Shopee or buyer."
     },
     {
       "bug_id": "BUG_8_SUMMARY",
@@ -87,22 +120,57 @@
       "bug_id": "BUG_2",
       "severity": "HIGH",
       "location": "Sub_id column",
-      "description": "5151 clicks have empty sub_id (----) — attribution broken",
+      "description": "1970 clicks have empty sub_id (----) — attribution broken",
       "fix": "Trace source of unattributed clicks. Add fallback UTM or pixel tracking."
     },
     {
       "bug_id": "BUG_3",
       "severity": "MEDIUM",
       "location": "Waktu Klik column",
-      "description": "4966 clicks with timestamps before 21:00 UTC — possible previous-day spillover",
+      "description": "1770 clicks with timestamps before 21:00 UTC — possible previous-day spillover",
       "fix": "Verify report date range matches claim. Implement report-generation-time validation."
     },
     {
       "bug_id": "BUG_4",
       "severity": "MEDIUM",
       "location": "Perujuk column",
-      "description": "500 clicks from \"Others\" referrer — channel unknown",
+      "description": "137 clicks from \"Others\" referrer — channel unknown",
       "fix": "Expand referrer categories or add UTM parameter to \"Others\" traffic"
+    },
+    {
+      "bug_id": "BUG_8_2",
+      "severity": "HIGH",
+      "location": "Commission Row 2 (Order: 260601VQ2V138C)",
+      "description": "Order pending 8 days — exceeds 7 day threshold",
+      "fix": "Flag order 260601VQ2V138C as potentially stuck. Check with Shopee or buyer."
+    },
+    {
+      "bug_id": "BUG_8_3",
+      "severity": "HIGH",
+      "location": "Commission Row 3 (Order: 260601VQ2V138C)",
+      "description": "Order pending 8 days — exceeds 7 day threshold",
+      "fix": "Flag order 260601VQ2V138C as potentially stuck. Check with Shopee or buyer."
+    },
+    {
+      "bug_id": "BUG_8_4",
+      "severity": "HIGH",
+      "location": "Commission Row 4 (Order: 260601VQ2V138B)",
+      "description": "Order pending 8 days — exceeds 7 day threshold",
+      "fix": "Flag order 260601VQ2V138B as potentially stuck. Check with Shopee or buyer."
+    },
+    {
+      "bug_id": "BUG_8_5",
+      "severity": "HIGH",
+      "location": "Commission Row 5 (Order: 260601VQ2V138B)",
+      "description": "Order pending 8 days — exceeds 7 day threshold",
+      "fix": "Flag order 260601VQ2V138B as potentially stuck. Check with Shopee or buyer."
+    },
+    {
+      "bug_id": "BUG_8_6",
+      "severity": "HIGH",
+      "location": "Commission Row 6 (Order: 260601VQ2V138A)",
+      "description": "Order pending 8 days — exceeds 7 day threshold",
+      "fix": "Flag order 260601VQ2V138A as potentially stuck. Check with Shopee or buyer."
     },
     {
       "bug_id": "BUG_8_SUMMARY",
@@ -137,7 +205,17 @@
       "priority": "THIS_WEEK",
       "bugs": [
         "BUG_2",
-        "BUG_2"
+        "BUG_8_2",
+        "BUG_8_3",
+        "BUG_8_4",
+        "BUG_8_5",
+        "BUG_8_6",
+        "BUG_2",
+        "BUG_8_2",
+        "BUG_8_3",
+        "BUG_8_4",
+        "BUG_8_5",
+        "BUG_8_6"
       ],
       "action": "Fix within 7 days — data quality and tracking issues",
       "automated_fixes": [
