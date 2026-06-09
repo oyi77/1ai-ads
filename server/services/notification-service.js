@@ -60,6 +60,52 @@ export class NotificationService {
     return sent > 0;
   }
 
+  async sendToUser(userId, message, settingsRepo) {
+    let token = '';
+    let chatId = '';
+
+    try {
+      const userToken = settingsRepo.get(`telegram_bot_token_${userId}`);
+      const userChatId = settingsRepo.get(`telegram_chat_id_${userId}`);
+      if (userToken && userChatId) {
+        token = userToken;
+        chatId = userChatId;
+      }
+    } catch {
+      log.debug('No per-user Telegram config, falling back to global');
+    }
+
+    if (!token || !chatId) {
+      token = this.telegramToken;
+      chatId = this.telegramChatId;
+    }
+
+    if (!token || !chatId) {
+      log.debug('Telegram not configured (user or global), skipping');
+      return false;
+    }
+
+    try {
+      const url = `https://api.telegram.org/bot${token}/sendMessage`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: message,
+          parse_mode: 'HTML',
+        }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      const data = await res.json();
+      log.info('Telegram sendToUser sent', { userId, ok: data.ok });
+      return data.ok;
+    } catch (err) {
+      log.error('Telegram sendToUser failed', { userId, error: err.message });
+      return false;
+    }
+  }
+
   async notify(event, data) {
     const message = this._formatMessage(event, data);
     await this.sendTelegram(message);

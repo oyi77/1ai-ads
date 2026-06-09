@@ -39,7 +39,10 @@ import { createResearchRouter } from '../routes/research.js';
 import { createMcpRouter } from '../routes/mcp.js';
 import { createSelowRouter } from '../routes/selow.js';
 import { createAttributionRouter } from '../routes/attribution.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { createAdminRouter } from '../routes/admin.js';
+import { createDraftRouter } from '../routes/drafts.js';
+import { createShopeeDashboardRouter } from '../routes/shopee-dashboard.js';
 
 export function createRouters({ app, repos, services }) {
  const publicRateLimit = rateLimit({
@@ -92,5 +95,8 @@ export function createRouters({ app, repos, services }) {
  app.use('/api/mcp', requireAuth, createMcpRouter(mcpClient, repos.settingsRepo, repos.campaignsRepo, repos.adsRepo, repos.landingRepo));
  app.use('/api/meta-ai', requireAuth, createMetaAiRouter(repos.settingsRepo));
  app.use('/api/ads-library-ai', publicRateLimit, createAdsLibraryAiRouter(repos.settingsRepo));
+  app.use('/api/admin', requireAuth, requireAdmin, createAdminRouter(repos.usersRepo, repos.settingsRepo));
+  app.use('/api/drafts', requireAuth, createDraftRouter(services.draftService));
+ app.use('/api/shopee', requireAuth, createShopeeDashboardRouter(services.shopeeAdapter, repos.settingsRepo));
  app.use('/t', createTrackRouter(repos.adUtmMapRepo, services.utmTagger));
 }

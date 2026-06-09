@@ -69,6 +69,9 @@ const config = {
   get microsoftAccessToken() { return process.env.MICROSOFT_ACCESS_TOKEN || ''; },
   get microsoftDevToken() { return process.env.MICROSOFT_DEVELOPER_TOKEN || ''; },
   get microsoftCustomerId() { return process.env.MICROSOFT_CUSTOMER_ID || ''; },
+  // Platform: Shopee
+  get shopeeSellerIds() { return process.env.SHOPEE_SELLER_IDS || ''; },
+  get shopeeApiUrl() { return process.env.SHOPEE_API_URL || ''; },
 };
 
 export function validateConfig() {

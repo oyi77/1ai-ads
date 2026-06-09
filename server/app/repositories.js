@@ -15,6 +15,7 @@ import { AdUtmMapRepository } from '../repositories/ad-utm-map.js';
 import { ScheduleRepository } from '../repositories/schedule.js';
 import { AttributionRepository } from '../repositories/attribution.js';
 import { ContentSchedulerQueueRepository } from '../repositories/content-scheduler-queue.js';
+import { DraftsRepository } from '../repositories/drafts.js';
 
 export function createRepositories(db) {
   const scheduleRepo = new ScheduleRepository(db);
@@ -43,5 +44,6 @@ export function createRepositories(db) {
     scheduleRepo,
     attributionRepo: new AttributionRepository(db),
     contentSchedulerQueueRepo,
+    draftsRepo: new DraftsRepository(db),
   };
 }

@@ -31,6 +31,7 @@ import { DataCleanup } from '../services/data-cleanup.js';
 import { UtmTaggerService } from '../services/utm-tagger.js';
 import { AdIntelligenceService } from '../services/ad-intelligence.js';
 import { CompetitorSpyService } from '../services/competitor-spy.js';
+import { DraftService } from '../services/draft-service.js';
 
 export function createServices({ db, repos, params }) {
   const llmClient = (params && params.llmClient) || new LLMClient({
@@ -87,6 +88,7 @@ export function createServices({ db, repos, params }) {
   const dataCleanup = new DataCleanup(db);
   const adIntelligenceService = new AdIntelligenceService(db, repos.competitorsRepo);
   const competitorSpyService = new CompetitorSpyService(db, adIntelligenceService, null, repos.competitorsRepo);
+  const draftService = new DraftService(repos.draftsRepo);
 
   return {
     llmClient, adspirerClient, trendingService, scalevService, paymentService,
@@ -96,6 +98,7 @@ export function createServices({ db, repos, params }) {
     googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI,
     autonomousAgent, autoOptimizer,
     webhookProcessor, dataCleanup, adIntelligenceService, competitorSpyService,
+    draftService,
     mcpClient: params && params.mcpClient,
   };
 }

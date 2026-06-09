@@ -22,6 +22,9 @@ import { renderCampaignWizard } from './views/campaign-wizard.js';
 import { renderAdWizard } from './views/ads-wizard.js';
 import { renderMarketingLP } from './views/marketing-lp.js';
 import { renderPlatformsDashboard } from './views/platforms-dashboard.js';
+import { renderDrafts } from './views/drafts.js';
+import { renderAdminUsers } from './views/admin-users.js';
+import { renderShopeeDashboard } from './views/shopee-dashboard.js';
 
 const router = new Router(document.getElementById('app'));
 
@@ -50,6 +53,9 @@ router.on('/trending', renderTrending);
 router.on('/competitor-spy', renderCompetitorSpy);
 router.on('/global-ads', renderGlobalAds);
 router.on('/platforms', renderPlatformsDashboard);
+router.on('/drafts', renderDrafts);
+router.on('/admin/users', renderAdminUsers);
+router.on('/shopee', renderShopeeDashboard);
 router.on('/ai-suggestions', renderAiSuggestions);
 router.on('/realtime', async () => {
   const { renderRealtimeView } = await import('./views/realtime.js');
@@ -96,7 +102,10 @@ function updateNav() {
       'a[href="#/attribution"]',
       'a[href="#/meta-ai"]',
       'a[href="#/ads-library-ai"]',
-      'a[href="#/platforms"]'
+      'a[href="#/platforms"]',
+      'a[href="#/drafts"]',
+      'a[href="#/admin/users"]',
+      'a[href="#/shopee"]'
     ];
     allSelectors.forEach(sel => {
       const el = navLinks.querySelector(sel);
