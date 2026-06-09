@@ -1,0 +1,278 @@
+{
+  "patrol_timestamp": "2026-06-09T09:15:00+07:00",
+  "patrol_date": "2026-06-09",
+  "patrol_run": 3,
+  "account": "act_435670549443081",
+  "account_short": "0858",
+  "shopee_account": "Kakriput",
+  "meta_api_fresh": true,
+  "comparison_to_prior_patrol": "Same day, third run at ~09:15; prior runs at 06:25 and 08:40",
+
+  "current_meta_state": {
+    "total_campaigns": 122,
+    "active_campaigns": 19,
+    "paused_campaigns": 103,
+    "7d_spend_all": 7798,
+    "7d_clicks_all": 69,
+    "7d_impressions_all": 1003,
+    "campaigns_with_7d_insights": 83,
+    "active_decreased_since_last_patrol": true,
+    "active_previous_run2": 21,
+    "active_previous_run1": 36,
+    "active_now": 19,
+    "net_decline_since_morning": 17
+  },
+
+  "taglink_health": {
+    "rakpiringpengering": {
+      "completed_orders": 956,
+      "completed_commission": 0,
+      "pending_commission": 3418743,
+      "cvr_7d_pct": 26.32,
+      "has_completed_ever": true,
+      "meets_keep_on_criteria": true,
+      "keep_on_reasons": [
+        "CVR 26.32% > 5%",
+        "Pending Rp3,418,743 > Rp50k",
+        "956 completed orders ever"
+      ],
+      "best_platform": "Instagram",
+      "existing_active": 3,
+      "existing_paused": 29
+    },
+    "organizerpullout": {
+      "completed_orders": 569,
+      "completed_commission": 0,
+      "pending_commission": 1993520,
+      "cvr_7d_pct": 57.58,
+      "has_completed_ever": true,
+      "meets_keep_on_criteria": true,
+      "keep_on_reasons": [
+        "CVR 57.58% > 5%",
+        "Pending Rp1,993,520 > Rp50k",
+        "569 completed orders ever"
+      ],
+      "best_platform": "Instagram",
+      "existing_active": 11,
+      "existing_paused": 19
+    },
+    "setelanbajukaosmihugajah": {
+      "completed_orders": 4,
+      "completed_commission": 0,
+      "pending_commission": 514689,
+      "cvr_7d_pct": 7.14,
+      "has_completed_ever": true,
+      "meets_keep_on_criteria": true,
+      "keep_on_reasons": [
+        "CVR 7.14% > 5%",
+        "Pending Rp514,689 > Rp50k",
+        "4 completed orders ever"
+      ],
+      "best_platform": "Facebook",
+      "existing_active": 0,
+      "existing_paused": 5
+    },
+    "setelangajahthaialand": {
+      "completed_orders": 0,
+      "completed_commission": 0,
+      "pending_commission": 80724,
+      "cvr_7d_pct": 5.46,
+      "has_completed_ever": false,
+      "meets_keep_on_criteria": true,
+      "keep_on_reasons": [
+        "CVR 5.46% > 5%",
+        "Pending Rp80,724 > Rp50k"
+      ],
+      "best_platform": "Facebook",
+      "existing_active": 0,
+      "existing_paused": 2
+    }
+  },
+
+  "active_campaigns_performance": [
+    {"name": "ON_0858_organizer_tableware", "7d_spend": 4261, "7d_clicks": 29, "taglink": "organizerpullout"},
+    {"name": "ON_Organizer_organizerpullout_Rumah_0603", "7d_spend": 1174, "7d_clicks": 7, "taglink": "organizerpullout"},
+    {"name": "ON_BIDCAP_Organizer_Resep_0603", "7d_spend": 1101, "7d_clicks": 20, "taglink": "organizerpullout"},
+    {"name": "ON_BIDCAP_rakpiringpengering_Parenting", "7d_spend": 671, "7d_clicks": 12, "taglink": "rakpiringpengering"},
+    {"name": "ON_BIDCAP_Lemari_lemarirakdapur_Dapur_0605", "7d_spend": 155, "7d_clicks": 0, "taglink": "lemarirakdapur"},
+    {"name": "ON_BIDCAP_rakpiringpengering_INT10", "7d_spend": 133, "7d_clicks": 1, "taglink": "rakpiringpengering"},
+    {"name": "ON_BIDCAP_organizer_jewelry", "7d_spend": 172, "7d_clicks": 0, "taglink": "organizerpullout"},
+    {"name": "ON_BIDCAP_Organizer_Broad2_0603", "7d_spend": 131, "7d_clicks": 0, "taglink": "organizerpullout"},
+    {"name": "12 other active campaigns", "7d_spend": 0, "7d_clicks": 0, "taglink": "mixed"}
+  ],
+
+  "wrongfully_paused_campaigns_highlights": [
+    {
+      "severity": "CRITICAL",
+      "taglink": "setelanbajukaosmihugajah",
+      "campaign": "0858_setelanbajukaosmihugajah_fashionShopping_BID",
+      "7d_spend": 777392,
+      "7d_clicks": 10146,
+      "reason": "This was the TOP SPENDER across the entire account! Rp777k spend, 10k clicks. Now PAUSED. CVR 7.14% > 5%, pending Rp514k. WRONGFUL PAUSE."
+    },
+    {
+      "severity": "CRITICAL",
+      "taglink": "rakpiringpengering",
+      "campaigns_paused": [
+        "ON_GEO_rakpiringpengering_INT08 (Rp372,730 spend)",
+        "ON_GEO_rakpiringpengering_INT07 (Rp307,676 spend)",
+        "ON_GEO_rakpiringpengering_INT04 (Rp207,499 spend)",
+        "ON_Rakpiring_rakpiringpengering_Winner_0603 (Rp214,631 spend)",
+        "ON_Rakpiring_rakpiringpengering_Shopping_0603 (Rp192,795 spend)",
+        "ON_GEO_rakpiringpengering_INT10 (Rp114,364 spend)",
+        "ON_Rakpiring_rakpiringpengering_Broad_0603 (Rp51,119 spend)",
+        "+ more"
+      ],
+      "total_lost_spend": 1500000,
+      "reason": "At least 8 rakpiringpengering campaigns PAUSED that had active spend. CVR 26.32% should NEVER be paused!"
+    },
+    {
+      "severity": "HIGH",
+      "taglink": "organizerpullout",
+      "campaigns_paused": [
+        "BIDCAP_Organizer_organizerpullout_Dapur_0603 (Rp324,916 spend)",
+        "ON_Organizer_organizerpullout_Travel_0603 (Rp165,182 spend)",
+        "ON_Organizer_organizerpullout_Fashion_0603 (Rp62,955 spend)",
+        "ON_Organizer_organizerpullout_Broad_0603 (Rp35,843 spend)",
+        "BIDCAP_Organizer_organizerpullout_DapurShop_0603 (Rp11,483 spend)"
+      ],
+      "total_lost_spend": 600379,
+      "reason": "Organizer campaigns with proven spend wrongfully paused. CVR 57.58% — the BEST performer!"
+    }
+  ],
+
+  "off_campaigns_analysis": {
+    "total_off_campaigns": 16,
+    "can_be_turned_on": [
+      {
+        "name": "OFF_Lemari_lemarirakdapur_Dapur_0605",
+        "taglink": "lemarirakdapur",
+        "7d_spend": 10293,
+        "7d_clicks": 82,
+        "recommended_action": "CAN_ON",
+        "note": "Had active spend recently (Rp10k). lemarirakdapur is a new taglink tested by 0858."
+      },
+      {
+        "name": "OFF_TEST_gajahThailand_shoppingFashion",
+        "taglink": "gajahThailand",
+        "7d_spend": 1848,
+        "7d_clicks": 20,
+        "recommended_action": "STAY_OFF",
+        "note": "gajahThailand is deprecated in favor of setelangajahthaialand per SOP."
+      },
+      {
+        "name": "OFF_0858_fashionWanitaPremium_shopping_Test",
+        "taglink": "unknown",
+        "7d_spend": 201,
+        "recommended_action": "STAY_OFF",
+        "note": "Minimal spend, unknown taglink. Not in core 4 taglinks."
+      }
+    ],
+    "off_candidates_by_taglink": {
+      "rakpiringpengering": 0,
+      "organizerpullout": 0,
+      "setelanbajukaosmihugajah": 0,
+      "setelangajahthaialand": 0,
+      "lemarirakdapur": 1,
+      "other": 15
+    }
+  },
+
+  "patrol_decisions": {
+    "organizerpullout": {
+      "decision": "KEEP_ON + PROTECT",
+      "note": "11 active ✅ CVR 57.58% > 5%. Top performer. Pastikan active campaigns tidak dipause. Jangan ada lagi wrongful pause! Ada Rp600k+ spend yang terbuang karena pause.",
+      "wrongful_pause_detected": true,
+      "wrongful_pause_count": 5,
+      "scale_opportunity": true,
+      "available_new_themes": ["Minimalis", "Rak serbaguna", "Kamar mandi", "Kantor", "Dekorasi", "Hemat tempat", "Multifungsi"]
+    },
+    "rakpiringpengering": {
+      "decision": "UNPAUSE + KEEP_ON",
+      "note": "⚠️ KRITIKAL: Hanya 3 active, puluhan dipause! CVR 26.32% excellent. UNPAUSE semua campaign yang spending. Rugi Rp1.5jt+ karena pause.",
+      "wrongful_pause_detected": true,
+      "wrongful_pause_count": 8,
+      "scale_opportunity": true,
+      "available_new_themes": ["Resep", "Dapur", "Rumah tangga", "Interior", "Keuangan", "Ibu rumah tangga", "Hemat", "Belanja online"]
+    },
+    "setelanbajukaosmihugajah": {
+      "decision": "UNPAUSE ALL",
+      "note": "🔴 SEMUA 5 campaign PAUSED! Termasuk top spender Rp777k dengan 10k klik! CVR 7.14% > 5%, pending Rp514k. UNPAUSE SEKARANG!",
+      "wrongful_pause_detected": true,
+      "wrongful_pause_count": 5,
+      "scale_opportunity": true,
+      "available_new_themes": ["Pria casual", "Olahraga", "Santai", "Harian", "Diskon fashion", "Baju kerja santai"]
+    },
+    "setelangajahthaialand": {
+      "decision": "UNPAUSE ALL",
+      "note": "Kedua campaign PAUSED. CVR 5.46% > 5%, pending Rp80,724 > 50k. UNPAUSE sekarang.",
+      "wrongful_pause_detected": true,
+      "wrongful_pause_count": 2,
+      "scale_opportunity": true,
+      "available_new_themes": ["Thailand style", "Baju murah", "Busana muslim", "Pakaian wanita", "Fashion anak"]
+    }
+  },
+
+  "recommendations": [
+    {
+      "priority": "P0 - EMERGENCY",
+      "type": "STOP_THE_BLEEDING",
+      "taglink": "ALL",
+      "detail": "🆘 17 campaign turun dari 36 jadi 19 active dalam beberapa jam. Ada bot/script/user lain yang MASS-PAUSE campaign. SISTEM INI SEDANG DIRUGIKAN BESAR-BESARAN. Perlu investigasi segera siapa/apa yang melakukan pause.",
+      "urgency": "IMMEDIATE"
+    },
+    {
+      "priority": "P0 - EMERGENCY",
+      "type": "UNPAUSE",
+      "taglink": "setelanbajukaosmihugajah",
+      "detail": "UNPAUSE campaign '0858_setelanbajukaosmihugajah_fashionShopping_BID' (id: 120250016047830416) — top spender Rp777k/7hr dengan 10k klik! Ini yang paling kritis.",
+      "urgency": "IMMEDIATE"
+    },
+    {
+      "priority": "P1 - CRITICAL",
+      "type": "UNPAUSE",
+      "taglink": "rakpiringpengering",
+      "detail": "UNPAUSE semua campaign rakpiringpengering yang ada spend: INT08, INT07, INT04, Winner_0603, Shopping_0603, INT10, Broad_0603. Total Rp1.5jt spend terbuang.",
+      "urgency": "NOW"
+    },
+    {
+      "priority": "P1 - CRITICAL",
+      "type": "UNPAUSE",
+      "taglink": "organizerpullout",
+      "detail": "UNPAUSE organizer campaigns: Dapur_0603, Travel_0603, FashiON_BIDCAP_0603, Broad_0603, DapurShop_0603.",
+      "urgency": "NOW"
+    },
+    {
+      "priority": "P1 - CRITICAL",
+      "type": "UNPAUSE",
+      "taglink": "setelangajahthaialand",
+      "detail": "UNPAUSE semua campaign setelangajahthaialand (2 campaigns).",
+      "urgency": "NOW"
+    },
+    {
+      "priority": "P2 - HIGH",
+      "type": "INVESTIGATE",
+      "taglink": "ALL",
+      "detail": "🛑 SISTEM MASS-PAUSE TERDETEKSI. 122 total campaigns, 103 PAUSED, hanya 19 ACTIVE. Campaign yang spending malah dipause. Campaign baru tanpa spend tetap active. Investigasi bot/script penyebab.",
+      "urgency": "IMMEDIATE"
+    },
+    {
+      "priority": "P3 - MEDIUM",
+      "type": "SCALE",
+      "taglink": "organizerpullout",
+      "detail": "Setelah unpause, bisa scale dengan theme baru: Minimalis, Hemat tempat, Multifungsi. Budget Rp20k/adset LOWEST_COST.",
+      "urgency": "AFTER_UNPAUSE"
+    }
+  ],
+
+  "sale_calendar_alert": {
+    "today": "2026-06-09",
+    "today_is_sale": false,
+    "upcoming_events": [
+      {"date": "2026-06-25", "event": "Gajian + Co-Creation", "days_away": 16, "action": "Mulai siapkan adset baru 50% lebih"},
+      {"date": "2026-07-07", "event": "7.7 Sale", "days_away": 28, "action": "Tambah adset 2.5x lipat"}
+    ]
+  },
+
+  "raw_meta_api_note": "Nilai API langsung Rupiah (IDR). Tidak perlu ÷100. Sesuai cara_baca_meta.md."
+}

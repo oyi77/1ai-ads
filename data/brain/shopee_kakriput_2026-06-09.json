@@ -1,0 +1,67 @@
+{
+  "account": "act_435670549443081",
+  "meta_account": "Selow ID 0858",
+  "shopee_account": "Kakriput",
+  "type": "shopee_affiliate_brain",
+  "date": "2026-06-09",
+  "period": "2026-06-01 to 2026-06-07",
+  "total_clicks": 22644,
+  "total_orders": 2699,
+  "total_commission": 7078336,
+  "completed_orders": 762,
+  "pending_orders": 1828,
+  "commission_cair": 2109077,
+  "taglinks": {
+    "rakpiringpengering": {
+      "clicks": 9083, "orders": 1409, "cvr_pct": 15.51,
+      "completed": 516, "pending": 825,
+      "commission_total": 3827208, "commission_cair": 1389080,
+      "epc": 421, "avg_order": 2716,
+      "best_platform": "Instagram (886 orders, Rp 2,449,990)"
+    },
+    "organizerpullout": {
+      "clicks": 5182, "orders": 597, "cvr_pct": 11.52,
+      "completed": 180, "pending": 395,
+      "commission_total": 1518662, "commission_cair": 484845,
+      "epc": 293, "avg_order": 2544,
+      "best_platform": "Instagram (219 orders, Rp 517,018)"
+    },
+    "setelanbajukaosmihugajah": {
+      "clicks": 3309, "orders": 328, "cvr_pct": 9.91,
+      "completed": 54, "pending": 262,
+      "commission_total": 939626, "commission_cair": 214274,
+      "epc": 284, "avg_order": 2865,
+      "best_platform": "Facebook (290 orders, Rp 821,986)"
+    },
+    "setelangajahthaialand": {
+      "clicks": 5031, "orders": 363, "cvr_pct": 7.22,
+      "completed": 12, "pending": 344,
+      "commission_total": 789117, "commission_cair": 20879,
+      "epc": 157, "avg_order": 2174,
+      "best_platform": "Facebook (338 orders, Rp 705,007)"
+    }
+  },
+  "platforms": {
+    "Facebook": 11547,
+    "Instagram": 6107,
+    "Others": 3411, 
+    "Websites": 1217,
+    "Threads": 354,
+    "Google Search": 7,
+    "WhatsApp": 2
+  },
+  "daily_clicks": {
+    "2026-06-01": 199,
+    "2026-06-02": 166,
+    "2026-06-03": 2936,
+    "2026-06-04": 2409,
+    "2026-06-05": 4470,
+    "2026-06-06": 8207,
+    "2026-06-07": 4258
+  },
+  "conclusion": {
+    "total_revenue_potential": 4965537,
+    "campaigns_should_be_active": true,
+    "reason": "All 4 taglinks generate orders with CVR 7-15%. Previous pause was because orders were pending (not yet completed/paid). With 7-14 day settlement window, pending orders will convert to cash."
+  }
+}

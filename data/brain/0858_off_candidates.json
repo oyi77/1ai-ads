@@ -1,0 +1,15 @@
+{
+  "date": "2026-06-09",
+  "candidates": [
+    {
+      "id": "120250012602960416",
+      "name": "OFF_TEST_gajahThailand_shoppingFashion",
+      "cpc": 92.4,
+      "cvr": 15.9,
+      "spend": 1848,
+      "clicks_meta": 20,
+      "tag": "setelangajahthaialand",
+      "reason": "CPC Rp92.4 < Rp130 \u2705, CVR 15.9% > 5% \u2705"
+    }
+  ]
+}

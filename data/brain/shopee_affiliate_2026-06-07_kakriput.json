@@ -1,0 +1,88 @@
+{
+  "type": "shopee_affiliate_decision_brain",
+  "account": "Kakriput / act_435670549443081 / 0858",
+  "date": "2026-06-07",
+  "source_files": {
+    "clicks": "/home/openclaw/projects/1ai-ads/data/shopee/2026-06-07_kakriput_clicks.csv",
+    "commission": "/home/openclaw/projects/1ai-ads/data/shopee/2026-06-07_kakriput_commission.csv"
+  },
+  "safety_rules": [
+    "All Meta campaign/adset/ad creation must be PAUSED/draft only; never auto-ACTIVE.",
+    "User manually reviews and activates campaigns after Telegram report.",
+    "Female-oriented products must use Female/Broad targeting; wrong-gender campaigns are paused and renamed OFF_.",
+    "Minimum 2-3 seconds between Meta API calls."
+  ],
+  "summary": {
+    "clicks_total": 4020,
+    "pending_unique_orders": 313,
+    "pending_rows": 440,
+    "pending_commission_rp": 995402.3919,
+    "pending_purchase_value_rp": 22146553.99995,
+    "top_referrer": "Facebook",
+    "peak_hours": [
+      "19:00",
+      "18:00",
+      "15:00",
+      "20:00"
+    ]
+  },
+  "product_rankings": [
+    {
+      "rank": 1,
+      "tag": "rakpiringpengering",
+      "role": "scale_paling_aman",
+      "clicks": 209,
+      "pending_orders": 55,
+      "pending_commission_rp": 183476.75,
+      "cvr_pct": 26.32,
+      "epc_rp": 877.88,
+      "bot_action": "prioritize draft Female/Broad; scale gradually after manual ON"
+    },
+    {
+      "rank": 2,
+      "tag": "organizerpullout",
+      "role": "high_epc_test",
+      "clicks": 66,
+      "pending_orders": 38,
+      "pending_commission_rp": 124844.64,
+      "cvr_pct": 57.58,
+      "epc_rp": 1891.59,
+      "bot_action": "create cautious PAUSED tests with multiple angles; do not overbudget before more click data"
+    },
+    {
+      "rank": 3,
+      "tag": "setelangajahthaialand",
+      "role": "volume_controlled",
+      "clicks": 2874,
+      "pending_orders": 157,
+      "pending_commission_rp": 480880.51,
+      "cvr_pct": 5.46,
+      "epc_rp": 167.32,
+      "bot_action": "continue volume but cap CPC/budget; improve creative filter for buyer-intent"
+    },
+    {
+      "rank": 4,
+      "tag": "setelanbajukaosmihugajah",
+      "role": "support_test",
+      "clicks": 868,
+      "pending_orders": 62,
+      "pending_commission_rp": 206075.49,
+      "cvr_pct": 7.14,
+      "epc_rp": 237.41,
+      "bot_action": "support campaign; do not prioritize over rakpiring/organizer"
+    }
+  ],
+  "draft_campaign_plan": {
+    "status": "PENDING_REVIEW",
+    "create_status": "PAUSED",
+    "targeting": "Female/Broad",
+    "products": [
+      "rakpiringpengering",
+      "organizerpullout",
+      "setelangajahthaialand",
+      "setelanbajukaosmihugajah"
+    ],
+    "activation": "manual only by user after bot report"
+  },
+  "created_at": "2026-06-08T15:19:17.270612"
+}

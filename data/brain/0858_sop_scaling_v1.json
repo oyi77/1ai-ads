@@ -1,0 +1,97 @@
+{
+  "sop_name": "SCALE-UP SOP - act_435670549443081 (0858)",
+  "version": 1,
+  "updated": "2026-06-09",
+  "source": "Nyamiresep Dapur pattern + Veris instructions",
+  
+  "core_principle": {
+    "scale_method": "HORIZONTAL — add more ad sets, NOT vertical (jangan naikkin budget satu adset)",
+    "budget_per_adset": 20000,
+    "bid_strategy": "LOWEST_COST (without cost cap)"
+  },
+  
+  "campaign_structure": {
+    "1_campaign_per_taglink": true,
+    "campaign_naming": "ON_BIDCAP_[taglink]_[audience_theme]_[date]_[v]",
+    "example": "ON_BIDCAP_rakpiringpengering_Interaksi_0607_v2",
+    "multiple_adsets_per_campaign": {
+      "rule": "Setiap adset dalam 1 campaign WAJIB audience BERBEDA",
+      "forbidden": "Dilarang duplicate adset dengan audience yang sama atau overlap >20%"
+    }
+  },
+  
+  "audience_matrix": {
+    "rakpiringpengering": {
+      "product_url": "https://lynk.id/jendralbot/product/rak-piring",
+      "product": "Rak Piring Pengering",
+      "existing_themes": ["Interaksi", "Diskon", "Belanja", "Broad", "Shopping", "Parenting", "Travel", "Winner"],
+      "available_new_themes": ["Resep", "Dapur", "Rumah tangga", "Interior", "Keuangan", "Ibu rumah tangga", "Hemat", "Belanja online", "Perlengkapan dapur"],
+      "target_gender": "Female",
+      "target_age": "25-45",
+      "best_platform": "Instagram"
+    },
+    "organizerpullout": {
+      "product_url": "https://lynk.id/jendralbot/product/tool-organizer",
+      "product": "Organizer Pullout",
+      "existing_themes": ["Broad", "Interior", "Dapur", "Travel", "Resep", "Rumah", "Fashion", "Keuangan", "Mobil", "Furniture"],
+      "available_new_themes": ["Minimalis", "Rak serbaguna", "Kamar mandi", "Kantor", "Dekorasi", "Hemat tempat", "Multifungsi"],
+      "target_gender": "Female",
+      "target_age": "25-45",
+      "best_platform": "Instagram"
+    },
+    "setelanbajukaosmihugajah": {
+      "product_url": "https://lynk.id/jendralbot/product/kaos-pria",
+      "product": "Setelan Baju Kaos Mihugajah",
+      "existing_themes": ["Travel", "Fashion", "Belanja", "Shopping"],
+      "available_new_themes": ["Pria casual", "Olahraga", "Santai", "Harian", "Diskon fashion", "Baju kerja santai"],
+      "target_gender": "Male & Female",
+      "target_age": "20-40",
+      "best_platform": "Facebook"
+    },
+    "setelangajahthaialand": {
+      "product_url": null,
+      "product": "Setelan Gajah Thailand",
+      "existing_themes": ["Resep", "fashion", "shoppingFashion"],
+      "available_new_themes": ["Thailand style", "Baju murah", "Busana muslim", "Pakaian wanita", "Fashion anak"],
+      "target_gender": "Female",
+      "target_age": "20-40",
+      "best_platform": "Facebook"
+    }
+  },
+  
+  "adset_creation_rules": {
+    "budget": "Rp 20,000 per adset (LOWEST_COST)",
+    "post_id": "HARUS sesuai produk dan taglink yang diiklankan. Postingan di Page harus konten tentang produk tersebut",
+    "audience_dedup": "Tiap adset wajib audience berbeda. Gunakan interest yang tidak overlap dengan adset lain",
+    "placement": "Automatic placements (default Meta)",
+    "optimization_goal": "LINK_CLICKS",
+    "billing_event": "LINK_CLICKS",
+    "daily_budget_cents": 2000000,
+    "lifetime_budget": null
+  },
+  
+  "bot_iklan_patrol_rules": {
+    "check_frequency": "Every 1 hour",
+    "do_not_pause_if_cvr_above_pct": 5.0,
+    "do_not_pause_if_pending_commission_above": 50000,
+    "do_not_pause_if_has_completed_orders": true,
+    "pause_only_if": {
+      "cvr_below_pct": 3.0,
+      "zero_orders_7days": true,
+      "zero_completed_ever": true,
+      "spent_more_than": 50000
+    },
+    "scale_trigger_cvr_above_pct": 5.0,
+    "scale_method": "add_new_adset_with_different_audience",
+    "scale_budget": 20000,
+    "never_increase_existing_adset_budget": true
+  },
+  
+  "calendar_events": {
+    "2026-06-25": {"event": "Gajian + Co-Creation", "boost": "2x", "action": "Tambah adset baru"},
+    "2026-06-26": {"event": "Gajian + Co-Creation", "boost": "2x"},
+    "2026-06-27": {"event": "Gajian + Co-Creation", "boost": "2x"},
+    "2026-07-07": {"event": "7.7 Sale", "boost": "2.5x", "action": "Tambah adset 50% lebih banyak"},
+    "2026-09-09": {"event": "9.9 Super Sale", "boost": "3x", "action": "Double adsets"}
+  }
+}

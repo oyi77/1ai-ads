@@ -1,0 +1,141 @@
+{
+  "timestamp": "2026-06-09 01:18:26.802535",
+  "success": [
+    {
+      "id": "120250543326310416",
+      "name": "ON_Scale_BIDCAP_organizerpullout_Broad_0607_v2",
+      "status": "ACTIVE",
+      "budget": 45000,
+      "success": true
+    },
+    {
+      "id": "120250543323530416",
+      "name": "ON_Scale_BIDCAP_rakpiringpengering_Interaksi_0607_v2",
+      "status": "ACTIVE",
+      "budget": 100000,
+      "success": true
+    },
+    {
+      "id": "120250543263900416",
+      "name": "ON_Scale_BIDCAP_setelanbajukaosmihugajah_Travel_0607_v2",
+      "status": "ACTIVE",
+      "budget": 25000,
+      "success": true
+    },
+    {
+      "id": "120250543260460416",
+      "name": "ON_Scale_BIDCAP_organizerpullout_Interior_0607_v2",
+      "status": "ACTIVE",
+      "budget": 35000,
+      "success": true
+    },
+    {
+      "id": "120250543255430416",
+      "name": "ON_Scale_BIDCAP_rakpiringpengering_Diskon_0607_v2",
+      "status": "ACTIVE",
+      "budget": 75000,
+      "success": true
+    },
+    {
+      "id": "120250543142260416",
+      "name": "ON_Scale_BIDCAP_setelanbajukaosmihugajah_Fashion_0607_v2",
+      "status": "ACTIVE",
+      "budget": 25000,
+      "success": true
+    },
+    {
+      "id": "120250543131900416",
+      "name": "ON_Scale_BIDCAP_organizerpullout_Dapur_0607_v2",
+      "status": "ACTIVE",
+      "budget": 35000,
+      "success": true
+    },
+    {
+      "id": "120250543115430416",
+      "name": "ON_Scale_BIDCAP_rakpiringpengering_Belanja_0607_v2",
+      "status": "ACTIVE",
+      "budget": 75000,
+      "success": true
+    },
+    {
+      "id": "120250542857990416",
+      "name": "ON_Scale_BIDCAP_organizerpullout_Broad_0607",
+      "status": "ACTIVE",
+      "budget": 35000,
+      "success": true
+    },
+    {
+      "id": "120250542837970416",
+      "name": "ON_Scale_BIDCAP_rakpiringpengering_Interaksi_0607",
+      "status": "ACTIVE",
+      "budget": 50000,
+      "success": true
+    },
+    {
+      "id": "120250542696440416",
+      "name": "ON_Scale_BIDCAP_setelanbajukaosmihugajah_Travel_0607",
+      "status": "ACTIVE",
+      "budget": 20000,
+      "success": true
+    },
+    {
+      "id": "120250542673870416",
+      "name": "ON_Scale_BIDCAP_rakpiringpengering_Diskon_0607",
+      "status": "ACTIVE",
+      "budget": 50000,
+      "success": true
+    },
+    {
+      "id": "120250542460480416",
+      "name": "ON_Scale_BIDCAP_setelanbajukaosmihugajah_Fashion_0607",
+      "status": "ACTIVE",
+      "budget": 20000,
+      "success": true
+    },
+    {
+      "id": "120250542449450416",
+      "name": "ON_Scale_BIDCAP_organizerpullout_Dapur_0607",
+      "status": "ACTIVE",
+      "budget": 25000,
+      "success": true
+    },
+    {
+      "id": "120250542393330416",
+      "name": "ON_Scale_BIDCAP_rakpiringpengering_Belanja_0607",
+      "status": "ACTIVE",
+      "budget": 50000,
+      "success": true
+    },
+    {
+      "id": "120250443083660416",
+      "name": "ON_BIDCAP_rakpiringpengering_Shopping_0603",
+      "status": "ACTIVE",
+      "budget": 35000,
+      "success": true
+    },
+    {
+      "id": "120250016058540416",
+      "name": "ON_0858_setelanbajukaosmihugajah_fashionBelanja",
+      "status": "ACTIVE",
+      "budget": 15000,
+      "success": true
+    },
+    {
+      "id": "120250015760320416",
+      "name": "ON_0858_gajahThailand_fashion",
+      "status": "ACTIVE",
+      "budget": 15000,
+      "success": true
+    }
+  ],
+  "fail": [
+    {
+      "id": "120250443083640416",
+      "name": "ON_BIDCAP_rakpiringpengering_Winner_0603",
+      "status": "FAILED",
+      "budget": 35000,
+      "success": false,
+      "error": "{'error': {'code': 1, 'message': 'An unknown error occurred', 'error_subcode': 99}}"
+    }
+  ]
+}

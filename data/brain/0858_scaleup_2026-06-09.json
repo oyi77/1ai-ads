@@ -1,0 +1,96 @@
+{
+  "timestamp": "2026-06-09 01:54:13.180169",
+  "results": [
+    {
+      "id": "120250443083330416",
+      "name": "ON_BIDCAP_rakpiringpengering_0606",
+      "budget": 50000,
+      "success": true
+    },
+    {
+      "id": "120250443083340416",
+      "name": "ON_BIDCAP_rakpiringpengering_06065",
+      "budget": 50000,
+      "success": true
+    },
+    {
+      "id": "120250443083370416",
+      "name": "ON_BIDCAP_rakpiring_travel",
+      "budget": 35000,
+      "success": true
+    },
+    {
+      "id": "120250443083350416",
+      "name": "ON_BIDCAP_rakpiringpengering_INT10",
+      "budget": 35000,
+      "success": true
+    },
+    {
+      "id": "120250443083420416",
+      "name": "ON_BIDCAP_Rakpiring_rakpiringpengering_Broad_0603",
+      "budget": 50000,
+      "success": true
+    },
+    {
+      "id": "120250443083250416",
+      "name": "ON_BIDCAP_rakpiringpengering_Parenting",
+      "budget": 35000,
+      "success": true
+    },
+    {
+      "id": "120250443082700416",
+      "name": "ON_BIDCAP_rakpiringpengering_0606",
+      "budget": 50000,
+      "success": true
+    },
+    {
+      "id": "120250443083450416",
+      "name": "ON_BIDCAP_Organizer_Resep_0603",
+      "budget": 35000,
+      "success": true
+    },
+    {
+      "id": "120250443083440416",
+      "name": "ON_BIDCAP_Organizer_Shopping_0603",
+      "budget": 25000,
+      "success": true
+    },
+    {
+      "id": "120250443083300416",
+      "name": "ON_BIDCAP_Organizer_FashiON_BIDCAP_0603",
+      "budget": 25000,
+      "success": true
+    },
+    {
+      "id": "120250543267510416",
+      "name": "Scale_BIDCAP_setelangajahthaialand_Resep_0607_v2",
+      "budget": 15000,
+      "success": true
+    },
+    {
+      "id": "120250542730220416",
+      "name": "Scale_BIDCAP_setelangajahthaialand_Resep_0607",
+      "budget": 15000,
+      "success": true
+    },
+    {
+      "id": "120250542684530416",
+      "name": "ON_Scale_BIDCAP_organizerpullout_Interior_0607",
+      "budget": 25000,
+      "success": true
+    },
+    {
+      "id": "120250443083700416",
+      "name": "ON_BIDCAP_gajahThailand_shoppingFashion",
+      "budget": 15000,
+      "success": true
+    },
+    {
+      "id": "120250443083430416",
+      "name": "ON_BIDCAP_rakpiringpengering_0606",
+      "budget": 50000,
+      "success": true
+    }
+  ],
+  "total_budget": 510000
+}

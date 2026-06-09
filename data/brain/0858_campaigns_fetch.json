@@ -1,0 +1,631 @@
+{
+  "timestamp": "2026-06-09T01:16:18.914872",
+  "account": "act_435670549443081",
+  "total_campaigns": 100,
+  "candidates": [
+    {
+      "id": "120250543326310416",
+      "name": "OFF_Scale_BIDCAP_organizerpullout_Broad_0607_v2",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "Scale_BIDCAP_organizerpullout_Broad_0607_v2"
+    },
+    {
+      "id": "120250543323530416",
+      "name": "OFF_Scale_BIDCAP_rakpiringpengering_Interaksi_0607_v2",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "Scale_BIDCAP_rakpiringpengering_Interaksi_0607_v2"
+    },
+    {
+      "id": "120250543267510416",
+      "name": "Scale_BIDCAP_setelangajahthaialand_Resep_0607_v2",
+      "taglink": "setelangajahthaialand",
+      "budget": 15000,
+      "status": "ACTIVE",
+      "new_name": "Scale_BIDCAP_setelangajahthaialand_Resep_0607_v2"
+    },
+    {
+      "id": "120250543263900416",
+      "name": "OFF_Scale_BIDCAP_setelanbajukaosmihugajah_Travel_0607_v2",
+      "taglink": "setelanbajukaosmihugajah",
+      "budget": 25000,
+      "status": "PAUSED",
+      "new_name": "Scale_BIDCAP_setelanbajukaosmihugajah_Travel_0607_v2"
+    },
+    {
+      "id": "120250543260460416",
+      "name": "OFF_Scale_BIDCAP_organizerpullout_Interior_0607_v2",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "Scale_BIDCAP_organizerpullout_Interior_0607_v2"
+    },
+    {
+      "id": "120250543255430416",
+      "name": "OFF_Scale_BIDCAP_rakpiringpengering_Diskon_0607_v2",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "Scale_BIDCAP_rakpiringpengering_Diskon_0607_v2"
+    },
+    {
+      "id": "120250543142260416",
+      "name": "OFF_Scale_BIDCAP_setelanbajukaosmihugajah_Fashion_0607_v2",
+      "taglink": "setelanbajukaosmihugajah",
+      "budget": 25000,
+      "status": "PAUSED",
+      "new_name": "Scale_BIDCAP_setelanbajukaosmihugajah_Fashion_0607_v2"
+    },
+    {
+      "id": "120250543131900416",
+      "name": "OFF_Scale_BIDCAP_organizerpullout_Dapur_0607_v2",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "Scale_BIDCAP_organizerpullout_Dapur_0607_v2"
+    },
+    {
+      "id": "120250543115430416",
+      "name": "OFF_Scale_BIDCAP_rakpiringpengering_Belanja_0607_v2",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "Scale_BIDCAP_rakpiringpengering_Belanja_0607_v2"
+    },
+    {
+      "id": "120250542857990416",
+      "name": "OFF_Scale_BIDCAP_organizerpullout_Broad_0607",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "Scale_BIDCAP_organizerpullout_Broad_0607"
+    },
+    {
+      "id": "120250542837970416",
+      "name": "OFF_Scale_BIDCAP_rakpiringpengering_Interaksi_0607",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "Scale_BIDCAP_rakpiringpengering_Interaksi_0607"
+    },
+    {
+      "id": "120250542730220416",
+      "name": "Scale_BIDCAP_setelangajahthaialand_Resep_0607",
+      "taglink": "setelangajahthaialand",
+      "budget": 15000,
+      "status": "ACTIVE",
+      "new_name": "Scale_BIDCAP_setelangajahthaialand_Resep_0607"
+    },
+    {
+      "id": "120250542696440416",
+      "name": "OFF_Scale_BIDCAP_setelanbajukaosmihugajah_Travel_0607",
+      "taglink": "setelanbajukaosmihugajah",
+      "budget": 25000,
+      "status": "PAUSED",
+      "new_name": "Scale_BIDCAP_setelanbajukaosmihugajah_Travel_0607"
+    },
+    {
+      "id": "120250542684530416",
+      "name": "OFF_Scale_BIDCAP_organizerpullout_Interior_0607",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "Scale_BIDCAP_organizerpullout_Interior_0607"
+    },
+    {
+      "id": "120250542673870416",
+      "name": "OFF_Scale_BIDCAP_rakpiringpengering_Diskon_0607",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "Scale_BIDCAP_rakpiringpengering_Diskon_0607"
+    },
+    {
+      "id": "120250542460480416",
+      "name": "OFF_Scale_BIDCAP_setelanbajukaosmihugajah_Fashion_0607",
+      "taglink": "setelanbajukaosmihugajah",
+      "budget": 25000,
+      "status": "PAUSED",
+      "new_name": "Scale_BIDCAP_setelanbajukaosmihugajah_Fashion_0607"
+    },
+    {
+      "id": "120250542449450416",
+      "name": "OFF_Scale_BIDCAP_organizerpullout_Dapur_0607",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "Scale_BIDCAP_organizerpullout_Dapur_0607"
+    },
+    {
+      "id": "120250542393330416",
+      "name": "OFF_Scale_BIDCAP_rakpiringpengering_Belanja_0607",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "Scale_BIDCAP_rakpiringpengering_Belanja_0607"
+    },
+    {
+      "id": "120250443083700416",
+      "name": "ON_BIDCAP_gajahThailand_shoppingFashion",
+      "taglink": "gajahThailand",
+      "budget": 15000,
+      "status": "PAUSED",
+      "new_name": "ON_BIDCAP_gajahThailand_shoppingFashion"
+    },
+    {
+      "id": "120250443083660416",
+      "name": "OFF_BIDCAP_rakpiringpengering_Shopping_0603",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "BIDCAP_rakpiringpengering_Shopping_0603"
+    },
+    {
+      "id": "120250443083640416",
+      "name": "OFF_BIDCAP_rakpiringpengering_Winner_0603",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "BIDCAP_rakpiringpengering_Winner_0603"
+    },
+    {
+      "id": "120250443083590416",
+      "name": "ON_BIDCAP_gajahThailand_fashion",
+      "taglink": "gajahThailand",
+      "budget": 15000,
+      "status": "ACTIVE",
+      "new_name": "ON_BIDCAP_gajahThailand_fashion"
+    },
+    {
+      "id": "120250443083430416",
+      "name": "ON_BIDCAP_rakpiringpengering_0606",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "ON_BIDCAP_rakpiringpengering_0606"
+    },
+    {
+      "id": "120250443083420416",
+      "name": "ON_BIDCAP_Rakpiring_rakpiringpengering_Broad_0603",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "ACTIVE",
+      "new_name": "ON_BIDCAP_Rakpiring_rakpiringpengering_Broad_0603"
+    },
+    {
+      "id": "120250443083360416",
+      "name": "ON_BIDCAP_rakpiringpengering_INT10",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "ON_BIDCAP_rakpiringpengering_INT10"
+    },
+    {
+      "id": "120250443083350416",
+      "name": "ON_BIDCAP__rakpiringpengering_0606",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "ACTIVE",
+      "new_name": "ON_BIDCAP__rakpiringpengering_0606"
+    },
+    {
+      "id": "120250443083340416",
+      "name": "ON_BIDCAP_rakpiringpengering_06065",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "ACTIVE",
+      "new_name": "ON_BIDCAP_rakpiringpengering_06065"
+    },
+    {
+      "id": "120250443083330416",
+      "name": "ON_BIDCAP_rakpiringpengering_0606",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "ACTIVE",
+      "new_name": "ON_BIDCAP_rakpiringpengering_0606"
+    },
+    {
+      "id": "120250443083280416",
+      "name": "ON_BIDCAP_rakpiringpengering_0606",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "ON_BIDCAP_rakpiringpengering_0606"
+    },
+    {
+      "id": "120250443083270416",
+      "name": "OFF_BIDCAP_rakpiringpengering_0606",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "BIDCAP_rakpiringpengering_0606"
+    },
+    {
+      "id": "120250443083250416",
+      "name": "ON_BIDCAP_rakpiringpengering_Parenting",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "ACTIVE",
+      "new_name": "ON_BIDCAP_rakpiringpengering_Parenting"
+    },
+    {
+      "id": "120250443083240416",
+      "name": "ON_BIDCAP__Kakriput_rakpiringpengering_Jewelry",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "ON_BIDCAP__Kakriput_rakpiringpengering_Jewelry"
+    },
+    {
+      "id": "120250443083230416",
+      "name": "ON_BIDCAP_rakpiringpengering_06062",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "ON_BIDCAP_rakpiringpengering_06062"
+    },
+    {
+      "id": "120250443083210416",
+      "name": "OFF_BIDCAP_rakpiringpengering_0606",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "BIDCAP_rakpiringpengering_0606"
+    },
+    {
+      "id": "120250443082700416",
+      "name": "ON_BIDCAP_rakpiringpengering_0606",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "ACTIVE",
+      "new_name": "ON_BIDCAP_rakpiringpengering_0606"
+    },
+    {
+      "id": "120250443082690416",
+      "name": "ON_BIDCAP_setelanbajukaosmihugajah_fashionBelanja",
+      "taglink": "setelanbajukaosmihugajah",
+      "budget": 25000,
+      "status": "PAUSED",
+      "new_name": "ON_BIDCAP_setelanbajukaosmihugajah_fashionBelanja"
+    },
+    {
+      "id": "120250442703720416",
+      "name": "OFF_TC_Kakriput_rakpiringpengering_Hotel",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "TC_Kakriput_rakpiringpengering_Hotel"
+    },
+    {
+      "id": "120250442703710416",
+      "name": "OFF_TC_Kakriput_rakpiringpengering_Instagram",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "TC_Kakriput_rakpiringpengering_Instagram"
+    },
+    {
+      "id": "120250442703700416",
+      "name": "OFF_TC_Kakriput_rakpiringpengering_Singapura",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "TC_Kakriput_rakpiringpengering_Singapura"
+    },
+    {
+      "id": "120250442703670416",
+      "name": "TC_Kakriput_rakpiringpengering_Penerbangan",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "ACTIVE",
+      "new_name": "TC_Kakriput_rakpiringpengering_Penerbangan"
+    },
+    {
+      "id": "120250442703660416",
+      "name": "TC_Kakriput_rakpiringpengering_Musik populer (musik)",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "ACTIVE",
+      "new_name": "TC_Kakriput_rakpiringpengering_Musik populer (musik)"
+    },
+    {
+      "id": "120250442703610416",
+      "name": "TC_Kakriput_rakpiringpengering_Celana (pakaian)",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "TC_Kakriput_rakpiringpengering_Celana (pakaian)"
+    },
+    {
+      "id": "120250442703470416",
+      "name": "TC_Kakriput_rakpiringpengering_Online banking",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "TC_Kakriput_rakpiringpengering_Online banking"
+    },
+    {
+      "id": "120250442703460416",
+      "name": "TC_Kakriput_rakpiringpengering_",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "TC_Kakriput_rakpiringpengering_"
+    },
+    {
+      "id": "120250442703450416",
+      "name": "TC_Kakriput_rakpiringpengering_Netflix",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "ACTIVE",
+      "new_name": "TC_Kakriput_rakpiringpengering_Netflix"
+    },
+    {
+      "id": "120250442703440416",
+      "name": "TC_Kakriput_rakpiringpengering_WhatsApp",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "TC_Kakriput_rakpiringpengering_WhatsApp"
+    },
+    {
+      "id": "120250055875170416",
+      "name": "OFF_GEO_rakpiringpengering_INT02",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "GEO_rakpiringpengering_INT02"
+    },
+    {
+      "id": "120250055875150416",
+      "name": "OFF_GEO_rakpiringpengering_INT10",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "GEO_rakpiringpengering_INT10"
+    },
+    {
+      "id": "120250055875130416",
+      "name": "OFF_GEO_rakpiringpengering_INT07",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "GEO_rakpiringpengering_INT07"
+    },
+    {
+      "id": "120250055875080416",
+      "name": "OFF_GEO_rakpiringpengering_INT01",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "GEO_rakpiringpengering_INT01"
+    },
+    {
+      "id": "120250055874940416",
+      "name": "OFF_GEO_rakpiringpengering_INT08",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "GEO_rakpiringpengering_INT08"
+    },
+    {
+      "id": "120250055874930416",
+      "name": "OFF_GEO_rakpiringpengering_INT09",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "GEO_rakpiringpengering_INT09"
+    },
+    {
+      "id": "120250055874920416",
+      "name": "OFF_GEO_rakpiringpengering_INT06",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "GEO_rakpiringpengering_INT06"
+    },
+    {
+      "id": "120250055874910416",
+      "name": "OFF_GEO_rakpiringpengering_INT05",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "GEO_rakpiringpengering_INT05"
+    },
+    {
+      "id": "120250055874900416",
+      "name": "OFF_GEO_rakpiringpengering_INT04",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "GEO_rakpiringpengering_INT04"
+    },
+    {
+      "id": "120250055874890416",
+      "name": "BIDCAP_GEO_rakpiringpengering_INT03",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "BIDCAP_GEO_rakpiringpengering_INT03"
+    },
+    {
+      "id": "120250016058540416",
+      "name": "OFF_0858_setelanbajukaosmihugajah_fashionBelanja",
+      "taglink": "setelanbajukaosmihugajah",
+      "budget": 25000,
+      "status": "PAUSED",
+      "new_name": "0858_setelanbajukaosmihugajah_fashionBelanja"
+    },
+    {
+      "id": "120250016047830416",
+      "name": "0858_setelanbajukaosmihugajah_fashionShopping_BID",
+      "taglink": "setelanbajukaosmihugajah",
+      "budget": 25000,
+      "status": "ACTIVE",
+      "new_name": "0858_setelanbajukaosmihugajah_fashionShopping_BID"
+    },
+    {
+      "id": "120250015760320416",
+      "name": "OFF_0858_gajahThailand_fashion",
+      "taglink": "gajahThailand",
+      "budget": 15000,
+      "status": "PAUSED",
+      "new_name": "0858_gajahThailand_fashion"
+    },
+    {
+      "id": "120250012602960416",
+      "name": "OFF_TEST_gajahThailand_shoppingFashion",
+      "taglink": "gajahThailand",
+      "budget": 15000,
+      "status": "PAUSED",
+      "new_name": "TEST_gajahThailand_shoppingFashion"
+    },
+    {
+      "id": "120250009872130416",
+      "name": "OFF_Organizer_organizerpullout_Resep_0603",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "Organizer_organizerpullout_Resep_0603"
+    },
+    {
+      "id": "120250009867060416",
+      "name": "OFF_Organizer_organizerpullout_Rumah_0603",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "Organizer_organizerpullout_Rumah_0603"
+    },
+    {
+      "id": "120250009843030416",
+      "name": "OFF_Organizer_organizerpullout_Broad_0603",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "Organizer_organizerpullout_Broad_0603"
+    },
+    {
+      "id": "120250009839170416",
+      "name": "OFF_Organizer_organizerpullout_FashiON_BIDCAP_0603",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "Organizer_organizerpullout_FashiON_BIDCAP_0603"
+    },
+    {
+      "id": "120250009834770416",
+      "name": "OFF_Organizer_organizerpullout_Shopping_0603",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "Organizer_organizerpullout_Shopping_0603"
+    },
+    {
+      "id": "120250009830630416",
+      "name": "BIDCAP_Organizer_organizerpullout_DapurShop_0603",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "BIDCAP_Organizer_organizerpullout_DapurShop_0603"
+    },
+    {
+      "id": "120250009402690416",
+      "name": "OFF_Organizer_organizerpullout_Broad2_0603",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "Organizer_organizerpullout_Broad2_0603"
+    },
+    {
+      "id": "120249941008950416",
+      "name": "OFF_Rakpiring_rakpiringpengering_Broad_0603",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "Rakpiring_rakpiringpengering_Broad_0603"
+    },
+    {
+      "id": "120249727184130416",
+      "name": "OFF_V2_CBO_organizerpullout_Keuangan",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "V2_CBO_organizerpullout_Keuangan"
+    },
+    {
+      "id": "120249727184120416",
+      "name": "OFF_V2_CBO_organizerpullout_Mobil",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "V2_CBO_organizerpullout_Mobil"
+    },
+    {
+      "id": "120249727184110416",
+      "name": "OFF__Kakriput_organizerpullout_Fashion",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "_Kakriput_organizerpullout_Fashion"
+    },
+    {
+      "id": "120249727184040416",
+      "name": "OFF_V2_CBO_organizerpullout_Online marketplace",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "V2_CBO_organizerpullout_Online marketplace"
+    },
+    {
+      "id": "120249727183890416",
+      "name": "OFF_V2_CBO_organizerpullout_Furniture",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "V2_CBO_organizerpullout_Furniture"
+    },
+    {
+      "id": "120249727183880416",
+      "name": "OFF_Organizer_organizerpullout_Dapur_0603_CLONE1",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "Organizer_organizerpullout_Dapur_0603_CLONE1"
+    },
+    {
+      "id": "120249722735730416",
+      "name": "OFF_GEO_rakpiringpengering_Dapur",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "GEO_rakpiringpengering_Dapur"
+    },
+    {
+      "id": "120249722735720416",
+      "name": "OFF_Organizer_organizerpullout_Travel_0603",
+      "taglink": "organizerpullout",
+      "budget": 45000,
+      "status": "PAUSED",
+      "new_name": "Organizer_organizerpullout_Travel_0603"
+    },
+    {
+      "id": "120249722735710416",
+      "name": "OFF_GEO_rakpiringpengering_E-commerce payment system",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "GEO_rakpiringpengering_E-commerce payment system"
+    },
+    {
+      "id": "120249722735700416",
+      "name": "TC_Kakriput_rakpiringpengering_Pinterest",
+      "taglink": "rakpiringpengering",
+      "budget": 100000,
+      "status": "PAUSED",
+      "new_name": "TC_Kakriput_rakpiringpengering_Pinterest"
+    }
+  ]
+}

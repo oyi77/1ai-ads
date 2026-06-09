@@ -1,0 +1,96 @@
+{
+  "directive_name": "BOT_IKLAN_PATROL_V2",
+  "version": 2,
+  "account": "act_435670549443081",
+  "account_short": "0858",
+  "shopee_account": "Kakriput",
+  "effective_from": "2026-06-09",
+  
+  "core_rules": {
+    "primary_metric": "CVR",
+    "budget_unit": "cents (raw ÷ 100 = IDR)",
+    "example_raw_2000000": "Rp 20,000"
+  },
+
+  "do_not_pause": {
+    "if_cvr_above_pct": 5.0,
+    "if_pending_commission_above": 50000,
+    "if_has_completed_orders": true
+  },
+
+  "pause_only_if_all": {
+    "cvr_below_pct": 3.0,
+    "zero_orders_7days": true,
+    "zero_completed_ever": true,
+    "spent_more_than": 5000000
+  },
+
+  "scale_rules": {
+    "method": "HORIZONTAL",
+    "detail": "Tambah adset BARU dengan audience BEDA. JANGAN naikin budget adset existing.",
+    "budget_per_new_adset": 20000,
+    "budget_per_new_adset_cents": 2000000,
+    "bid_strategy": "LOWEST_COST",
+    "trigger_cvr_above": 5.0,
+    "post_id_rule": "WAJIB postingan yang kontennya sesuai produk + taglink",
+    "audience_rule": "WAJIB BEDA antar adset dalam 1 campaign, tidak boleh overlap >20%"
+  },
+
+  "calendar_hot_dates": [
+    {"date": "2026-06-25", "event": "Gajian + Co-Creation", "boost": "2x"},
+    {"date": "2026-06-26", "event": "Gajian + Co-Creation", "boost": "2x"},
+    {"date": "2026-07-07", "event": "7.7 Sale", "boost": "2.5x"},
+    {"date": "2026-09-09", "event": "9.9 Super Sale", "boost": "3x"},
+    {"date": "2026-11-11", "event": "11.11 Big Sale", "boost": "3x"},
+    {"date": "2026-12-12", "event": "12.12 Year-End", "boost": "3x"}
+  ],
+
+  "campaigns_active": {
+    "rakpiringpengering": {
+      "taglink": "rakpiringpengering",
+      "product_url": "https://lynk.id/jendralbot/product/rak-piring",
+      "platform": "Instagram",
+      "total_campaigns_active": 16,
+      "audience_themes_in_use": ["Interaksi", "Diskon", "Belanja", "Broad", "Shopping", "Parenting", "Travel", "Winner"],
+      "available_new_themes": ["Resep", "Dapur", "Rumah tangga", "Interior", "Keuangan", "Ibu rumah tangga", "Hemat", "Belanja online"],
+      "target_gender": "Female",
+      "target_age": "25-45"
+    },
+    "organizerpullout": {
+      "taglink": "organizerpullout",
+      "product_url": "https://lynk.id/jendralbot/product/tool-organizer",
+      "platform": "Instagram",
+      "total_campaigns_active": 9,
+      "audience_themes_in_use": ["Broad", "Interior", "Dapur", "Travel", "Resep", "Rumah", "Fashion", "Keuangan"],
+      "available_new_themes": ["Minimalis", "Rak serbaguna", "Kamar mandi", "Kantor", "Dekorasi", "Hemat tempat", "Multifungsi"],
+      "target_gender": "Female",
+      "target_age": "25-45"
+    },
+    "setelanbajukaosmihugajah": {
+      "taglink": "setelanbajukaosmihugajah",
+      "product_url": null,
+      "platform": "Facebook",
+      "total_campaigns_active": 7,
+      "audience_themes_in_use": ["Travel", "Fashion", "Belanja", "Shopping"],
+      "available_new_themes": ["Pria casual", "Olahraga", "Santai", "Harian", "Diskon fashion"],
+      "target_gender": "Male & Female",
+      "target_age": "20-40"
+    },
+    "setelangajahthaialand": {
+      "taglink": "setelangajahthaialand",
+      "product_url": null,
+      "platform": "Facebook",
+      "total_campaigns_active": 4,
+      "audience_themes_in_use": ["Resep", "fashion", "shoppingFashion"],
+      "available_new_themes": ["Thailand style", "Baju murah", "Busana muslim", "Pakaian wanita"],
+      "target_gender": "Female",
+      "target_age": "20-40"
+    }
+  },
+
+  "legacy_rules_disabled": {
+    "old_cpc_threshold": "no longer used",
+    "cpc_100_pause": "DISABLED — replaced by CVR",
+    "old_roas_2.0_scale": "DISABLED — replaced by CVR > 5%"
+  }
+}

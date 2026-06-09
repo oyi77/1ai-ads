@@ -1,0 +1,70 @@
+{
+  "v": 2,
+  "account": "act_435670549443081",
+  "updated": "2026-06-09T14:00:00",
+  "rules": {
+    "primary_metric": "CVR",
+    "secondary_metric": "7day_pending_commission",
+    "tertiary_metric": "EPC",
+    "do_not_pause_if": {
+      "cvr_above_pct": 5.0,
+      "pending_commission_above": 50000,
+      "has_completed_orders": true
+    },
+    "pause_only_if_all": {
+      "cvr_below_pct": 3.0,
+      "zero_orders_7days": true,
+      "zero_completed_ever": true,
+      "spent_more_than": 50000
+    }
+  },
+  "campaigns": {
+    "rakpiringpengering": {
+      "action": "ON",
+      "budget": 100000,
+      "platform": "Instagram",
+      "audience": "Wanita 25-45, Ibu Rumah Tangga",
+      "interest": "Dapur, Memasak, Organizer"
+    },
+    "organizerpullout": {
+      "action": "ON",
+      "budget": 45000,
+      "platform": "Instagram",
+      "audience": "Wanita 25-45",
+      "interest": "Organizer, Dekorasi Rumah"
+    },
+    "setelanbajukaosmihugajah": {
+      "action": "ON",
+      "budget": 25000,
+      "platform": "Facebook",
+      "audience": "Pria & Wanita 20-40",
+      "interest": "Fashion, Kaos Pria"
+    },
+    "setelangajahthaialand": {
+      "action": "ON",
+      "budget": 15000,
+      "platform": "Facebook",
+      "audience": "Wanita 20-40",
+      "interest": "Fashion Wanita"
+    }
+  },
+  "sale_calendar": {
+    "next_events": [
+      {"date": "2026-06-25", "event": "Gajian + Co-Creation", "boost": "2x"},
+      {"date": "2026-06-26", "event": "Gajian + Co-Creation", "boost": "2x"},
+      {"date": "2026-06-27", "event": "Gajian + Co-Creation", "boost": "2x"},
+      {"date": "2026-07-07", "event": "7.7 Sale", "boost": "2.5x"},
+      {"date": "2026-08-08", "event": "8.8 Sale", "boost": "2.5x"},
+      {"date": "2026-09-09", "event": "9.9 Super Shopping Day", "boost": "3x"},
+      {"date": "2026-10-10", "event": "10.10 Brands Festival", "boost": "2.5x"},
+      {"date": "2026-11-11", "event": "11.11 Big Sale", "boost": "3x"},
+      {"date": "2026-12-12", "event": "12.12 Year-End Sale", "boost": "3x"}
+    ]
+  },
+  "budget_rules": {
+    "normal_day": "CVR-based: <10%=base, 10-15%=1.5x, >15%=2x",
+    "sale_day": "double budget, max cap",
+    "total_daily_max": 185000,
+    "sale_daily_max": 370000
+  }
+}
