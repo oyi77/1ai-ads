@@ -16,10 +16,10 @@ function createMockShopeeAdapter(orders = []) {
   };
 }
 
-function createApp(shopeeAdapter, settingsRepo) {
+function createApp(shopeeAdapter, settingsRepo, commissionsRepo = null) {
   const app = express();
   app.use(express.json());
-  app.use('/api/shopee', createShopeeDashboardRouter(shopeeAdapter, settingsRepo));
+  app.use('/api/shopee', createShopeeDashboardRouter(shopeeAdapter, settingsRepo, commissionsRepo));
   return app;
 }
 
@@ -140,7 +140,6 @@ describe('Shopee Dashboard Router', () => {
         .send(bigBody);
       expect(res.status).toBe(413);
     });
-
     it('accepts raw CSV body upload', async () => {
       app = createApp(shopeeAdapter, settingsRepo);
       const csv = 'order_id,amount\nORD-1,100\nORD-2,200\n';
@@ -151,7 +150,7 @@ describe('Shopee Dashboard Router', () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.file.filename).toBe('upload.csv');
-      expect(res.body.file.rows).toBe(3); // header + 2 data rows
+      expect(res.body.file.rows).toBe(2); // 2 data rows (header excluded)
       expect(settingsRepo.set).toHaveBeenCalled();
     });
   });

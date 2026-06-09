@@ -18,7 +18,7 @@ export class UsersRepository {
   }
 
   findAll() {
-    return this.db.prepare('SELECT id, username, email, role, plan FROM users').all();
+    return this.db.prepare('SELECT id, username, email, role, is_active, created_at, last_login FROM users').all();
   }
 
   create({ username, email, password_hash, confirmed = 0 }) {
@@ -33,7 +33,7 @@ export class UsersRepository {
 
     const fields = [];
     const params = [];
-    const updatable = ['username', 'email', 'password_hash', 'role', 'plan', 'confirmed'];
+    const updatable = ['username', 'email', 'password_hash', 'role', 'plan', 'confirmed', 'is_active', 'last_login'];
 
     for (const field of updatable) {
       if (data[field] !== undefined) {

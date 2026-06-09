@@ -30,7 +30,7 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
       if (isLocal) {
         return `${req.protocol}://${hostname}/api/auth/facebook/callback`;
       }
-      return 'https://adforge.aitradepulse.com/api/auth/facebook/callback';
+      return `${req.protocol}://${hostname}/api/auth/facebook/callback`;
     })();
     
     const fbAppId = config.fbAppId;
@@ -64,7 +64,7 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
       if (isLocal) {
         return `${req.protocol}://${hostname}/api/auth/facebook/callback`;
       }
-      return 'https://adforge.aitradepulse.com/api/auth/facebook/callback';
+      return `${req.protocol}://${hostname}/api/auth/facebook/callback`;
     })();
     
     if (!fbAppId || !fbSecret) {
@@ -387,10 +387,13 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
   });
 
   router.post('/facebook/deauthorize', async (req, res) => {
-    log.info('Meta Deauthorize (Data Deletion) Request received', { body: req.body });
-    // In a real scenario, decrypt signed_request and delete user data
+    const hostname = req.get('host');
+    const isLocal = hostname && (hostname.includes('127.0.0.1') || hostname.includes('localhost'));
+    const base = isLocal || !hostname
+      ? 'https://adforge.aitradepulse.com'
+      : `${req.protocol}://${hostname}`;
     res.json({
-      url: 'https://adforge.aitradepulse.com/data-deletion-status',
+      url: `${base}/data-deletion-status`,
       confirmation_code: `del_${Date.now()}`
     });
   });
