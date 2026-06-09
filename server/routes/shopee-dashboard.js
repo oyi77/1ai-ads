@@ -1,13 +1,16 @@
 import { Router } from 'express';
 import { createLogger } from '../lib/logger.js';
 import { randomUUID } from 'crypto';
+import { ShopeeCSVParser } from '../services/shopee-csv-parser.js';
 
 const log = createLogger('shopee-dashboard');
 
 const SHOPEE_ACCOUNTS_KEY = 'shopee_accounts';
 const SHOPEE_UPLOADS_KEY = 'shopee_uploads';
 
-export function createShopeeDashboardRouter(shopeeAdapter, settingsRepo) {
+const csvParser = new ShopeeCSVParser();
+
+export function createShopeeDashboardRouter(shopeeAdapter, settingsRepo, commissionsRepo) {
   const router = Router();
 
   // GET /api/shopee/accounts — list configured Shopee seller accounts
@@ -55,6 +58,38 @@ export function createShopeeDashboardRouter(shopeeAdapter, settingsRepo) {
         return res.status(404).json({ success: false, error: 'Account not found' });
       }
 
+      // Try repository first (from CSV uploads)
+      if (commissionsRepo) {
+        const repoSummary = commissionsRepo.getSummaryByAccount(accountId);
+        if (repoSummary.totalOrders > 0) {
+          const dailySummary = commissionsRepo.getDailySummary(accountId, 30);
+          const recentOrders = commissionsRepo.findByAccount(accountId, 20);
+          return res.json({
+            success: true,
+            accountId,
+            summary: {
+              totalOrders: repoSummary.totalOrders,
+              totalRevenue: repoSummary.totalRevenue,
+              totalCommission: repoSummary.totalCommission,
+              avgOrderValue: repoSummary.totalOrders > 0
+                ? Math.round(repoSummary.totalRevenue / repoSummary.totalOrders)
+                : 0,
+            },
+            dailySummary,
+            recentOrders: recentOrders.map(o => ({
+              orderId: o.order_id,
+              productName: o.product_name,
+              shopName: o.shop_name,
+              commission: o.commission_amount,
+              orderAmount: o.order_amount,
+              status: o.status,
+              orderDate: o.order_date,
+            })),
+          });
+        }
+      }
+
+      // Fall back to live API
       const orders = await shopeeAdapter.fetchOrders({ sellerId: account.seller_id }) || [];
 
       let totalRevenue = 0;
@@ -79,7 +114,7 @@ export function createShopeeDashboardRouter(shopeeAdapter, settingsRepo) {
     }
   });
 
-  // POST /api/shopee/upload — accept CSV file upload
+  // POST /api/shopee/upload — accept CSV file upload, parse, and store
   router.post('/upload', (req, res) => {
     try {
       const chunks = [];
@@ -104,6 +139,7 @@ export function createShopeeDashboardRouter(shopeeAdapter, settingsRepo) {
 
         let filename = 'upload.csv';
         let fileData = buffer.toString('utf-8');
+        let accountId = req.query.accountId || req.headers['x-shopee-account-id'] || null;
 
         // Parse multipart if present
         if (contentType.includes('multipart/form-data')) {
@@ -114,7 +150,17 @@ export function createShopeeDashboardRouter(shopeeAdapter, settingsRepo) {
               filename = parts[0].filename || filename;
               fileData = parts[0].data.toString('utf-8');
             }
+            // Check for accountId field in multipart
+            const accountPart = parts.find(p => p.name === 'accountId');
+            if (accountPart) {
+              accountId = accountPart.data.toString('utf-8').trim();
+            }
           }
+        }
+
+        // Auto-detect account from filename if not provided
+        if (!accountId) {
+          accountId = detectAccountFromFilename(filename, settingsRepo);
         }
 
         const fileId = randomUUID();
@@ -130,16 +176,43 @@ export function createShopeeDashboardRouter(shopeeAdapter, settingsRepo) {
           id: fileId,
           filename,
           size: buffer.length,
-          rows: fileData.split('\n').filter(l => l.trim()).length,
+          rows: fileData.split('\n').filter(l => l.trim()).length - 1, // exclude header
           uploadedAt: new Date().toISOString(),
+          accountId,
           data: fileData,
         };
 
         uploads.push(upload);
         settingsRepo.set(SHOPEE_UPLOADS_KEY, JSON.stringify(uploads));
 
-        log.info('Shopee CSV uploaded', { fileId, filename, rows: upload.rows });
-        res.json({ success: true, file: { id: fileId, filename, rows: upload.rows } });
+        // Parse CSV and store commission data
+        let parseResult = { orders: [], summary: null };
+        if (commissionsRepo) {
+          try {
+            const orders = csvParser.parseCSVString(fileData);
+            if (orders.length > 0 && accountId) {
+              // Clear previous data for this account before bulk insert
+              commissionsRepo.deleteByAccount(accountId);
+              commissionsRepo.bulkCreate(accountId, orders);
+            }
+            const summary = csvParser.calculateSummary(orders);
+            parseResult = { orders: orders.length, summary };
+          } catch (parseErr) {
+            log.error('CSV parse failed', { fileId, error: parseErr.message });
+            parseResult = { orders: 0, error: parseErr.message };
+          }
+        }
+
+        log.info('Shopee CSV uploaded', {
+          fileId, filename, rows: upload.rows,
+          accountId, parsedOrders: parseResult.orders,
+        });
+
+        res.json({
+          success: true,
+          file: { id: fileId, filename, rows: upload.rows, accountId },
+          parsed: parseResult,
+        });
       });
 
       req.on('error', (err) => {
@@ -197,7 +270,6 @@ export function createShopeeDashboardRouter(shopeeAdapter, settingsRepo) {
  */
 function parseMultipart(buffer, boundary) {
   const parts = [];
-  const boundaryBuf = Buffer.from(`--${boundary}`);
   const str = buffer.toString('latin1');
   const sections = str.split(`--${boundary}`);
 
@@ -226,4 +298,31 @@ function parseMultipart(buffer, boundary) {
   }
 
   return parts;
+}
+
+/**
+ * Auto-detect account from filename by matching known account patterns.
+ */
+function detectAccountFromFilename(filename, settingsRepo) {
+  try {
+    const raw = settingsRepo.get(SHOPEE_ACCOUNTS_KEY);
+    const accounts = raw ? JSON.parse(raw) : [];
+    const fnameLower = filename.toLowerCase();
+
+    for (const acc of accounts) {
+      const patterns = acc.csv_patterns || [];
+      for (const pattern of patterns) {
+        if (fnameLower.includes(pattern.toLowerCase())) {
+          return acc.id;
+        }
+      }
+      // Also try matching account name/id in filename
+      if (acc.name && fnameLower.includes(acc.name.toLowerCase())) {
+        return acc.id;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return null;
 }

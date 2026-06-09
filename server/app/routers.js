@@ -43,6 +43,8 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { createAdminRouter } from '../routes/admin.js';
 import { createDraftRouter } from '../routes/drafts.js';
 import { createShopeeDashboardRouter } from '../routes/shopee-dashboard.js';
+import { createFacebookSystemUserRouter } from '../routes/facebook-system-user.js';
+import { createCampaignMonitorRouter } from '../routes/campaign-monitor.js';
 
 export function createRouters({ app, repos, services }) {
  const publicRateLimit = rateLimit({
@@ -97,6 +99,8 @@ export function createRouters({ app, repos, services }) {
  app.use('/api/ads-library-ai', publicRateLimit, createAdsLibraryAiRouter(repos.settingsRepo));
   app.use('/api/admin', requireAuth, requireAdmin, createAdminRouter(repos.usersRepo, repos.settingsRepo));
   app.use('/api/drafts', requireAuth, createDraftRouter(services.draftService));
- app.use('/api/shopee', requireAuth, createShopeeDashboardRouter(services.shopeeAdapter, repos.settingsRepo));
+ app.use('/api/shopee', requireAuth, createShopeeDashboardRouter(services.shopeeAdapter, repos.settingsRepo, repos.shopeeCommissionsRepo));
+ app.use('/api/meta-system', createFacebookSystemUserRouter(services.facebookSystemUserService));
+ app.use('/api/campaign-monitor', requireAuth, createCampaignMonitorRouter(services.campaignMonitorService));
  app.use('/t', createTrackRouter(repos.adUtmMapRepo, services.utmTagger));
 }

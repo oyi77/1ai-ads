@@ -32,6 +32,8 @@ import { UtmTaggerService } from '../services/utm-tagger.js';
 import { AdIntelligenceService } from '../services/ad-intelligence.js';
 import { CompetitorSpyService } from '../services/competitor-spy.js';
 import { DraftService } from '../services/draft-service.js';
+import { FacebookSystemUserService } from '../services/facebook-system-user.js';
+import { CampaignMonitorService } from '../services/campaign-monitor.js';
 
 export function createServices({ db, repos, params }) {
   const llmClient = (params && params.llmClient) || new LLMClient({
@@ -89,6 +91,12 @@ export function createServices({ db, repos, params }) {
   const adIntelligenceService = new AdIntelligenceService(db, repos.competitorsRepo);
   const competitorSpyService = new CompetitorSpyService(db, adIntelligenceService, null, repos.competitorsRepo);
   const draftService = new DraftService(repos.draftsRepo);
+  const facebookSystemUserService = new FacebookSystemUserService({
+    systemToken: config.fbSystemToken,
+    apiVersion: config.metaApiVersion,
+  });
+
+  const campaignMonitorService = new CampaignMonitorService(metaApi, repos.campaignsRepo, repos.settingsRepo);
 
   return {
     llmClient, adspirerClient, trendingService, scalevService, paymentService,
@@ -98,7 +106,7 @@ export function createServices({ db, repos, params }) {
     googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI,
     autonomousAgent, autoOptimizer,
     webhookProcessor, dataCleanup, adIntelligenceService, competitorSpyService,
-    draftService,
+    draftService, facebookSystemUserService, campaignMonitorService,
     mcpClient: params && params.mcpClient,
   };
 }
