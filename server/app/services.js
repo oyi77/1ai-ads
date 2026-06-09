@@ -19,6 +19,11 @@ import { ShopeeAdapter } from '../services/shopee-adapter.js';
 import { AttributionService } from '../services/attribution-service.js';
 import { GoogleAdsAPI } from '../services/google-ads-api.js';
 import { TikTokAdsAPI } from '../services/tiktok-api.js';
+import { LinkedInAdsAPI } from '../services/linkedin-ads-api.js';
+import { TwitterAdsAPI } from '../services/twitter-ads-api.js';
+import { SnapchatAdsAPI } from '../services/snapchat-ads-api.js';
+import { MicrosoftAdsAPI } from '../services/microsoft-ads-api.js';
+import { PinterestAdsAPI } from '../services/pinterest-ads-api.js';
 import { AutonomousAgent } from '../services/autonomous-agent.js';
 import { AutoOptimizer } from '../services/auto-optimizer.js';
 import { WebhookProcessor } from '../services/webhook-processor.js';
@@ -62,14 +67,19 @@ export function createServices({ db, repos, params }) {
 
   const shopeeAdapter = new ShopeeAdapter();
   const attributionService = new AttributionService(repos.attributionRepo, shopeeAdapter, repos.campaignsRepo, repos.adsRepo);
+  const tiktokAdsAPI = new TikTokAdsAPI(repos.settingsRepo);
+  const linkedinAdsAPI = new LinkedInAdsAPI(repos.settingsRepo);
+  const twitterAdsAPI = new TwitterAdsAPI(repos.settingsRepo);
+  const microsoftAdsAPI = new MicrosoftAdsAPI(repos.settingsRepo);
+  const snapchatAdsAPI = new SnapchatAdsAPI(repos.settingsRepo);
+  const pinterestAdsAPI = new PinterestAdsAPI(repos.settingsRepo);
 
   const googleAdsAPI = new GoogleAdsAPI(repos.settingsRepo);
-  const tiktokAdsAPI = new TikTokAdsAPI(repos.settingsRepo);
 
   const autonomousAgent = new AutonomousAgent(
     repos.settingsRepo, repos.platformAccountsRepo, repos.campaignsRepo,
     repos.rulesRepo, llmClient, undefined,
-    { metaAdsAPI: metaApi, googleAdsAPI, tiktokAdsAPI }
+    { metaAdsAPI: metaApi, googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI }
   );
 
   const autoOptimizer = new AutoOptimizer(metaApi, repos.rulesRepo, repos.campaignsRepo);
@@ -83,7 +93,8 @@ export function createServices({ db, repos, params }) {
     learningService, utmTagger, metaApi, creativeStudio, videoService,
     contentScheduler, adResearchService, orchestrator, realtimeService,
     contentBridge, socialBridge, aiAgent, shopeeAdapter, attributionService,
-    googleAdsAPI, tiktokAdsAPI, autonomousAgent, autoOptimizer,
+    googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI,
+    autonomousAgent, autoOptimizer,
     webhookProcessor, dataCleanup, adIntelligenceService, competitorSpyService,
     mcpClient: params && params.mcpClient,
   };

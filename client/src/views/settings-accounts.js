@@ -6,10 +6,13 @@ export function renderAccountsSection() {
     { id: 'meta', name: 'Meta Ads', desc: 'Facebook & Instagram Ads' },
     { id: 'google', name: 'Google Ads', desc: 'Search and Display Ads' },
     { id: 'tiktok', name: 'TikTok Ads', desc: 'Short-form video Ads' },
-    { id: 'x', name: 'X (Twitter) Ads', desc: 'X Ads Credentials' },
+    { id: 'linkedin', name: 'LinkedIn Ads', desc: 'B2B Professional Ads' },
+    { id: 'pinterest', name: 'Pinterest Ads', desc: 'Visual Discovery Ads' },
+    { id: 'snapchat', name: 'Snapchat Ads', desc: 'Full-Screen Mobile Ads' },
+    { id: 'twitter', name: 'Twitter/X Ads', desc: 'Real-time Engagement Ads' },
+    { id: 'microsoft', name: 'Microsoft/Bing Ads', desc: 'Search & Native Ads' },
     { id: 'scalev', name: 'Scalev.id', desc: 'E-commerce Checkout' },
   ];
-
   return `
     <h2 class="text-2xl font-bold text-white mb-6">Connected Accounts</h2>
     <div class="grid gap-6">
@@ -76,9 +79,12 @@ export function renderPlatformFields(p, existing = {}) {
       </div>
       <p class="text-[10px] text-sky-300 mb-2">Click "Connect Facebook" to login with your Meta credentials and automatically connect your Business Manager and Ads Accounts.</p>
     </div>`;
-  if (p === 'google') return `<div class="grid grid-cols-2 gap-4"><div><label class="${label}">Dev Token</label><input type="password" name="developer_token" value="${existing.developer_token || ''}" class="${common}"></div><div><label class="${label}">Cred Path</label><input type="text" name="credentials_path" value="${existing.credentials_path || ''}" class="${common}"></div></div>`;
   if (p === 'tiktok') return `<div><label class="${label}">Access Token</label><input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}"></div>`;
-  if (p === 'x') return `<div class="grid grid-cols-2 gap-4"><div><label class="${label}">API Key</label><input type="password" name="api_key" value="${existing.api_key || ''}" class="${common}"></div><div><label class="${label}">API Secret</label><input type="password" name="api_secret" value="${existing.api_secret || ''}" class="${common}"></div></div>`;
+  if (p === 'linkedin') return `<div class="grid grid-cols-2 gap-4"><div><label class="${label}">Access Token</label><input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}"></div><div><label class="${label}">Client ID</label><input type="text" name="client_id" value="${existing.client_id || ''}" class="${common}"></div></div><div><label class="${label}">Client Secret</label><input type="password" name="client_secret" value="${existing.client_secret || ''}" class="${common}"></div>`;
+  if (p === 'pinterest') return `<div><label class="${label}">Access Token</label><input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}"></div><div><label class="${label}">Ad Account ID</label><input type="text" name="ad_account_id" value="${existing.ad_account_id || ''}" class="${common}"></div>`;
+  if (p === 'snapchat') return `<div><label class="${label}">Access Token</label><input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}"></div><div><label class="${label}">Refresh Token</label><input type="password" name="refresh_token" value="${existing.refresh_token || ''}" class="${common}"></div>`;
+  if (p === 'twitter') return `<div class="grid grid-cols-2 gap-4"><div><label class="${label}">Access Token</label><input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}"></div><div><label class="${label}">Account ID</label><input type="text" name="account_id" value="${existing.account_id || ''}" class="${common}"></div></div>`;
+  if (p === 'microsoft') return `<div class="grid grid-cols-2 gap-4"><div><label class="${label}">OAuth Token</label><input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}"></div><div><label class="${label}">Developer Token</label><input type="password" name="developer_token" value="${existing.developer_token || ''}" class="${common}"></div></div><div><label class="${label}">Customer ID</label><input type="text" name="customer_id" value="${existing.customer_id || ''}" class="${common}"></div>`;
   if (p === 'scalev') return `<div><label class="${label}">API Token</label><input type="password" name="api_token" value="${existing.api_token || ''}" class="${common}"></div>`;
   return '';
 }

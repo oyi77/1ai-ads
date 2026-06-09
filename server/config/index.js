@@ -52,6 +52,23 @@ const config = {
  get gcpProjectId() { return process.env.GCP_PROJECT_ID || ''; },
  get bigqueryDataset() { return process.env.BIGQUERY_DATASET || 'adforge_reports'; },
  get gcpServiceAccountEmail() { return process.env.GCP_SERVICE_ACCOUNT_EMAIL || ''; },
+  // Platform: LinkedIn Ads
+  get linkedinAccessToken() { return process.env.LINKEDIN_ACCESS_TOKEN || ''; },
+  get linkedinClientId() { return process.env.LINKEDIN_CLIENT_ID || ''; },
+  get linkedinClientSecret() { return process.env.LINKEDIN_CLIENT_SECRET || ''; },
+  // Platform: Pinterest Ads
+  get pinterestAccessToken() { return process.env.PINTEREST_ACCESS_TOKEN || ''; },
+  get pinterestAdAccountId() { return process.env.PINTEREST_AD_ACCOUNT_ID || ''; },
+  // Platform: Snapchat Ads
+  get snapchatAccessToken() { return process.env.SNAPCHAT_ACCESS_TOKEN || ''; },
+  get snapchatRefreshToken() { return process.env.SNAPCHAT_REFRESH_TOKEN || ''; },
+  // Platform: Twitter/X Ads
+  get twitterAccessToken() { return process.env.TWITTER_ACCESS_TOKEN || ''; },
+  get twitterAccountId() { return process.env.TWITTER_ACCOUNT_ID || ''; },
+  // Platform: Microsoft/Bing Ads
+  get microsoftAccessToken() { return process.env.MICROSOFT_ACCESS_TOKEN || ''; },
+  get microsoftDevToken() { return process.env.MICROSOFT_DEVELOPER_TOKEN || ''; },
+  get microsoftCustomerId() { return process.env.MICROSOFT_CUSTOMER_ID || ''; },
 };
 
 export function validateConfig() {

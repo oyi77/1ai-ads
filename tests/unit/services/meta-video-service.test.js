@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MetaVideoService } from '../../../server/services/meta-video-service.js';
+
+// Mock config to prevent real env leakage
+vi.mock('../../../server/config/index.js', () => ({
+  default: {
+    metaApiVersion: 'v22.0',
+    fbSystemToken: '',
+  },
+}));
 
 // Mock axios
 vi.mock('axios', () => ({
@@ -8,6 +15,7 @@ vi.mock('axios', () => ({
   },
 }));
 
+import { MetaVideoService } from '../../../server/services/meta-video-service.js';
 import axios from 'axios';
 
 describe('MetaVideoService', () => {
