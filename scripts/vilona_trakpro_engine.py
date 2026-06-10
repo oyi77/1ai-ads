@@ -996,9 +996,9 @@ def create_scale_clone(original_campaign, account_id, account_config):
             "targeting": json.dumps(diversified_targeting),
             "optimization_goal": "LINK_CLICKS",
             "billing_event": "IMPRESSIONS",
-            "bid_strategy": "LOWEST_COST_WITHOUT_CAP",  # ⚠️ CRITICAL: No bid cap! Rp20k cap caused 0.02% budget utilization
-            "daily_budget": "500000",  # Rp5,000/day in cents (existing Scale_ clones use this)
-            "status": "PAUSED",  # ⚠️ SAFETY: never auto-ACTIVE
+            "bid_strategy": "LOWEST_COST_WITHOUT_CAP",  # OpenGraph
+            "daily_budget": "2000000",  # 0858 default scale
+            "status": "PAUSED",  # Safety default; activation handled before ad creation completes
         }
         # Do NOT put object_story_id in adset promoted_object.
         # The post/creative linkage belongs at ad level; v22 rejects object_story_id

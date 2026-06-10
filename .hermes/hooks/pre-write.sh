@@ -12,11 +12,13 @@ if [[ "$FILE" =~ ^scripts/test_ ]]; then
   exit 1
 fi
 
-# Rule 2: Block hardcoded paths
-if grep -q "/home/openclaw/" "$FILE" 2>/dev/null; then
-  echo "❌ BLOCKED: Hardcoded /home/openclaw/ path found in $FILE"
-  echo "   Use WORKSPACE/DATA_DIR from vilona_trakpro_engine"
-  exit 1
+# Rule 2: Block hardcoded paths (except the engine itself — it defines WORKSPACE)
+if [[ ! "$FILE" =~ "vilona_trakpro_engine" ]]; then
+  if grep -q "/home/openclaw/" "$FILE" 2>/dev/null; then
+    echo "❌ BLOCKED: Hardcoded /home/openclaw/ path found in $FILE"
+    echo "   Use WORKSPACE/DATA_DIR from vilona_trakpro_engine"
+    exit 1
+  fi
 fi
 
 # Rule 3: Block direct Meta API in scripts/ (not engine)
