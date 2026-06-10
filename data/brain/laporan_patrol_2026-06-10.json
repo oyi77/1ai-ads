@@ -1,117 +1,98 @@
 {
   "patrol_date": "2026-06-10",
-  "patrol_time_wib": "04:08",
   "account": "act_435670549443081",
-  "active_campaigns": 8,
-  "total_spend_today": 256,
-  "total_spend_7d": 328896,
-  "total_clicks_today": 3,
-  "paused_count": 0,
-  "kept_count": 8,
-  "total_completed_commission": 0,
-  "total_pending_commission": 6007676,
-  "to_pause": [],
-  "to_keep_summary": [
-    {
-      "name": "\ud83c\udf1f_ON__Kakriput_organizerpullout_INT10",
-      "taglink": "organizerpullout",
-      "spend_today": 40,
-      "decision": "KEEP",
-      "reason": "CVR 57.58% > 5.0% \u2192 KEEP"
-    },
-    {
-      "name": "\ud83c\udf1f_ON_GEO_organizerpullout_INT08",
-      "taglink": "organizerpullout",
-      "spend_today": 0,
-      "decision": "KEEP",
-      "reason": "CVR 57.58% > 5.0% \u2192 KEEP"
-    },
-    {
-      "name": "\ud83c\udf1f_ON__Kakriput_organizerpullout_INT06",
-      "taglink": "organizerpullout",
-      "spend_today": 0,
-      "decision": "KEEP",
-      "reason": "CVR 57.58% > 5.0% \u2192 KEEP"
-    },
-    {
-      "name": "ON_GEO_organizerpullout_INT04",
-      "taglink": "organizerpullout",
-      "spend_today": 7,
-      "decision": "KEEP",
-      "reason": "CVR 57.58% > 5.0% \u2192 KEEP"
-    },
-    {
-      "name": "ON_GEO_organizerpullout_INT02",
-      "taglink": "organizerpullout",
-      "spend_today": 7,
-      "decision": "KEEP",
-      "reason": "CVR 57.58% > 5.0% \u2192 KEEP"
-    },
-    {
-      "name": "BIDCAP_Organizer_organizerpullout_Dapur_0603",
-      "taglink": "organizerpullout",
-      "spend_today": 202,
-      "decision": "KEEP",
-      "reason": "CVR 57.58% > 5.0% \u2192 KEEP"
-    },
-    {
-      "name": "\ud83c\udf1f_ON_VILONA_organizerpullout_FBonly",
-      "taglink": "organizerpullout",
-      "spend_today": 0,
-      "decision": "KEEP",
-      "reason": "CVR 57.58% > 5.0% \u2192 KEEP"
-    },
-    {
-      "name": "\ud83c\udf1f_ON_VILONA_organizerpullout_IGonly",
-      "taglink": "organizerpullout",
-      "spend_today": 0,
-      "decision": "KEEP",
-      "reason": "CVR 57.58% > 5.0% \u2192 KEEP"
-    }
+  "source": "0858_campaigns_fetch",
+  "meta_api_reachable": false,
+  "tracked_tags": [
+    "organizerpullout",
+    "rakpiringpengering",
+    "setelangajahthaialand",
+    "setelanbajukaosmihugajah"
   ],
-  "pause_results": [],
   "taglink_health": {
-    "rakpiringpengering": {
-      "cvr": 26.32,
-      "pending": 3418743,
-      "completed": 956,
-      "keep_on": true
-    },
     "organizerpullout": {
-      "cvr": 57.58,
-      "pending": 1993520,
-      "completed": 569,
-      "keep_on": true
+      "tagtag": "organizerpullout",
+      "cvr_7d_pct": 57.58,
+      "pending_commission_idr": 1993520.0,
+      "completed_orders_ever": 569,
+      "active_campaigns": 0,
+      "paused_campaigns": 20,
+      "viability": "VIABLE",
+      "keep_reasons": [
+        "CVR 57.58% > 5%",
+        "pending Komisi Rp 1,993,520 > 50k",
+        "569 completed orders ever"
+      ],
+      "to_pause_candidates": [],
+      "scale_ready_campaign_ids": []
     },
-    "setelanbajukaosmihugajah": {
-      "cvr": 7.14,
-      "pending": 514689,
-      "completed": 4,
-      "keep_on": true
+    "rakpiringpengering": {
+      "tagtag": "rakpiringpengering",
+      "cvr_7d_pct": 26.32,
+      "pending_commission_idr": 3418743.0,
+      "completed_orders_ever": 956,
+      "active_campaigns": 9,
+      "paused_campaigns": 36,
+      "viability": "VIABLE",
+      "keep_reasons": [
+        "9 active campaign(s)",
+        "CVR 26.32% > 5%",
+        "pending Komisi Rp 3,418,743 > 50k",
+        "956 completed orders ever"
+      ],
+      "to_pause_candidates": [],
+      "scale_ready_campaign_ids": []
     },
     "setelangajahthaialand": {
-      "cvr": 5.46,
-      "pending": 80724,
-      "completed": 0,
-      "keep_on": true
+      "tagtag": "setelangajahthaialand",
+      "cvr_7d_pct": 5.46,
+      "pending_commission_idr": 80724.0,
+      "completed_orders_ever": 0,
+      "active_campaigns": 4,
+      "paused_campaigns": 9,
+      "viability": "VIABLE",
+      "keep_reasons": [
+        "4 active campaign(s)",
+        "CVR 5.46% > 5%",
+        "pending Komisi Rp 80,724 > 50k"
+      ],
+      "to_pause_candidates": [],
+      "scale_ready_campaign_ids": []
     },
-    "gajahThailand": {
-      "cvr": 0,
-      "pending": 0,
-      "completed": 0,
-      "keep_on": false
-    },
-    "lemarirakdapur": {
-      "cvr": 0,
-      "pending": 0,
-      "completed": 0,
-      "keep_on": false
-    },
-    "rakdapur": {
-      "cvr": 0,
-      "pending": 0,
-      "completed": 0,
-      "keep_on": false
+    "setelanbajukaosmihugajah": {
+      "tagtag": "setelanbajukaosmihugajah",
+      "cvr_7d_pct": 7.14,
+      "pending_commission_idr": 514689.0,
+      "completed_orders_ever": 4,
+      "active_campaigns": 0,
+      "paused_campaigns": 0,
+      "viability": "VIABLE",
+      "keep_reasons": [
+        "CVR 7.14% > 5%",
+        "pending Komisi Rp 514,689 > 50k",
+        "4 completed orders ever"
+      ],
+      "to_pause_candidates": [],
+      "scale_ready_campaign_ids": []
     }
-  }
+  },
+  "dead_taglinks": [],
+  "winner_campaigns_found": [],
+  "campaigns_to_pause": [],
+  "campaigns_to_scale": {
+    "organizerpullout": [],
+    "rakpiringpengering": [],
+    "setelangajahthaialand": [],
+    "setelanbajukaosmihugajah": []
+  },
+  "upcoming_sale": {
+    "date": "2026-06-26",
+    "event": "Gajian + Co-Creation Day 2",
+    "action": "Tambah +50% adset baru jika ada taglink aktif scalable"
+  },
+  "notes": [
+    "API fetched from tmp_campaign_fetch.json (first page 50 campaigns).",
+    "CVR and commission history from 2026-06-09/10 patrol archives.",
+    "Ad-level scan not available in fetch; nebeng detection is name-level only."
+  ]
 }

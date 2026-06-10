@@ -56,7 +56,44 @@ export function createApp(params) {
   const clientPath = path.join(process.cwd(), 'dist');
   app.use(express.static(clientPath));
 
-  createRouters({ app, repos, services });
+  // Proxy webhooks BEFORE API routers (must run before createRouters)
+  
+  // Proxy Telegram webhook requests to Hermes bot (port 8443)
+  app.use('/webhook', async (req, res) => {
+    try {
+      const targetUrl = `http://127.0.0.1:8443${req.originalUrl}`;
+      const response = await fetch(targetUrl, {
+        method: req.method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body),
+        signal: AbortSignal.timeout(30000),
+      });
+      const responseBody = await response.arrayBuffer();
+      res.status(response.status).send(Buffer.from(responseBody));
+    } catch (err) {
+      log.error('Webhook proxy error', err.message);
+      if (!res.headersSent) res.status(502).json({ error: 'webhook proxy failed' });
+    }
+  });
+
+  // Proxy Scalev payment callback → Hermes bot (port 8443)
+  // Cloudflare WAF blocks unknown POST paths; use a standard-looking path
+  app.post('/api/payments/notify', async (req, res) => {
+    try {
+      const targetUrl = `http://127.0.0.1:8443/webhook/scalev`;
+      const response = await fetch(targetUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body),
+        signal: AbortSignal.timeout(30000),
+      });
+      const responseBody = await response.arrayBuffer();
+      res.status(response.status).send(Buffer.from(responseBody));
+    } catch (err) {
+      log.error('Scalev proxy error', err.message);
+      if (!res.headersSent) res.status(502).json({ error: 'proxy failed' });
+    }
+  });
 
   app.post('/api/webhooks/video-complete', (req, res) => {
     const { jobId, status, videoUrl, thumbnailUrl } = req.body;
@@ -71,6 +108,8 @@ export function createApp(params) {
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+
+  createRouters({ app, repos, services });
 
   app.use((req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/assets') || req.path.startsWith('/t/') || req.path.startsWith('/favicon.ico')) {

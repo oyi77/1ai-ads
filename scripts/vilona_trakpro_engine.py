@@ -863,12 +863,12 @@ def _pick_scale_audience(og_targeting, existing_clone_names, taglink):
 def create_lc_clone(original_campaign, account_id, account_config, variant_num=1):
     """Create ON_LC_ clone with Lowest Cost + Age-Shifting strategy.
     
-    Strategy (2026-06-10):
+    Strategy (2026-06-11 FINAL):
     - Budget: Rp 18,000/hari (micro-budget, scale horizontal bukan vertikal)
-    - Bid: LOWEST_COST (no cap — Meta optimize sendiri)
+    - Bid: LOWEST_COST_WITHOUT_CAP (NO bid cap — Meta optimize sendiri)
     - Targeting: EXACT copy dari winning campaign (audience/gender/placement SAMA)
     - Creative: EXACT copy (copywriting, CTA, post_id SAMA PERSIS)
-    - Age Shifting: randomize ±1-3 tahun dari rentang usia original
+    - Age: randomize ±1-3 tahun, MINIMUM 24 (anak muda gak ada duit)
     - Naming: ON_LC_[Product]_[AgeRange]_[MMDD]
     - Status: ACTIVE (langsung jalan, bukan PAUSED)
     
@@ -921,7 +921,7 @@ def create_lc_clone(original_campaign, account_id, account_config, variant_num=1
         
         shift_min = random.randint(-3, 3)
         shift_max = random.randint(-3, 3)
-        new_age_min = max(18, age_min + shift_min)
+        new_age_min = max(24, age_min + shift_min)  # minimum age 24 — anak muda gak ada duit
         new_age_max = min(65, age_max + shift_max)
         
         # Swap if inverted
@@ -1013,7 +1013,7 @@ def create_lc_clone(original_campaign, account_id, account_config, variant_num=1
             "targeting": json.dumps(lc_targeting),
             "optimization_goal": "LINK_CLICKS",
             "billing_event": "IMPRESSIONS",
-            "bid_strategy": "LOWEST_COST",
+            "bid_strategy": "LOWEST_COST_WITHOUT_CAP",  # NO bid cap — Meta optimize sendiri, bukan BID_CAP
             "daily_budget": "18000",  # Rp 18,000 micro-budget
             "status": "ACTIVE",
         }

@@ -1,0 +1,226 @@
+{
+  "timestamp": "2026-06-09T22:00:00+07:00",
+  "action": "MASS_UNPAUSE + \ud83c\udf1f WINNERS",
+  "unpaused_count": 72,
+  "winners_count": 36,
+  "winners": [
+    {
+      "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT08",
+      "cid": "120250055874940416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT07",
+      "cid": "120250055875130416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_Organizer_organizerpullout_Travel_0603",
+      "cid": "120249722735720416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_Rakpiring_rakpiringpengering_Winner_0603",
+      "cid": "120248404118800416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT04",
+      "cid": "120250055874900416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_Rakpiring_rakpiringpengering_Shopping_0603",
+      "cid": "120249205714820416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_Organizer_organizerpullout_Dapur_0603_CLONE1",
+      "cid": "120249727183880416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT10",
+      "cid": "120250055875150416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_Organizer_organizerpullout_FashiON_BIDCAP_0603",
+      "cid": "120250009839170416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_Rakpiring_rakpiringpengering_Broad_0603",
+      "cid": "120249941008950416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_E-commerce payment system",
+      "cid": "120249722735710416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON__GEO_rakpiringpengering_INT01",
+      "cid": "120249502539430416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_0858_rakpiring_travel",
+      "cid": "120249205714850416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_BIDCAP_Organizer_Broad2_0603",
+      "cid": "120250443083390416"
+    },
+    {
+      "name": "\ud83c\udf1f_BIDCAP_Organizer_organizerpullout_DapurShop_0603",
+      "cid": "120250009830630416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_0858_organizer_pelancong",
+      "cid": "120249727184140416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_Scale_BIDCAP_organizerpullout_Broad_0607_v2",
+      "cid": "120250543326310416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_Organizer_organizerpullout_Broad2_0603",
+      "cid": "120250009402690416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_Scale_BIDCAP_organizerpullout_Broad_0607",
+      "cid": "120250542857990416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT05",
+      "cid": "120250055874910416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_0858_organizer_tableware",
+      "cid": "120249727184170416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_Scale_BIDCAP_organizerpullout_Dapur_0607_v2",
+      "cid": "120250543131900416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_Organizer_organizerpullout_Resep_0603",
+      "cid": "120250009872130416"
+    },
+    {
+      "name": "\ud83c\udf1f_TC_Kakriput_rakpiringpengering_Pinterest",
+      "cid": "120249722735700416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT01",
+      "cid": "120250055875080416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT02",
+      "cid": "120250055875170416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_Scale_BIDCAP_rakpiringpengering_Belanja_0607",
+      "cid": "120250542393330416"
+    },
+    {
+      "name": "\ud83c\udf1f_BIDCAP_GEO_rakpiringpengering_INT03",
+      "cid": "120250055874890416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_Organizer_organizerpullout_Shopping_0603",
+      "cid": "120250009834770416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT06",
+      "cid": "120250055874920416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_BIDCAP_Organizer_Broad_0603",
+      "cid": "120250443083220416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_Organizer_organizerpullout_Rumah_0603",
+      "cid": "120250009867060416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_BIDCAP_rakpiringpengering_INT10",
+      "cid": "120250443083360416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_BIDCAP__rakpiringpengering_0606",
+      "cid": "120250443083350416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_BIDCAP_rakpiringpengering_06065",
+      "cid": "120250443083340416"
+    },
+    {
+      "name": "\ud83c\udf1f_ON_BIDCAP_organizer_jewelry",
+      "cid": "120250443083410416"
+    }
+  ],
+  "all_unpaused": [
+    "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT08",
+    "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT07",
+    "\ud83c\udf1f_ON_Organizer_organizerpullout_Travel_0603",
+    "\ud83c\udf1f_ON_Rakpiring_rakpiringpengering_Winner_0603",
+    "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT04",
+    "\ud83c\udf1f_ON_Rakpiring_rakpiringpengering_Shopping_0603",
+    "\ud83c\udf1f_ON_Organizer_organizerpullout_Dapur_0603_CLONE1",
+    "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT10",
+    "\ud83c\udf1f_ON_Organizer_organizerpullout_FashiON_BIDCAP_0603",
+    "\ud83c\udf1f_ON_Rakpiring_rakpiringpengering_Broad_0603",
+    "\ud83c\udf1f_ON_GEO_rakpiringpengering_E-commerce payment system",
+    "\ud83c\udf1f_ON__GEO_rakpiringpengering_INT01",
+    "\ud83c\udf1f_ON_0858_rakpiring_travel",
+    "\ud83c\udf1f_ON_BIDCAP_Organizer_Broad2_0603",
+    "\ud83c\udf1f_BIDCAP_Organizer_organizerpullout_DapurShop_0603",
+    "\ud83c\udf1f_ON_0858_organizer_pelancong",
+    "ON_Lemari_lemarirakdapur_Dapur_0605",
+    "\ud83c\udf1f_ON_Scale_BIDCAP_organizerpullout_Broad_0607_v2",
+    "\ud83c\udf1f_ON_Organizer_organizerpullout_Broad2_0603",
+    "\ud83c\udf1f_ON_Scale_BIDCAP_organizerpullout_Broad_0607",
+    "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT05",
+    "\ud83c\udf1f_ON_0858_organizer_tableware",
+    "\ud83c\udf1f_ON_Scale_BIDCAP_organizerpullout_Dapur_0607_v2",
+    "\ud83c\udf1f_ON_Organizer_organizerpullout_Resep_0603",
+    "\ud83c\udf1f_TC_Kakriput_rakpiringpengering_Pinterest",
+    "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT01",
+    "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT02",
+    "\ud83c\udf1f_ON_Scale_BIDCAP_rakpiringpengering_Belanja_0607",
+    "\ud83c\udf1f_BIDCAP_GEO_rakpiringpengering_INT03",
+    "\ud83c\udf1f_ON_Organizer_organizerpullout_Shopping_0603",
+    "\ud83c\udf1f_ON_GEO_rakpiringpengering_INT06",
+    "ON_BIDCAP_Lemari_lemarirakdapur_Dapur_0605",
+    "\ud83c\udf1f_ON_BIDCAP_Organizer_Broad_0603",
+    "\ud83c\udf1f_ON_Organizer_organizerpullout_Rumah_0603",
+    "\ud83c\udf1f_ON_BIDCAP_rakpiringpengering_INT10",
+    "\ud83c\udf1f_ON_BIDCAP__rakpiringpengering_0606",
+    "\ud83c\udf1f_ON_BIDCAP_rakpiringpengering_06065",
+    "ON_GEO_rakpiringpengering_INT09",
+    "\ud83c\udf1f_ON_BIDCAP_organizer_jewelry",
+    "\ud83c\udf1f_ON_GEO_rakpiringpengering_Parenting",
+    "ON_BIDCAP_Organizer_Travel_0603",
+    "ON_BIDCAP_Organizer_Rumah_0603",
+    "ON_BIDCAP_rakpiringpengering_Shopping_0603",
+    "ON_BIDCAP_rakpiringpengering_Winner_0603",
+    "TC_Kakriput_rakpiringpengering_Online banking",
+    "TC_Kakriput_rakpiringpengering_Celana (pakaian)",
+    "TC_Kakriput_rakpiringpengering_",
+    "ON_TC_Kakriput_rakpiringpengering_Singapura",
+    "ON_BIDCAP__Kakriput_rakpiringpengering_Jewelry",
+    "ON_BIDCAP_organizer_pelancong",
+    "\ud83c\udf1f_ON__Kakriput_rakpiringpengering_INT07",
+    "ON_GEO_rakpiringpengering_Pengasuhan anak",
+    "ON_0858_organizer_interior_design",
+    "\ud83c\udf1f_ON_GEO_rakpiringpengering_Dapur",
+    "ON_V2_CBO_organizerpullout_Online marketplace",
+    "ON_BIDCAP_Organizer_Shopping_0603",
+    "ON_V2_CBO_organizerpullout_Mobil",
+    "ON_TC_Kakriput_rakpiringpengering_Instagram",
+    "ON_TC_Kakriput_rakpiringpengering_Hotel",
+    "TC_Kakriput_rakpiringpengering_WhatsApp",
+    "ON_GEO_rakpiringpengering_Pelancong",
+    "ON_BIDCAP_Organizer_Dapur_0603_CLONE1",
+    "ON_V2_CBO_organizerpullout_Furniture",
+    "\ud83c\udf1f_ON_GEO_rakpiringpengering_Gelang",
+    "\ud83c\udf1f_ON_V2_Organizer_Belanja",
+    "ON_BIDCAP_rakpiringpengering_0606",
+    "ON_BIDCAP_rakpiringpengering_0606",
+    "ON_BIDCAP_rakpiringpengering_0606",
+    "ON_BIDCAP_organizer_tableware",
+    "ON_BIDCAP_rakpiringpengering_06062",
+    "ON_BIDCAP_rakpiringpengering_0606",
+    "ON_0858_fashionWanitaPremium_shopping_Test"
+  ]
+}
