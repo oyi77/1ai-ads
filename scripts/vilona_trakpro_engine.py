@@ -990,7 +990,8 @@ def create_lc_clone(original_campaign, account_id, account_config, variant_num=1
             name=camp_name,
             objective="OUTCOME_TRAFFIC",
             status="ACTIVE",
-            special_ad_categories="[]")
+            special_ad_categories="[]",
+            is_adset_budget_sharing_enabled="false")
         
         if "id" not in camp_result:
             log(f"LC clone campaign creation failed: {camp_result}", "WARN")
