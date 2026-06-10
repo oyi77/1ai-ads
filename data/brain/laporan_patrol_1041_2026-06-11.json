@@ -1,0 +1,2637 @@
+{
+  "act_id": "380721031313330",
+  "generated_at": "2026-06-11T03:09:23.295617",
+  "summary": {
+    "total_campaigns": 100,
+    "active": 19,
+    "paused": 81,
+    "off_": 0
+  },
+  "cpc_sweep": {
+    "paused_candidates": 0,
+    "safe_campaigns": 100,
+    "paused_list": [],
+    "safe_list": [
+      {
+        "campaign_id": "120247928844160121",
+        "name": "ON_LC_rakdapur3_24-57_0611",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 0
+      },
+      {
+        "campaign_id": "120247928549760121",
+        "name": "ON_LC_rakdapur3_24-54_0611",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 0
+      },
+      {
+        "campaign_id": "120247850708470121",
+        "name": "OFF_ON_BIDCAP_rakdapur_Movies_0306_02 - Salin",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 1
+      },
+      {
+        "campaign_id": "120247771207170121",
+        "name": "ON_BIDCAP_rakdapur_Movies_0306_02",
+        "cpc": 82.285714,
+        "spend": 576.0,
+        "age_days": 2
+      },
+      {
+        "campaign_id": "120247752336020121",
+        "name": "OFF_atayasetelankaosanak_Belanja_0609",
+        "cpc": 149.0,
+        "spend": 447.0,
+        "age_days": 2
+      },
+      {
+        "campaign_id": "120247748061730121",
+        "name": "DEAD_TC_atayasetelankaosanak_Pakaian_1006",
+        "cpc": 0.0,
+        "spend": 38.0,
+        "age_days": 2
+      },
+      {
+        "campaign_id": "120247748060470121",
+        "name": "DEAD_TC_rakdapur3_BelanjaOnline_1006",
+        "cpc": 0.0,
+        "spend": 10.0,
+        "age_days": 2
+      },
+      {
+        "campaign_id": "120247747438830121",
+        "name": "DEAD_Scale_BIDCAP_atayasetelankaosanak_Fashion_1006",
+        "cpc": 0.0,
+        "spend": 37.0,
+        "age_days": 2
+      },
+      {
+        "campaign_id": "120247747437450121",
+        "name": "DEAD_Scale_BIDCAP_rakdapur3_Dapur_1006",
+        "cpc": 0.0,
+        "spend": 15.0,
+        "age_days": 2
+      },
+      {
+        "campaign_id": "120247747423400121",
+        "name": "ON_BIDCAP_rakdapur_Movies_0306_02",
+        "cpc": 122.666667,
+        "spend": 368.0,
+        "age_days": 2
+      },
+      {
+        "campaign_id": "120247726098550121",
+        "name": "ON_BIDCAP_rakdapur_Movies_0306_02 - Salin",
+        "cpc": 91.142857,
+        "spend": 638.0,
+        "age_days": 3
+      },
+      {
+        "campaign_id": "120247711008310121",
+        "name": "OFF_ON_BCrakdapur_Movies_0306_02 - Salin",
+        "cpc": 0.0,
+        "spend": 55.0,
+        "age_days": 3
+      },
+      {
+        "campaign_id": "120247694015340121",
+        "name": "OFF_ON_BCrakdapur_Movies_0306_02 - Salin",
+        "cpc": 73.0,
+        "spend": 73.0,
+        "age_days": 3
+      },
+      {
+        "campaign_id": "120247674984320121",
+        "name": "BIDCAP_atayasetelankaosanak_Kursi _07 OFF",
+        "cpc": 72.010909,
+        "spend": 19803.0,
+        "age_days": 3
+      },
+      {
+        "campaign_id": "120247674984310121",
+        "name": "BIDCAP_atayasetelankaosanak_Kursi _07 OFF",
+        "cpc": 328.0,
+        "spend": 656.0,
+        "age_days": 3
+      },
+      {
+        "campaign_id": "120247674984300121",
+        "name": "OFF_BIDCAP_atayasetelankaosanak_Pakaian _07 OFF",
+        "cpc": 91.2,
+        "spend": 912.0,
+        "age_days": 3
+      },
+      {
+        "campaign_id": "120247674984290121",
+        "name": "OFF_ON_BIDCAP_atayasetelankaosanak_Real estate (industry)_07 SCALE",
+        "cpc": 0.0,
+        "spend": 184.0,
+        "age_days": 3
+      },
+      {
+        "campaign_id": "120247674984280121",
+        "name": "ON_BIDCAP_atayasetelankaosanak_0806_07 SCALE_Kamar tidur (Arsitektur)",
+        "cpc": 75.076087,
+        "spend": 6907.0,
+        "age_days": 3
+      },
+      {
+        "campaign_id": "120247674984270121",
+        "name": "ON_BIDCAP_atayasetelankaosanak_Apartemen_07 SCALE",
+        "cpc": 86.628713,
+        "spend": 17499.0,
+        "age_days": 3
+      },
+      {
+        "campaign_id": "120247674984250121",
+        "name": "ON_BIDCAP_atayasetelankaosanak_Aksesori fashion_07 SCALE",
+        "cpc": 90.217391,
+        "spend": 4150.0,
+        "age_days": 3
+      },
+      {
+        "campaign_id": "120247674984200121",
+        "name": "OFF_BIDCAP_atayasetelankaosanak_Interior design (design)_07 OFF",
+        "cpc": 117.4,
+        "spend": 587.0,
+        "age_days": 3
+      },
+      {
+        "campaign_id": "120247674984050121",
+        "name": "BIDCAP_atayasetelankaosanak_Ruang tamu (arsitektur)_07 OFF",
+        "cpc": 94.846154,
+        "spend": 1233.0,
+        "age_days": 3
+      },
+      {
+        "campaign_id": "120247674984030121",
+        "name": "ON_BIDCAP_atayasetelankaosanak_0306_07 SCALE",
+        "cpc": 86.469388,
+        "spend": 4237.0,
+        "age_days": 3
+      },
+      {
+        "campaign_id": "120247672160290121",
+        "name": "OFF_ON_TC_radapur3_Pakiann_0306",
+        "cpc": 80.3,
+        "spend": 4015.0,
+        "age_days": 3
+      },
+      {
+        "campaign_id": "120247657985440121",
+        "name": "Scale_BIDCAP_Rakdapur3_Fashion_0607_v3",
+        "cpc": 58.88,
+        "spend": 1472.0,
+        "age_days": 4
+      },
+      {
+        "campaign_id": "120247657983060121",
+        "name": "OFF_BIDCAP_Rakdapur3_Dapur_0607_v3",
+        "cpc": 103.56,
+        "spend": 2589.0,
+        "age_days": 4
+      },
+      {
+        "campaign_id": "120247657980490121",
+        "name": "BIDCAP_Rakdapur3_Belanja_0607_v3",
+        "cpc": 96.865854,
+        "spend": 7943.0,
+        "age_days": 4
+      },
+      {
+        "campaign_id": "120247657905960121",
+        "name": "OFF_Scale_BIDCAP_Rakdapur3_Interaksi_0607_v2",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 20615
+      },
+      {
+        "campaign_id": "120247657903080121",
+        "name": "DEAD_Scale_BIDCAP_Atayasetelankaosanak_Resep_0607_v2",
+        "cpc": 0.0,
+        "spend": 5.0,
+        "age_days": 4
+      },
+      {
+        "campaign_id": "120247657902560121",
+        "name": "OFF_Scale_BIDCAP_Rakdapur3_Travel_0607_v2",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 20615
+      },
+      {
+        "campaign_id": "120247657902310121",
+        "name": "OFF_Scale_BIDCAP_Rakdapur3_Diskon_0607_v2",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 20615
+      },
+      {
+        "campaign_id": "120247657890340121",
+        "name": "OFF_Scale_BIDCAP_Rakdapur3_Fashion_0607_v2",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 4
+      },
+      {
+        "campaign_id": "120247657885840121",
+        "name": "OFF_Scale_BIDCAP_Atayasetelankaosanak_Dapur_0607_v2",
+        "cpc": 0.0,
+        "spend": 95.0,
+        "age_days": 4
+      },
+      {
+        "campaign_id": "120247657881260121",
+        "name": "OFF_Scale_BIDCAP_Rakdapur3_Belanja_0607_v2",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 4
+      },
+      {
+        "campaign_id": "120247657717610121",
+        "name": "OFF_Scale_BIDCAP_Rakdapur3_Interaksi_0607",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 20615
+      },
+      {
+        "campaign_id": "120247657715830121",
+        "name": "OFF_Scale_BIDCAP_Rakdapur3_Travel_0607",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 20615
+      },
+      {
+        "campaign_id": "120247657713480121",
+        "name": "OFF_Scale_BIDCAP_Rakdapur3_Diskon_0607",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 20615
+      },
+      {
+        "campaign_id": "120247657710950121",
+        "name": "OFF_Scale_BIDCAP_Rakdapur3_Fashion_0607",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 4
+      },
+      {
+        "campaign_id": "120247657709550121",
+        "name": "OFF_Scale_BIDCAP_Rakdapur3_Belanja_0607",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 4
+      },
+      {
+        "campaign_id": "120247657678710121",
+        "name": "OFF_Scale_BIDCAP_Rakdapur3_Belanja_0706",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 20615
+      },
+      {
+        "campaign_id": "120247657249240121",
+        "name": "OFF_Scale_BIDCAP_rakdapur_Resep_0607",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 20615
+      },
+      {
+        "campaign_id": "120247657245680121",
+        "name": "OFF_Scale_BIDCAP_rakdapur_Interior_0607",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 20615
+      },
+      {
+        "campaign_id": "120247657240940121",
+        "name": "OFF_Scale_BIDCAP_rakdapur_Fashion_0607",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 20615
+      },
+      {
+        "campaign_id": "120247626770240121",
+        "name": "OFF_ON_TC_radapur3_Fashion_0306 - Salin",
+        "cpc": 0.0,
+        "spend": 143.0,
+        "age_days": 4
+      },
+      {
+        "campaign_id": "120247589817450121",
+        "name": "OFF_ON_TC_radapur3_Recipes (food & drink)_0606",
+        "cpc": 65.555556,
+        "spend": 590.0,
+        "age_days": 5
+      },
+      {
+        "campaign_id": "120247589817440121",
+        "name": "ON_TC_radapur3_Dapur (rumah & taman)_0606",
+        "cpc": 79.884615,
+        "spend": 6231.0,
+        "age_days": 5
+      },
+      {
+        "campaign_id": "120247589817430121",
+        "name": "OFF_ON_TC_radapur3_Belanja (ritel)_0606",
+        "cpc": 0.0,
+        "spend": 179.0,
+        "age_days": 5
+      },
+      {
+        "campaign_id": "120247589817420121",
+        "name": "ON_TC_radapur3_Pembelanja yang Berinteraksi_0606",
+        "cpc": 0.0,
+        "spend": 49.0,
+        "age_days": 5
+      },
+      {
+        "campaign_id": "120247589817410121",
+        "name": "ON_TC_radapur3_Aksesori fashion (aksesori)_0606",
+        "cpc": 87.75,
+        "spend": 3159.0,
+        "age_days": 5
+      },
+      {
+        "campaign_id": "120247589817400121",
+        "name": "OFF_ON_TC_radapur3_pernikahan_0606",
+        "cpc": 0.0,
+        "spend": 149.0,
+        "age_days": 5
+      },
+      {
+        "campaign_id": "120247589817330121",
+        "name": "DEAD_ON_TC_radapur3_Baking (cooking)_0606",
+        "cpc": 0.0,
+        "spend": 81.0,
+        "age_days": 5
+      },
+      {
+        "campaign_id": "120247589817190121",
+        "name": "ON_TC_radapur3_Kaus (pakaian)_0606",
+        "cpc": 65.71875,
+        "spend": 2103.0,
+        "age_days": 5
+      },
+      {
+        "campaign_id": "120247589817180121",
+        "name": "ON_TC_radapur3_Pakaian (pakaian)_0606",
+        "cpc": 0.0,
+        "spend": 94.0,
+        "age_days": 5
+      },
+      {
+        "campaign_id": "120247589817170121",
+        "name": "DEAD_ON_TC_radapur3_Baju Atasan_0606",
+        "cpc": 0.0,
+        "spend": 54.0,
+        "age_days": 5
+      },
+      {
+        "campaign_id": "120247589718080121",
+        "name": "ON_BIDCAP_atayasetelankaosanak_Anak_0606",
+        "cpc": 81.64,
+        "spend": 6123.0,
+        "age_days": 5
+      },
+      {
+        "campaign_id": "120247584050060121",
+        "name": "OFF_ON_TC_general_Fashion_0306 - Salin",
+        "cpc": 0.0,
+        "spend": 247.0,
+        "age_days": 5
+      },
+      {
+        "campaign_id": "120247543499850121",
+        "name": "TC_rakdapur_ElektrOFFik_0506",
+        "cpc": 113.933333,
+        "spend": 1709.0,
+        "age_days": 6
+      },
+      {
+        "campaign_id": "120247537130080121",
+        "name": "OFF_rakdapur_0306",
+        "cpc": 118.675676,
+        "spend": 13173.0,
+        "age_days": 6
+      },
+      {
+        "campaign_id": "120247518679800121",
+        "name": "OFF_ON_TC_rakdapur_0306_02",
+        "cpc": 0.0,
+        "spend": 214.0,
+        "age_days": 6
+      },
+      {
+        "campaign_id": "120247484807300121",
+        "name": "OFF_ON_TC_general_Elektronik_0506",
+        "cpc": 0.0,
+        "spend": 165.0,
+        "age_days": 6
+      },
+      {
+        "campaign_id": "120247331116360121",
+        "name": "OFF_ON_BIDCAP_general_Fashion_0306",
+        "cpc": 64.571429,
+        "spend": 904.0,
+        "age_days": 8
+      },
+      {
+        "campaign_id": "120247331108190121",
+        "name": "OFF_rakdapur_Movies_0306",
+        "cpc": 125.2,
+        "spend": 1878.0,
+        "age_days": 8
+      },
+      {
+        "campaign_id": "120247331036930121",
+        "name": "OFF_rakdapur_Movies_0306_02",
+        "cpc": 156.0,
+        "spend": 468.0,
+        "age_days": 8
+      },
+      {
+        "campaign_id": "120247330930460121",
+        "name": "OFF_rakdapur_Movies_0306",
+        "cpc": 135.4,
+        "spend": 677.0,
+        "age_days": 8
+      },
+      {
+        "campaign_id": "120247272335490121",
+        "name": "rakdapur_Movies_0306_03",
+        "cpc": 104.571429,
+        "spend": 732.0,
+        "age_days": 9
+      },
+      {
+        "campaign_id": "120247272267060121",
+        "name": "Rakdapur_FashiOFF_0306_02",
+        "cpc": 180.5,
+        "spend": 361.0,
+        "age_days": 9
+      },
+      {
+        "campaign_id": "120247272257570121",
+        "name": "ON_BC_rakdapur_0306",
+        "cpc": 108.06338,
+        "spend": 15345.0,
+        "age_days": 9
+      },
+      {
+        "campaign_id": "120247272253380121",
+        "name": "OFF_general_Movies_0306",
+        "cpc": 220.428571,
+        "spend": 1543.0,
+        "age_days": 9
+      },
+      {
+        "campaign_id": "120247272253210121",
+        "name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_02",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 9
+      },
+      {
+        "campaign_id": "120247272253160121",
+        "name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_03",
+        "cpc": 89.033019,
+        "spend": 18875.0,
+        "age_days": 9
+      },
+      {
+        "campaign_id": "120247272253140121",
+        "name": "ON_BIDCAP_atayasetelankaosanak_Anak_0306_04",
+        "cpc": 75.042647,
+        "spend": 443427.0,
+        "age_days": 9
+      },
+      {
+        "campaign_id": "120247272253130121",
+        "name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_05",
+        "cpc": 262.0,
+        "spend": 786.0,
+        "age_days": 9
+      },
+      {
+        "campaign_id": "120247272253120121",
+        "name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_06",
+        "cpc": 82.509146,
+        "spend": 54126.0,
+        "age_days": 9
+      },
+      {
+        "campaign_id": "120247272253110121",
+        "name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_07",
+        "cpc": 78.364296,
+        "spend": 107986.0,
+        "age_days": 9
+      },
+      {
+        "campaign_id": "120247272253100121",
+        "name": "ON_BIDCAP_atayasetelankaosanak_Anak_0306_08",
+        "cpc": 71.615385,
+        "spend": 13034.0,
+        "age_days": 9
+      },
+      {
+        "campaign_id": "120247272252840121",
+        "name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_09",
+        "cpc": 81.829918,
+        "spend": 39933.0,
+        "age_days": 9
+      },
+      {
+        "campaign_id": "120247272252830121",
+        "name": "ON_BIDCAP_atayasetelankaosanak_Anak_0306_10",
+        "cpc": 85.086667,
+        "spend": 12763.0,
+        "age_days": 9
+      },
+      {
+        "campaign_id": "120247245871210121",
+        "name": "OFF_BIDCAP_benihsayuran_0306",
+        "cpc": 94.34375,
+        "spend": 15095.0,
+        "age_days": 9
+      },
+      {
+        "campaign_id": "120247168586320121",
+        "name": "LC_rakdapur",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 11
+      },
+      {
+        "campaign_id": "120247168586100121",
+        "name": "LC_rakdapur",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 11
+      },
+      {
+        "campaign_id": "120247168585640121",
+        "name": "LC_rakdapur_DIY",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 11
+      },
+      {
+        "campaign_id": "120247168585470121",
+        "name": "LC_rakdapur_Interior",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 11
+      },
+      {
+        "campaign_id": "120247168584710121",
+        "name": "LC_rakdapur_02",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 11
+      },
+      {
+        "campaign_id": "120247106433770121",
+        "name": "OFF_BC_test",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 20615
+      },
+      {
+        "campaign_id": "120247042406920121",
+        "name": "BC_rakdapur_Masak",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 12
+      },
+      {
+        "campaign_id": "120247042406850121",
+        "name": "ON_BCrakdapur3_0306",
+        "cpc": 104.968254,
+        "spend": 6613.0,
+        "age_days": 12
+      },
+      {
+        "campaign_id": "120247042406830121",
+        "name": "BC_rakdapur_Masak_02",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 12
+      },
+      {
+        "campaign_id": "120247042406820121",
+        "name": "OFF_BC_rakdapur_Masak_03",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 12
+      },
+      {
+        "campaign_id": "120247042406810121",
+        "name": "OFF_BC_rakdapur_Masak_04",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 12
+      },
+      {
+        "campaign_id": "120246992725090121",
+        "name": "LC_WallpaperDindingVinyl",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 13
+      },
+      {
+        "campaign_id": "120246992724970121",
+        "name": "OFF_LC_rakdapur_03",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 13
+      },
+      {
+        "campaign_id": "120246992724960121",
+        "name": "OFF_LC_rakdapur3",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 13
+      },
+      {
+        "campaign_id": "120246992724950121",
+        "name": "OFF_LC_rakdapur3",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 13
+      },
+      {
+        "campaign_id": "120246992724940121",
+        "name": "OFF_LC_rakdapur3_02",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 13
+      },
+      {
+        "campaign_id": "120246992724930121",
+        "name": "LC_rakdapur_04",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 13
+      },
+      {
+        "campaign_id": "120246992724920121",
+        "name": "OFF_LC_1-3-1",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 13
+      },
+      {
+        "campaign_id": "120246992724910121",
+        "name": "OFF_LC_dressanakperempuan",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 13
+      },
+      {
+        "campaign_id": "120246992724900121",
+        "name": "OFF_atayasetelankaosanak_Anak_0306",
+        "cpc": 175.407821,
+        "spend": 94194.0,
+        "age_days": 13
+      },
+      {
+        "campaign_id": "120246992724890121",
+        "name": "OFF_LC_movies",
+        "cpc": 0.0,
+        "spend": 0.0,
+        "age_days": 13
+      },
+      {
+        "campaign_id": "120246992724880121",
+        "name": "\ud83c\udf1f_ON_BC0306_Rakdapur_Fashion_0306",
+        "cpc": 106.04,
+        "spend": 18557.0,
+        "age_days": 13
+      }
+    ]
+  },
+  "taglinks": [
+    {
+      "name": "rakdapur",
+      "active": 13,
+      "avg_cpc": 110.69,
+      "total_spend": 73466.0,
+      "status": "OK"
+    },
+    {
+      "name": "rakdapur3",
+      "active": 3,
+      "avg_cpc": 91.07,
+      "total_spend": 18642.0,
+      "status": "OK"
+    },
+    {
+      "name": "atayasetelankaosanak",
+      "active": 3,
+      "avg_cpc": 113.67,
+      "total_spend": 848037.0,
+      "status": "OK"
+    }
+  ],
+  "scale_candidates": [],
+  "raw_insights": [
+    {
+      "campaign_id": "120247928844160121",
+      "campaign_name": "ON_LC_rakdapur3_24-57_0611",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247928549760121",
+      "campaign_name": "ON_LC_rakdapur3_24-54_0611",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247850708470121",
+      "campaign_name": "OFF_ON_BIDCAP_rakdapur_Movies_0306_02 - Salin",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247771207170121",
+      "campaign_name": "ON_BIDCAP_rakdapur_Movies_0306_02",
+      "spend": "576",
+      "cpc": "82.285714",
+      "clicks": "7",
+      "ctr": "7.777778",
+      "impressions": "90",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247752336020121",
+      "campaign_name": "OFF_atayasetelankaosanak_Belanja_0609",
+      "spend": "447",
+      "cpc": "149",
+      "clicks": "3",
+      "ctr": "3.061224",
+      "impressions": "98",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247748061730121",
+      "campaign_name": "DEAD_TC_atayasetelankaosanak_Pakaian_1006",
+      "spend": "38",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "13",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247748060470121",
+      "campaign_name": "DEAD_TC_rakdapur3_BelanjaOnline_1006",
+      "spend": "10",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "6",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247747438830121",
+      "campaign_name": "DEAD_Scale_BIDCAP_atayasetelankaosanak_Fashion_1006",
+      "spend": "37",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "6",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247747437450121",
+      "campaign_name": "DEAD_Scale_BIDCAP_rakdapur3_Dapur_1006",
+      "spend": "15",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "5",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247747423400121",
+      "campaign_name": "ON_BIDCAP_rakdapur_Movies_0306_02",
+      "spend": "368",
+      "cpc": "122.666667",
+      "clicks": "3",
+      "ctr": "4.615385",
+      "impressions": "65",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247726098550121",
+      "campaign_name": "ON_BIDCAP_rakdapur_Movies_0306_02 - Salin",
+      "spend": "638",
+      "cpc": "91.142857",
+      "clicks": "7",
+      "ctr": "5.691057",
+      "impressions": "123",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247711008310121",
+      "campaign_name": "OFF_ON_BCrakdapur_Movies_0306_02 - Salin",
+      "spend": "55",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "14",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247694015340121",
+      "campaign_name": "OFF_ON_BCrakdapur_Movies_0306_02 - Salin",
+      "spend": "73",
+      "cpc": "73",
+      "clicks": "1",
+      "ctr": "5.555556",
+      "impressions": "18",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247674984320121",
+      "campaign_name": "BIDCAP_atayasetelankaosanak_Kursi _07 OFF",
+      "spend": "19803",
+      "cpc": "72.010909",
+      "clicks": "275",
+      "ctr": "7.033248",
+      "impressions": "3910",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247674984310121",
+      "campaign_name": "BIDCAP_atayasetelankaosanak_Kursi _07 OFF",
+      "spend": "656",
+      "cpc": "328",
+      "clicks": "2",
+      "ctr": "1.550388",
+      "impressions": "129",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247674984300121",
+      "campaign_name": "OFF_BIDCAP_atayasetelankaosanak_Pakaian _07 OFF",
+      "spend": "912",
+      "cpc": "91.2",
+      "clicks": "10",
+      "ctr": "5.813953",
+      "impressions": "172",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247674984290121",
+      "campaign_name": "OFF_ON_BIDCAP_atayasetelankaosanak_Real estate (industry)_07 SCALE",
+      "spend": "184",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "39",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247674984280121",
+      "campaign_name": "ON_BIDCAP_atayasetelankaosanak_0806_07 SCALE_Kamar tidur (Arsitektur)",
+      "spend": "6907",
+      "cpc": "75.076087",
+      "clicks": "92",
+      "ctr": "8.258528",
+      "impressions": "1114",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247674984270121",
+      "campaign_name": "ON_BIDCAP_atayasetelankaosanak_Apartemen_07 SCALE",
+      "spend": "17499",
+      "cpc": "86.628713",
+      "clicks": "202",
+      "ctr": "6.740073",
+      "impressions": "2997",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247674984250121",
+      "campaign_name": "ON_BIDCAP_atayasetelankaosanak_Aksesori fashion_07 SCALE",
+      "spend": "4150",
+      "cpc": "90.217391",
+      "clicks": "46",
+      "ctr": "4.978355",
+      "impressions": "924",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247674984200121",
+      "campaign_name": "OFF_BIDCAP_atayasetelankaosanak_Interior design (design)_07 OFF",
+      "spend": "587",
+      "cpc": "117.4",
+      "clicks": "5",
+      "ctr": "4.347826",
+      "impressions": "115",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247674984050121",
+      "campaign_name": "BIDCAP_atayasetelankaosanak_Ruang tamu (arsitektur)_07 OFF",
+      "spend": "1233",
+      "cpc": "94.846154",
+      "clicks": "13",
+      "ctr": "6.018519",
+      "impressions": "216",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247674984030121",
+      "campaign_name": "ON_BIDCAP_atayasetelankaosanak_0306_07 SCALE",
+      "spend": "4237",
+      "cpc": "86.469388",
+      "clicks": "49",
+      "ctr": "7.790143",
+      "impressions": "629",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247672160290121",
+      "campaign_name": "OFF_ON_TC_radapur3_Pakiann_0306",
+      "spend": "4015",
+      "cpc": "80.3",
+      "clicks": "50",
+      "ctr": "7.911392",
+      "impressions": "632",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247657985440121",
+      "campaign_name": "Scale_BIDCAP_Rakdapur3_Fashion_0607_v3",
+      "spend": "1472",
+      "cpc": "58.88",
+      "clicks": "25",
+      "ctr": "9.920635",
+      "impressions": "252",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247657983060121",
+      "campaign_name": "OFF_BIDCAP_Rakdapur3_Dapur_0607_v3",
+      "spend": "2589",
+      "cpc": "103.56",
+      "clicks": "25",
+      "ctr": "7.122507",
+      "impressions": "351",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247657980490121",
+      "campaign_name": "BIDCAP_Rakdapur3_Belanja_0607_v3",
+      "spend": "7943",
+      "cpc": "96.865854",
+      "clicks": "82",
+      "ctr": "9.050773",
+      "impressions": "906",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247657905960121",
+      "campaign_name": "OFF_Scale_BIDCAP_Rakdapur3_Interaksi_0607_v2",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247657903080121",
+      "campaign_name": "DEAD_Scale_BIDCAP_Atayasetelankaosanak_Resep_0607_v2",
+      "spend": "5",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "2",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247657902560121",
+      "campaign_name": "OFF_Scale_BIDCAP_Rakdapur3_Travel_0607_v2",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247657902310121",
+      "campaign_name": "OFF_Scale_BIDCAP_Rakdapur3_Diskon_0607_v2",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247657890340121",
+      "campaign_name": "OFF_Scale_BIDCAP_Rakdapur3_Fashion_0607_v2",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247657885840121",
+      "campaign_name": "OFF_Scale_BIDCAP_Atayasetelankaosanak_Dapur_0607_v2",
+      "spend": "95",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "14",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247657881260121",
+      "campaign_name": "OFF_Scale_BIDCAP_Rakdapur3_Belanja_0607_v2",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247657717610121",
+      "campaign_name": "OFF_Scale_BIDCAP_Rakdapur3_Interaksi_0607",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247657715830121",
+      "campaign_name": "OFF_Scale_BIDCAP_Rakdapur3_Travel_0607",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247657713480121",
+      "campaign_name": "OFF_Scale_BIDCAP_Rakdapur3_Diskon_0607",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247657710950121",
+      "campaign_name": "OFF_Scale_BIDCAP_Rakdapur3_Fashion_0607",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247657709550121",
+      "campaign_name": "OFF_Scale_BIDCAP_Rakdapur3_Belanja_0607",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247657678710121",
+      "campaign_name": "OFF_Scale_BIDCAP_Rakdapur3_Belanja_0706",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247657249240121",
+      "campaign_name": "OFF_Scale_BIDCAP_rakdapur_Resep_0607",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247657245680121",
+      "campaign_name": "OFF_Scale_BIDCAP_rakdapur_Interior_0607",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247657240940121",
+      "campaign_name": "OFF_Scale_BIDCAP_rakdapur_Fashion_0607",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247626770240121",
+      "campaign_name": "OFF_ON_TC_radapur3_Fashion_0306 - Salin",
+      "spend": "143",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "27",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247589817450121",
+      "campaign_name": "OFF_ON_TC_radapur3_Recipes (food & drink)_0606",
+      "spend": "590",
+      "cpc": "65.555556",
+      "clicks": "9",
+      "ctr": "9.473684",
+      "impressions": "95",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247589817440121",
+      "campaign_name": "ON_TC_radapur3_Dapur (rumah & taman)_0606",
+      "spend": "6231",
+      "cpc": "79.884615",
+      "clicks": "78",
+      "ctr": "8.853575",
+      "impressions": "881",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247589817430121",
+      "campaign_name": "OFF_ON_TC_radapur3_Belanja (ritel)_0606",
+      "spend": "179",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "40",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247589817420121",
+      "campaign_name": "ON_TC_radapur3_Pembelanja yang Berinteraksi_0606",
+      "spend": "49",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "14",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247589817410121",
+      "campaign_name": "ON_TC_radapur3_Aksesori fashion (aksesori)_0606",
+      "spend": "3159",
+      "cpc": "87.75",
+      "clicks": "36",
+      "ctr": "8.200456",
+      "impressions": "439",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247589817400121",
+      "campaign_name": "OFF_ON_TC_radapur3_pernikahan_0606",
+      "spend": "149",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "15",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247589817330121",
+      "campaign_name": "DEAD_ON_TC_radapur3_Baking (cooking)_0606",
+      "spend": "81",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "16",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247589817190121",
+      "campaign_name": "ON_TC_radapur3_Kaus (pakaian)_0606",
+      "spend": "2103",
+      "cpc": "65.71875",
+      "clicks": "32",
+      "ctr": "9.065156",
+      "impressions": "353",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247589817180121",
+      "campaign_name": "ON_TC_radapur3_Pakaian (pakaian)_0606",
+      "spend": "94",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "14",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247589817170121",
+      "campaign_name": "DEAD_ON_TC_radapur3_Baju Atasan_0606",
+      "spend": "54",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "12",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247589718080121",
+      "campaign_name": "ON_BIDCAP_atayasetelankaosanak_Anak_0606",
+      "spend": "6123",
+      "cpc": "81.64",
+      "clicks": "75",
+      "ctr": "9.55414",
+      "impressions": "785",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247584050060121",
+      "campaign_name": "OFF_ON_TC_general_Fashion_0306 - Salin",
+      "spend": "247",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "31",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247543499850121",
+      "campaign_name": "TC_rakdapur_ElektrOFFik_0506",
+      "spend": "1709",
+      "cpc": "113.933333",
+      "clicks": "15",
+      "ctr": "6.410256",
+      "impressions": "234",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247537130080121",
+      "campaign_name": "OFF_rakdapur_0306",
+      "spend": "13173",
+      "cpc": "118.675676",
+      "clicks": "111",
+      "ctr": "6.092206",
+      "impressions": "1822",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247518679800121",
+      "campaign_name": "OFF_ON_TC_rakdapur_0306_02",
+      "spend": "214",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "29",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247484807300121",
+      "campaign_name": "OFF_ON_TC_general_Elektronik_0506",
+      "spend": "165",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "31",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247331116360121",
+      "campaign_name": "OFF_ON_BIDCAP_general_Fashion_0306",
+      "spend": "904",
+      "cpc": "64.571429",
+      "clicks": "14",
+      "ctr": "11.290323",
+      "impressions": "124",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247331108190121",
+      "campaign_name": "OFF_rakdapur_Movies_0306",
+      "spend": "1878",
+      "cpc": "125.2",
+      "clicks": "15",
+      "ctr": "4.559271",
+      "impressions": "329",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247331036930121",
+      "campaign_name": "OFF_rakdapur_Movies_0306_02",
+      "spend": "468",
+      "cpc": "156",
+      "clicks": "3",
+      "ctr": "4.545455",
+      "impressions": "66",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247330930460121",
+      "campaign_name": "OFF_rakdapur_Movies_0306",
+      "spend": "677",
+      "cpc": "135.4",
+      "clicks": "5",
+      "ctr": "4.273504",
+      "impressions": "117",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247272335490121",
+      "campaign_name": "rakdapur_Movies_0306_03",
+      "spend": "732",
+      "cpc": "104.571429",
+      "clicks": "7",
+      "ctr": "6.25",
+      "impressions": "112",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247272267060121",
+      "campaign_name": "Rakdapur_FashiOFF_0306_02",
+      "spend": "361",
+      "cpc": "180.5",
+      "clicks": "2",
+      "ctr": "3.030303",
+      "impressions": "66",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247272257570121",
+      "campaign_name": "ON_BC_rakdapur_0306",
+      "spend": "15345",
+      "cpc": "108.06338",
+      "clicks": "142",
+      "ctr": "5.062389",
+      "impressions": "2805",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247272253380121",
+      "campaign_name": "OFF_general_Movies_0306",
+      "spend": "1543",
+      "cpc": "220.428571",
+      "clicks": "7",
+      "ctr": "2.39726",
+      "impressions": "292",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247272253210121",
+      "campaign_name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_02",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247272253160121",
+      "campaign_name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_03",
+      "spend": "18875",
+      "cpc": "89.033019",
+      "clicks": "212",
+      "ctr": "6.242638",
+      "impressions": "3396",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247272253140121",
+      "campaign_name": "ON_BIDCAP_atayasetelankaosanak_Anak_0306_04",
+      "spend": "443427",
+      "cpc": "75.042647",
+      "clicks": "5909",
+      "ctr": "6.291324",
+      "impressions": "93923",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247272253130121",
+      "campaign_name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_05",
+      "spend": "786",
+      "cpc": "262",
+      "clicks": "3",
+      "ctr": "1.734104",
+      "impressions": "173",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247272253120121",
+      "campaign_name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_06",
+      "spend": "54126",
+      "cpc": "82.509146",
+      "clicks": "656",
+      "ctr": "7.227854",
+      "impressions": "9076",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247272253110121",
+      "campaign_name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_07",
+      "spend": "107986",
+      "cpc": "78.364296",
+      "clicks": "1378",
+      "ctr": "8.486789",
+      "impressions": "16237",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247272253100121",
+      "campaign_name": "ON_BIDCAP_atayasetelankaosanak_Anak_0306_08",
+      "spend": "13034",
+      "cpc": "71.615385",
+      "clicks": "182",
+      "ctr": "7.958024",
+      "impressions": "2287",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247272252840121",
+      "campaign_name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_09",
+      "spend": "39933",
+      "cpc": "81.829918",
+      "clicks": "488",
+      "ctr": "7.017544",
+      "impressions": "6954",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247272252830121",
+      "campaign_name": "ON_BIDCAP_atayasetelankaosanak_Anak_0306_10",
+      "spend": "12763",
+      "cpc": "85.086667",
+      "clicks": "150",
+      "ctr": "7.723996",
+      "impressions": "1942",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247245871210121",
+      "campaign_name": "OFF_BIDCAP_benihsayuran_0306",
+      "spend": "15095",
+      "cpc": "94.34375",
+      "clicks": "160",
+      "ctr": "7.262823",
+      "impressions": "2203",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247168586320121",
+      "campaign_name": "LC_rakdapur",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247168586100121",
+      "campaign_name": "LC_rakdapur",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247168585640121",
+      "campaign_name": "LC_rakdapur_DIY",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247168585470121",
+      "campaign_name": "LC_rakdapur_Interior",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247168584710121",
+      "campaign_name": "LC_rakdapur_02",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247106433770121",
+      "campaign_name": "OFF_BC_test",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247042406920121",
+      "campaign_name": "BC_rakdapur_Masak",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247042406850121",
+      "campaign_name": "ON_BCrakdapur3_0306",
+      "spend": "6613",
+      "cpc": "104.968254",
+      "clicks": "63",
+      "ctr": "5.635063",
+      "impressions": "1118",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120247042406830121",
+      "campaign_name": "BC_rakdapur_Masak_02",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247042406820121",
+      "campaign_name": "OFF_BC_rakdapur_Masak_03",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120247042406810121",
+      "campaign_name": "OFF_BC_rakdapur_Masak_04",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120246992725090121",
+      "campaign_name": "LC_WallpaperDindingVinyl",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120246992724970121",
+      "campaign_name": "OFF_LC_rakdapur_03",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120246992724960121",
+      "campaign_name": "OFF_LC_rakdapur3",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120246992724950121",
+      "campaign_name": "OFF_LC_rakdapur3",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120246992724940121",
+      "campaign_name": "OFF_LC_rakdapur3_02",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120246992724930121",
+      "campaign_name": "LC_rakdapur_04",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120246992724920121",
+      "campaign_name": "OFF_LC_1-3-1",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120246992724910121",
+      "campaign_name": "OFF_LC_dressanakperempuan",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120246992724900121",
+      "campaign_name": "OFF_atayasetelankaosanak_Anak_0306",
+      "spend": "94194",
+      "cpc": "175.407821",
+      "clicks": "537",
+      "ctr": "4.792931",
+      "impressions": "11204",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    },
+    {
+      "campaign_id": "120246992724890121",
+      "campaign_name": "OFF_LC_movies",
+      "spend": "0",
+      "cpc": "0",
+      "clicks": "0",
+      "ctr": "0",
+      "impressions": "0"
+    },
+    {
+      "campaign_id": "120246992724880121",
+      "campaign_name": "\ud83c\udf1f_ON_BC0306_Rakdapur_Fashion_0306",
+      "spend": "18557",
+      "cpc": "106.04",
+      "clicks": "175",
+      "ctr": "5.382959",
+      "impressions": "3251",
+      "date_start": "2026-06-04",
+      "date_stop": "2026-06-11"
+    }
+  ],
+  "raw_campaigns": [
+    {
+      "id": "120247928844160121",
+      "name": "ON_LC_rakdapur3_24-57_0611",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "18000",
+      "start_time": "2026-06-11T01:39:05+0700",
+      "updated_time": "2026-06-11T01:43:25+0700"
+    },
+    {
+      "id": "120247928549760121",
+      "name": "ON_LC_rakdapur3_24-54_0611",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "18000",
+      "start_time": "2026-06-11T01:39:11+0700",
+      "updated_time": "2026-06-11T01:43:26+0700"
+    },
+    {
+      "id": "120247850708470121",
+      "name": "OFF_ON_BIDCAP_rakdapur_Movies_0306_02 - Salin",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "5184000",
+      "start_time": "2026-06-10T04:30:59+0700",
+      "updated_time": "2026-06-11T01:32:17+0700"
+    },
+    {
+      "id": "120247771207170121",
+      "name": "ON_BIDCAP_rakdapur_Movies_0306_02",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "5184000",
+      "start_time": "2026-06-09T12:30:15+0700",
+      "updated_time": "2026-06-11T03:00:06+0700"
+    },
+    {
+      "id": "120247752336020121",
+      "name": "OFF_atayasetelankaosanak_Belanja_0609",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "start_time": "2026-06-09T04:22:29+0700",
+      "updated_time": "2026-06-11T01:13:24+0700"
+    },
+    {
+      "id": "120247748061730121",
+      "name": "DEAD_TC_atayasetelankaosanak_Pakaian_1006",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "2000000",
+      "start_time": "2026-06-09T01:49:25+0700",
+      "updated_time": "2026-06-11T03:00:55+0700"
+    },
+    {
+      "id": "120247748060470121",
+      "name": "DEAD_TC_rakdapur3_BelanjaOnline_1006",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "start_time": "2026-06-09T01:49:17+0700",
+      "updated_time": "2026-06-11T03:00:51+0700"
+    },
+    {
+      "id": "120247747438830121",
+      "name": "DEAD_Scale_BIDCAP_atayasetelankaosanak_Fashion_1006",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1000000",
+      "start_time": "2026-06-09T01:33:53+0700",
+      "updated_time": "2026-06-11T03:00:54+0700"
+    },
+    {
+      "id": "120247747437450121",
+      "name": "DEAD_Scale_BIDCAP_rakdapur3_Dapur_1006",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1000000",
+      "start_time": "2026-06-09T01:33:45+0700",
+      "updated_time": "2026-06-11T03:00:52+0700"
+    },
+    {
+      "id": "120247747423400121",
+      "name": "ON_BIDCAP_rakdapur_Movies_0306_02",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "5184000",
+      "start_time": "2026-06-09T01:31:06+0700",
+      "updated_time": "2026-06-11T02:54:58+0700"
+    },
+    {
+      "id": "120247726098550121",
+      "name": "ON_BIDCAP_rakdapur_Movies_0306_02 - Salin",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "5184000",
+      "start_time": "2026-06-08T20:30:16+0700",
+      "updated_time": "2026-06-11T02:48:21+0700"
+    },
+    {
+      "id": "120247711008310121",
+      "name": "OFF_ON_BCrakdapur_Movies_0306_02 - Salin",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "5184000",
+      "start_time": "2026-06-08T17:30:13+0700",
+      "updated_time": "2026-06-11T01:32:23+0700"
+    },
+    {
+      "id": "120247694015340121",
+      "name": "OFF_ON_BCrakdapur_Movies_0306_02 - Salin",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "5184000",
+      "start_time": "2026-06-08T14:30:18+0700",
+      "updated_time": "2026-06-11T01:32:25+0700"
+    },
+    {
+      "id": "120247674984320121",
+      "name": "BIDCAP_atayasetelankaosanak_Kursi _07 OFF",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1800000",
+      "start_time": "2026-06-08T02:39:56+0700",
+      "updated_time": "2026-06-11T03:00:06+0700"
+    },
+    {
+      "id": "120247674984310121",
+      "name": "BIDCAP_atayasetelankaosanak_Kursi _07 OFF",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1800000",
+      "start_time": "2026-06-08T02:39:56+0700",
+      "updated_time": "2026-06-11T03:00:15+0700"
+    },
+    {
+      "id": "120247674984300121",
+      "name": "OFF_BIDCAP_atayasetelankaosanak_Pakaian _07 OFF",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1800000",
+      "start_time": "2026-06-08T02:39:56+0700",
+      "updated_time": "2026-06-11T01:13:44+0700"
+    },
+    {
+      "id": "120247674984290121",
+      "name": "OFF_ON_BIDCAP_atayasetelankaosanak_Real estate (industry)_07 SCALE",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1800000",
+      "start_time": "2026-06-08T02:39:56+0700",
+      "updated_time": "2026-06-11T03:01:10+0700"
+    },
+    {
+      "id": "120247674984280121",
+      "name": "ON_BIDCAP_atayasetelankaosanak_0806_07 SCALE_Kamar tidur (Arsitektur)",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "1800000",
+      "start_time": "2026-06-08T02:39:56+0700",
+      "updated_time": "2026-06-11T02:48:41+0700"
+    },
+    {
+      "id": "120247674984270121",
+      "name": "ON_BIDCAP_atayasetelankaosanak_Apartemen_07 SCALE",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1800000",
+      "start_time": "2026-06-08T02:39:56+0700",
+      "updated_time": "2026-06-11T01:30:05+0700"
+    },
+    {
+      "id": "120247674984250121",
+      "name": "ON_BIDCAP_atayasetelankaosanak_Aksesori fashion_07 SCALE",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1800000",
+      "start_time": "2026-06-08T02:39:56+0700",
+      "updated_time": "2026-06-11T01:30:06+0700"
+    },
+    {
+      "id": "120247674984200121",
+      "name": "OFF_BIDCAP_atayasetelankaosanak_Interior design (design)_07 OFF",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1800000",
+      "start_time": "2026-06-08T02:39:56+0700",
+      "updated_time": "2026-06-11T01:13:24+0700"
+    },
+    {
+      "id": "120247674984050121",
+      "name": "BIDCAP_atayasetelankaosanak_Ruang tamu (arsitektur)_07 OFF",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1800000",
+      "start_time": "2026-06-08T02:39:56+0700",
+      "updated_time": "2026-06-11T03:00:40+0700"
+    },
+    {
+      "id": "120247674984030121",
+      "name": "ON_BIDCAP_atayasetelankaosanak_0306_07 SCALE",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1800000",
+      "start_time": "2026-06-08T02:39:56+0700",
+      "updated_time": "2026-06-11T01:30:07+0700"
+    },
+    {
+      "id": "120247672160290121",
+      "name": "OFF_ON_TC_radapur3_Pakiann_0306",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "3369600",
+      "start_time": "2026-06-08T00:30:42+0700",
+      "updated_time": "2026-06-11T03:00:47+0700"
+    },
+    {
+      "id": "120247657985440121",
+      "name": "Scale_BIDCAP_Rakdapur3_Fashion_0607_v3",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "2000000",
+      "start_time": "2026-06-07T18:21:36+0700",
+      "updated_time": "2026-06-11T02:15:03+0700"
+    },
+    {
+      "id": "120247657983060121",
+      "name": "OFF_BIDCAP_Rakdapur3_Dapur_0607_v3",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "2000000",
+      "start_time": "2026-06-07T18:21:24+0700",
+      "updated_time": "2026-06-11T01:13:32+0700"
+    },
+    {
+      "id": "120247657980490121",
+      "name": "BIDCAP_Rakdapur3_Belanja_0607_v3",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "2000000",
+      "start_time": "2026-06-07T18:21:12+0700",
+      "updated_time": "2026-06-11T02:57:33+0700"
+    },
+    {
+      "id": "120247657905960121",
+      "name": "OFF_Scale_BIDCAP_Rakdapur3_Interaksi_0607_v2",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "start_time": "1970-01-01T06:59:59+0700",
+      "updated_time": "2026-06-07T23:20:51+0700"
+    },
+    {
+      "id": "120247657903080121",
+      "name": "DEAD_Scale_BIDCAP_Atayasetelankaosanak_Resep_0607_v2",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "start_time": "2026-06-07T18:17:01+0700",
+      "updated_time": "2026-06-11T03:00:48+0700"
+    },
+    {
+      "id": "120247657902560121",
+      "name": "OFF_Scale_BIDCAP_Rakdapur3_Travel_0607_v2",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "start_time": "1970-01-01T06:59:59+0700",
+      "updated_time": "2026-06-07T23:20:55+0700"
+    },
+    {
+      "id": "120247657902310121",
+      "name": "OFF_Scale_BIDCAP_Rakdapur3_Diskon_0607_v2",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "start_time": "1970-01-01T06:59:59+0700",
+      "updated_time": "2026-06-07T23:20:58+0700"
+    },
+    {
+      "id": "120247657890340121",
+      "name": "OFF_Scale_BIDCAP_Rakdapur3_Fashion_0607_v2",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "start_time": "2026-06-07T18:15:51+0700",
+      "updated_time": "2026-06-07T23:21:01+0700"
+    },
+    {
+      "id": "120247657885840121",
+      "name": "OFF_Scale_BIDCAP_Atayasetelankaosanak_Dapur_0607_v2",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "start_time": "2026-06-07T18:15:26+0700",
+      "updated_time": "2026-06-07T23:21:02+0700"
+    },
+    {
+      "id": "120247657881260121",
+      "name": "OFF_Scale_BIDCAP_Rakdapur3_Belanja_0607_v2",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "start_time": "2026-06-07T18:14:59+0700",
+      "updated_time": "2026-06-07T23:21:04+0700"
+    },
+    {
+      "id": "120247657717610121",
+      "name": "OFF_Scale_BIDCAP_Rakdapur3_Interaksi_0607",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "start_time": "1970-01-01T06:59:59+0700",
+      "updated_time": "2026-06-07T23:21:07+0700"
+    },
+    {
+      "id": "120247657715830121",
+      "name": "OFF_Scale_BIDCAP_Rakdapur3_Travel_0607",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "start_time": "1970-01-01T06:59:59+0700",
+      "updated_time": "2026-06-07T23:21:10+0700"
+    },
+    {
+      "id": "120247657713480121",
+      "name": "OFF_Scale_BIDCAP_Rakdapur3_Diskon_0607",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "start_time": "1970-01-01T06:59:59+0700",
+      "updated_time": "2026-06-07T23:21:16+0700"
+    },
+    {
+      "id": "120247657710950121",
+      "name": "OFF_Scale_BIDCAP_Rakdapur3_Fashion_0607",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "start_time": "2026-06-07T18:07:49+0700",
+      "updated_time": "2026-06-07T23:21:19+0700"
+    },
+    {
+      "id": "120247657709550121",
+      "name": "OFF_Scale_BIDCAP_Rakdapur3_Belanja_0607",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "start_time": "2026-06-07T18:07:30+0700",
+      "updated_time": "2026-06-07T23:21:23+0700"
+    },
+    {
+      "id": "120247657678710121",
+      "name": "OFF_Scale_BIDCAP_Rakdapur3_Belanja_0706",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "start_time": "1970-01-01T06:59:59+0700",
+      "updated_time": "2026-06-07T23:21:24+0700"
+    },
+    {
+      "id": "120247657249240121",
+      "name": "OFF_Scale_BIDCAP_rakdapur_Resep_0607",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1800000",
+      "start_time": "1970-01-01T06:59:59+0700",
+      "updated_time": "2026-06-07T23:21:28+0700"
+    },
+    {
+      "id": "120247657245680121",
+      "name": "OFF_Scale_BIDCAP_rakdapur_Interior_0607",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1800000",
+      "start_time": "1970-01-01T06:59:59+0700",
+      "updated_time": "2026-06-07T23:21:34+0700"
+    },
+    {
+      "id": "120247657240940121",
+      "name": "OFF_Scale_BIDCAP_rakdapur_Fashion_0607",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "3000000",
+      "start_time": "1970-01-01T06:59:59+0700",
+      "updated_time": "2026-06-07T23:21:38+0700"
+    },
+    {
+      "id": "120247626770240121",
+      "name": "OFF_ON_TC_radapur3_Fashion_0306 - Salin",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "3369600",
+      "start_time": "2026-06-07T04:30:05+0700",
+      "updated_time": "2026-06-11T03:01:03+0700"
+    },
+    {
+      "id": "120247589817450121",
+      "name": "OFF_ON_TC_radapur3_Recipes (food & drink)_0606",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "3369600",
+      "start_time": "2026-06-06T16:38:32+0700",
+      "updated_time": "2026-06-11T03:00:44+0700"
+    },
+    {
+      "id": "120247589817440121",
+      "name": "ON_TC_radapur3_Dapur (rumah & taman)_0606",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "3369600",
+      "start_time": "2026-06-06T16:38:32+0700",
+      "updated_time": "2026-06-11T00:45:04+0700"
+    },
+    {
+      "id": "120247589817430121",
+      "name": "OFF_ON_TC_radapur3_Belanja (ritel)_0606",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "3369600",
+      "start_time": "2026-06-06T16:38:32+0700",
+      "updated_time": "2026-06-11T03:01:12+0700"
+    },
+    {
+      "id": "120247589817420121",
+      "name": "ON_TC_radapur3_Pembelanja yang Berinteraksi_0606",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "3369600",
+      "start_time": "2026-06-06T16:38:32+0700",
+      "updated_time": "2026-06-09T11:45:08+0700"
+    },
+    {
+      "id": "120247589817410121",
+      "name": "ON_TC_radapur3_Aksesori fashion (aksesori)_0606",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "3369600",
+      "start_time": "2026-06-06T16:38:32+0700",
+      "updated_time": "2026-06-11T03:06:53+0700"
+    },
+    {
+      "id": "120247589817400121",
+      "name": "OFF_ON_TC_radapur3_pernikahan_0606",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "3369600",
+      "start_time": "2026-06-06T16:38:32+0700",
+      "updated_time": "2026-06-11T03:01:05+0700"
+    },
+    {
+      "id": "120247589817330121",
+      "name": "DEAD_ON_TC_radapur3_Baking (cooking)_0606",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "3369600",
+      "start_time": "2026-06-06T16:38:32+0700",
+      "updated_time": "2026-06-11T03:01:00+0700"
+    },
+    {
+      "id": "120247589817190121",
+      "name": "ON_TC_radapur3_Kaus (pakaian)_0606",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "3369600",
+      "start_time": "2026-06-06T16:38:32+0700",
+      "updated_time": "2026-06-11T03:06:56+0700"
+    },
+    {
+      "id": "120247589817180121",
+      "name": "ON_TC_radapur3_Pakaian (pakaian)_0606",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "3369600",
+      "start_time": "2026-06-06T16:38:32+0700",
+      "updated_time": "2026-06-09T12:15:04+0700"
+    },
+    {
+      "id": "120247589817170121",
+      "name": "DEAD_ON_TC_radapur3_Baju Atasan_0606",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "3369600",
+      "start_time": "2026-06-06T16:38:32+0700",
+      "updated_time": "2026-06-11T03:00:59+0700"
+    },
+    {
+      "id": "120247589718080121",
+      "name": "ON_BIDCAP_atayasetelankaosanak_Anak_0606",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1800000",
+      "start_time": "2026-06-06T16:20:28+0700",
+      "updated_time": "2026-06-11T01:30:15+0700"
+    },
+    {
+      "id": "120247584050060121",
+      "name": "OFF_ON_TC_general_Fashion_0306 - Salin",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "3369600",
+      "start_time": "2026-06-06T14:30:12+0700",
+      "updated_time": "2026-06-11T03:01:14+0700"
+    },
+    {
+      "id": "120247543499850121",
+      "name": "TC_rakdapur_ElektrOFFik_0506",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "2000000",
+      "start_time": "2026-06-05T18:30:12+0700",
+      "updated_time": "2026-06-11T02:57:11+0700"
+    },
+    {
+      "id": "120247537130080121",
+      "name": "OFF_rakdapur_0306",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "2000000",
+      "start_time": "2026-06-05T17:30:13+0700",
+      "updated_time": "2026-06-06T12:39:34+0700"
+    },
+    {
+      "id": "120247518679800121",
+      "name": "OFF_ON_TC_rakdapur_0306_02",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "2000000",
+      "start_time": "2026-06-05T15:30:33+0700",
+      "updated_time": "2026-06-11T01:32:27+0700"
+    },
+    {
+      "id": "120247484807300121",
+      "name": "OFF_ON_TC_general_Elektronik_0506",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "5000000",
+      "start_time": "2026-06-05T01:30:05+0700",
+      "updated_time": "2026-06-11T03:01:06+0700"
+    },
+    {
+      "id": "120247331116360121",
+      "name": "OFF_ON_BIDCAP_general_Fashion_0306",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "5000000",
+      "start_time": "2026-06-03T00:22:02+0700",
+      "updated_time": "2026-06-11T03:00:45+0700"
+    },
+    {
+      "id": "120247331108190121",
+      "name": "OFF_rakdapur_Movies_0306",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "5000000",
+      "start_time": "2026-06-03T00:21:50+0700",
+      "updated_time": "2026-06-06T12:39:34+0700"
+    },
+    {
+      "id": "120247331036930121",
+      "name": "OFF_rakdapur_Movies_0306_02",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "3000000",
+      "start_time": "2026-06-03T00:20:21+0700",
+      "updated_time": "2026-06-06T12:39:34+0700"
+    },
+    {
+      "id": "120247330930460121",
+      "name": "OFF_rakdapur_Movies_0306",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "5184000",
+      "start_time": "2026-06-03T00:19:17+0700",
+      "updated_time": "2026-06-06T12:39:49+0700"
+    },
+    {
+      "id": "120247272335490121",
+      "name": "rakdapur_Movies_0306_03",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "4320000",
+      "start_time": "2026-06-02T12:26:50+0700",
+      "updated_time": "2026-06-11T02:57:06+0700"
+    },
+    {
+      "id": "120247272267060121",
+      "name": "Rakdapur_FashiOFF_0306_02",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "3120000",
+      "start_time": "2026-06-02T12:24:49+0700",
+      "updated_time": "2026-06-11T02:57:59+0700"
+    },
+    {
+      "id": "120247272257570121",
+      "name": "ON_BC_rakdapur_0306",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "3000000",
+      "start_time": "2026-06-02T12:23:59+0700",
+      "updated_time": "2026-06-11T03:00:14+0700"
+    },
+    {
+      "id": "120247272253380121",
+      "name": "OFF_general_Movies_0306",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "2400000",
+      "start_time": "2026-06-02T12:23:49+0700",
+      "updated_time": "2026-06-06T12:39:34+0700"
+    },
+    {
+      "id": "120247272253210121",
+      "name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_02",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "500000",
+      "start_time": "2026-06-02T12:33:30+0700",
+      "updated_time": "2026-06-11T03:00:00+0700"
+    },
+    {
+      "id": "120247272253160121",
+      "name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_03",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "500000",
+      "start_time": "2026-06-02T12:33:31+0700",
+      "updated_time": "2026-06-11T03:00:10+0700"
+    },
+    {
+      "id": "120247272253140121",
+      "name": "ON_BIDCAP_atayasetelankaosanak_Anak_0306_04",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "2000000",
+      "start_time": "2026-06-02T12:33:30+0700",
+      "updated_time": "2026-06-11T01:30:09+0700"
+    },
+    {
+      "id": "120247272253130121",
+      "name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_05",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "500000",
+      "start_time": "2026-06-02T12:33:30+0700",
+      "updated_time": "2026-06-11T02:59:59+0700"
+    },
+    {
+      "id": "120247272253120121",
+      "name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_06",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "500000",
+      "start_time": "2026-06-02T12:33:30+0700",
+      "updated_time": "2026-06-11T03:00:09+0700"
+    },
+    {
+      "id": "120247272253110121",
+      "name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_07",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "500000",
+      "start_time": "2026-06-02T12:33:30+0700",
+      "updated_time": "2026-06-11T03:00:06+0700"
+    },
+    {
+      "id": "120247272253100121",
+      "name": "ON_BIDCAP_atayasetelankaosanak_Anak_0306_08",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1800000",
+      "start_time": "2026-06-02T12:33:30+0700",
+      "updated_time": "2026-06-11T01:30:11+0700"
+    },
+    {
+      "id": "120247272252840121",
+      "name": "\ud83c\udf1f_ON_BIDCAP_atayasetelankaosanak_Anak_0306_09",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1800000",
+      "start_time": "2026-06-02T12:33:30+0700",
+      "updated_time": "2026-06-11T03:00:05+0700"
+    },
+    {
+      "id": "120247272252830121",
+      "name": "ON_BIDCAP_atayasetelankaosanak_Anak_0306_10",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "500000",
+      "start_time": "2026-06-02T12:33:30+0700",
+      "updated_time": "2026-06-11T01:30:12+0700"
+    },
+    {
+      "id": "120247245871210121",
+      "name": "OFF_BIDCAP_benihsayuran_0306",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "start_time": "2026-06-02T00:12:41+0700",
+      "updated_time": "2026-06-11T01:19:01+0700"
+    },
+    {
+      "id": "120247168586320121",
+      "name": "LC_rakdapur",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "20000",
+      "start_time": "2026-05-31T20:47:51+0700",
+      "updated_time": "2026-06-11T03:00:12+0700"
+    },
+    {
+      "id": "120247168586100121",
+      "name": "LC_rakdapur",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "20000",
+      "start_time": "2026-05-31T20:47:44+0700",
+      "updated_time": "2026-06-11T02:57:30+0700"
+    },
+    {
+      "id": "120247168585640121",
+      "name": "LC_rakdapur_DIY",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "20000",
+      "start_time": "2026-05-31T20:47:37+0700",
+      "updated_time": "2026-06-11T02:57:25+0700"
+    },
+    {
+      "id": "120247168585470121",
+      "name": "LC_rakdapur_Interior",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "20000",
+      "start_time": "2026-05-31T20:47:30+0700",
+      "updated_time": "2026-06-11T03:00:37+0700"
+    },
+    {
+      "id": "120247168584710121",
+      "name": "LC_rakdapur_02",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "20000",
+      "start_time": "2026-05-31T20:47:22+0700",
+      "updated_time": "2026-06-11T03:00:36+0700"
+    },
+    {
+      "id": "120247106433770121",
+      "name": "OFF_BC_test",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "20000",
+      "start_time": "1970-01-01T06:59:59+0700",
+      "updated_time": "2026-06-06T04:54:59+0700"
+    },
+    {
+      "id": "120247042406920121",
+      "name": "BC_rakdapur_Masak",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "3000000",
+      "start_time": "2026-05-30T14:38:44+0700",
+      "updated_time": "2026-06-11T02:57:53+0700"
+    },
+    {
+      "id": "120247042406850121",
+      "name": "ON_BCrakdapur3_0306",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1000000",
+      "start_time": "2026-05-30T14:38:44+0700",
+      "updated_time": "2026-06-11T01:30:14+0700"
+    },
+    {
+      "id": "120247042406830121",
+      "name": "BC_rakdapur_Masak_02",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "3000000",
+      "start_time": "2026-05-30T14:38:44+0700",
+      "updated_time": "2026-06-11T02:57:19+0700"
+    },
+    {
+      "id": "120247042406820121",
+      "name": "OFF_BC_rakdapur_Masak_03",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "3000000",
+      "start_time": "2026-05-30T14:38:44+0700",
+      "updated_time": "2026-06-06T04:55:00+0700"
+    },
+    {
+      "id": "120247042406810121",
+      "name": "OFF_BC_rakdapur_Masak_04",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "3000000",
+      "start_time": "2026-05-30T14:38:45+0700",
+      "updated_time": "2026-06-06T04:55:01+0700"
+    },
+    {
+      "id": "120246992725090121",
+      "name": "LC_WallpaperDindingVinyl",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "53000",
+      "start_time": "2026-05-29T20:33:21+0700",
+      "updated_time": "2026-06-11T02:56:50+0700"
+    },
+    {
+      "id": "120246992724970121",
+      "name": "OFF_LC_rakdapur_03",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "53000",
+      "start_time": "2026-05-29T20:33:21+0700",
+      "updated_time": "2026-06-06T04:56:53+0700"
+    },
+    {
+      "id": "120246992724960121",
+      "name": "OFF_LC_rakdapur3",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "53000",
+      "start_time": "2026-05-29T20:33:21+0700",
+      "updated_time": "2026-06-06T04:55:03+0700"
+    },
+    {
+      "id": "120246992724950121",
+      "name": "OFF_LC_rakdapur3",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "53000",
+      "start_time": "2026-05-29T20:33:21+0700",
+      "updated_time": "2026-06-06T04:56:54+0700"
+    },
+    {
+      "id": "120246992724940121",
+      "name": "OFF_LC_rakdapur3_02",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "53000",
+      "start_time": "2026-05-29T20:33:21+0700",
+      "updated_time": "2026-06-06T04:56:55+0700"
+    },
+    {
+      "id": "120246992724930121",
+      "name": "LC_rakdapur_04",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "53000",
+      "start_time": "2026-05-29T20:33:21+0700",
+      "updated_time": "2026-06-11T02:57:48+0700"
+    },
+    {
+      "id": "120246992724920121",
+      "name": "OFF_LC_1-3-1",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "53000",
+      "start_time": "2026-05-29T20:33:21+0700",
+      "updated_time": "2026-06-06T04:55:06+0700"
+    },
+    {
+      "id": "120246992724910121",
+      "name": "OFF_LC_dressanakperempuan",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "53000",
+      "start_time": "2026-05-29T20:33:21+0700",
+      "updated_time": "2026-06-06T04:55:07+0700"
+    },
+    {
+      "id": "120246992724900121",
+      "name": "OFF_atayasetelankaosanak_Anak_0306",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "1000000",
+      "start_time": "2026-05-29T20:33:21+0700",
+      "updated_time": "2026-06-08T02:33:03+0700"
+    },
+    {
+      "id": "120246992724890121",
+      "name": "OFF_LC_movies",
+      "status": "PAUSED",
+      "effective_status": "PAUSED",
+      "daily_budget": "53000",
+      "start_time": "2026-05-29T20:33:21+0700",
+      "updated_time": "2026-06-06T04:55:08+0700"
+    },
+    {
+      "id": "120246992724880121",
+      "name": "\ud83c\udf1f_ON_BC0306_Rakdapur_Fashion_0306",
+      "status": "ACTIVE",
+      "effective_status": "ACTIVE",
+      "daily_budget": "5000000",
+      "start_time": "2026-05-29T20:33:21+0700",
+      "updated_time": "2026-06-11T02:59:55+0700"
+    }
+  ]
+}
