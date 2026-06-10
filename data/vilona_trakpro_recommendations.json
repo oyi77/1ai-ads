@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-11T01:35:59.652142+07:00",
+  "generated_at": "2026-06-11T02:54:02.960762+07:00",
   "date": "2026-06-11",
   "account": "Kakriput",
   "sections": [
@@ -10,11 +10,11 @@
         {
           "name": "BIDCAP_Organizer_organizerpullout_Dapur_0603",
           "score": 89,
-          "note": "ROAS:204.4x CPC:94 CTR:7.8% LC:349",
-          "spend": 40115.0,
-          "link_clicks": 349,
-          "cpc": 94.166667,
-          "ctr": 7.779401
+          "note": "ROAS:203.8x CPC:94 CTR:7.8% LC:352",
+          "spend": 40232.0,
+          "link_clicks": 352,
+          "cpc": 93.562791,
+          "ctr": 7.821026
         },
         {
           "name": "OFF_Organizer_organizerpullout_FashiOFF_BIDCAP_0603",
@@ -138,10 +138,10 @@
         },
         {
           "name": "BIDCAP_Organizer_organizerpullout_Dapur_0603",
-          "spend": 40115.0,
-          "link_clicks": 349,
-          "cpc": 94.166667,
-          "ctr": 7.779401,
+          "spend": 40232.0,
+          "link_clicks": 352,
+          "cpc": 93.562791,
+          "ctr": 7.821026,
           "signal": "EARLY_WINNER",
           "new_campaign": true,
           "recommendation": "Winner signal confirmed — pantau 24 jam lagi untuk scale penuh"
@@ -288,10 +288,10 @@
         },
         {
           "name": "ON_LC_rakpiringpengering_0606",
-          "spend": 1784.0,
+          "spend": 1816.0,
           "link_clicks": 13,
-          "cpc": 137.230769,
-          "ctr": 7.386364,
+          "cpc": 139.692308,
+          "ctr": 7.344633,
           "signal": "EARLY_WINNER",
           "new_campaign": true,
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
@@ -328,10 +328,10 @@
         },
         {
           "name": "ON_LC_rakpiringpengering_0606",
-          "spend": 1064.0,
+          "spend": 1088.0,
           "link_clicks": 7,
-          "cpc": 133.0,
-          "ctr": 7.76699,
+          "cpc": 136.0,
+          "ctr": 7.619048,
           "signal": "EARLY_WINNER",
           "new_campaign": true,
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
@@ -358,10 +358,10 @@
         },
         {
           "name": "ON_LC_Rakpiring_rakpiringpengering_Broad_0603",
-          "spend": 1058.0,
+          "spend": 1125.0,
           "link_clicks": 6,
-          "cpc": 132.25,
-          "ctr": 9.411765,
+          "cpc": 140.625,
+          "ctr": 8.791209,
           "signal": "EARLY_WINNER",
           "new_campaign": true,
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
@@ -378,10 +378,10 @@
         },
         {
           "name": "OFF_BIDCAP_setelanbajukaosmihugajah_fashion",
-          "spend": 14600.0,
+          "spend": 14608.0,
           "link_clicks": 98,
-          "cpc": 96.688742,
-          "ctr": 6.339211,
+          "cpc": 96.741722,
+          "ctr": 6.336551,
           "signal": "EARLY_WINNER",
           "new_campaign": true,
           "recommendation": "Scale test: naikkan budget 50% untuk validasi sinyal"
@@ -468,7 +468,7 @@
           "icon": "📈",
           "category": "SCALE",
           "title": "Scale: BIDCAP_Organizer_organizerpullout_Dapur_",
-          "detail": "Score 89/100 | ROAS:204.4x CPC:94 CTR:7.8% LC:349",
+          "detail": "Score 89/100 | ROAS:203.8x CPC:94 CTR:7.8% LC:352",
           "action": "Buat LC clone baru. Budget Rp100K, LOWEST_COST_WITH_BID_CAP @ Rp200."
         },
         {
@@ -491,7 +491,7 @@
           "priority": 1,
           "icon": "🏆",
           "title": "Scale pemenang: BIDCAP_Organizer_organizerpullout_Dapur_",
-          "detail": "Score 89/100, ROAS:204.4x CPC:94 CTR:7.8% LC:349",
+          "detail": "Score 89/100, ROAS:203.8x CPC:94 CTR:7.8% LC:352",
           "action": "Naikkan budget 20% atau duplikasi ke audience baru"
         },
         {
