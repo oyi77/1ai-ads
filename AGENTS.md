@@ -64,4 +64,33 @@ Full-stack ad management platform. Express backend with SQLite persistence, Vite
 - @modelcontextprotocol/sdk — MCP integration
 - meta-ads-mcp — Meta Ads API MCP bridge
 
+## Guardrails (Active During Development)
+
+**Single source of truth:** `.opencode/guardrails.md` + agent prompts in `.opencode/agent/`
+
+### Key Enforcement Points
+- **No direct Meta API calls** → Use `vilona_trakpro_engine` (`fb_get`, `fb_post`)
+- **No duplicate token logic** → Import `ACCESS_TOKEN` from engine
+- **No hardcoded paths** → Use `WORKSPACE`, `DATA_DIR` from engine
+- **No root directory files** → All code in `server/`, `client/`, `scripts/`, `tests/`
+- **No scattered test scripts** → Tests in `tests/` with Vitest/Playwright
+- **Layered architecture** → Routes → Services → Repositories → DB
+- **MCP for externals** → Ads Library, Competitor Spy, Web Scraping
+
+### Agent-Specific Prompts
+| Agent | Prompt File |
+|-------|-------------|
+| Sisyphus (main) | `.opencode/agent/sisyphus.md` |
+| Build (Sisyphus-Jr) | `.opencode/agent/build.md` |
+| Explore | `.opencode/agent/explore.md` |
+| Oracle | `.opencode/agent/oracle.md` |
+| Librarian | `.opencode/agent/librarian.md` |
+| Plan (Metis/Momus) | `.opencode/agent/plan.md` |
+
+### Permission Rules (opencode.json)
+- `scripts/test_*.py` → **DENIED** (throwaway tests)
+- `*.log` → **DENIED** (gitignored)
+- `data/*.json` → **DENIED** (auto-regenerate)
+- `/home/openclaw/**` → **DENIED** (hardcoded paths)
+
 <!-- MANUAL: Custom project notes can be added below -->

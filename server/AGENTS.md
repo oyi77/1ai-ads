@@ -52,4 +52,24 @@ Express 5 backend providing REST API for 1ai-ads. Follows a layered architecture
 - better-sqlite3 — Database driver
 - uuid — ID generation
 
+## Guardrails (Enforced During Development)
+
+**Reference:** Root `.opencode/guardrails.md` + `.opencode/agent/*.md`
+
+### Server-Specific Rules
+- **Layered architecture mandatory**: Routes → Services → Repositories → DB
+- **Thin routes**: Validate → Delegate to service → Return JSON
+- **Services inject repos**: Never instantiate repos in routes
+- **Repositories only**: Parameterized SQL, return `null` for missing
+- **Shared utilities in `server/lib/`**: Auth, errors, validate, logger, rate-limiter
+- **Custom errors**: `ApiError`, `NotFoundError`, `ValidationError` from `lib/errors.js`
+- **Validation at boundary**: `validateBody(schema, req.body)` from `lib/validate.js`
+
+### Forbidden in Server
+- ❌ Raw SQL in routes/services
+- ❌ Direct `better-sqlite3` calls outside repositories
+- ❌ `console.log` — use `logger` from `lib/logger.js`
+- ❌ Catching errors silently — throw typed errors
+- ❌ Inline validation — use Zod schemas in `lib/validate.js`
+
 <!-- MANUAL: Custom project notes can be added below -->

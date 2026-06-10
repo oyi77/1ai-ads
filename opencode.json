@@ -1,0 +1,75 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "omniroute/auto/best-reasoning",
+  "agent": {
+    "sisyphus": {
+      "model": "omniroute/auto/best-reasoning",
+      "prompt": ".opencode/agent/sisyphus.md"
+    },
+    "build": {
+      "model": "omniroute/auto/best-fast",
+      "prompt": ".opencode/agent/build.md"
+    },
+    "explore": {
+      "model": "omniroute/auto/best-fast",
+      "prompt": ".opencode/agent/explore.md"
+    },
+    "oracle": {
+      "model": "omniroute/auto/best-reasoning",
+      "prompt": ".opencode/agent/oracle.md"
+    },
+    "librarian": {
+      "model": "omniroute/auto/best-coding",
+      "prompt": ".opencode/agent/librarian.md"
+    },
+    "plan": {
+      "model": "omniroute/auto/best-reasoning",
+      "prompt": ".opencode/agent/plan.md"
+    }
+  },
+  "mcp": {
+    "1ai-hub": {
+      "type": "remote",
+      "url": "http://localhost:9099/mcp",
+      "enabled": true
+    },
+    "cf-router": {
+      "type": "local",
+      "command": ["/home/openclaw/.local/bin/cloudflare-router", "mcp"],
+      "enabled": true
+    }
+  },
+  "permission": {
+    "default": "ask",
+    "rules": [
+      {
+        "pattern": "scripts/test_*.py",
+        "permission": "deny",
+        "reason": "Throwaway test scripts forbidden - use tests/"
+      },
+      {
+        "pattern": "*.log",
+        "permission": "deny",
+        "reason": "Log files are gitignored"
+      },
+      {
+        "pattern": "data/*.json",
+        "permission": "deny",
+        "reason": "State files auto-regenerate, gitignored"
+      },
+      {
+        "pattern": "/home/openclaw/**",
+        "permission": "deny",
+        "reason": "Hardcoded paths forbidden - use WORKSPACE/DATA_DIR"
+      }
+    ]
+  },
+  "hooks": {
+    "pre_write": [
+      "bash .hermes/hooks/pre-write.sh \"$FILE\""
+    ],
+    "post_write": [
+      "bash -c 'if [[ \"$FILE\" =~ \\.(js|ts)$ ]]; then npx eslint \"$FILE\" --quiet; fi'"
+    ]
+  }
+}
