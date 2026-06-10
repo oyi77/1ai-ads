@@ -226,8 +226,8 @@ ACCOUNTS = {
         "roas_winner": 3.0,
         "roas_super": 8.0,
         "roas_kill": 0.3,
-        "cpc_kill": 250,
-        "cpc_safe_cbo": 100, "cpc_danger_cbo": 140,
+        "cpc_kill": 200,
+        "cpc_safe_cbo": 80, "cpc_danger_cbo": 120,
         "cpc_safe_abo": 150, "cpc_danger_abo": 250,
         "budget_cap_per_camp": 500000,
         "tags": ["rakpiringpengering", "organizerpullout", "Dongkrakelektrik"],
@@ -622,6 +622,12 @@ def classify_campaign(camp_insights, shopee_data, account_config, prev_state, al
     missing_shopee = not shopee_data or matched_tag is None
     
     if not missing_shopee:
+        # ─── HARD CPC KILL (BEFORE winner check) ───────────────────
+        # 2026-06-11: CPC > cpc_kill → BONCOS regardless of ROAS
+        cpc_kill = account_config.get("cpc_kill", 250)
+        if cpc > cpc_kill and spend > 2000:
+            return "BONCOS", est_roas, f"CPC Rp{cpc:.0f} > Rp{cpc_kill} (HARD KILL) [{ctype}]"
+
         # Super winner: ROAS > 8x
         if est_roas > account_config["roas_super"] and link_clicks >= 10:
             return "SUPER", est_roas, f"ROAS {est_roas:.1f}x [{matched_tag}]"
