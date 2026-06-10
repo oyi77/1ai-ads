@@ -1683,8 +1683,8 @@ def main():
             midnight_housekeeping()
             
             actions, alerts = run_cycle()
-            log(f"💤 Next cycle in 30 min...")
-            time.sleep(1800)  # 30 minutes
+            log(f"💤 Next cycle in 15 min...")
+            time.sleep(900)  # 15 minutes
         except KeyboardInterrupt:
             log("👋 Shutting down...")
             break
