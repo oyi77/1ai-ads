@@ -1156,6 +1156,13 @@ def execute_actions(account_id, account_config, classifications, acc_key="", ins
                 except Exception as e:
                     log(f"Reactivate failed: {e}", "ERROR")
             
+            # CPC safety gate: only clone if CPC below danger threshold
+            cpc_warn = account_config.get("cpc_danger_cbo", 150)
+            camp_cpc = insights.get(cid, {}).get("cpc", 0) if insights else 0
+            if camp_cpc > cpc_warn:
+                actions_taken.append(f"⏸️ HOLD: {name[:40]} — CPC Rp{camp_cpc:.0f} > Rp{cpc_warn} (unsafe to clone)")
+                continue
+
             # 2026-06-10: ALL winners → LC Micro-Scale clone (age-shifted)
             # No more bid_strategy discrimination — clone everything!
             if clones_created < max_clones_per_cycle:
