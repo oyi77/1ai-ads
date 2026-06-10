@@ -1148,59 +1148,25 @@ def execute_actions(account_id, account_config, classifications, acc_key="", ins
                 except Exception as e:
                     log(f"Reactivate failed: {e}", "ERROR")
             
-            # Check bid strategy (Veris rule: only scale LOWEST_COST)
-            bid_strategy, bid_amount = get_campaign_bid_strategy(cid)
-            is_cost_cap = bid_strategy in ("COST_CAP", "LOWEST_COST_WITH_BID_CAP")
-            is_lowest_cost = bid_strategy == "LOWEST_COST"
-            
-            if is_cost_cap and clones_created < max_clones_per_cycle:
-                # Veris Rule: COST_CAP winner → create LC clone, NOT scale budget
-                if status == "ACTIVE" and roas > account_config["roas_winner"]:
-                    result = create_lc_clone(camp, account_id, account_config, clones_created)
-                    if result:
-                        clone_id = result["campaign_id"] if isinstance(result, dict) else result
-                        clones_created += 1
-                        age_info = result.get("age_range", "?") if isinstance(result, dict) else "?"
-                        actions_taken.append(
-                            f"🧬 LC CLONE: {name[:30]} → ON_LC_ age {age_info} "
-                            f"(Rp 18k, LOWEST_COST, ROAS {roas:.1f}x)"
-                        )
-                    else:
-                        actions_taken.append(
-                            f"⏸️ HOLD: {name[:40]} — COST_CAP winner, clone failed"
-                        )
+            # 2026-06-10: ALL winners → LC Micro-Scale clone (age-shifted)
+            # No more bid_strategy discrimination — clone everything!
+            if clones_created < max_clones_per_cycle:
+                result = create_lc_clone(camp, account_id, account_config, clones_created)
+                if result:
+                    clone_id = result["campaign_id"] if isinstance(result, dict) else result
+                    clones_created += 1
+                    age_info = result.get("age_range", "?") if isinstance(result, dict) else "?"
+                    actions_taken.append(
+                        f"🧬 LC CLONE: {name[:30]} → ON_LC_ age {age_info} "
+                        f"(Rp 18k, LOWEST_COST, ROAS {roas:.1f}x)"
+                    )
                 else:
                     actions_taken.append(
-                        f"⏸️ HOLD: {name[:40]} — COST_CAP (budget scale useless, "
-                        f"bid Rp{bid_amount} controls spend)"
+                        f"⏸️ HOLD: {name[:40]} — clone failed"
                     )
-            
-            elif is_lowest_cost:
-                # LOWEST_COST → LC Micro-Scale: create ON_LC_ clones (age-shifted)
-                # NOT vertical budget scaling — horizontal micro-duplication
-                if clones_created < max_clones_per_cycle:
-                    result = create_lc_clone(camp, account_id, account_config, clones_created)
-                    if result:
-                        clone_id = result["campaign_id"] if isinstance(result, dict) else result
-                        clones_created += 1
-                        age_info = result.get("age_range", "?") if isinstance(result, dict) else "?"
-                        actions_taken.append(
-                            f"🧬 LC CLONE: {name[:30]} → ON_LC_ age {age_info} "
-                            f"(Rp 18k, LOWEST_COST, ROAS {roas:.1f}x)"
-                        )
-                    else:
-                        actions_taken.append(
-                            f"⏸️ HOLD: {name[:40]} — LC winner, clone failed"
-                        )
-                else:
-                    actions_taken.append(
-                        f"⏸️ MAX CLONES: {name[:40]} — {clones_created}/{max_clones_per_cycle} reached"
-                    )
-            
             else:
-                # Unknown strategy - log and hold
                 actions_taken.append(
-                    f"⏸️ HOLD: {name[:40]} — unknown bid strategy ({bid_strategy})"
+                    f"⏸️ MAX CLONES: {name[:40]} — {clones_created}/{max_clones_per_cycle}"
                 )
         
         elif verdict == "FATIGUE":
