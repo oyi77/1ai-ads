@@ -272,6 +272,7 @@ ACCOUNTS = {
     "1340": {
         "id": "act_1181078009580337",
         "name": "Selow-1340",
+        "enabled": False,
         "roas_winner": 1.5,
         "roas_super": 4.0,
         "roas_kill": 0.15,
