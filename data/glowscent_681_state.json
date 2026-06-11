@@ -1,14 +1,10 @@
 {
-  "last_run": "2026-06-11T03:11:35.650260+07:00",
-  "total_spend": 0,
-  "active_count": 3,
+  "last_run": "2026-06-11T11:06:44.020721+07:00",
+  "total_spend": 0.0,
+  "active_count": 100,
   "hard_cap_percent": 0.0,
   "hard_cap_breached": false,
-  "dead_zone": true,
-  "actions": [
-    "DEAD_ZONE: paused 3"
-  ],
-  "alerts": [
-    "\ud83c\udf19 Dead zone: 3 paused"
-  ]
+  "dead_zone": false,
+  "actions": [],
+  "alerts": []
 }

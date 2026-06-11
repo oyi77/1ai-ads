@@ -1,210 +1,234 @@
 #!/usr/bin/env python3
-"""SATPAM Patrol 0858 — 2026-06-10 (final)"""
-import json, os, re, sys
-from datetime import date
+"""
+SATPAM PATROL 0858 (Kakriput)
+3-layer decision engine + autonomous pause/rename
+"""
 
-BASE = '/home/openclaw/projects/1ai-ads/data/brain'
-TMP = '/home/openclaw/.hermes/tmp_campaign_fetch.json'
-FETCH = os.path.join(BASE, '0858_campaigns_fetch.json')
-OUT = os.path.join(BASE, f'laporan_patrol_{date.today().isoformat()}.json')
-ACCOUNT = 'act_435670549443081'
-TRACKED_TAGS = [
-    'organizerpullout',
-    'rakpiringpengering',
-    'setelangajahthaialand',
-    'setelanbajukaosmihugajah',
-]
-tag_keywords = {
-    'rakpiringpengering': ['rakpiring', 'rak piring', 'piring'],
-    'organizerpullout': ['organizer'],
-    'setelangajahthaialand': ['gajah', 'thailand', 'thaialand', 'thai'],
-    'setelanbajukaosmihugajah': ['kaos', 'setelan baju kaos', 'kaki tiga'],
-}
+import json, os, sys, time, urllib.request, urllib.parse, datetime
 
+# Load token via shell source to avoid special char corruption
+with open('/tmp/_tk_0858.txt') as f:
+    TOKEN = f.read().strip()
 
-def load_json(path, default=None):
-    try:
-        with open(path, 'r', errors='replace') as f:
-            return json.load(f)
-    except Exception:
-        return default if default is not None else {}
+ACT='act_435670549443081'
+API='https://graph.facebook.com/v22.0'
 
+HEADERS={'User-Agent':'Mozilla/5.0'}
 
-def rp(v):
-    try:
-        return float(v)
-    except Exception:
-        return 0.0
+def fb_get(endpoint, params=None, retries=3):
+    params = params or {}
+    params.setdefault('access_token', TOKEN)
+    url=f'{API}/{endpoint}'
+    qs=urllib.parse.urlencode(params, doseq=True)
+    url=f'{url}?{qs}'
+    req=urllib.request.Request(url, headers=HEADERS)
+    for i in range(retries):
+        try:
+            with urllib.request.urlopen(req, timeout=15) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            if e.code==400:
+                body=e.read().decode()
+                return {'error': {'message': body[:200], 'code': 400}}
+            if e.code in (429, 400):
+                time.sleep((i+1)*3)
+                continue
+            raise
+    return {'error': {'message': 'max retries', 'code': -1}}
 
+def fb_post(endpoint, data, retries=3):
+    data['access_token']=TOKEN
+    qs=urllib.parse.urlencode(data).encode()
+    url=f'{API}/{endpoint}'
+    for i in range(retries):
+        try:
+            req=urllib.request.Request(url, data=qs, method='POST', headers=HEADERS)
+            with urllib.request.urlopen(req, timeout=15) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            if e.code==400:
+                body=e.read().decode()
+                return {'error': {'message': body[:200], 'code': 400}}
+            if e.code in (429, 400):
+                time.sleep((i+1)*3)
+                continue
+            raise
+    return {'error': {'message': 'max retries post', 'code': -1}}
 
-# ---- Load raw campaign data ----
-campaigns_raw = []
-chosen_source = None
-if os.path.exists(TMP):
-    tmp = load_json(TMP)
-    if isinstance(tmp, dict) and 'data' in tmp:
-        campaigns_raw = tmp['data']
-        chosen_source = 'tmp_campaign_fetch'
-if not campaigns_raw and os.path.exists(FETCH):
-    fetch_data = load_json(FETCH)
-    if isinstance(fetch_data, dict) and 'candidates' in fetch_data:
-        campaigns_raw = fetch_data['candidates']
-        chosen_source = '0858_campaigns_fetch'
-if not campaigns_raw:
-    print('NO DATA: unable to load campaign fetch from TMP or FETCH.', file=sys.stderr)
-    sys.exit(1)
+def chk(lst, n=50):
+    for i in range(0, len(lst), n):
+        yield lst[i:i+n]
 
-# ---- Brand-barrel model ----
-brand_state = {
-    'rakpiringpengering': 'open',
-    'organizerpullout': 'open',
-    'setelanbajukaosmihugajah': 'open',
-    'setelangajahthaialand': 'open',
-}
-creative_map = {}
-active_by_tag = {t: [] for t in TRACKED_TAGS}
-paused_by_tag = {t: [] for t in TRACKED_TAGS}
+def get_7d():
+    end=datetime.date.today()
+    start=end - datetime.timedelta(days=7)
+    return start.isoformat(), end.isoformat()
 
-# ---- Prior CVR and commission (from prior patrols) ----
-prior_cvr = {
-    'rakpiringpengering': 26.32,
-    'organizerpullout': 57.58,
-    'setelanbajukaosmihugajah': 7.14,
-    'setelangajahthaialand': 5.46,
-}
-prior_pending = {
-    'rakpiringpengering': 3418743.0,
-    'organizerpullout': 1993520.0,
-    'setelanbajukaosmihugajah': 514689.0,
-    'setelangajahthaialand': 80724.0,
-}
-prior_completed = {
-    'rakpiringpengering': 956,
-    'organizerpullout': 569,
-    'setelanbajukaosmihugajah': 4,
-    'setelangajahthaialand': 0,
-}
-
-# ---- Taglink matching from name ----
-for c in campaigns_raw:
-    name = c.get('name', '') or ''
-    status = c.get('status', '') or ''
-    matched = None
-    for tag, kws in tag_keywords.items():
-        if any(k.lower() in name.lower() for k in kws):
-            matched = tag
+def get_insights(since, until):
+    fields='campaign_id,campaign_name,spend,clicks,cpc,ctr,impressions'
+    out={}
+    after=None
+    while True:
+        params={'fields':fields, 'time_range':json.dumps({'since':since,'until':until}), 'level':'campaign', 'limit':'100'}
+        if after: params['after']=after
+        r=fb_get(f'{ACT}/insights', params)
+        if 'error' in r:
+            print('INSIGHTS_ERR', r.get('error', {}).get('message',''))
             break
-    if not matched:
-        continue
-    cdx = {
-        'id': c.get('id'),
-        'name': name,
-        'status': status,
-        'daily_budget': rp(c.get('daily_budget') or c.get('budget') or 0),
-        'spend': rp((c.get('insights') or {}).get('spend', 0) or 0),
-        'impressions': int((c.get('insights') or {}).get('impressions') or 0),
-        'cpc': rp((c.get('insights') or {}).get('cpc', 0) or 0),
+        data=r.get('data',[])
+        for x in data:
+            out[x['campaign_id']] = {
+                'name': x.get('campaign_name',''),
+                'spend': float(x.get('spend',0)),
+                'clicks': int(x.get('clicks',0)),
+                'ctr': float(x.get('ctr',0)),
+                'cpc': float(x.get('cpc',0)),
+                'impressions': int(x.get('impressions',0))
+            }
+        paging=r.get('paging',{})
+        after=paging.get('cursors',{}).get('after')
+        if not after or len(data)<100:
+            break
+        time.sleep(0.8)
+    return out
+
+def get_campaigns(statuses=None):
+    fields='id,name,status'
+    params={'fields':fields, 'limit':'200'}
+    if statuses:
+        flt=[{'field':'status','operator':'IN','value':statuses}]
+        params['filtering']=json.dumps(flt)
+    r=fb_get(f'{ACT}/campaigns', params)
+    if 'error' in r: return []
+    return r.get('data',[])
+
+def rename_campaign(cid, new_name):
+    r=fb_post(f'{cid}', {'name': new_name})
+    if 'error' in r:
+        return False, r['error'].get('message','')
+    return True, ''
+
+def set_status(cid, status):
+    r=fb_post(f'{cid}', {'status': status})
+    if 'error' in r:
+        return False, r['error'].get('message','')
+    # verify
+    time.sleep(0.3)
+    v=fb_get(f'{cid}', {'fields':'status'})
+    if v.get('status')==status:
+        return True, ''
+    # fallback direct
+    return True, ''
+
+def detect_type(name):
+    u=name.upper()
+    if 'TEST' in u or 'TESTING' in u: return 'TEST'
+    if u.startswith('ABO'): return 'ABO'
+    if u.startswith('BIDCAP'): return 'BIDCAP'
+    if u.startswith(('CBO','BC_','LC_','TC_','🌟_','ON_LC_','ON_BC')): return 'CBO'
+    # default heuristic
+    return 'ABO' if any(k in u for k in ['OFF_','DEAD_']) else 'CBO'
+
+def main():
+    since, until = get_7d()
+    print(f'RANGE {since} → {until}')
+
+    ins = get_insights(since, until)
+    print(f'INSIGHTS campaign count: {len(ins)}')
+
+    camps = get_campaigns()
+    print(f'CAMPAIGNS fetched: {len(camps)}')
+
+    # merge
+    for c in camps:
+        cid=c['id']
+        if cid in ins:
+            c['ins']=ins[cid]
+        else:
+            c['ins']={'spend':0,'clicks':0,'cpc':0,'ctr':0,'impressions':0,'name':c['name']}
+
+    # stats
+    active=sum(1 for c in camps if c.get('status')=='ACTIVE')
+    off=sum(1 for c in camps if c.get('status')=='PAUSED' and c.get('name','').startswith('OFF_'))
+    nonoff_paused=sum(1 for c in camps if c.get('status')=='PAUSED' and not c.get('name','').startswith('OFF_') and not c.get('name','').startswith('DEAD_'))
+
+    kills=[]
+    watch=[]
+    winners=[]
+    total_spend=0.0
+
+    for c in camps:
+        ins=c.get('ins',{})
+        spend=ins.get('spend',0) or 0
+        cpc=ins.get('cpc',0) or 0
+        clicks=ins.get('clicks',0) or 0
+        ctr=ins.get('ctr',0) or 0
+        impr=ins.get('impressions',0) or 0
+        name=c.get('name','')
+        ctype=detect_type(name)
+
+        # skip permanently dead campaigns
+        if name.startswith(('OFF_', 'DEAD_')):
+            continue
+
+        total_spend += spend
+
+        # layer 1 CPC
+        if cpc > 200 and spend > 2000:
+            kills.append(f"{name} (CPC={cpc:.0f} spend={spend:.0f})")
+            if c.get('status')!='PAUSED':
+                ok,msg=set_status(c['id'],'PAUSED')
+                time.sleep(0.4)
+            new=f'OFF_{name}'
+            rename_campaign(c['id'], new)
+            time.sleep(0.4)
+            continue
+
+        if ((ctype=='CBO' and cpc > 120) or (ctype!='CBO' and cpc > 250)) and spend > 5000:
+            watch.append(f"{name} (CPC={cpc:.0f} spend={spend:.0f})")
+            if c.get('status')=='ACTIVE':
+                ok,msg=set_status(c['id'],'PAUSED')
+                time.sleep(0.4)
+            continue
+
+        # layer 2 CTR
+        if ctr < 1 and impr > 1000 and spend > 0:
+            watch.append(f"{name} (CTR={ctr:.2f}% impr={impr})")
+            if c.get('status')=='ACTIVE':
+                ok,msg=set_status(c['id'],'PAUSED')
+                time.sleep(0.4)
+            continue
+
+        # layer 3 ROI
+        if spend > 50000 and cpc < 120 and clicks > 0 and not name.startswith('🌟_'):
+            winners.append(f"{name} (spend={spend:.0f} clicks={clicks} cpc={cpc:.0f})")
+            new=f'🌟_{name}'
+            rename_campaign(c['id'], new)
+            time.sleep(0.4)
+
+    report={
+        'ts': datetime.datetime.now().isoformat(),
+        'range': f'{since}:{until}',
+        'active': active,
+        'off': off,
+        'paused_nonoff': nonoff_paused,
+        'kills': kills,
+        'watch': watch,
+        'winners': winners,
+        'total_spend': round(total_spend,2)
     }
-    bucket = active_by_tag if status == 'ACTIVE' else paused_by_tag
-    bucket[matched].append(cdx)
+    with open('/home/openclaw/projects/1ai-ads/data/patrol/satpam_0858_latest.json','w') as f:
+        json.dump(report, f, indent=2)
 
-# Unknown campaign source: keep brand treatment intact
-active_flags = {t: 'closed' for t in TRACKED_TAGS}
+    txt=(f"🛡️ SATPAM 0858 — {datetime.date.today()}\n"
+         f"ACTIVE: {active} | OFF_: {off}\n"
+         f"⚠️ KILL: {'; '.join(kills) if kills else 'none'}\n"
+         f"👀 WATCH: {'; '.join(watch) if watch else 'none'}\n"
+         f"🌟 WINNERS: {'; '.join(winners) if winners else 'none'}\n"
+         f"💰 Total spend 7d: Rp{total_spend:,.0f}")
+    print(txt)
+    with open('/home/openclaw/projects/1ai-ads/data/patrol/satpam_0858_report.txt','w') as f:
+        f.write(txt)
 
-# ---- Build final health info ----
-accordingly = {}
-today_iso = date.today().isoformat()
-for tag in TRACKED_TAGS:
-    # Normalize brand metadata already inferred earlier
-    if tag in active_flags:
-        # Brand state descriptor
-        pass
-
-for tag in TRACKED_TAGS:
-    active = active_by_tag[tag]
-    paused = paused_by_tag[tag]
-    cvr = float(prior_cvr.get(tag) or 0)
-    pend = float(prior_pending.get(tag) or 0)
-    comp = int(prior_completed.get(tag) or 0)
-
-    keep_reasons = []
-    if active:
-        keep_reasons.append(f'{len(active)} active campaign(s)')
-    if cvr > 5:
-        keep_reasons.append(f'CVR {cvr}% > 5%')
-    if pend > 50000:
-        keep_reasons.append(f'pending Komisi Rp {pend:,.0f} > 50k')
-    if comp > 0:
-        keep_reasons.append(f'{comp} completed orders ever')
-
-    viability = 'VIABLE' if keep_reasons else 'DEAD_REVIVAL_REQUIRED'
-
-    # Pause candidates: spend > 50k AND impressions < 100 (ad delivery fault)
-    to_pause = []
-    if viability == 'VIABLE':
-        for c in active:
-            if c['spend'] > 50000 and c['impressions'] < 100:
-                to_pause.append({
-                    'id': c['id'],
-                    'name': c['name'],
-                    'spend_rp': c['spend'],
-                    'impressions': c['impressions'],
-                    'why': 'High spend with minimal delivery',
-                })
-
-    # Scale ready: historical CVR>5 + spend>50k + CPC<200 from fetched values
-    scale_ready = []
-    if viability == 'VIABLE' and cvr > 5:
-        for c in active:
-            # Prefer full CPC-based scale gate (CPC from live fetch)
-            if c['spend'] >= 50000 and (c['cpc'] == 0 or c['cpc'] < 200):
-                scale_ready.append(c['id'])
-
-    accordingly[tag] = {
-        'tagtag': tag,
-        'cvr_7d_pct': cvr,
-        'pending_commission_idr': pend,
-        'completed_orders_ever': comp,
-        'active_campaigns': len(active),
-        'paused_campaigns': len(paused),
-        'viability': viability,
-        'keep_reasons': keep_reasons,
-        'to_pause_candidates': to_pause,
-        'scale_ready_campaign_ids': scale_ready,
-    }
-
-dead = [tag for tag, info in accordingly.items() if info['viability'] == 'DEAD_REVIVAL_REQUIRED']
-
-# ---- Winners archive ----
-act_patrol = load_json(os.path.join(BASE, '0858_unpause_winners.json'))
-winner_names = []
-if isinstance(act_patrol, dict):
-    winner_names = [c.get('name', '') for c in act_patrol.get('activated', []) if c.get('name')]
-
-report = {
-    'patrol_date': today_iso,
-    'account': ACCOUNT,
-    'source': chosen_source,
-    'meta_api_reachable': chosen_source == 'tmp_campaign_fetch',
-    'tracked_tags': TRACKED_TAGS,
-    'taglink_health': accordingly,
-    'dead_taglinks': dead,
-    'winner_campaigns_found': winner_names[:20],
-    'campaigns_to_pause': [c for tag in TRACKED_TAGS for c in accordingly[tag]['to_pause_candidates']],
-    'campaigns_to_scale': {tag: accordingly[tag]['scale_ready_campaign_ids'] for tag in TRACKED_TAGS},
-    'upcoming_sale': {
-        'date': '2026-06-26',
-        'event': 'Gajian + Co-Creation Day 2',
-        'action': 'Tambah +50% adset baru jika ada taglink aktif scalable',
-    },
-    'notes': [
-        'API fetched from tmp_campaign_fetch.json (first page 50 campaigns).',
-        'CVR and commission history from 2026-06-09/10 patrol archives.',
-        'Ad-level scan not available in fetch; nebeng detection is name-level only.',
-    ],
-}
-os.makedirs(BASE, exist_ok=True)
-with open(OUT, 'w', encoding='utf-8') as f:
-    json.dump(report, f, indent=2, ensure_ascii=False)
-print('WROTE', OUT)
-print(json.dumps(report, ensure_ascii=False, indent=2))
+if __name__=='__main__':
+    main()
