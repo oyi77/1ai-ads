@@ -1,6 +1,6 @@
 {
   "report_date": "2026-06-03",
-  "generated_at": "2026-06-11T12:00:01.646887",
+  "generated_at": "2026-06-11T18:00:01.669112",
   "summary": {
     "total_bugs": 22,
     "critical": 2,
@@ -66,35 +66,35 @@
       "bug_id": "BUG_8_2",
       "severity": "HIGH",
       "location": "Commission Row 2 (Order: 260601VQ2V138C)",
-      "description": "Order pending 9 days — exceeds 7 day threshold",
+      "description": "Order pending 10 days — exceeds 7 day threshold",
       "fix": "Flag order 260601VQ2V138C as potentially stuck. Check with Shopee or buyer."
     },
     {
       "bug_id": "BUG_8_3",
       "severity": "HIGH",
       "location": "Commission Row 3 (Order: 260601VQ2V138C)",
-      "description": "Order pending 9 days — exceeds 7 day threshold",
+      "description": "Order pending 10 days — exceeds 7 day threshold",
       "fix": "Flag order 260601VQ2V138C as potentially stuck. Check with Shopee or buyer."
     },
     {
       "bug_id": "BUG_8_4",
       "severity": "HIGH",
       "location": "Commission Row 4 (Order: 260601VQ2V138B)",
-      "description": "Order pending 9 days — exceeds 7 day threshold",
+      "description": "Order pending 10 days — exceeds 7 day threshold",
       "fix": "Flag order 260601VQ2V138B as potentially stuck. Check with Shopee or buyer."
     },
     {
       "bug_id": "BUG_8_5",
       "severity": "HIGH",
       "location": "Commission Row 5 (Order: 260601VQ2V138B)",
-      "description": "Order pending 9 days — exceeds 7 day threshold",
+      "description": "Order pending 10 days — exceeds 7 day threshold",
       "fix": "Flag order 260601VQ2V138B as potentially stuck. Check with Shopee or buyer."
     },
     {
       "bug_id": "BUG_8_6",
       "severity": "HIGH",
       "location": "Commission Row 6 (Order: 260601VQ2V138A)",
-      "description": "Order pending 9 days — exceeds 7 day threshold",
+      "description": "Order pending 10 days — exceeds 7 day threshold",
       "fix": "Flag order 260601VQ2V138A as potentially stuck. Check with Shopee or buyer."
     },
     {
@@ -143,35 +143,35 @@
       "bug_id": "BUG_8_2",
       "severity": "HIGH",
       "location": "Commission Row 2 (Order: 260601VQ2V138C)",
-      "description": "Order pending 9 days — exceeds 7 day threshold",
+      "description": "Order pending 10 days — exceeds 7 day threshold",
       "fix": "Flag order 260601VQ2V138C as potentially stuck. Check with Shopee or buyer."
     },
     {
       "bug_id": "BUG_8_3",
       "severity": "HIGH",
       "location": "Commission Row 3 (Order: 260601VQ2V138C)",
-      "description": "Order pending 9 days — exceeds 7 day threshold",
+      "description": "Order pending 10 days — exceeds 7 day threshold",
       "fix": "Flag order 260601VQ2V138C as potentially stuck. Check with Shopee or buyer."
     },
     {
       "bug_id": "BUG_8_4",
       "severity": "HIGH",
       "location": "Commission Row 4 (Order: 260601VQ2V138B)",
-      "description": "Order pending 9 days — exceeds 7 day threshold",
+      "description": "Order pending 10 days — exceeds 7 day threshold",
       "fix": "Flag order 260601VQ2V138B as potentially stuck. Check with Shopee or buyer."
     },
     {
       "bug_id": "BUG_8_5",
       "severity": "HIGH",
       "location": "Commission Row 5 (Order: 260601VQ2V138B)",
-      "description": "Order pending 9 days — exceeds 7 day threshold",
+      "description": "Order pending 10 days — exceeds 7 day threshold",
       "fix": "Flag order 260601VQ2V138B as potentially stuck. Check with Shopee or buyer."
     },
     {
       "bug_id": "BUG_8_6",
       "severity": "HIGH",
       "location": "Commission Row 6 (Order: 260601VQ2V138A)",
-      "description": "Order pending 9 days — exceeds 7 day threshold",
+      "description": "Order pending 10 days — exceeds 7 day threshold",
       "fix": "Flag order 260601VQ2V138A as potentially stuck. Check with Shopee or buyer."
     },
     {

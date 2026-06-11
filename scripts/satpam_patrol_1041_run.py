@@ -1,211 +1,262 @@
-#!/usr/bin/env python3
-"""SATPAM PATROL 1041 Nyamiresep — 3-layer decision engine (CPC -> CTR -> ROI)"""
 import json
-import datetime
 import time
-from vilona_trakpro_engine import fb_get, fb_post
+import datetime
+import urllib.request
+import urllib.error
+import urllib.parse
 
-ACT = '380721031313330'
+TOKEN_PATH='/tmp/tk_1041.txt'
+API = 'https://graph.facebook.com/v22.0'
+ACT = 'act_380721031313330'
 ACCOUNT_NAME = 'Nyamiresep (1041)'
 CPC_KILL = 200
 CPC_DANGER_CBO = 120
 CPC_DANGER_ABO = 250
 REQUIRED_TAGS = ['rakdapur3', 'atayasetelankaosanak']
 
+def load_token():
+    with open(TOKEN_PATH) as f:
+        return f.read().strip()
+
+def fb_get(path, params=None):
+    token = load_token()
+    p = dict(params or {})
+    p['access_token'] = token
+    qs = urllib.parse.urlencode(p)
+    url = f"{API}/{path}?{qs}"
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, timeout=20) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            body = e.read().decode('utf-8', errors='replace')
+            if e.code == 400 and '2446079' in body and attempt < 2:
+                time.sleep((attempt + 1) * 5)
+                continue
+            raise RuntimeError(f"GET {e.code}: {body[:500]}") from e
+    raise RuntimeError('GET rate limit exhausted')
+
+def fb_post(path, data):
+    token = load_token()
+    d = dict(data)
+    d['access_token'] = token
+    qs = urllib.parse.urlencode(d).encode()
+    url = f"{API}/{path}"
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(url, data=qs, method='POST')
+            with urllib.request.urlopen(req, timeout=20) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            body = e.read().decode('utf-8', errors='replace')
+            if e.code == 400 and '2446079' in body and attempt < 2:
+                time.sleep((attempt + 1) * 5)
+                continue
+            raise RuntimeError(f"POST {e.code}: {body[:500]}") from e
+    raise RuntimeError('POST rate limit exhausted')
+
 def detect_type(name):
     n = name.upper()
-    for p in ['CBO','BC_','LC_','TC_','GLW','ON_LC','ON_BC','🌟']:
+    for p in ('CBO', 'BC_', 'LC_', 'TC_', 'GLW', 'ON_LC', 'ON_BC', '🌟'):
         if p in n:
             return 'CBO'
-    if n.startswith('ABO') or 'BIDCAP' in n or 'TEST' in n:
+    if n.startswith(('ABO', 'BIDCAP')) or 'TEST' in n:
         return 'ABO'
     return 'ABO'
 
 def extract_tag(name):
-    n = name.lower().replace(' ','_').replace('-','_')
+    n = name.lower().replace(' ', '_').replace('-', '_')
     for t in REQUIRED_TAGS:
         if t in n:
             return t
     return None
 
-ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M WIB')
-print(f'SATPAM PATROL 1041 — {ts}')
-print(f'Account: {ACCOUNT_NAME} | act_{ACT}')
-
-# Fetch ALL campaigns
-camps = []
-params = {'fields':'id,name,status,effective_status,spend,cpc','limit':200}
-while True:
-    r = fb_get(f'{ACT}/campaigns', **params)
-    if isinstance(r, dict):
-        data = r.get('data',[])
-    else:
-        data = []
-    camps.extend(data)
-    nxt = ''
-    if isinstance(r, dict):
-        nxt = r.get('paging',{}).get('next','')
-    if not nxt or not data:
-        break
-    params = {}
-    time.sleep(0.7)
-
-active_n = len([c for c in camps if c.get('status')=='ACTIVE'])
-paused_n = len([c for c in camps if c.get('status')=='PAUSED'])
-off_n = len([c for c in camps if c['name'].startswith('OFF_')])
-print(f'Total campaigns: {len(camps)} | ACTIVE: {active_n} | PAUSED: {paused_n} | OFF_: {off_n}')
-
-# Fetch 7-day insights
-all_ids = [c['id'] for c in camps]
-insights = {}
-for i in range(0, len(all_ids), 20):
-    batch = all_ids[i:i+20]
+def main():
     since = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
     until = datetime.date.today().isoformat()
-    r = fb_get('insights',
-        fields='campaign_id,campaign_name,spend,cpc,clicks,ctr,impressions',
-        time_range=json.dumps({'since':since,'until':until}),
-        filtering=json.dumps([{'field':'campaign.id','operator':'IN','value':batch}]),
-        level='campaign',
-        limit=50)
-    if isinstance(r, dict):
-        for row in r.get('data',[]):
-            if row.get('campaign_id'):
-                insights[row['campaign_id']] = row
-    time.sleep(1.5)
-print(f'Insights received: {len(insights)}')
+    ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB')
 
-# 3-layer classify + execute
-kills=[]
-watches=[]
-winners=[]
-spend_total=0
-act_results={'skip':0,'paused':0,'paused_off':0,'winner_tagged':0,'errors':0}
+    # --- Fetch campaigns ---
+    camps = []
+    after = None
+    for _ in range(20):
+        p = {'fields': 'id,name,status,effective_status,daily_budget,lifetime_budget,spend,cpc', 'limit': 200}
+        if after:
+            p['after'] = after
+        res = fb_get(f'{ACT}/campaigns', p)
+        data = res.get('data') or []
+        camps.extend(data)
+        pg = res.get('paging', {})
+        nxt = pg.get('next', '')
+        after = None
+        if nxt:
+            try:
+                qp = urllib.parse.parse_qs(urllib.parse.urlparse(nxt).query)
+                after = (qp.get('after') or [None])[0]
+            except Exception:
+                pass
+        time.sleep(1.5)
+        if not after or not data:
+            break
 
-for camp in camps:
-    cid = camp['id']
-    name = camp['name']
-    status = camp.get('status','')
-    ins = insights.get(cid,{})
-    spend = float(ins.get('spend') or 0)
-    cpc = float(ins.get('cpc') or 0)
-    clicks = int(float(ins.get('clicks') or 0))
-    ctr = float(ins.get('ctr') or 0)
-    impr = int(float(ins.get('impressions') or 0))
-    ttype = detect_type(name)
-    tag = extract_tag(name)
-    spend_total += spend
+    active_n = len([c for c in camps if c.get('status') == 'ACTIVE'])
+    paused_n = len([c for c in camps if c.get('status') == 'PAUSED'])
+    off_n = len([c for c in camps if c['name'].startswith('OFF_')])
+    print(f"[FETCH] Total={len(camps)} ACTIVE={active_n} PAUSED={paused_n} OFF_={off_n}")
 
-    # Skip protected
-    if name.startswith('OFF_') or name.startswith('DEAD_'):
-        act_results['skip'] += 1
-        continue
+    # --- Fetch 7d insights ---
+    all_ids = [c['id'] for c in camps]
+    insights = {}
+    for batch_start in range(0, len(all_ids), 20):
+        batch = all_ids[batch_start:batch_start+20]
+        res = fb_get(f'{ACT}/insights', {
+            'fields': 'campaign_id,campaign_name,spend,cpc,clicks,ctr,impressions',
+            'time_range': json.dumps({'since': since, 'until': until}),
+            'level': 'campaign',
+            'filtering': json.dumps([{'field': 'campaign.id', 'operator': 'IN', 'value': batch}]),
+            'limit': 50
+        })
+        for row in res.get('data', []):
+            cid = row.get('campaign_id')
+            if cid:
+                insights[cid] = row
+        time.sleep(2.0)
 
-    # L1 CPC hard kill (before any ROI check)
-    if cpc > CPC_KILL and spend > 2000:
-        kills.append({'name':name,'cpc':cpc,'spend':spend,'tag':tag,'ttype':ttype})
-        if status == 'ACTIVE':
-            r = fb_post(cid, status='PAUSED')
-            if 'error' not in r:
-                time.sleep(2)
-            nn = 'OFF_'+name if not name.startswith('OFF_') else name
-            fb_post(cid, name=nn)
+    print(f"[INSIGHTS] Received={len(insights)}")
+
+    # --- 3-Layer classify ---
+    kills = []
+    watch_pause = []
+    winners = []
+    winners_new = []
+    spend_total = 0.0
+    act_stats = {'SKIP': 0, 'KEEP': 0, 'ZERO': 0, 'WATCH_NONTAG': 0}
+
+    for camp in camps:
+        cid = camp['id']
+        name = camp['name']
+        status = camp.get('status', '')
+        ins = insights.get(cid, {})
+        spend = float(ins.get('spend') or 0)
+        cpc = float(ins.get('cpc') or 0)
+        clicks = int(float(ins.get('clicks') or 0))
+        ctr = float(ins.get('ctr') or 0)
+        impr = int(float(ins.get('impressions') or 0))
+        ttype = detect_type(name)
+        tag = extract_tag(name)
+        spend_total += spend
+
+        if name.startswith('OFF_') or name.startswith('DEAD_'):
+            act_stats['SKIP'] += 1
+            continue
+
+        # LAYER 1: CPC hard kill (before ROI check)
+        if cpc > CPC_KILL and spend > 2000:
+            kills.append({'name': name, 'cid': cid, 'cpc': cpc, 'spend': spend, 'tag': tag, 'ttype': ttype,
+                          'reason': f'CPC Rp{cpc:.0f} > {CPC_KILL} + spend Rp{spend:.0f} > 2K'})
+            if status == 'ACTIVE':
+                fb_post(cid, {'status': 'PAUSED'})
+                time.sleep(1.5)
+            fb_post(cid, {'name': 'OFF_' + name if not name.startswith('OFF_') else name})
             time.sleep(0.7)
-            act_results['paused_off'] += 1
-        else:
-            if not name.startswith('OFF_'):
-                fb_post(cid, name='OFF_'+name)
+            continue
+
+        # LAYER 1: CPC danger
+        cpc_d = CPC_DANGER_CBO if ttype == 'CBO' else CPC_DANGER_ABO
+        if cpc > cpc_d and spend > 5000:
+            watch_pause.append({'name': name, 'cid': cid, 'cpc': cpc, 'spend': spend, 'tag': tag,
+                                'reason': f'CPC Rp{cpc:.0f} > {cpc_d} ({ttype}) + Rp{spend:.0f} > 5K'})
+            if status == 'ACTIVE':
+                fb_post(cid, {'status': 'PAUSED'})
+                time.sleep(1.5)
+            continue
+
+        # LAYER 2: CTR
+        if ctr < 1.0 and impr > 1000:
+            watch_pause.append({'name': name, 'cid': cid, 'cpc': cpc, 'spend': spend, 'tag': tag,
+                                'reason': f'CTR {ctr:.1f}% < 1% + {impr:,} impr'})
+            if status == 'ACTIVE':
+                fb_post(cid, {'status': 'PAUSED'})
+                time.sleep(1.5)
+            continue
+
+        # LAYER 3: Winner
+        if spend > 50000 and cpc <= cpc_d and clicks > 0 and ctr >= 1.0:
+            winners.append({'name': name, 'cid': cid, 'cpc': cpc, 'spend': spend, 'clicks': clicks,
+                            'ctr': ctr, 'tag': tag, 'reason': f'Rp{spend:,.0f} + CPC Rp{cpc:.0f} + CTR {ctr:.1f}%'})
+            if not name.startswith('🌟'):
+                fb_post(cid, {'name': '🌟_' + name})
                 time.sleep(0.7)
-            act_results['paused_off'] += 1
-        continue
+                winners_new.append(name)
+            continue
 
-    # L1 CPC danger
-    cpc_d = CPC_DANGER_CBO if ttype=='CBO' else CPC_DANGER_ABO
-    if cpc > cpc_d and spend > 5000:
-        watches.append({'name':name,'cpc':cpc,'spend':spend,'reason':f'CPC {cpc:.0f}>{cpc_d} (type={ttype}) + spend {spend:.0f}>5K'})
-        if status == 'ACTIVE':
-            fb_post(cid, status='PAUSED')
-            act_results['paused'] += 1
-        continue
+        if not tag and spend > 50000:
+            watch_pause.append({'name': name, 'reason': 'non-taglink + spend>50K'})
+            act_stats['WATCH_NONTAG'] += 1
+            continue
 
-    # L2 CTR
-    if ctr < 1.0 and impr > 1000:
-        watches.append({'name':name,'cpc':cpc,'spend':spend,'reason':f'CTR {ctr:.1f}%<1% + impressions {impr}'})
-        if status == 'ACTIVE':
-            fb_post(cid, status='PAUSED')
-            act_results['paused'] += 1
-        continue
+        if spend < 100:
+            act_stats['ZERO'] += 1
+            continue
 
-    # L3 Winner
-    if spend > 50000 and cpc <= cpc_d and clicks > 0 and ctr >= 1.0:
-        winners.append({'name':name,'cpc':cpc,'spend':spend,'clicks':clicks,'ctr':ctr,'tag':tag})
-        if not name.startswith('🌟'):
-            r2 = fb_post(cid, name='🌟_'+name)
-            time.sleep(0.7)
-            act_results['winner_tagged'] += 1
-        continue
+        act_stats['KEEP'] += 1
 
-    # Non-taglink high spend
-    if not tag and spend > 50000:
-        watches.append({'name':name,'reason':'non-taglink campaign + spend>50K'})
-        continue
+    # --- Final state ---
+    active_f = len([c for c in camps if c.get('status') == 'ACTIVE'])
+    off_f = len([c for c in camps if c['name'].startswith('OFF_')])
+    already_w = len([c for c in camps if c['name'].startswith('🌟')])
 
-    act_results['skip'] += 1
+    # --- Log ---
+    from pathlib import Path
+    log_dir = Path('/home/openclaw/projects/1ai-ads/data/patrols')
+    log_dir.mkdir(parents=True, exist_ok=True)
+    lf = log_dir / f'patrol_1041_{datetime.date.today().isoformat()}.json'
+    lf.write_text(json.dumps({
+        'timestamp': ts, 'account': '1041', 'total': len(camps),
+        'active': active_f, 'off': off_f,
+        'kills': len(kills), 'watches': len(watch_pause),
+        'winners_new': len(winners_new),
+        'spend_7d': spend_total,
+        'kill_list': [{'name': k['name'], 'cpc': k['cpc'], 'spend': k['spend'], 'tag': k['tag']} for k in kills],
+        'watch_list': [{'name': w['name'], 'reason': w.get('reason', '')} for w in watch_pause[:20]],
+        'winner_list': [{'name': w['name'], 'spend': w['spend'], 'cpc': w['cpc'], 'tag': w['tag']} for w in winners if not w['name'].startswith('🌟')]
+    }, indent=2, ensure_ascii=False))
+    print(f"[LOG] Saved to {lf}")
 
-# Final state
-active_final = len([c for c in camps if c.get('status')=='ACTIVE'])
-off_final = len([c for c in camps if c['name'].startswith('OFF_')])
-already_w = len([c for c in camps if c['name'].startswith('🌟')])
-new_winners = [w for w in winners if not w['name'].startswith('🌟')]
+    # --- REPORT ---
+    print()
+    print("=" * 60)
+    print(f"SATPAM 1041 — {ts}")
+    print(f"ACTIVE: {active_f} | OFF_: {off_f} | 🌟: {already_w + len(winners_new)}")
+    print()
 
-# Save patrol log
-from pathlib import Path
-log_dir = Path('/home/openclaw/projects/1ai-ads/data/patrols')
-log_dir.mkdir(parents=True, exist_ok=True)
-log_file = log_dir / f'patrol_1041_{datetime.date.today().isoformat()}.json'
-log = {
-    'timestamp': ts,
-    'account': '1041',
-    'total': len(camps),
-    'active': active_final,
-    'off': off_final,
-    'kills': len(kills),
-    'watches': len(watches),
-    'winners_new': len(new_winners),
-    'spend_7d': spend_total,
-    'results': act_results,
-    'kill_list': [{'name':k['name'],'cpc':k['cpc'],'spend':k['spend'],'tag':k['tag'],'ttype':k['ttype']} for k in kills],
-    'watch_list': [{'name':w['name'],'reason':w.get('reason','')} for w in watches[:20]],
-    'winner_list': [{'name':w['name'],'spend':w['spend'],'cpc':w['cpc'],'clicks':w['clicks'],'ctr':w['ctr'],'tag':w['tag']} for w in new_winners]
-}
-log_file.write_text(json.dumps(log, indent=2, ensure_ascii=False))
+    if kills:
+        print(f"💀 KILL ({len(kills)}):")
+        for k in kills:
+            print(f"  {k['name'][:65]}")
+            print(f"     CPC Rp{k['cpc']:.0f} | Spend Rp{k['spend']:,.0f} | {k['reason']}")
+        print()
 
-# REPORT
-print()
-print('='*60)
-print(f'SATPAM 1041 — {ts}')
-print(f'ACTIVE: {active_final} | OFF_: {off_final} | 🌟: {already_w + len(new_winners)}')
-print()
-if kills:
-    print(f'💀 KILL ({len(kills)}):')
-    for k in kills:
-        print(f'  {k["name"][:60]}')
-        print(f'     CPC Rp{k["cpc"]:.0f} | Spend Rp{k["spend"]:.0f} | Type: {k["ttype"]} | Tag: {k["tag"]}')
-print()
-if watches:
-    print(f'👀 WATCH ({len(watches)}):')
-    for w in watches[:12]:
-        print(f'  {w["name"][:60]}')
-        print(f'     {w["reason"]}')
-    if len(watches)>12:
-        print(f'  ... +{len(watches)-12} more')
-print()
-if new_winners:
-    print(f'🌟 WINNERS ({len(new_winners)}):')
-    for w in new_winners:
-        print(f'  {w["name"][:60]}')
-        print(f'     CPC Rp{w["cpc"]:.0f} | Spend Rp{w["spend"]:.0f} | Clicks {w["clicks"]} | CTR {w["ctr"]:.1f}% | Tag: {w["tag"]}')
-print()
-print(f'💰 Total 7d spend: Rp{spend_total:,.0f}')
-print(f'📋 Actions: {act_results}')
-print(f'📁 Log: {log_file}')
+    if watch_pause:
+        print(f"👀 WATCH ({len(watch_pause)}):")
+        for w in watch_pause[:12]:
+            print(f"  {w['name'][:65]}")
+            print(f"     {w['reason']}")
+        if len(watch_pause) > 12:
+            print(f"  ... +{len(watch_pause) - 12} more")
+        print()
+
+    new_winners_clean = [w for w in winners if not w['name'].startswith('🌟')]
+    if new_winners_clean:
+        print(f"🌟 NEW WINNERS ({len(new_winners_clean)}):")
+        for w in new_winners_clean:
+            print(f"  {w['name'][:65]}")
+            print(f"     CPC Rp{w['cpc']:.0f} | Spend Rp{w['spend']:,.0f} | Clicks {w['clicks']} | CTR {w['ctr']:.1f}% | Tag: {w['tag']}")
+        print()
+
+    print(f"💰 7d spend: Rp{spend_total:,.0f}")
+    print(f"📋 Stats: {act_stats}")
+
+if __name__ == '__main__':
+    main()
