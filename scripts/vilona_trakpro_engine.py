@@ -907,7 +907,10 @@ def create_lc_clone(original_campaign, account_id, account_config, variant_num=1
                     break
         taglink = product
         
-        # ─── TARGETING: EXACT COPY ──────────────────────────────────────
+        # Get promoted_object for page_id
+        page_id = og_adset.get("promoted_object", {}).get("page_id", "1014428148422867")
+    
+        # ─── ADSET TARGETING: EXACT COPY ──────────────────────────────────
         og_targeting = og_adset.get("targeting", {})
         lc_targeting = {k: v for k, v in og_targeting.items()}
         
@@ -1013,9 +1016,10 @@ def create_lc_clone(original_campaign, account_id, account_config, variant_num=1
             "targeting": json.dumps(lc_targeting),
             "optimization_goal": "LINK_CLICKS",
             "billing_event": "IMPRESSIONS",
-            "bid_strategy": "LOWEST_COST_WITHOUT_CAP",  # NO bid cap — Meta optimize sendiri, bukan BID_CAP
+            "bid_strategy": "LOWEST_COST_WITHOUT_CAP",  # NO bid cap
             "daily_budget": "18000",  # Rp 18,000 micro-budget
             "status": "ACTIVE",
+            "promoted_object": json.dumps({"page_id": page_id}),  # ⚠️ REQUIRED v22.0
         }
         
         adset_result = fb_post(f"{account_id}/adsets", **adset_payload)
@@ -1081,7 +1085,7 @@ def execute_actions(account_id, account_config, classifications, acc_key="", ins
     actions_taken = []
     core = CORE_PORTFOLIO.get(acc_key, [])
     clones_created = 0
-    max_clones_per_cycle = 3  # Limit to avoid spam
+    max_clones_per_cycle = 1  # 1 per cycle — quality over quantity
     
     # DRY_RUN gate: skip all real API mutations unless explicitly disabled
     dry_run = os.getenv("DRY_RUN", "true").lower() in ("true", "1", "yes")
