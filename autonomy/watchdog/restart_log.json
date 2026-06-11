@@ -19,9 +19,10 @@
   },
   "vilona-trakpro-1134.service": {
     "since": "20260606-210231",
-    "count": 1,
+    "count": 2,
     "last_ts": [
-      1781106970.9315906
+      1781106970.9315906,
+      1781194819.0710363
     ]
   },
   "vilona-guardian.service": {
