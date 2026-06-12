@@ -864,7 +864,7 @@ def create_lc_clone(original_campaign, account_id, account_config, variant_num=1
     """Create ON_LC_ clone with Lowest Cost + Age-Shifting strategy.
     
     Strategy (2026-06-11 FINAL):
-    - Budget: Rp 18,000/hari (micro-budget, scale horizontal bukan vertikal)
+    - Budget: Rp 20,000/hari (micro-budget, scale horizontal bukan vertikal)
     - Bid: LOWEST_COST_WITHOUT_CAP (NO bid cap — Meta optimize sendiri)
     - Targeting: EXACT copy dari winning campaign (audience/gender/placement SAMA)
     - Creative: EXACT copy (copywriting, CTA, post_id SAMA PERSIS)
@@ -1017,7 +1017,7 @@ def create_lc_clone(original_campaign, account_id, account_config, variant_num=1
             "optimization_goal": "LINK_CLICKS",
             "billing_event": "IMPRESSIONS",
             "bid_strategy": "LOWEST_COST_WITHOUT_CAP",  # NO bid cap
-            "daily_budget": "18000",  # Rp 18,000 micro-budget
+            "daily_budget": "20000",  # Rp 20,000 micro-budget
             "status": "ACTIVE",
             "promoted_object": json.dumps({"page_id": page_id}),  # ⚠️ REQUIRED v22.0
         }
@@ -1050,7 +1050,7 @@ def create_lc_clone(original_campaign, account_id, account_config, variant_num=1
             log(f"LC clone ad creation failed: {ad_result}", "WARN")
         
         log(f"🧬 LC CLONE CREATED: {camp_name}")
-        log(f"     Budget: Rp 18,000 | Bid: LOWEST_COST | Age: {age_range_str}")
+        log(f"     Budget: Rp 20,000 | Bid: LOWEST_COST | Age: {age_range_str}")
         log(f"     Adset: {adset_name} | Creative: {'copy' if creative_id else 'post_id:' + str(post_id)}")
         
         return {
@@ -1058,7 +1058,7 @@ def create_lc_clone(original_campaign, account_id, account_config, variant_num=1
             "adset_id": new_adset_id,
             "name": camp_name,
             "age_range": age_range_str,
-            "budget": 18000,
+            "budget": 20000,
         }
             
     except Exception as e:
