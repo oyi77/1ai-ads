@@ -45,8 +45,22 @@ def read_token(path):
     return None
 
 
+def read_token_dotenv():
+    env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+    try:
+        with open(env_path, "r") as f:
+            for line in f:
+                if "META_ACCESS_TOKEN" in line:
+                    token = line.split("=", 1)[1].strip().strip("'").strip('"')
+                    if token:
+                        return token
+    except Exception:
+        pass
+    return None
+
+
 def api_get(path, params=None):
-    token = read_token(CLEAN_TK_PATH) or read_token(FALLBACK_TK_PATH)
+    token = read_token_dotenv() or read_token(CLEAN_TK_PATH) or read_token(FALLBACK_TK_PATH)
     if not token:
         raise RuntimeError("No access token available")
     url = f"https://graph.facebook.com/{API_VERSION}/{path}"
