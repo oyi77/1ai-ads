@@ -1,216 +1,286 @@
 /**
  * Satpam 1134 Patrol – Glowscent
- * - Fetches campaigns and 7-day insights
- * - Classifies by 3-layer decision matrix
- * - Renames WINNER / SUPER campaigns with 🌟_
- * - Pauses (kills) CBO / ABO / TEST offender campaigns
- * - Writes aggregate patrol report
+ * Corrected 2026-06-12: 3-layer decision engine per meta-ads-operations skill.
  */
 import https from 'node:https';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { URL, URLSearchParams } from 'node:url';
 
 const ENV_PATH = '/home/openclaw/projects/1ai-ads/.env';
 const ACCOUNT_ID = 'act_2125021885010866';
-const API_VERSION = 'v22.0';
+const API_BASE = `https://graph.facebook.com/v22.0/${ACCOUNT_ID}`;
 const REPORT_PATH = '/home/openclaw/projects/1ai-ads/outputs/satpam_1134_glowscent_report.json';
+
+const TRACKED_TAGS = new Set(['abera', 'pintulipatgeser', 'hijab']);
 
 function loadEnvToken() {
   const raw = fs.readFileSync(ENV_PATH, 'utf8');
-  const m = raw.match(/^META_ACCESS_TOKEN=(.+)$/m);
-  if (!m || !m[1]) throw new Error('META_ACCESS_TOKEN missing from .env');
-  return m[1].trim();
+  for (const line of raw.split(/\r?\n/)) {
+    if (!line || line.startsWith('#')) continue;
+    const [k, ...v] = line.split('=');
+    if (k === 'META_ACCESS_TOKEN') return v.join('=').trim();
+  }
+  throw new Error('META_ACCESS_TOKEN missing from .env');
 }
 
-function api(url, body = null) {
-  const u = new URL(url);
-  const qs = new URLSearchParams({ access_token: loadEnvToken() });
-  for (const [k, v] of Object.entries(body || {})) qs.append(k, String(v));
-  u.search = qs.toString();
+let tokenCache = null;
+function token() {
+  if (!tokenCache) tokenCache = loadEnvToken();
+  return tokenCache;
+}
+
+function request(url) {
   return new Promise((resolve, reject) => {
-    const req = u.protocol === 'https:'
-      ? https.request(u, res => collect(res, resolve, reject))
-      : http.request(u, res => collect(res, resolve, reject));
+    const u = new URL(url);
+    const mod = u.protocol === 'https:' ? https : http;
+    const req = mod.request(u, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => {
+        try {
+          const j = JSON.parse(d);
+          if (j.error) reject(new Error(JSON.stringify(j.error)));
+          else resolve(j);
+        } catch (e) { reject(e); }
+      });
+    });
     req.on('error', reject);
-    if (body !== null) req.write(JSON.stringify(body));
     req.end();
-  });
-}
-
-function collect(res, resolve, reject) {
-  let d = '';
-  res.on('data', c => d += c);
-  res.on('end', () => {
-    try {
-      const j = JSON.parse(d);
-      j.error ? reject(new Error(JSON.stringify(j.error))) : resolve(j);
-    } catch (e) {
-      reject(e);
-    }
   });
 }
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-async function fetchCampaigns() {
-  const fields = [
-    'id', 'name', 'status', 'configured_status', 'special_ad_categories',
-    'bid_strategy',
-  ].join(',');
-  const url = `https://graph.facebook.com/${API_VERSION}/${ACCOUNT_ID}/campaigns?fields=${fields}&limit=100&access_token=<SECRET_9a86de34>`;k`
-  const j = await api(url);
+async function graphGet(pathname, params = {}) {
+  const qs = new URLSearchParams({ access_token: token(), ...params });
+  const url = `${API_BASE}/${pathname}?${qs.toString()}`;
+  const j = await request(url);
   return j.data || [];
 }
 
+async function graphPost(pathname, body = {}, retry = 0) {
+  const qs = new URLSearchParams({ access_token: token() });
+  for (const [k, v] of Object.entries(body)) qs.set(k, String(v));
+  const url = `${API_BASE}/${pathname}?${qs.toString()}`;
+  const j = await request(url);
+  if (!j.id && !j.success && retry < 2) {
+    await sleep((retry + 1) * 2000);
+    return graphPost(pathname, body, retry + 1);
+  }
+  return j;
+}
+
+async function fetchAllCampaigns() {
+  const out = [];
+  let next = `${API_BASE}/campaigns?fields=id,name,status,configured_status,special_ad_categories,bid_strategy&limit=100&access_token=${token()}`;
+  while (next) {
+    const j = await request(next);
+    const data = j.data || [];
+    out.push(...data);
+    const paging = j.paging || {};
+    next = paging.next || null;
+    if (next && !next.includes('access_token')) {
+      // rebuild stale next URL with current token
+      const u = new URL(next);
+      u.searchParams.set('access_token', token());
+      next = u.toString();
+    }
+    if (out.length >= 400) break;
+  }
+  return out;
+}
+
 async function fetchInsights(campaignId) {
-  const fields = [
-    'campaign_name', 'spend', 'clicks', 'impressions', 'ctr', 'cpc',
-    'inline_link_clksers', 'actions', 'cost_per_action_type',
-    'cpp', 'cpm',
-  ].join(',');
-  const url = `https://graph.facebook.com/${API_VERSION}/${ACCOUNT_ID}/insights?fields=${fields}&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"${campaignId}"}]&date_preset=last_7d&limit=200&access_token=<SECRET_9a86de34>`;k`
-  const j = await api(url);
+  const qs = new URLSearchParams({
+    fields: 'campaign_id,campaign_name,spend,cpc,clicks,ctr,impressions',
+    time_range: JSON.stringify({ since: '-7d', until: 'today' }),
+    level: 'campaign',
+    limit: '200',
+    access_token: token(),
+    'filtering': JSON.stringify([{ field: 'campaign.id', operator: 'EQUAL', value: String(campaignId) }]),
+  });
+  const url = `${API_BASE}/insights?${qs.toString()}`;
+  const j = await request(url);
   return (j.data && j.data[0]) || null;
 }
 
-function parseVal(actions, actionType) {
-  if (!actions) return null;
-  const x = actions.find(a => a.action_type === actionType && a.value != null);
-  return x ? parseFloat(x.value) : null;
-}
-function parseCPA(cpa, actionType) {
-  if (!cpa) return null;
-  const x = cpa.find(a => a.action_type === actionType);
-  return x ? parseFloat(x.cost_per_action) : null;
+function detectCampaignType(name = '') {
+  const u = name.toUpperCase();
+  if (/TEST|TESTING/.test(u)) return 'TEST';
+  if (u.startsWith('ABO')) return 'ABO';
+  if (u.startsWith('BIDCAP')) return 'BIDCAP';
+  if (/^(CBO|BC_|LC_|TC_|GLW|ON_LC_|ON_BC|🌟_)/.test(u)) return 'CBO';
+  return 'UNKNOWN';
 }
 
-function classify(cpc, ctr, roas, name) {
-  const upper = (name || '').toUpperCase();
-  // Killer name override
-  const isKiller = /(?:^|[\s\-_])?(?:CBO|ABO|TEST)(?:[\s\-_]|$)/.test(upper);
-  // Layer 1: KILL conditions
-  if (isKiller || cpc > 8000 || (ctr < 0.008 && ctr >= 0) || (roas > -1 && roas < 0.8)) {
-    return 'KILL';
+function parseNum(v) {
+  if (v == null) return null;
+  const n = parseFloat(String(v).replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(n) ? n : null;
+}
+
+function extractTag(name = '') {
+  const lower = name.toLowerCase();
+  // strip prefixes
+  const cleaned = lower.replace(/^(off_|dead_|🌟_|on_lc_|on_bc_|scale_|cbo_|abo_|bidcap_|lc_|tc_|bc_|glw_)\s*/g, '');
+  const segs = cleaned.split(/[^a-z0-9]+/).filter(Boolean);
+  for (const s of segs) {
+    if (TRACKED_TAGS.has(s)) return s;
   }
-  if (roas < 0 && cpc > 0 && ctr < 0.008) return 'KILL';
-  // Layer 2: SUPER exceptions
-  if (cpc <= 1500 && ctr >= 0.03 && ctr <= 0.05 && roas >= 4.0) return 'SUPER';
-  // Layer 3: WIN
-  if (cpc <= 3000 && ctr >= 0.015 && ctr <= 0.06 && roas >= 2.0) return 'WIN';
-  // Fallback
-  if (ctr < 0.008 || (roas > -1 && roas < 1.0) || cpc > 6000) return 'KILL';
-  return 'NEUTRAL';
-}
-
-async function renameCampaign(id, name) {
-  const url = `https://graph.facebook.com/${API_VERSION}/${id}?access_token=<SECRET_9a86de34>`;k`
-  const j = await api(url, { name });
-  return j.success || j.id ? true : false;
+  return segs[0] || null;
 }
 
 async function pauseCampaign(id) {
-  const url = `https://graph.facebook.com/${API_VERSION}/${id}?access_token=<SECRET_9a86de34>`;k`
-  const j = await api(url, { status: 'PAUSED' });
-  return j.success || j.id ? true : false;
+  return graphPost(String(id), { status: 'PAUSED' });
 }
 
-function fmt(x) {
-  if (x == null) return '-';
-  if (typeof x === 'number') return Number.isInteger(x) ? String(x) : x.toFixed(2);
-  return String(x);
+async function renameCampaign(id, name) {
+  return graphPost(String(id), { name });
+}
+
+function classifyRow(c) {
+  const name = c.name || '';
+  const type = detectCampaignType(name);
+  const spend = c.spend || 0;
+  const cpc = parseNum(c.cpc);
+  const ctr = parseNum(c.ctr) != null ? parseNum(c.ctr) / 100 : parseNum(c.ctr);
+  const impressions = parseNum(c.impressions) || 0;
+  const clicks = parseNum(c.clicks) || 0;
+  const lower = name.toLowerCase();
+
+  const isTag = [...TRACKED_TAGS].some(t => lower.includes(t));
+
+  // OFF_ guard
+  if (name.startsWith('OFF_') || name.startsWith('DEAD_')) return { verdict: 'OFF_LIMITS' };
+
+  // CPC hard kill (Glowscent: 400)
+  const cpcKill = 400;
+  const cpcDangerCbo = 140;
+  const cpcDangerAbo = 250;
+  const cpcDanger = type === 'CBO' ? cpcDangerCbo : (type === 'ABO' || type === 'TEST' || type === 'BIDCAP') ? cpcDangerAbo : cpcDangerCbo;
+
+  if (cpc != null && cpc > cpcKill && spend > 2000) return { verdict: 'OFF' };
+  if (cpc != null && cpc > cpcDanger && spend > 5000) return { verdict: 'WATCH_CPC' };
+  // CTR hard pause
+  if (ctr != null && ctr < 0.01 && impressions > 1000) return { verdict: 'WATCH_CTR' };
+
+  // Winner tag
+  if (cpc != null && cpc < cpcDanger && spend > 50000 && clicks > 0 && isTag) return { verdict: 'WINNER' };
+
+  // Non-tag watch
+  if (!isTag && spend > 50000) return { verdict: 'WATCH_SPEND' };
+
+  return { verdict: 'KEEP' };
 }
 
 (async () => {
   try {
-    const campaigns = await fetchCampaigns();
-    console.error(`campaigns_fetched=${campaigns.length}`);
+    const campaigns = await fetchAllCampaigns();
     const rows = [];
-    for (const c of campaigns) {
-      console.error(`insights_start campaign_id=${c.id}`);
+    for (let i = 0; i < campaigns.length; i++) {
+      const c = campaigns[i];
+      if (i % 25 === 0) console.error(`insights_fetch_progress ${i}/${campaigns.length}`);
       await sleep(1500);
       const ins = await fetchInsights(c.id);
-      const spend = ins?.spend ? parseFloat(ins.spend) : 0;
-      const cpc = ins?.cpc ? parseFloat(ins.cpc) : null;
-      const ctr = ins?.ctr ? parseFloat(ins.ctr) / 100 : (ins?.ctr != null ? parseFloat(ins.ctr) : null);
-      const clicks = ins?.clicks ?? 0;
-      const impressions = ins?.impressions ?? 0;
-      const purchases = parseVal(ins?.actions, 'PURCHASE');
-      const cpa = parseCPA(ins?.cost_per_action_type, 'PURCHASE');
-      const roas = (cpa && cpa > 0 && spend > 0) ? (spend / cpa) : -1;
-      const cpm = ins?.cpm ? parseFloat(ins.cpm) : null;
-      const cpp = ins?.cpp ? parseFloat(ins.cpp) : null;
-      const tier = classify(cpc, ctr, roas, c.name);
-      rows.push({ id: c.id, name: c.name, status: c.status, configured_status: c.configured_status, tier, spend, cpc, ctr, roas, clicks, impressions, purchases, cpa, cpm, cpp });
+      rows.push({
+        id: c.id,
+        name: c.name || '',
+        status: c.status || c.configured_status || '',
+        spend: parseNum(ins?.spend) || 0,
+        cpc: parseNum(ins?.cpc),
+        ctr: parseNum(ins?.ctr),
+        clicks: parseNum(ins?.clicks) || 0,
+        impressions: parseNum(ins?.impressions) || 0,
+        impressionsRaw: ins?.impressions || 0,
+      });
     }
-    console.error('classification_complete');
 
-    const winners = rows.filter(r => r.tier === 'WIN');
-    const supers = rows.filter(r => r.tier === 'SUPER');
-    const kills = rows.filter(r => r.tier === 'KILL');
-    const neutrals = rows.filter(r => r.tier === 'NEUTRAL');
+    let pauseOps = [];
+    let offOps = [];
+    let winnerOps = [];
+    let watchOps = [];
 
-    // Mutations
-    const renameOps = [];
-    for (const r of [...winners, ...supers]) {
-      const target = r.name.startsWith('🌟_') ? r.name : `🌟_${r.name}`;
-      if (r.name !== target) renameOps.push({ id: r.id, old: r.name, new: target });
+    for (const r of rows) {
+      if (r.status === 'PAUSED') continue;
+      const { verdict } = classifyRow(r);
+      switch (verdict) {
+        case 'OFF':
+          offOps.push(r);
+          break;
+        case 'WATCH_CPC':
+        case 'WATCH_CTR':
+        case 'WATCH_SPEND':
+          watchOps.push(r);
+          pauseOps.push(r);
+          break;
+        case 'WINNER':
+          winnerOps.push(r);
+          break;
+        default:
+          break;
+      }
     }
-    let renamedCount = 0;
-    let renameOk = [];
-    let renameFail = [];
-    for (const op of renameOps) {
+
+    // Execute OFF (pause + rename)
+    const offRenamed = [];
+    const offPaused = [];
+    for (const r of offOps) {
       await sleep(1500);
-      console.error(`rename_start campaign_id=${op.id}`);
-      const ok = await renameCampaign(op.id, op.new);
-      console.error(`rename_end campaign_id=${op.id} ${ok ? 'ok' : 'failed'}`);
-      if (ok) { renamedCount++; renameOk.push({ id: op.id, old: op.old, new: op.new }); }
-      else renameFail.push(id: op.id, old: op.old, new: op.new });
-    }
-
-    let killedCount = 0;
-    let killOk = [];
-    let killFail = [];
-    for (const r of kills) {
+      try { await pauseCampaign(r.id); offPaused.push(r.id); } catch (e) { console.error('pause_fail', r.id, e.message); }
       await sleep(1500);
-      console.error(`kill_start campaign_id=${r.id}`);
-      const ok = await pauseCampaign(r.id);
-      console.error(`kill_end campaign_id=${r.id} ${ok ? 'ok' : 'failed'}`);
-      if (ok) { killedCount++; killOk.push({ id: r.id, name: r.name }); }
-      else killFail.push({ id: r.id, name: r.name });
+      const newName = `OFF_${r.name}`;
+      try { const j = await renameCampaign(r.id, newName); if (j.success || j.id) offRenamed.push({ id: r.id, newName }); else console.error('rename_fail', r.id); } catch (e) { console.error('rename_fail', r.id, e.message); }
     }
 
-    // Write report
+    // Execute WATCH pauses
+    const watchPaused = [];
+    for (const r of pauseOps) {
+      await sleep(1500);
+      try { await pauseCampaign(r.id); watchPaused.push(r.id); } catch (e) { console.error('pause_watch_fail', r.id, e.message); }
+    }
+
+    // Execute winner rename
+    const winnerRenamed = [];
+    for (const r of winnerOps) {
+      await sleep(1500);
+      const newName = `🌟_${r.name}`;
+      try { const j = await renameCampaign(r.id, newName); if (j.success || j.id) winnerRenamed.push({ id: r.id, newName }); else console.error('rename_fail', r.id); } catch (e) { console.error('rename_fail', r.id, e.message); }
+    }
+
+    const active = rows.filter(r => r.status === 'ACTIVE').length;
+    const offCount = (await fetchAllCampaigns()).filter(c => /^OFF_/.test(c.name)).length;
+    const starCount = (await fetchAllCampaigns()).filter(c => /^🌟_/.test(c.name)).length;
+
     const report = {
-      account: ACCOUNT_ID,
+      account: '1134 Glowscent',
+      act_id: ACCOUNT_ID,
       timestamp: new Date().toISOString(),
       counts: {
-        total_campaigns: campaigns.length,
-        winners: winners.length,
-        supers: supers.length,
-        kills: kills.length,
-        neutrals: neutrals.length,
-        renamed_success: renamedCount,
-        rename_failed: renameFail.length,
-        killed_success: killedCount,
-        kill_failed: killFail.length,
+        active,
+        off: offCount,
+        star: starCount,
+        kill_count: offOps.length,
+        watch_count: watchOps.length,
+        winner_count: winnerOps.length,
       },
       lists: {
-        winners: winners.map(r => ({ id: r.id, name: r.name, cpc: r.cpc, ctr: r.ctr, roas: fmt(r.roas) })),
-        supers: supers.map(r => ({ id: r.id, name: r.name, cpc: r.cpc, ctr: r.ctr, roas: fmt(r.roas) })),
-        kills: kills.map(r => ({ id: r.id, name: r.name, spend: fmt(r.spend), cpc: r.cpc, ctr: r.ctr, roas: r.roas < 0 ? 'n/a' : fmt(r.roas) })),
-        neutrals: neutrals.map(r => ({ id: r.id, name: r.name, spend: fmt(r.spend) })),
-        renamed_success: renameOk,
-        renamed_failed: renameFail,
-        killed_success: killOk,
-        killed_failed: killFail,
+        kill: offOps.map(r => ({ id: r.id, name: r.name, spend: r.spend, cpc: r.cpc })),
+        watch: watchOps.map(r => ({ id: r.id, name: r.name, spend: r.spend, cpc: r.cpc, ctr: r.ctr })),
+        winners: winnerOps.map(r => ({ id: r.id, name: r.name, spend: r.spend, cpc: r.cpc, ctr: r.ctr, clicks: r.clicks })),
+      },
+      totals: {
+        spend7d: rows.reduce((s, r) => s + (r.spend || 0), 0),
       },
     };
-    fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
-    fs.writeFileSync(REPORT_PATH, Buffer.from(JSON.stringify(report)));
-    console.error('report_saved');
 
-    console.log(JSON.stringify(report, null, 2));
+    fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
+    fs.writeFileSync(REPORT_PATH, Buffer.from(JSON.stringify(report, null, 2)));
+
+    const totalSpend = report.totals.spend7d;
+    console.log(JSON.stringify({ active, off: offCount, star: starCount, kill_count: offOps.length, watch_count: watchOps.length, winner_count: winnerOps.length, spend7d: totalSpend }, null, 2));
+    console.error('report_saved');
   } catch (e) {
     console.error('patrol_error', e.message);
     process.exit(1);
