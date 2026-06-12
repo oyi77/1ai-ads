@@ -1,0 +1,156 @@
+{
+  "timestamp": "2026-06-12",
+  "campaigns_with_spend": 157,
+  "top_winners": [
+    {
+      "id": "120250016047830416",
+      "name": "\ud83c\udf1f_LC_0858_setelanbajukaosmihugajah_fashiOn",
+      "clicks": 11507,
+      "spend": 933478.0,
+      "purchases": 0,
+      "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+      "status": "PAUSED",
+      "tag": "setelan"
+    },
+    {
+      "id": "120248404118800416",
+      "name": "\ud83c\udf1f_Rakpiring_rakpiringpengering_Winner_0603",
+      "clicks": 6060,
+      "spend": 798416.0,
+      "purchases": 0,
+      "bid_strategy": "LOWEST_COST_WITH_BID_CAP",
+      "status": "PAUSED",
+      "tag": "rakpiring"
+    },
+    {
+      "id": "120249205714820416",
+      "name": "\ud83c\udf1f_Rakpiring_rakpiringpengering_Shopping_0603",
+      "clicks": 3560,
+      "spend": 508545.0,
+      "purchases": 0,
+      "bid_strategy": "COST_CAP",
+      "status": "PAUSED",
+      "tag": "rakpiring"
+    },
+    {
+      "id": "120250016058540416",
+      "name": "\ud83c\udf1f_0858_setelanbajukaosmihugajah_fashiOFFBelanja",
+      "clicks": 2636,
+      "spend": 247826.0,
+      "purchases": 0,
+      "bid_strategy": "LOWEST_COST_WITH_BID_CAP",
+      "status": "PAUSED",
+      "tag": "setelan"
+    },
+    {
+      "id": "120250055874940416",
+      "name": "\ud83c\udf1f_GEO_rakpiringpengering_INT08",
+      "clicks": 2100,
+      "spend": 375719.0,
+      "purchases": 0,
+      "bid_strategy": "COST_CAP",
+      "status": "PAUSED",
+      "tag": "rakpiring"
+    },
+    {
+      "id": "120250443083590416",
+      "name": "OFF_BIDCAP_setelanbajukaosmihugajah_fashion",
+      "clicks": 2054,
+      "spend": 148835.0,
+      "purchases": 0,
+      "bid_strategy": "LOWEST_COST_WITH_BID_CAP",
+      "status": "PAUSED",
+      "tag": "setelan"
+    },
+    {
+      "id": "120250055875130416",
+      "name": "\ud83c\udf1f_GEO_rakpiringpengering_INT07",
+      "clicks": 1768,
+      "spend": 310318.0,
+      "purchases": 0,
+      "bid_strategy": "COST_CAP",
+      "status": "PAUSED",
+      "tag": "rakpiring"
+    },
+    {
+      "id": "120249205714850416",
+      "name": "OFF_\ud83c\udf1f_0858_rakpiring_travel",
+      "clicks": 1589,
+      "spend": 189795.0,
+      "purchases": 0,
+      "bid_strategy": "COST_CAP",
+      "status": "PAUSED",
+      "tag": "rakpiring"
+    },
+    {
+      "id": "120250055874900416",
+      "name": "\ud83c\udf1f_GEO_rakpiringpengering_INT04",
+      "clicks": 1201,
+      "spend": 208179.0,
+      "purchases": 0,
+      "bid_strategy": "COST_CAP",
+      "status": "PAUSED",
+      "tag": "rakpiring"
+    },
+    {
+      "id": "120250015760320416",
+      "name": "\ud83c\udf1f_0858_setelanbajukaosmihugajah_fashiOFF",
+      "clicks": 617,
+      "spend": 63404.0,
+      "purchases": 0,
+      "bid_strategy": "LOWEST_COST_WITH_BID_CAP",
+      "status": "PAUSED",
+      "tag": "setelan"
+    },
+    {
+      "id": "120250055875150416",
+      "name": "\ud83c\udf1f_GEO_rakpiringpengering_INT10",
+      "clicks": 608,
+      "spend": 115076.0,
+      "purchases": 0,
+      "bid_strategy": "COST_CAP",
+      "status": "PAUSED",
+      "tag": "rakpiring"
+    },
+    {
+      "id": "120249502557800416",
+      "name": "OFF__Kakriput_rakpiringpengering_INT07",
+      "clicks": 385,
+      "spend": 48581.0,
+      "purchases": 0,
+      "bid_strategy": "COST_CAP",
+      "status": "PAUSED",
+      "tag": "rakpiring"
+    },
+    {
+      "id": "120249722735700416",
+      "name": "\ud83c\udf1f_TC_Kakriput_rakpiringpengering_Pinterest",
+      "clicks": 269,
+      "spend": 35875.0,
+      "purchases": 0,
+      "bid_strategy": "COST_CAP",
+      "status": "PAUSED",
+      "tag": "rakpiring"
+    },
+    {
+      "id": "120249722735710416",
+      "name": "\ud83c\udf1f_GEO_rakpiringpengering_E-commerce payment system",
+      "clicks": 268,
+      "spend": 46151.0,
+      "purchases": 0,
+      "bid_strategy": "COST_CAP",
+      "status": "PAUSED",
+      "tag": "rakpiring"
+    },
+    {
+      "id": "120250012602960416",
+      "name": "\ud83c\udf1f_TEST_setelanbajukaosmihugajah_shoppingFashiOFF",
+      "clicks": 260,
+      "spend": 25425.0,
+      "purchases": 0,
+      "bid_strategy": "LOWEST_COST_WITH_BID_CAP",
+      "status": "PAUSED",
+      "tag": "setelan"
+    }
+  ]
+}

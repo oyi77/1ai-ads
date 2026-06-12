@@ -1,184 +1,267 @@
 #!/usr/bin/env python3
-"""Standalone patrol for Meta Ads act_2125021885010866 (Glowscent)."""
+"""SATPAM PATROL 1134 — Glowscent (act_2125021885010866)"""
 import json
 import os
+import sys
 import time
 import urllib.request
-import urllib.parse
 import urllib.error
-from datetime import datetime, timezone, timedelta
+import urllib.parse
+from datetime import datetime, timedelta
 
-TOKEN_PATH = "/tmp/_tk_1134.txt"
-ACCT = "act_2125021885010866"
+ENV_PATH = "/home/openclaw/projects/1ai-ads/.env"
 API = "https://graph.facebook.com/v22.0"
-WIB = timezone(timedelta(hours=7))
-
+ACT_ID = "act_2125021885010866"
 
 def load_token():
-    with open(TOKEN_PATH) as f:
-        token = f.read().strip()
-    if not token:
-        raise RuntimeError("Token file empty")
-    return token
+    for line in open(ENV_PATH).read().splitlines():
+        if not line or line.startswith("#"):
+            continue
+        if line.split("=", 1)[0] == "META_ACCESS_TOKEN":
+            return line.split("=", 1)[1].strip()
+    raise RuntimeError("META_ACCESS_TOKEN missing")
 
+def api_get(endpoint, params=None, retries=3):
+    url = f"{API}/{endpoint}"
+    if params:
+        url = f"{url}?{urllib.parse.urlencode(params)}"
+    for attempt in range(retries):
+        try:
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            body = e.read().decode()
+            if e.code == 400 and "user request limit" in body.lower():
+                wait = (attempt + 1) * 5
+                print(f"[RATE LIMIT] waiting {wait}s (attempt {attempt+1})")
+                time.sleep(wait)
+                continue
+            if e.code == 400 and "Tidak Bisa Mengedit" in body:
+                return {}  # rule already deleted
+            print(f"[API ERROR] {e.code} {body[:200]}")
+            return {}
+        except Exception as e:
+            print(f"[NET ERROR] {e}")
+            time.sleep(2)
+    return {}
 
-def api_get(endpoint, params=None):
-    token = load_token()
-    qs = urllib.parse.urlencode({**(params or {}), "access_token": token})
-    url = f"{API}/{endpoint}?{qs}"
-    req = urllib.request.Request(url, headers={"User-Agent": "patrol-1134/1.1"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read())
+def api_post(endpoint, data, retries=3):
+    data["access_token"] = load_token()
+    qs = urllib.parse.urlencode(data).encode()
+    url = f"{API}/{endpoint}"
+    for attempt in range(retries):
+        try:
+            req = urllib.request.Request(url, data=qs, method="POST")
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            body = e.read().decode()
+            if e.code == 400 and "user request limit" in body.lower():
+                wait = (attempt + 1) * 5
+                print(f"[RATE LIMIT POST] waiting {wait}s")
+                time.sleep(wait)
+                continue
+            print(f"[POST ERROR] {e.code} {body[:200]}")
+            return {}
+        except Exception as e:
+            print(f"[NET ERROR POST] {e}")
+            time.sleep(2)
+    return {}
 
+def rename_campaign(cid, new_name):
+    return api_post(cid, {"name": new_name})
 
-def paginated_get(endpoint, params):
-    items = []
-    next_url = None
-    while True:
-        if next_url:
-            req = urllib.request.Request(next_url, headers={"User-Agent": "patrol-1134/1.1"})
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                data = json.loads(resp.read())
-        else:
-            data = api_get(endpoint, params)
-        if "data" in data:
-            items.extend(data["data"])
-        if data.get("paging", {}).get("next"):
-            next_url = data["paging"]["next"]
-            time.sleep(1.5)
-        else:
-            break
-    return items
-
-
-def classify_type(name):
-    n = name.upper()
-    if n.startswith(("ABO", "TEST")):
-        return "ABO"
-    if n.startswith(("CBO", "BC_", "LC_", "TC_", "GLW", "ON_LC")):
-        return "CBO"
-    return "CBO"
-
+def pause_campaign(cid):
+    return api_post(cid, {"status": "PAUSED"})
 
 def main():
     token = load_token()
-    if not ACCT.startswith("act_"):
-        acct = f"act_{ACCT}"
-    else:
-        acct = ACCT
-
-    # Verify account access
-    me = api_get("me")
-    if "error" in me:
-        raise SystemExit(f"[FATAL] Token invalid or access denied: {me['error']}")
-
-    acct_info = api_get(acct, {"fields": "id,name"})
-    if "error" in acct_info:
-        raise SystemExit(f"[FATAL] Account access denied: {acct_info['error']}")
-    acct_name = acct_info.get("name", "Unknown")
-
-    # 1. Fetch campaigns
-    campaigns = paginated_get(
-        f"{acct}/campaigns",
-        {"fields": "id,name,status", "limit": 200},
-    )
-    time.sleep(1.5)
-
-    # 2. Fetch 7-day insights in batches of 50
-    now = datetime.now(WIB)
+    now = datetime.now()
+    ts = now.strftime("%Y-%m-%d %H:%M:%S")
     since = (now - timedelta(days=7)).strftime("%Y-%m-%d")
     until = now.strftime("%Y-%m-%d")
-    insights = {}
-    ids = [c["id"] for c in campaigns]
-    for i in range(0, len(ids), 50):
-        batch = ids[i:i+50]
-        batch_filter = json.dumps({"campaign.id": {"in": batch}})
-        rows = paginated_get(
-            f"{acct}/insights",
-            {
-                "fields": "campaign_id,spend,cpc,ctr,clicks,impressions",
-                "level": "campaign",
-                "time_range": json.dumps({"since": since, "until": until}),
-                "filtering": batch_filter,
-                "limit": 200,
-            },
-        )
-        for r in rows:
-            cid = r.get("campaign_id")
-            if cid:
-                insights[cid] = r
-        time.sleep(1.5)
 
-    lookup = {}
-    for c in campaigns:
-        lookup[c["id"]] = {
-            "id": c["id"],
-            "name": c.get("name", ""),
-            "status": c.get("status", ""),
-            "ctype": classify_type(c.get("name", "")),
-            "spend": 0.0,
-            "cpc": 0.0,
-            "ctr": 0.0,
-            "clicks": 0,
-            "impressions": 0,
-        }
-    for cid, ins in insights.items():
-        if cid in lookup:
-            lookup[cid]["spend"] = float(ins.get("spend", 0) or 0)
-            lookup[cid]["cpc"] = float(ins.get("cpc", 0) or 0)
-            lookup[cid]["ctr"] = float(ins.get("ctr", 0) or 0)
-            lookup[cid]["clicks"] = int(float(ins.get("clicks", 0) or 0))
-            lookup[cid]["impressions"] = int(float(ins.get("impressions", 0) or 0))
+    print(f"[*] SATPAM 1134 — {ts}")
+    print(f"[*] Token length: {len(token)}")
 
-    active, off_paused, winners = [], [], []
-    killed_list, watch_list = [], []
-    total_spend = 0.0
+    # Pre-flight
+    pre = api_get(f"{ACT_ID}", {"fields": "account_name", "access_token": token})
+    if "error" in pre:
+        print(f"[FATAL] Token/account invalid: {pre['error']}")
+        # Still emit report
+        print(f"\n🛡️ SATPAM 1134 — {ts}")
+        print(f"ACTIVE: 0 | OFF_: 0 | 🌟: 0")
+        print(f"⚠️ INVALID TOKEN / ACCOUNT ACCESS")
+        print(f"💰 Spend 7d: Rp0")
+        return
+    print(f"[+] Account: {pre.get('account_name', ACT_ID)}")
 
-    for c in lookup.values():
-        if c["status"] != "ACTIVE":
-            off_paused.append(c)
-            continue
-        total_spend += c["spend"]
-        cpc = c["cpc"]
-        spend = c["spend"]
-        clicks = c["clicks"]
-        ctr = c["ctr"]
-        impr = c["impressions"]
-        ctype = c["ctype"]
+    time.sleep(1.5)
 
-        if cpc > 400 and spend > 2000:
-            killed_list.append(c)
-        elif ctype == "CBO" and cpc > 140 and spend > 5000:
-            watch_list.append(c)
-        elif ctype == "ABO" and cpc > 250 and spend > 5000:
-            watch_list.append(c)
-        elif ctr < 1.0 and impr > 1000:
-            watch_list.append(c)
-        elif cpc < 140 and spend > 50000 and clicks > 0:
-            winners.append(c)
+    # Fetch campaigns
+    camps = api_get(f"{ACT_ID}/campaigns", {
+        "fields": "id,name,status,daily_budget,lifetime_budget,spend,cpc",
+        "limit": 200,
+        "access_token": token
+    })
+    all_camps = camps.get("data", [])
+    print(f"[*] Campaigns fetched: {len(all_camps)}")
+
+    time.sleep(1.5)
+
+    # Fetch insights
+    insights = api_get(f"{ACT_ID}/insights", {
+        "fields": "campaign_id,campaign_name,spend,cpc,clicks,ctr,impressions",
+        "level": "campaign",
+        "time_range": json.dumps({"since": since, "until": until}),
+        "limit": 200,
+        "access_token": token
+    })
+    ins_data = {}
+    for row in insights.get("data", []):
+        cid = row.get("campaign_id")
+        if cid:
+            ins_data[cid] = row
+    print(f"[*] Insights rows: {len(ins_data)}")
+
+    time.sleep(1.5)
+
+    # Classify
+    TRACKED_TAGS = {"abera", "pintulipatgeser", "hijab"}
+    
+    active_list = []
+    off_list = []
+    star_list = []
+    kill_list = []
+    watch_list = []
+    
+    actions = []  # (cid, action_type, detail)
+    
+    for c in all_camps:
+        cid = c["id"]
+        name = c["name"]
+        status = c["status"]
+        spend = float(c.get("spend", 0) or 0)
+        cpc = float(c.get("cpc", 0) or 0)
+        ins = ins_data.get(cid, {})
+        clicks = int(ins.get("clicks", 0) or 0)
+        ctr = float(ins.get("ctr", 0) or 0)
+        impr = int(ins.get("impressions", 0) or 0)
+        spend_ins = float(ins.get("spend", 0) or 0)
+        
+        # Use insights spend if available, otherwise campaign spend
+        eff_spend = spend_ins if spend_ins > 0 else spend
+        
+        # Determine type
+        name_up = name.upper()
+        if "TEST" in name_up or "TESTING" in name_up:
+            camp_type = "TEST"
+        elif name_up.startswith("ABO"):
+            camp_type = "ABO"
+        elif name_up.startswith("BIDCAP"):
+            camp_type = "BIDCAP"
+        elif name_up.startswith(("CBO", "BC_", "LC_", "TC_", "GLW")):
+            camp_type = "CBO"
         else:
-            active.append(c)
-
-    ts = datetime.now(WIB).strftime("%Y-%m-%d %H:%M WIB")
-    print()
-    print(f"🛡️ SATPAM 1134 — {ts}")
-    print(f"ACCOUNT: {acct_name}")
-    print(f"ACTIVE: {len(active)} | OFF/PAUSED: {len(off_paused)} | 🌟: {len(winners)}")
-
-    print(f"⚠️ KILL ({len(killed_list)}):")
-    for c in killed_list:
-        print(f"  • {c['name']} | CPC Rp{c['cpc']:.0f} | spend Rp{c['spend']:.0f}")
-
-    print(f"👀 WATCH ({len(watch_list)}):")
-    for c in watch_list:
-        print(f"  • {c['name']} | CTR {c['ctr']:.2f}% | impressions {c['impressions']} | spend Rp{c['spend']:.0f}")
-
-    print(f"🌟 WINNERS ({len(winners)}):")
-    for c in winners:
-        print(f"  • {c['name']} | spend Rp{c['spend']:.0f} | clicks {c['clicks']} | CPC Rp{c['cpc']:.0f}")
-
-    print(f"💰 Spend 7d: Rp{int(total_spend):,}")
-
+            camp_type = "CBO"  # default
+        
+        # OFF_ check
+        if name.startswith("OFF_") or name.startswith("DEAD_"):
+            off_list.append(name)
+            continue
+        
+        # Layer 1: CPC
+        hard_kill = False
+        soft_pause = False
+        reason = ""
+        if cpc > 400 and eff_spend > 2000:
+            hard_kill = True
+            reason = f"CPC {cpc:.0f} > 400 + spend Rp{eff_spend:,.0f}"
+        elif camp_type in ("CBO", "BIDCAP", "LC_") and cpc > 140 and eff_spend > 5000:
+            soft_pause = True
+            reason = f"CPC {cpc:.0f} > 140 (CBO) + spend Rp{eff_spend:,.0f}"
+        elif camp_type in ("ABO", "TEST") and cpc > 250 and eff_spend > 5000:
+            soft_pause = True
+            reason = f"CPC {cpc:.0f} > 250 (ABO) + spend Rp{eff_spend:,.0f}"
+        
+        # Layer 2: CTR
+        if not hard_kill and not soft_pause:
+            if ctr < 1.0 and impr > 1000:
+                soft_pause = True
+                reason = f"CTR {ctr:.2f}% < 1% + impr {impr:,}"
+        
+        # Layer 3: Taglink / winner
+        has_tag = any(tag in name.lower() for tag in TRACKED_TAGS)
+        
+        if hard_kill:
+            actions.append((cid, "kill", reason))
+            kill_list.append(f"{name} ({reason})")
+        elif soft_pause:
+            actions.append((cid, "pause", reason))
+            watch_list.append(f"{name} ({reason})")
+        else:
+            # Healthy
+            active_list.append(name)
+            
+            # Check winner criteria: CPC < 140 + spend > 50K + clicks > 0
+            if cpc < 140 and eff_spend > 50000 and clicks > 0 and has_tag:
+                new_name = f"🌟_{name}"
+                actions.append((cid, "star", new_name))
+                star_list.append(f"{name} → {new_name}")
+    
+    # Deduplicate active list
+    active_list = list(dict.fromkeys(active_list))
+    star_list = list(dict.fromkeys(star_list))
+    kill_list = list(dict.fromkeys(kill_list))
+    watch_list = list(dict.fromkeys(watch_list))
+    
+    print(f"[*] Actions planned: {len(actions)}")
+    
+    # Execute actions
+    for cid, atype, detail in actions:
+        time.sleep(1.5)
+        if atype == "kill":
+            print(f"[KILL] {cid} -> {detail}")
+            rename_campaign(cid, f"OFF_{detail.split('(')[0].strip()}")
+            pause_campaign(cid)
+        elif atype == "pause":
+            print(f"[PAUSE] {cid} -> {detail}")
+            pause_campaign(cid)
+        elif atype == "star":
+            print(f"[STAR] {cid} -> {detail}")
+            rename_campaign(cid, detail)
+    
+    # Compute totals
+    total_spend = sum(
+        float(ins_data.get(c["id"], {}).get("spend", 0) or 0)
+        for c in all_camps
+        if not c["name"].startswith("OFF_") and not c["name"].startswith("DEAD_")
+    )
+    
+    report = f"""🛡️ SATPAM 1134 — {ts}
+ACTIVE: {len(active_list)} | OFF_: {len(off_list)} | 🌟: {len(star_list)}
+⚠️ KILL: {len(kill_list)}
+👀 WATCH: {len(watch_list)}
+🌟 WINNERS: {len(star_list)}
+💰 Spend 7d: Rp{total_spend:,.0f}"""
+    
+    if kill_list:
+        report += "\n\n💀 Killed:\n" + "\n".join(f"  - {k}" for k in kill_list[:20])
+    if watch_list:
+        report += "\n\n👀 Watch:\n" + "\n".join(f"  - {w}" for w in watch_list[:20])
+    if star_list:
+        report += "\n\n🌟 Winners:\n" + "\n".join(f"  - {s}" for s in star_list[:20])
+    
+    # Summary
+    report += f"\n✅ Patrol complete. {len(actions)} actions executed."
+    
+    print("\n" + report)
+    
+    # Save report
+    os.makedirs("data/shopee", exist_ok=True)
+    with open(f"data/shopee/patrol_1134_{now.strftime('%Y%m%d_%H%M')}.txt", "w") as f:
+        f.write(report)
 
 if __name__ == "__main__":
     main()

@@ -1,161 +1,200 @@
 #!/usr/bin/env python3
-import json, os, time, urllib.request, urllib.parse
-from datetime import datetime, timedelta
+"""SATPAM PATROL 1041 Nyamiresep."""
 
-ENV_PATH = "/home/openclaw/projects/1ai-ads/.env"
-ACT_ID = "380721031313330"
-API_BASE = "https://graph.facebook.com/v22.0"
-SINCE = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d")
-UNTIL = datetime.utcnow().strftime("%Y-%m-%d")
+import json
+import os
+import sys
+import time
+from datetime import datetime, timedelta, timezone
 
-def load_token():
-    for line in open(ENV_PATH).read().splitlines():
-        if not line or line.startswith("#"):
-            continue
-        key = line.split("=", 1)[0]
-        if key == "META_ACCESS_TOKEN":
-            return line.split("=", 1)[1].strip()
-    raise RuntimeError("META_ACCESS_TOKEN missing")
+BASE_DIR = "/home/openclaw/projects/1ai-ads/scripts"
+sys.path.insert(0, BASE_DIR)
+import vilona_trakpro_engine as engine
 
-TOKEN = load_token()
-print(f"Token loaded: {len(TOKEN)} chars", flush=True)
+ACT_ID = engine.ACCOUNTS["1041"]["id"]
+SINCE = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
+UNTIL = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+DRY_RUN = os.getenv("DRY_RUN", "true").lower() in ("true", "1", "yes")
 
-def api_get(path, params=None):
-    url = f"{API_BASE}/{path}"
-    qs = {"access_token": TOKEN}
-    if params:
-        qs.update(params)
-    full = f"{url}?{urllib.parse.urlencode(qs)}"
-    req = urllib.request.Request(full)
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read())
 
-def safe_post(endpoint, data):
-    data["access_token"] = TOKEN
-    qs = urllib.parse.urlencode(data).encode()
-    req = urllib.request.Request(f"{API_BASE}/{endpoint}", data=qs, method="POST")
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read())
-
-def detect_type(name):
+def classify(name):
     n = name.upper()
-    if any(p in n for p in ["CBO", "BC_", "LC_", "TC_", "🌟_", "ON_LC_", "ON_BC"]):
-        return "CBO"
-    if n.startswith("ABO") or n.startswith("BIDCAP") or "TEST" in n:
-        return "ABO"
+    for pref in ("ABO", "BIDCAP", "BID", "TC_", "TEST", "TESTING", "DEAD_", "OFF_"):
+        if n.startswith(pref):
+            return "ABO"
     return "CBO"
 
-def main():
-    print("Fetching campaigns...", flush=True)
-    camp_resp = api_get(f"act_{ACT_ID}/campaigns", {"fields": "id,name,status", "limit": 200})
-    campaigns = camp_resp.get("data", [])
-    print(f"Total campaigns: {len(campaigns)}", flush=True)
-    time.sleep(1.5)
 
-    print("Fetching insights...", flush=True)
+def main():
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    all_camps = []
+    endpoint = f"{ACT_ID}/campaigns"
+    params = {
+        "fields": "id,name,status,effective_status,daily_budget,lifetime_budget,spend",
+        "limit": 200,
+    }
+    next_url = None
+    while True:
+        if next_url is None:
+            raw = engine.fb_get(endpoint, **params)
+        else:
+            parts = next_url.split("?")
+            ep = f"{ACT_ID}/campaigns"
+            q = parts[1] if len(parts) > 1 else ""
+            raw = engine.fb_get(ep, **dict([kv.split("=", 1) for kv in q.split("&") if "=" in kv]))
+        all_camps.extend(raw.get("data", []))
+        paging = raw.get("paging", {})
+        next_url = paging.get("next")
+        if not next_url:
+            break
+        endpoint = f"{ACT_ID}/campaigns"
+        time.sleep(1)
+
     insights = {}
-    ins_resp = api_get(
-        f"act_{ACT_ID}/insights",
-        {
-            "fields": "campaign_id,campaign_name,spend,clicks,cpc,ctr,impressions",
-            "time_range": json.dumps({"since": SINCE, "until": UNTIL}),
-            "level": "campaign",
-            "limit": 200,
-        },
-    )
-    for row in ins_resp.get("data", []):
-        cid = row.get("campaign_id")
-        if cid:
-            insights[cid] = row
-    while ins_resp.get("paging", {}).get("next"):
-        req = urllib.request.Request(ins_resp["paging"]["next"])
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            ins_resp = json.loads(resp.read())
-        for row in ins_resp.get("data", []):
+    endpoint = f"{ACT_ID}/insights"
+    params = {
+        "fields": "campaign_id,campaign_name,spend,cpc,clicks,ctr,impressions",
+        "time_range": json.dumps({"since": SINCE, "until": UNTIL}),
+        "level": "campaign",
+        "limit": 200,
+    }
+    next_url = None
+    while True:
+        if next_url is None:
+            raw = engine.fb_get(endpoint, **params)
+        else:
+            parts = next_url.split("?")
+            ep = f"{ACT_ID}/insights"
+            q = parts[1] if len(parts) > 1 else ""
+            raw = engine.fb_get(ep, **dict([kv.split("=", 1) for kv in q.split("&") if "=" in kv]))
+        for row in raw.get("data", []):
             cid = row.get("campaign_id")
             if cid:
-                insights[cid] = row
-        time.sleep(1.5)
-    print(f"Insight rows: {len(insights)}", flush=True)
+                insights[cid] = {
+                    "spend": float(row.get("spend", 0) or 0),
+                    "cpc": float(row.get("cpc", 0) or 0),
+                    "clicks": int(row.get("clicks", 0) or 0),
+                    "ctr": float(row.get("ctr", 0) or 0),
+                    "impressions": int(row.get("impressions", 0) or 0),
+                }
+        paging = raw.get("paging", {})
+        next_url = paging.get("next")
+        if not next_url:
+            break
+        endpoint = f"{ACT_ID}/insights"
+        time.sleep(1)
 
-    killed = []
-    watch = []
-    winners = []
-    total_spend = 0.0
-    final_active = 0
-    final_off = 0
-    final_winner = 0
+    active_count = 0
+    off_count = 0
+    star_count = 0
+    kill_list = []
+    watch_list = []
+    winner_list = []
+    total_spend_7d = 0.0
+    actions = []
 
-    for c in campaigns:
-        cid = c["id"]
-        name = c["name"]
-        status = c["status"]
-        i = insights.get(cid, {})
-        spend = float(i.get("spend", 0) or 0)
-        clicks = int(i.get("clicks", 0) or 0)
-        cpc = float(i.get("cpc", 0) or 0)
-        ctr = float(i.get("ctr", 0) or 0)
-        impr = int(i.get("impressions", 0) or 0)
-        total_spend += spend
-        ctype = detect_type(name)
-        is_off = name.startswith("OFF_") or name.startswith("DEAD_")
+    def post_status(cid, payload):
+        try:
+            engine.fb_post(cid, **payload)
+            return True
+        except Exception as e:
+            actions.append(f"ERROR {cid}: {e}")
+            return False
 
-        if status == "ACTIVE" and not is_off:
-            try:
-                if cpc > 200 and spend > 2000:
-                    new_name = f"OFF_{name}"
-                    safe_post(cid, {"name": new_name})
-                    time.sleep(0.5)
-                    safe_post(cid, {"status": "PAUSED"})
-                    killed.append((name, cpc, spend, "CPC>200"))
-                    time.sleep(1.5)
-                elif (ctype == "CBO" and cpc > 120 and spend > 5000) or (
-                    ctype == "ABO" and cpc > 250 and spend > 5000
-                ):
-                    safe_post(cid, {"status": "PAUSED"})
-                    watch.append((name, cpc, spend, f"CPC danger ({ctype})"))
-                    time.sleep(1.5)
-                elif ctr < 1 and impr > 1000:
-                    safe_post(cid, {"status": "PAUSED"})
-                    watch.append((name, cpc, spend, f"CTR {ctr:.2f}%"))
-                    time.sleep(1.5)
-                elif cpc < 120 and spend > 50000 and clicks > 0:
-                    new_name = f"🌟_{name}"
-                    safe_post(cid, {"name": new_name})
-                    winners.append((name, cpc, spend, clicks))
-                    time.sleep(1.5)
-                else:
-                    pass
-            except Exception as e:
-                print(f"Error acting on {name}: {e}", flush=True)
+    for camp in all_camps:
+        cid = camp["id"]
+        name = camp["name"]
+        status = camp.get("status", "")
+        if name.startswith("OFF_") or name.startswith("DEAD_"):
+            off_count += 1
+            continue
+        if status == "PAUSED":
+            off_count += 1
+            continue
 
-    print("Re-fetching final state...", flush=True)
-    time.sleep(2)
-    final = api_get(f"act_{ACT_ID}/campaigns", {"fields": "name,status", "limit": 200})
-    data = final.get("data", [])
-    final_active = sum(1 for c in data if c["status"] == "ACTIVE" and not c["name"].startswith(("OFF_", "DEAD_")))
-    final_off = sum(1 for c in data if c["name"].startswith("OFF_") or c["name"].startswith("DEAD_"))
-    final_winner = sum(1 for c in data if c["name"].startswith("🌟_"))
+        ins = insights.get(cid, {})
+        spend = ins.get("spend", 0)
+        cpc = ins.get("cpc", 0)
+        clicks = ins.get("clicks", 0)
+        ctr = ins.get("ctr", 0)
+        impr = ins.get("impressions", 0)
+        total_spend_7d += spend
+        typ = classify(name)
+        danger = 120 if typ == "CBO" else 250
 
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    lines = [
-        f"🛡️ SATPAM 1041 — {ts}",
-        f"ACTIVE: {final_active} | OFF_: {final_off} | 🌟: {final_winner}",
-    ]
-    if killed:
-        lines.append("⚠️ KILL: " + "; ".join([f"{n} (CPC {cp:.0f}, Rp {sp:,.0f})" for n, cp, sp, _ in killed]))
-    else:
-        lines.append("⚠️ KILL: None")
-    if watch:
-        lines.append("👀 WATCH: " + "; ".join([f"{n} ({reason})" for n, cp, sp, reason in watch]))
-    else:
-        lines.append("👀 WATCH: None")
-    if winners:
-        lines.append("🌟 WINNERS: " + "; ".join([f"{n} (CPC {cp:.0f}, Rp {sp:,.0f}, clicks {cl})" for n, cp, sp, cl in winners]))
-    else:
-        lines.append("🌟 WINNERS: None")
-    lines.append(f"💰 Spend 7d: Rp {total_spend:,.0f}")
-    print("\n".join(lines), flush=True)
+        if cpc > 200 and spend > 2000:
+            if not DRY_RUN:
+                post_status(cid, {"status": "PAUSED"})
+                time.sleep(1.5)
+                post_status(cid, {"name": f"OFF_{name}"})
+                time.sleep(1.5)
+            actions.append(f"OFF+PAUSE {name}")
+            off_count += 1
+            kill_list.append(f"{name} (CPC {cpc:.0f}, spend Rp{spend:,.0f})")
+            continue
+
+        if cpc > danger and spend > 5000:
+            if not DRY_RUN:
+                post_status(cid, {"status": "PAUSED"})
+                time.sleep(1.5)
+            actions.append(f"PAUSE_WATCH {name}")
+            off_count += 1
+            watch_list.append(f"{name} (CPC {cpc:.0f}, spend Rp{spend:,.0f})")
+            continue
+
+        if ctr < 1.0 and impr > 1000:
+            if not DRY_RUN:
+                post_status(cid, {"status": "PAUSED"})
+                time.sleep(1.5)
+            actions.append(f"PAUSE_CTR {name}")
+            off_count += 1
+            watch_list.append(f"{name} (CTR {ctr:.2f}%, impr {impr:,})")
+            continue
+
+        if cpc < 120 and spend > 50000 and clicks > 0:
+            new_name = f"🌟_{name}" if not name.startswith("🌟_") else name
+            if new_name != name and not DRY_RUN:
+                post_status(cid, {"name": new_name})
+                time.sleep(1.5)
+            actions.append(f"STAR {name}")
+            star_count += 1
+            active_count += 1
+            winner_list.append(name)
+            continue
+
+        active_count += 1
+
+    report = (
+        f"🛡️ SATPAM 1041 — {timestamp}\n"
+        f"ACTIVE: {active_count} | OFF_: {off_count} | 🌟: {star_count}\n"
+        f"⚠️ KILL: {', '.join(kill_list) if kill_list else '0'}\n"
+        f"👀 WATCH: {', '.join(watch_list) if watch_list else '0'}\n"
+        f"🌟 WINNERS: {', '.join(winner_list) if winner_list else '0'}\n"
+        f"💰 Spend 7d: Rp{total_spend_7d:,.0f}\n"
+        f"DRY_RUN: {DRY_RUN}\n"
+    )
+    sys.stdout.write(report)
+
+    log_path = "/home/openclaw/projects/1ai-ads/data/shopee/patrol_1041_log.json"
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    with open(log_path, "w") as f:
+        json.dump(
+            {
+                "timestamp": timestamp,
+                "dry_run": DRY_RUN,
+                "active": active_count,
+                "off": off_count,
+                "star": star_count,
+                "kill": kill_list,
+                "watch": watch_list,
+                "winners": winner_list,
+                "spend_7d": total_spend_7d,
+                "actions": actions,
+            },
+            f,
+            indent=2,
+        )
+
 
 if __name__ == "__main__":
     main()
