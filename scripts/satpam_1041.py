@@ -1,148 +1,156 @@
-import sys
-import json
-import time
-import urllib.parse
-from datetime import datetime
-from pathlib import Path
+import json, time, urllib.request, urllib.parse
+from datetime import datetime, timedelta
 
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent))
-
-
-def load_token():
-    env_path = "/home/openclaw/projects/1ai-ads/.env"
-    for line in open(env_path, "r", encoding="utf-8").read().splitlines():
-        if not line or line.startswith("#"):
-            continue
-        key = line.split("=", 1)[0]
-        if key == "META_ACCESS_TOKEN":
-            return line.split("=", 1)[1].strip()
-    raise RuntimeError("META_ACCESS_TOKEN not found")
-
-
-TOKEN = load_token()
+TOKEN_PATH = "/home/openclaw/projects/1ai-ads/.env"
 API = "https://graph.facebook.com/v22.0"
 ACT = "act_380721031313330"
-TODAY = "2026-06-13"
 
-import importlib.util
-spec = importlib.util.spec_from_file_location("engine", str(HERE / "vilona_trakpro_engine.py"))
-engine = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(engine)
-fb_get = engine.fb_get
-fb_post = engine.fb_post
-
-# 1) Account-level insights -> global CPC
-acc_ins = fb_get(
-    f"{ACT}/insights",
-    fields="spend,clicks,cpc",
-    time_range=json.dumps({"since": TODAY, "until": TODAY}),
-    level="account",
-    limit="1",
-)
-acc_spend = 0.0
-acc_clicks = 0
-acc_cpc = None
-if acc_ins and acc_ins.get("data"):
-    row = acc_ins["data"][0]
-    acc_spend = float(row.get("spend", 0) or 0)
-    acc_clicks = int(row.get("clicks", 0) or 0)
-    acc_cpc = row.get("cpc")
-    if acc_cpc is not None:
-        try:
-            acc_cpc = float(acc_cpc)
-        except Exception:
-            acc_cpc = None
-
-if acc_cpc is None or acc_clicks <= 0:
-    global_cpc = 0.0
-else:
-    global_cpc = acc_spend / acc_clicks
-
-mode = "AMAN" if global_cpc < 120 else "WASPADA"
-ts = datetime.now().strftime("%H:%M")
-
-# 2) Campaign list + insights
-camp_ins = fb_get(
-    f"{ACT}/insights",
-    fields="campaign_id,campaign_name,spend,clicks,cpc,ctr",
-    time_range=json.dumps({"since": TODAY, "until": TODAY}),
-    level="campaign",
-    limit="200",
-)
-ins_map = {}
-if camp_ins and camp_ins.get("data"):
-    for r in camp_ins["data"]:
-        cid = r.get("campaign_id")
-        if cid:
-            ins_map[cid] = {
-                "spend": float(r.get("spend", 0) or 0),
-                "clicks": int(r.get("clicks", 0) or 0),
-                "cpc": float(r.get("cpc", 0) or 0),
-                "ctr": float(r.get("ctr", 0) or 0),
-                "name": r.get("campaign_name", ""),
-            }
-
-campaigns = fb_get(f"{ACT}/campaigns", fields="id,name,status", limit="200")
-active_n = 0
-off_n = 0
-star_n = 0
-monsters = []
-watches = []
-winners = []
-lc_targets = []
-
-if campaigns and campaigns.get("data"):
-    for c in campaigns["data"]:
-        st = c.get("status", "")
-        nm = c.get("name", "")
-        if st == "ACTIVE":
-            active_n += 1
-        if nm.startswith("OFF_"):
-            off_n += 1
-        if nm.startswith("\u2605_"):
-            star_n += 1
-        info = ins_map.get(c["id"], {})
-        cpc = info.get("cpc", 0)
-        spend = info.get("spend", 0)
-        clicks = info.get("clicks", 0)
-        if mode == "WASPADA":
-            if cpc >= 500 and spend > 1000:
-                monsters.append((nm, cpc, spend))
-            if cpc > 200 and clicks == 0 and spend > 500:
-                watches.append((nm, cpc, spend))
-        if cpc < 120 and clicks > 5 and spend > 10000:
-            winners.append((nm, cpc, spend, clicks))
-        if "LC" in nm and cpc < 120 and clicks > 0:
-            lc_targets.append((c["id"], nm, spend))
-
-# 3) LC scale +20% up to 50k
-lc_scaled = 0
-for cid, nm, spend in lc_targets:
-    try:
-        if spend <= 0:
+def load_token():
+    for line in open(TOKEN_PATH).read().splitlines():
+        if not line or line.startswith("#"):
             continue
-        new_budget = min(50000, int(spend * 1.2))
-        if new_budget <= spend:
-            new_budget = min(50000, spend + 2000)
-        if new_budget > 50000:
-            new_budget = 50000
-        res = fb_post(cid, daily_budget=new_budget, access_token=TOKEN)
-        if res is not None:
-            lc_scaled += 1
-        time.sleep(1.2)
-    except Exception as e:
-        print(f"LC scale failed {nm}: {e}", file=sys.stderr)
+        if line.split("=", 1)[0] == "META_ACCESS_TOKEN":
+            return line.split("=", 1)[1].strip()
+    raise RuntimeError("token missing")
 
-# 4) Report
-monster_names = ", ".join([f"{n} (Rp{cpc:.0f}, Rp{spend:.0f})" for n,cpc,spend in monsters]) if monsters else "none"
-watch_names = ", ".join([f"{n} (Rp{cpc:.0f}, Rp{spend:.0f})" for n,cpc,spend in watches]) if watches else "none"
-winner_names = ", ".join([f"{n} Rp{cpc:.0f} {clicks}kl" for n,cpc,spend,clicks in winners[:10]]) if winners else "none"
+TOKEN = load_token()
 
-report = f"\U0001f6e1\ufe0f SATPAM 1041 {TODAY} {ts}\n"
-report += f"ACTIVE:{active_n} | Global CPC:Rp{global_cpc:.0f} | Mode:{mode}\n"
-report += f"\U0001f480 MONSTER: {len(monsters)}: {monster_names}\n"
-report += f"\U0001f441\ufe0f WATCH: {len(watches)}: {watch_names}\n"
-report += f"\u2605\ufe0f WINNER: {len(winners)}: {winner_names}\n"
-report += f"\U0001f4b0 LC SCALE: {lc_scaled} naik budget\n"
-print(report)
+def fb_get(endpoint, params=None):
+    params = params or {}
+    params["access_token"] = TOKEN
+    url = f"{API}/{endpoint}?{urllib.parse.urlencode(params)}"
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(url, timeout=20) as resp:
+                return json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            if e.code == 400 and attempt < 2:
+                time.sleep(2)
+            else:
+                raise
+
+def fb_post(endpoint, payload):
+    payload["access_token"] = TOKEN
+    qs = urllib.parse.urlencode(payload).encode()
+    req = urllib.request.Request(f"{API}/{endpoint}", data=qs, method="POST")
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        return json.loads(resp.read())
+
+end_date = datetime.now().strftime("%Y-%m-%d")
+start_date = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
+time_range = f'{{"since":"{start_date}","until":"{end_date}"}}'
+
+campaigns = fb_get(f"{ACT}/campaigns", {"fields": "id,name,status", "limit": "200"}).get("data", [])
+insights = fb_get(f"{ACT}/insights", {
+    "fields": "campaign_id,campaign_name,spend,clicks,cpc,ctr",
+    "time_range": time_range,
+    "level": "campaign",
+    "limit": "200",
+}).get("data", [])
+
+ins_map = {row["campaign_id"]: row for row in insights if "campaign_id" in row}
+
+merged = []
+for c in campaigns:
+    ins = ins_map.get(c["id"], {})
+    merged.append({
+        "id": c["id"],
+        "name": c["name"],
+        "status": c["status"],
+        "spend": float(ins.get("spend", 0) or 0),
+        "clicks": int(ins.get("clicks", 0) or 0),
+        "cpc": float(ins.get("cpc", 0) or 0),
+        "ctr": float(ins.get("ctr", 0) or 0),
+    })
+
+active_norm = [m for m in merged if m["status"] == "ACTIVE" and not m["name"].startswith(("OFF_", "DEAD_"))]
+total_spend = sum(m["spend"] for m in active_norm)
+total_clicks = sum(m["clicks"] for m in active_norm)
+global_cpc = total_spend / total_clicks if total_clicks > 0 else 0.0
+
+now = datetime.now().strftime("%Y-%m-%d %H:%M")
+active_count = len(active_norm)
+off_count = sum(1 for m in merged if m["name"].startswith("OFF_"))
+star_count = sum(1 for m in merged if m["name"].startswith("🌟_"))
+
+if global_cpc < 120:
+    print(
+        f"🛡️ SATPAM 1041 {now}\n"
+        f"ACTIVE:{active_count} | OFF_:{off_count} | 🌟:{star_count} | Global CPC:Rp{int(global_cpc)} | Mode:AMAN\n"
+        f"💰 Spend 3d: Rp{int(total_spend)}\n"
+        "AMAN — global CPC sehat, tidak ada kill/watch/scale."
+    )
+    raise SystemExit(0)
+
+monsters = []
+watch_paused = []
+winners = []
+lc_scaled = []
+
+for m in merged:
+    name = m["name"]
+    if name.startswith(("OFF_", "DEAD_")):
+        continue
+
+    if m["cpc"] >= 500 and m["spend"] > 1000:
+        monsters.append(name)
+        try:
+            time.sleep(1.5)
+            fb_post(m["id"], {"status": "PAUSED"})
+        except Exception:
+            pass
+        try:
+            time.sleep(1.5)
+            fb_post(m["id"], {"name": f"OFF_{name}"})
+        except Exception:
+            pass
+        continue
+
+    if m["cpc"] > 200 and m["clicks"] == 0 and m["spend"] > 500:
+        watch_paused.append(name)
+        try:
+            time.sleep(1.5)
+            fb_post(m["id"], {"status": "PAUSED"})
+        except Exception:
+            pass
+        continue
+
+    if m["cpc"] < 120 and m["clicks"] > 5 and m["spend"] > 10000:
+        winners.append(name)
+        if not name.startswith("🌟"):
+            try:
+                time.sleep(1.5)
+                fb_post(m["id"], {"name": f"🌟_{name}"})
+            except Exception:
+                pass
+        continue
+
+    if "LC" in name.upper() and m["cpc"] < 120:
+        try:
+            time.sleep(1.5)
+            adset_resp = fb_get(f"{m['id']}/adsets", {"fields": "id,daily_budget", "limit": "10"})
+            old_budget = 0
+            target_id = None
+            if adset_resp.get("data"):
+                ads = adset_resp["data"][0]
+                old_budget = int(ads.get("daily_budget", 0))
+                target_id = ads["id"]
+            new_budget = min(int(old_budget * 1.2), 100000)
+            if new_budget > old_budget and target_id:
+                fb_post(target_id, {"daily_budget": str(new_budget)})
+                lc_scaled.append(f"{name} -> Rp{new_budget}")
+            else:
+                lc_scaled.append(name)
+        except Exception:
+            lc_scaled.append(name)
+        continue
+
+print(
+    f"🛡️ SATPAM 1041 {now}\n"
+    f"ACTIVE:{active_count} | Global CPC:Rp{int(global_cpc)} | Mode:AKTIF\n"
+    f"💀 MONSTER KILLED:{len(monsters)}\n"
+    f"👀 WATCH PAUSED:{len(watch_paused)}\n"
+    f"🌟 WINNER:{len(winners)} renamed:{len(winners)}\n"
+    f"⚡ LC SCALED:{len(lc_scaled)}\n"
+    f"💰 Spend 3d: Rp{int(total_spend)}"
+)

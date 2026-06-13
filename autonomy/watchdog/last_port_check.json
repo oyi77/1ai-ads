@@ -1,8 +1,8 @@
 {
-  "last_dt": "2026-06-13T11:27:04.257221",
+  "last_dt": "2026-06-13T11:40:20.460988",
   "status": {
     "service": "vilona-guardian.service",
-    "timestamp": "2026-06-13T11:27:04.237182",
+    "timestamp": "2026-06-13T11:40:20.440416",
     "engine_exists": "ACTIVE"
   },
   "last_port_check": "2026-06-12T13:00:13.310192"
