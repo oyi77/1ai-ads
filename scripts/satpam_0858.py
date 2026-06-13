@@ -105,7 +105,7 @@ def fetch_insights_batch(cid_list):
         filter_str = json.dumps([{'field':'campaign.id','operator':'IN','value':batch}])
         res = fb_get(f"{ACT}/insights",
             fields='campaign_id,campaign_name,spend,cpc,clicks,impressions,ctr',
-            time_range='{"since":"7daysago","until":"today"}',
+            time_range='{"since":"30daysago","until":"today"}',
             level='campaign',
             filtering=filter_str,
             limit='200')
@@ -291,7 +291,7 @@ with open('/home/openclaw/projects/1ai-ads/data/satpam_0858_report.json', 'w') a
         'active': len(active_camps),
         'paused': len(paused_camps),
         'off': len(off_camps),
-        'star': len(star_cams),
+        'star': len(star_camps),
         'monsters': monsters,
         'watch': watch_list,
         'on': on_list,
