@@ -2,7 +2,7 @@
 import requests
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # === CONFIG ===
 ACCOUNT_ID = "act_380721031313330"
@@ -57,12 +57,16 @@ if not campaigns_data or "data" not in campaigns_data:
 campaigns = campaigns_data["data"]
 
 # === STEP 2: FETCH INSIGHTS 7 DAYS ===
+since_dt = (datetime.now() - timedelta(days=7)).date()
+until_dt = datetime.now().date()
+time_range = json.dumps({"since": since_dt.isoformat(), "until": until_dt.isoformat()})
 print(f"Fetching insights for {len(campaigns)} campaigns...")
 insights_data = api_get("insights", {
     "fields": "campaign_id,campaign_name,spend,clicks,ctr,cpc",
-    "time_range": "{\"since\":\"-7days\"}",
+    "time_range": time_range,
     "level": "campaign",
-    "limit": 200
+    "limit": 200,
+    "time_increment": 1,
 })
 
 if not insights_data or "data" not in insights_data:
