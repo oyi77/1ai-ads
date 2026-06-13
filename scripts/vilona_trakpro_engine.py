@@ -863,23 +863,81 @@ def _pick_scale_audience(og_targeting, existing_clone_names, taglink):
 def create_lc_clone(original_campaign, account_id, account_config, variant_num=1):
     """Create ON_LC_ clone with Lowest Cost + Age-Shifting strategy.
     
-    Strategy (2026-06-11 FINAL):
-    - Budget: Rp 20,000/hari (micro-budget, scale horizontal bukan vertikal)
-    - Bid: LOWEST_COST_WITHOUT_CAP (NO bid cap — Meta optimize sendiri)
-    - Targeting: EXACT copy dari winning campaign (audience/gender/placement SAMA)
-    - Creative: EXACT copy (copywriting, CTA, post_id SAMA PERSIS)
-    - Age: randomize ±1-3 tahun, MINIMUM 24 (anak muda gak ada duit)
-    - Naming: ON_LC_[Product]_[AgeRange]_[MMDD]
-    - Status: ACTIVE (langsung jalan, bukan PAUSED)
+    PROTOCOL 15 BIRTH CONTROL (2026-06-13):
+    - ALL clones SPAWN AS PAUSED — Elite Wake decides fate at 00:05
+    - CB CHECK: if spend_today >= cap, ABORT immediately
+    - MAX 1 clone per account per day — enforced via state file
     
-    Args:
-        original_campaign: dict with 'id', 'name', etc.
-        account_id: act_XXXXXXXXX
-        account_config: dict with tags, etc.
-        variant_num: iteration number (for dedup naming)
+    Strategy:
+    - Budget: Rp 20,000/hari (micro-budget, horizontal scale)
+    - Bid: LOWEST_COST_WITHOUT_CAP (no bid cap)
+    - Targeting: EXACT copy (audience/gender/placement)
+    - Creative: EXACT copy (post_id)
+    - Age: randomize ±3 years, MINIMUM 24
+    - Status: PAUSED (Protocol 15 — Elite Wake determines fate)
     """
     import random
+    from pathlib import Path as _P
     
+    # ═══ PROTOCOL 15: BIRTH CONTROL — CB CHECK ═══
+    # Check if today's cap is already breached
+    try:
+        cb_path = None
+        for suffix in ['0858', '1041']:
+            p = _P('/tmp') / f'{suffix}_cb_state.json'
+            if p.exists():
+                cb_path = p
+                break
+        if cb_path:
+            cb_data = json.loads(cb_path.read_text())
+            spend = cb_data.get('spend', 0)
+            cap = cb_data.get('cap', 300000)
+            if spend >= cap:
+                log(f"⛔ BIRTH CONTROL: CB TRIPPED spend={spend} >= cap={cap} — ABORT clone", "CRITICAL")
+                return None
+    except:
+        pass
+    
+    # Check spend_today live if no CB file
+    try:
+        today_str2 = datetime.now(WIB).strftime('%Y-%m-%d')
+        today_ins = fb_get(f'{account_id}/insights', {
+            'fields': 'spend',
+            'time_range': json.dumps({'since': today_str2, 'until': today_str2}),
+            'level': 'account',
+        })
+        today_spend = sum(int(float(r.get('spend',0))) for r in today_ins.get('data', []))
+        # Read cap from governor state
+        cap = 300000
+        try:
+            gs_path = _P(__file__).parent.parent / 'data' / 'macro_governor_state.json'
+            gs = json.loads(gs_path.read_text())
+            for k in gs:
+                if isinstance(gs[k], dict) and gs[k].get('new_cap'):
+                    cap = gs[k]['new_cap']
+                    break
+        except: pass
+        if today_spend >= cap:
+            log(f"⛔ BIRTH CONTROL: spend_today={today_spend} >= cap={cap} — ABORT clone", "CRITICAL")
+            return None
+    except:
+        pass
+    
+    # ═══ PROTOCOL 15: MAX 1 CLONE PER DAY ═══
+    clone_tracker = _P('/tmp') / 'clone_count_today.json'
+    today_date = datetime.now(WIB).strftime('%Y-%m-%d')
+    clone_count = 0
+    try:
+        if clone_tracker.exists():
+            ct = json.loads(clone_tracker.read_text())
+            if ct.get('date') == today_date:
+                clone_count = ct.get('count', 0)
+    except: pass
+    
+    if clone_count >= 1:
+        log(f"⛔ BIRTH CONTROL: Daily clone limit reached ({clone_count}/1) — ABORT", "CRITICAL")
+        return None
+   
     try:
         # Get original's adsets for targeting + ads
         adsets = fb_get(f"{original_campaign['id']}/adsets",
@@ -995,11 +1053,11 @@ def create_lc_clone(original_campaign, account_id, account_config, variant_num=1
         except Exception as e:
             log(f"Post ID fetch warning: {e}", "WARN")
         
-        # ─── CREATE CAMPAIGN (ACTIVE) ───────────────────────────────────
+        # ─── CREATE CAMPAIGN (PAUSED — Protocol 15) ───────────────────
         camp_result = fb_post(f"{account_id}/campaigns",
             name=camp_name,
             objective="OUTCOME_TRAFFIC",
-            status="ACTIVE",
+            status="PAUSED",
             special_ad_categories="[]",
             is_adset_budget_sharing_enabled="false")
         
@@ -1009,17 +1067,17 @@ def create_lc_clone(original_campaign, account_id, account_config, variant_num=1
         
         new_camp_id = camp_result["id"]
         
-        # ─── CREATE ADSET (ACTIVE, Rp 18k, LOWEST_COST) ─────────────────
+        # ─── CREATE ADSET (PAUSED, Rp 20k, LOWEST_COST) ────────────────
         adset_payload = {
             "name": adset_name,
             "campaign_id": new_camp_id,
             "targeting": json.dumps(lc_targeting),
             "optimization_goal": "LINK_CLICKS",
             "billing_event": "IMPRESSIONS",
-            "bid_strategy": "LOWEST_COST_WITHOUT_CAP",  # NO bid cap
-            "daily_budget": "20000",  # Rp 20,000 micro-budget
-            "status": "ACTIVE",
-            "promoted_object": json.dumps({"page_id": page_id}),  # ⚠️ REQUIRED v22.0
+            "bid_strategy": "LOWEST_COST_WITHOUT_CAP",
+            "daily_budget": "20000",
+            "status": "PAUSED",
+            "promoted_object": json.dumps({"page_id": page_id}),
         }
         
         adset_result = fb_post(f"{account_id}/adsets", **adset_payload)
@@ -1030,11 +1088,11 @@ def create_lc_clone(original_campaign, account_id, account_config, variant_num=1
         
         new_adset_id = adset_result["id"]
         
-        # ─── CREATE AD (ACTIVE, EXACT COPY CREATIVE) ────────────────────
+        # ─── CREATE AD (PAUSED — Protocol 15) ──────────────────────────
         ad_payload = {
             "name": ad_name,
             "adset_id": new_adset_id,
-            "status": "ACTIVE",
+            "status": "PAUSED",
         }
         if creative_id:
             ad_payload["creative"] = json.dumps({"creative_id": creative_id})
@@ -1049,9 +1107,15 @@ def create_lc_clone(original_campaign, account_id, account_config, variant_num=1
         if "id" not in ad_result:
             log(f"LC clone ad creation failed: {ad_result}", "WARN")
         
-        log(f"🧬 LC CLONE CREATED: {camp_name}")
+        log(f"🧬 LC CLONE CREATED (PAUSED — P15): {camp_name}")
         log(f"     Budget: Rp 20,000 | Bid: LOWEST_COST | Age: {age_range_str}")
         log(f"     Adset: {adset_name} | Creative: {'copy' if creative_id else 'post_id:' + str(post_id)}")
+        
+        # ═══ PROTOCOL 15: Increment clone counter ═══
+        try:
+            clone_tracker.write_text(json.dumps({'date': today_date, 'count': clone_count + 1}))
+            log(f"     📊 Clone count: {clone_count + 1}/1 today")
+        except: pass
         
         return {
             "campaign_id": new_camp_id,
