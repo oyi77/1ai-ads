@@ -25,7 +25,8 @@ def load_token():
     env_path = Path('/home/openclaw/projects/1ai-ads/.env')
     if env_path.exists():
         for line in env_path.read_text().splitlines():
-            if line.startswith('META_ACCESS_TOKEN=***                    return line.split('=', 1)[1].strip()
+            if line.startswith('META_ACCESS_TOKEN='):
+                return line.split('=', 1)[1].strip()
     raise RuntimeError('META_ACCESS_TOKEN not found')
 
 TOKEN = load_token()
@@ -136,10 +137,11 @@ def money(val):
 def fetch_campaigns():
     print(f"[1] Fetching campaigns for {ACCOUNT_NAME}...")
     camps = []
-    url = f"{ACT_ID}/campaigns"
+    url = f"act_{ACT_ID}/campaigns"
     params = {
         'fields': 'id,name,status,effective_status,daily_budget,lifetime_budget,spend,cpc',
-        'limit': 200
+        'limit': 200,
+        'access_token': TOKEN,
     }
     while True:
         resp = fb_get(url, params)
@@ -165,13 +167,14 @@ def fetch_insights(campaign_ids):
         batch = campaign_ids[i:i+20]
         id_list = json.dumps(batch)
         time.sleep(1.5)  # rate limit courtesy
-        resp = fb_get(f'{ACT_ID}/insights', {
+        resp = fb_get(f'act_{ACT_ID}/insights', {
             'fields': 'campaign_id,campaign_name,spend,cpc,clicks,ctr,impressions,actions',
             'time_range': json.dumps({'since': (datetime.date.today() - datetime.timedelta(days=7)).isoformat(),
                                       'until': datetime.date.today().isoformat()}),
             'filtering': json.dumps([{'field': 'campaign.id', 'operator': 'IN', 'value': batch}]),
             'level': 'campaign',
-            'limit': 50
+            'limit': 50,
+            'access_token': TOKEN,
         })
         if 'data' in resp:
             for row in resp['data']:
@@ -482,7 +485,7 @@ def main():
         'watch_list': [{'name': w['name'], 'cid': w['cid'], 'reason': w['reason']} for w in watch_list[:20]],
         'winner_list': [{'name': w['name'], 'cid': w['cid'], 'spend': w['spend'], 'cpc': w['cpc'], 'clicks': w['clicks']} for w in new_winners]
     }
-    log_path.write_text(json.dumps(log_data, indent=2, ensure_ascii=False))
+    log_file.write_text(json.dumps(log_data, indent=2, ensure_ascii=False))
     print(f"Log saved: {log_file}")
 
 if __name__ == '__main__':

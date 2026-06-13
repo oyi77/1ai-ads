@@ -1,0 +1,32 @@
+{
+  "timestamp": "2026-06-13 06:52 WIB",
+  "account": "1041",
+  "act_id": "380721031313330",
+  "total_campaigns": 136,
+  "active": 35,
+  "off": 31,
+  "dead": 0,
+  "winners_new": 0,
+  "kills": 0,
+  "watch": 0,
+  "total_spend_7d": 416096.0,
+  "verdicts_counts": {
+    "ZERO": 23,
+    "KEEP": 81,
+    "OFF_LIMITS": 31,
+    "WINNER": 1
+  },
+  "actions": {
+    "paused_and_off": 0,
+    "paused": 0,
+    "renamed_winner": 0,
+    "watch_nontag": 0,
+    "skip": 54,
+    "errors": 0,
+    "none": 81,
+    "already_winner": 1
+  },
+  "kill_list": [],
+  "watch_list": [],
+  "winner_list": []
+}

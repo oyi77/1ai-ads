@@ -1,200 +1,231 @@
 #!/usr/bin/env python3
-"""SATPAM PATROL 1041 Nyamiresep."""
-
+"""SATPAM 1041 — 5-minute patrol for act_380721031313330"""
 import json
-import os
-import sys
 import time
-from datetime import datetime, timedelta, timezone
+import urllib.request
+import urllib.error
+from datetime import datetime
 
-BASE_DIR = "/home/openclaw/projects/1ai-ads/scripts"
-sys.path.insert(0, BASE_DIR)
-import vilona_trakpro_engine as engine
+ACCOUNT_ID = "380721031313330"
+TOKEN_PATH = "/home/openclaw/projects/1ai-ads/.env"
+BASE_URL = f"https://graph.facebook.com/v22.0/act_{ACCOUNT_ID}"
+HEADERS = {"User-Agent": "Mozilla/5.0"}
 
-ACT_ID = engine.ACCOUNTS["1041"]["id"]
-SINCE = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
-UNTIL = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-DRY_RUN = os.getenv("DRY_RUN", "true").lower() in ("true", "1", "yes")
+# --- helpers ---
+def api_get(path, params=None):
+    """GET with token from .env, delay 0.5s"""
+    time.sleep(0.5)
+    params = params or {}
+    params["access_token"] = read_token()
+    url = f"{BASE_URL}{path}?" + "&".join(f"{k}={urllib.parse.quote(str(v))}" for k,v in params.items())
+    req = urllib.request.Request(url, headers=HEADERS)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode()
+        try:
+            return {"error": json.loads(body)}
+        except Exception:
+            return {"error": {"message": body, "code": e.code}}
 
 
-def classify(name):
-    n = name.upper()
-    for pref in ("ABO", "BIDCAP", "BID", "TC_", "TEST", "TESTING", "DEAD_", "OFF_"):
-        if n.startswith(pref):
-            return "ABO"
-    return "CBO"
+def api_post(path, body):
+    """POST with token, delay 0.5s"""
+    time.sleep(0.5)
+    body["access_token"] = read_token()
+    data = json.dumps(body).encode()
+    url = f"{BASE_URL}{path}"
+    req = urllib.request.Request(url, data=data, headers=HEADERS, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        body_r = e.read().decode()
+        try:
+            return {"error": json.loads(body_r)}
+        except Exception:
+            return {"error": {"message": body_r, "code": e.code}}
 
+
+def read_token():
+    line = open(TOKEN_PATH).readline()
+    if "=" in line:
+        return line.split("=", 1)[1].strip().strip('"').strip("'")
+    return line.strip()
+
+
+def rupiah(amount):
+    """Format float to Rp integer"""
+    return f"Rp{int(round(amount)):,}"
+
+
+# --- MAIN ---
+import urllib.parse
 
 def main():
-    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    all_camps = []
-    endpoint = f"{ACT_ID}/campaigns"
-    params = {
-        "fields": "id,name,status,effective_status,daily_budget,lifetime_budget,spend",
-        "limit": 200,
-    }
-    next_url = None
-    while True:
-        if next_url is None:
-            raw = engine.fb_get(endpoint, **params)
-        else:
-            parts = next_url.split("?")
-            ep = f"{ACT_ID}/campaigns"
-            q = parts[1] if len(parts) > 1 else ""
-            raw = engine.fb_get(ep, **dict([kv.split("=", 1) for kv in q.split("&") if "=" in kv]))
-        all_camps.extend(raw.get("data", []))
-        paging = raw.get("paging", {})
-        next_url = paging.get("next")
-        if not next_url:
-            break
-        endpoint = f"{ACT_ID}/campaigns"
-        time.sleep(1)
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M WIB")
 
-    insights = {}
-    endpoint = f"{ACT_ID}/insights"
-    params = {
-        "fields": "campaign_id,campaign_name,spend,cpc,clicks,ctr,impressions",
-        "time_range": json.dumps({"since": SINCE, "until": UNTIL}),
-        "level": "campaign",
-        "limit": 200,
-    }
-    next_url = None
-    while True:
-        if next_url is None:
-            raw = engine.fb_get(endpoint, **params)
-        else:
-            parts = next_url.split("?")
-            ep = f"{ACT_ID}/insights"
-            q = parts[1] if len(parts) > 1 else ""
-            raw = engine.fb_get(ep, **dict([kv.split("=", 1) for kv in q.split("&") if "=" in kv]))
-        for row in raw.get("data", []):
-            cid = row.get("campaign_id")
-            if cid:
-                insights[cid] = {
-                    "spend": float(row.get("spend", 0) or 0),
-                    "cpc": float(row.get("cpc", 0) or 0),
-                    "clicks": int(row.get("clicks", 0) or 0),
-                    "ctr": float(row.get("ctr", 0) or 0),
-                    "impressions": int(row.get("impressions", 0) or 0),
-                }
-        paging = raw.get("paging", {})
-        next_url = paging.get("next")
-        if not next_url:
-            break
-        endpoint = f"{ACT_ID}/insights"
-        time.sleep(1)
+    # LANGKAH 1: Fetch campaigns
+    print(f"[{ts}] Fetching campaigns...", flush=True)
+    camp_resp = api_get("/campaigns", {
+        "fields": "id,name,status",
+        "limit": 200
+    })
 
+    if "error" in camp_resp:
+        print(f"ERROR fetching campaigns: {camp_resp['error']}", flush=True)
+        return
+
+    campaigns = camp_resp.get("data", [])
+    print(f"  Found {len(campaigns)} campaigns", flush=True)
+
+    # LANGKAH 1b: Fetch insights 7 hari (level=campaign)
+    print(f"  Fetching 7d insights...", flush=True)
+    insights_resp = api_get("/insights", {
+        "fields": "campaign_id,campaign_name,spend,clicks,cpc,ctr",
+        "time_range": json.dumps({"since": (datetime.now().timestamp() - 7*24*3600)//1, "until": datetime.now().timestamp()//1}),
+        "level": "campaign"
+    })
+
+    if "error" in insights_resp:
+        print(f"ERROR fetching insights: {insights_resp['error']}", flush=True)
+        return
+
+    insights_raw = insights_resp.get("data", [])
+    print(f"  Got {len(insights_raw)} insight rows", flush=True)
+
+    # Build insight map by campaign_id
+    insights_by_camp = {}
+    for row in insights_raw:
+        cid = row.get("campaign_id")
+        if cid:
+            insights_by_camp[cid] = row
+
+    # Calculate totals
+    total_spend = 0.0
+    total_clicks = 0
     active_count = 0
-    off_count = 0
-    star_count = 0
-    kill_list = []
+    camp_stats = []
+
+    for c in campaigns:
+        if c.get("status") not in ("ACTIVE", "PAUSED"):
+            continue
+        cid = c["id"]
+        ins = insights_by_camp.get(cid, {})
+        spend = float(ins.get("spend", 0) or 0)
+        clicks = int(ins.get("clicks", 0) or 0)
+        cpc = float(ins.get("cpc", 0) or 0)
+        ctr = float(ins.get("ctr", 0) or 0)
+        name = c.get("name", "")
+        status = c.get("status", "")
+
+        if status == "ACTIVE":
+            active_count += 1
+
+        total_spend += spend
+        total_clicks += clicks
+
+        camp_stats.append({
+            "id": cid,
+            "name": name,
+            "status": status,
+            "spend": spend,
+            "clicks": clicks,
+            "cpc": cpc,
+            "ctr": ctr
+        })
+
+    global_cpc = total_spend / total_clicks if total_clicks > 0 else 0.0
+    print(f"\n[GLOBAL] spend={rupiah(total_spend)} clicks={total_clicks} cpc={global_cpc:.2f}", flush=True)
+
+    # LANGKAH 2: Decision logic
+    # Layer 0: Global CPC gate
+    if global_cpc >= 120:
+        gate_mode = "FULL"
+    elif global_cpc >= 81:
+        gate_mode = "WATCH"
+    else:
+        gate_mode = "AMAN"
+
+    print(f"[GATE] mode={gate_mode}", flush=True)
+
+    monster_list = []
     watch_list = []
     winner_list = []
-    total_spend_7d = 0.0
-    actions = []
+    lc_scale_list = []
 
-    def post_status(cid, payload):
-        try:
-            engine.fb_post(cid, **payload)
-            return True
-        except Exception as e:
-            actions.append(f"ERROR {cid}: {e}")
-            return False
+    for c in camp_stats:
+        cid = c["id"]
+        name = c["name"]
+        status = c["status"]
+        spend = c["spend"]
+        clicks = c["clicks"]
+        cpc = c["cpc"]
 
-    for camp in all_camps:
-        cid = camp["id"]
-        name = camp["name"]
-        status = camp.get("status", "")
-        if name.startswith("OFF_") or name.startswith("DEAD_"):
-            off_count += 1
-            continue
-        if status == "PAUSED":
-            off_count += 1
+        if status != "ACTIVE":
             continue
 
-        ins = insights.get(cid, {})
-        spend = ins.get("spend", 0)
-        cpc = ins.get("cpc", 0)
-        clicks = ins.get("clicks", 0)
-        ctr = ins.get("ctr", 0)
-        impr = ins.get("impressions", 0)
-        total_spend_7d += spend
-        typ = classify(name)
-        danger = 120 if typ == "CBO" else 250
-
-        if cpc > 200 and spend > 2000:
-            if not DRY_RUN:
-                post_status(cid, {"status": "PAUSED"})
-                time.sleep(1.5)
-                post_status(cid, {"name": f"OFF_{name}"})
-                time.sleep(1.5)
-            actions.append(f"OFF+PAUSE {name}")
-            off_count += 1
-            kill_list.append(f"{name} (CPC {cpc:.0f}, spend Rp{spend:,.0f})")
+        # 💀 MONSTER always applies
+        if cpc >= 500 and spend > 1000:
+            # Rename OFF_ + PAUSE
+            off_name = f"OFF_{name}" if not name.startswith("OFF_") else name
+            r = api_post(f"/{cid}", {"name": off_name, "status": "PAUSED"})
+            print(f"  💀 MONSTER: {name} → OFF_ + PAUSE (cpc={cpc:.2f} spend={rupiah(spend)})", flush=True)
+            if "error" in r:
+                print(f"     ERROR: {r['error']}", flush=True)
+            monster_list.append(name)
             continue
 
-        if cpc > danger and spend > 5000:
-            if not DRY_RUN:
-                post_status(cid, {"status": "PAUSED"})
-                time.sleep(1.5)
-            actions.append(f"PAUSE_WATCH {name}")
-            off_count += 1
-            watch_list.append(f"{name} (CPC {cpc:.0f}, spend Rp{spend:,.0f})")
+        if cpc >= 1000 and spend > 500:
+            off_name = f"OFF_{name}" if not name.startswith("OFF_") else name
+            r = api_post(f"/{cid}", {"name": off_name, "status": "PAUSED"})
+            print(f"  💀 MONSTER: {name} → OFF_ + PAUSE (cpc={cpc:.2f} spend={rupiah(spend)})", flush=True)
+            if "error" in r:
+                print(f"     ERROR: {r['error']}", flush=True)
+            monster_list.append(name)
             continue
 
-        if ctr < 1.0 and impr > 1000:
-            if not DRY_RUN:
-                post_status(cid, {"status": "PAUSED"})
-                time.sleep(1.5)
-            actions.append(f"PAUSE_CTR {name}")
-            off_count += 1
-            watch_list.append(f"{name} (CTR {ctr:.2f}%, impr {impr:,})")
+        # 👀 CPC > 200 + 0 clicks + spend > 500 → PAUSE
+        if cpc > 200 and clicks == 0 and spend > 500:
+            r = api_post(f"/{cid}", {"status": "PAUSED"})
+            print(f"  👀 WATCH PCR: {name} → PAUSE (cpc={cpc:.2f} clicks=0 spend={rupiah(spend)})", flush=True)
+            if "error" in r:
+                print(f"     ERROR: {r['error']}", flush=True)
+            watch_list.append(name)
             continue
 
-        if cpc < 120 and spend > 50000 and clicks > 0:
-            new_name = f"🌟_{name}" if not name.startswith("🌟_") else name
-            if new_name != name and not DRY_RUN:
-                post_status(cid, {"name": new_name})
-                time.sleep(1.5)
-            actions.append(f"STAR {name}")
-            star_count += 1
-            active_count += 1
-            winner_list.append(name)
-            continue
+        # CPC > 200 + clicks > 0 → report JANGAN pause
+        if cpc > 200 and clicks > 0:
+            print(f"  👀 WATCH RPT: {name} (cpc={cpc:.2f} clicks={clicks} spend={rupiah(spend)}) — no action", flush=True)
+            watch_list.append(name)
 
-        active_count += 1
+        # 🌟 WINNER only if global CPC < 120
+        if gate_mode == "AMAN" or gate_mode == "WATCH":
+            if cpc < 120 and clicks > 5 and spend > 10000:
+                star_name = f"🌟_{name}" if not name.startswith("🌟_") else name
+                r = api_post(f"/{cid}", {"name": star_name})
+                print(f"  🌟 WINNER: {name} → 🌟_ (cpc={cpc:.2f} clicks={clicks} spend={rupiah(spend)})", flush=True)
+                if "error" in r:
+                    print(f"     ERROR: {r['error']}", flush=True)
+                winner_list.append(name)
 
-    report = (
-        f"🛡️ SATPAM 1041 — {timestamp}\n"
-        f"ACTIVE: {active_count} | OFF_: {off_count} | 🌟: {star_count}\n"
-        f"⚠️ KILL: {', '.join(kill_list) if kill_list else '0'}\n"
-        f"👀 WATCH: {', '.join(watch_list) if watch_list else '0'}\n"
-        f"🌟 WINNERS: {', '.join(winner_list) if winner_list else '0'}\n"
-        f"💰 Spend 7d: Rp{total_spend_7d:,.0f}\n"
-        f"DRY_RUN: {DRY_RUN}\n"
-    )
-    sys.stdout.write(report)
+        # 💰 LC SCALE: campaign with "LC" in name, CPC < 120, clicks > 0
+        if "LC" in name.upper() and cpc < 120 and clicks > 0:
+            lc_scale_list.append(name)
+            print(f"  💰 LC SCALE: {name} (cpc={cpc:.2f} clicks={clicks})", flush=True)
+            # Note: budget scaling logic requires current campaign data; 
+            # actual scaling would need campaign details — flagging here
 
-    log_path = "/home/openclaw/projects/1ai-ads/data/shopee/patrol_1041_log.json"
-    os.makedirs(os.path.dirname(log_path), exist_ok=True)
-    with open(log_path, "w") as f:
-        json.dump(
-            {
-                "timestamp": timestamp,
-                "dry_run": DRY_RUN,
-                "active": active_count,
-                "off": off_count,
-                "star": star_count,
-                "kill": kill_list,
-                "watch": watch_list,
-                "winners": winner_list,
-                "spend_7d": total_spend_7d,
-                "actions": actions,
-            },
-            f,
-            indent=2,
-        )
-
+    # Report
+    print("\n" + "="*60, flush=True)
+    print(f"🛡️ SATPAM 1041 {ts}", flush=True)
+    print(f"ACTIVE:{active_count} | Global CPC:{rupiah(global_cpc)}", flush=True)
+    print(f"💀 MONSTER: {', '.join(monster_list) if monster_list else 'none'}", flush=True)
+    print(f"👀 WATCH: {', '.join(watch_list) if watch_list else 'none'}", flush=True)
+    print(f"🌟: {', '.join(winner_list) if winner_list else 'none'}", flush=True)
+    print(f"💰 LC: {', '.join(lc_scale_list) if lc_scale_list else 'none'}", flush=True)
+    print("="*60, flush=True)
 
 if __name__ == "__main__":
     main()
