@@ -1,12 +1,14 @@
+#!/usr/bin/env python3
+# satpam_0858_patrol.py — cron strict patrol for Kakriput (0858) act_435670549443081
 import json
 import time
 import urllib.request
-import urllib.error
 import urllib.parse
+import urllib.error
 from datetime import datetime, timedelta
 
-ACT_ID = "435670549443081"
-API = "https://graph.facebook.com/v22.0"
+ACT_ID = "act_435670549443081"
+API_VER = "v22.0"
 ENV_PATH = "/home/openclaw/projects/1ai-ads/.env"
 
 def load_token():
@@ -15,143 +17,230 @@ def load_token():
             continue
         if line.split("=", 1)[0] == "META_ACCESS_TOKEN":
             return line.split("=", 1)[1].strip()
-    raise RuntimeError("META_ACCESS_TOKEN missing")
+    raise RuntimeError("META_ACCESS_TOKEN missing in .env")
 
 TOKEN = load_token()
-print("TOKEN_LEN", len(TOKEN))
+print(f"TOKEN_LEN={len(TOKEN)}")
 
-until = datetime.now().date()
-since = until - timedelta(days=7)
-
-def api_get(path, params=None):
-    if not path.startswith("http"):
-        url = f"{API}/{path}"
+def api_get(endpoint):
+    url = f"https://graph.facebook.com/{API_VER}/{endpoint}"
+    if "?" in url:
+        sep = "&"
     else:
-        url = path
-    if params is None:
-        params = {}
-    params["access_token"] = TOKEN
-    url = f"{url}?{urllib.parse.urlencode(params)}"
+        sep = "?"
+    url = url + sep + "access_token=" + urllib.parse.quote(TOKEN, safe="")
     req = urllib.request.Request(url)
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return json.loads(r.read())
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", "ignore")
-        return {"_http_error": e.code, "_body": body}
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        raw = resp.read().decode()
+        try:
+            return json.loads(raw)
+        except Exception:
+            return {"_raw": raw}
 
-def api_post(path, data):
-    if not path.startswith("http"):
-        url = f"{API}/{path}"
-    else:
-        url = path
+def api_post(endpoint, payload):
+    url = f"https://graph.facebook.com/{API_VER}/{endpoint}"
+    data = dict(payload)
     data["access_token"] = TOKEN
-    for k in list(data.keys()):
-        if isinstance(data[k], (dict, list)):
-            data[k] = json.dumps(data[k])
     qs = urllib.parse.urlencode(data).encode()
     req = urllib.request.Request(url, data=qs, method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return json.loads(r.read())
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", "ignore")
-        return {"_http_error": e.code, "_body": body}
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.loads(resp.read().decode())
 
-account_check = api_get(f"act_{ACT_ID}", {"fields": "account_name"})
-print("ACCOUNT_CHECK", account_check)
+def main():
+    now = datetime.now()
+    since = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+    until = now.strftime("%Y-%m-%d")
+    today_mmdd = now.strftime("%m%d")
+    ts = now.strftime("%Y-%m-%d %H:%M:%S")
 
-time.sleep(1.5)
-camp_resp = api_get(f"act_{ACT_ID}/campaigns", {
-    "fields": "id,name,status",
-    "limit": 200,
-})
-camps = camp_resp.get("data", [])
-print("CAMPAIGN_COUNT", len(camps))
+    print(f"SATPAM_0858 {ts}")
+    print(f"WINDOW: {since} → {until}")
 
-insights_params = {
-    "fields": "campaign_id,campaign_name,spend,cpc,clicks,ctr,impressions",
-    "time_range": json.dumps({"since": str(since), "until": str(until)}),
-    "level": "campaign",
-    "limit": 200,
-}
-time.sleep(1.5)
-ins_resp = api_get(f"act_{ACT_ID}/insights", insights_params)
-ins_data = {row["campaign_id"]: row for row in ins_resp.get("data", [])}
-print("INSIGHTS_ROWS", len(ins_data))
+    # 1. Fetch campaigns
+    camps_raw = api_get(f"{ACT_ID}/campaigns?fields=id,name,status&limit=200")
+    campaigns = camps_raw.get("data", [])
+    by_cid = {c["id"]: c for c in campaigns}
 
-time.sleep(1.5)
-rules = api_get(f"act_{ACT_ID}/adrules_library", {"fields": "id,name", "limit": 50})
-print("RULES_COUNT", len(rules.get("data", [])))
+    # paging
+    nxt = camps_raw.get("paging", {}).get("next")
+    while nxt:
+        time.sleep(1.5)
+        url = nxt + ("&" if "?" in nxt else "?") + "access_token=" + urllib.parse.quote(TOKEN, safe="")
+        with urllib.request.urlopen(url, timeout=30) as resp:
+            page = json.loads(resp.read().decode())
+        campaigns.extend(page.get("data", []))
+        for c in page.get("data", []):
+            by_cid[c["id"]] = c
+        nxt = page.get("paging", {}).get("next")
 
-now = datetime.now().strftime("%Y-%m-%d %H:%M")
-active = [c for c in camps if c["status"] == "ACTIVE"]
-off = [c for c in camps if c["status"] == "PAUSED" and c["name"].startswith("OFF_")]
-paused_other = [c for c in camps if c["status"] == "PAUSED" and not c["name"].startswith("OFF_")]
+    active_ids = [c["id"] for c in campaigns if c["status"] == "ACTIVE"]
+    paused_ids = [c["id"] for c in campaigns if c["status"] == "PAUSED"]
 
-rows = []
-for c in active + paused_other:
-    ins = ins_data.get(c["id"], {})
-    spend = float(ins.get("spend", 0) or 0)
-    cpc_raw = ins.get("cpc")
-    cpc = float(cpc_raw) if cpc_raw is not None else None
-    clicks = int(ins.get("clicks", 0) or 0)
-    impr = int(ins.get("impressions", 0) or 0)
-    ctr = float(ins.get("ctr", 0) or 0)
-    name = c["name"]
-    is_off_limit = name.startswith("OFF_") or name.startswith("DEAD_")
-    rows.append({
-        "id": c["id"],
-        "name": name,
-        "status": c["status"],
-        "spend": spend,
-        "cpc": cpc,
-        "clicks": clicks,
-        "impressions": impr,
-        "ctr": ctr,
-        "is_off_limit": is_off_limit,
-    })
+    print(f"TOTAL_CAMPAIGNS={len(campaigns)} ACTIVE={len(active_ids)} PAUSED={len(paused_ids)}")
 
-kill = []
-watch = []
-winners = []
-for r in rows:
-    if r["is_off_limit"]:
-        continue
-    if r["cpc"] is not None and r["cpc"] > 200 and r["spend"] > 2000:
-        kill.append(r)
-    elif r["ctr"] < 1 and r["impressions"] > 1000:
-        watch.append(r)
-    elif r["cpc"] is not None and r["cpc"] > 120 and r["spend"] > 5000:
-        watch.append(r)
-    elif r["spend"] > 50000 and r["clicks"] > 0 and ((r["cpc"] is not None and r["cpc"] < 120) or r["cpc"] is None):
-        winners.append(r)
+    # 2. Fetch insights - level campaign, 7d+ today
+    insights_map = {}
+    if active_ids:
+        # batched by 20
+        for i in range(0, len(active_ids), 20):
+            batch = active_ids[i:i+20]
+            ids_param = json.dumps(batch)
+            q = urllib.parse.urlencode({
+                "time_range": json.dumps({"since": since, "until": until}),
+                "level": "campaign",
+                "fields": "campaign_id,campaign_name,spend,cpc,clicks,ctr,impressions",
+                "limit": "200",
+                "filtering": json.dumps([{"field": "campaign.id", "operator": "IN", "value": batch}]),
+            })
+            url = f"https://graph.facebook.com/{API_VER}/{ACT_ID}/insights?{q}&access_token=" + urllib.parse.quote(TOKEN, safe="")
+            time.sleep(1.5)
+            with urllib.request.urlopen(url, timeout=30) as resp:
+                data = json.loads(resp.read().decode())
+            for row in data.get("data", []):
+                cid = row.get("campaign_id")
+                if cid:
+                    insights_map[cid] = row
+            nxt2 = data.get("paging", {}).get("next")
+            while nxt2:
+                time.sleep(1.5)
+                url2 = nxt2 + ("&" if "?" in nxt2 else "?") + "access_token=" + urllib.parse.quote(TOKEN, safe="")
+                with urllib.request.urlopen(url2, timeout=30) as resp:
+                    page2 = json.loads(resp.read().decode())
+                for row in page2.get("data", []):
+                    cid = row.get("campaign_id")
+                    if cid:
+                        insights_map[cid] = row
+                nxt2 = page2.get("paging", {}).get("next")
 
-seen = set()
-deduped_watch = []
-for r in watch:
-    if r["id"] not in seen:
-        seen.add(r["id"])
-        deduped_watch.append(r)
-watch = deduped_watch
+    # 3. Calculate global CPC across ALL active campaigns (all rows)
+    total_spend = 0.0
+    total_clicks = 0
+    for cid in active_ids:
+        row = insights_map.get(cid, {})
+        try:
+            total_spend += float(row.get("spend") or 0)
+        except Exception:
+            pass
+        try:
+            total_clicks += int(row.get("clicks") or 0)
+        except Exception:
+            pass
 
-total_spend = round(sum(r["spend"] for r in rows), 2)
+    global_cpc = (total_spend / total_clicks) if total_clicks > 0 else 0.0
+    print(f"GLOBAL_CPC={global_cpc:.2f}")
 
-def fmt(n):
-    return "Rp" + f"{n:,.0f}".replace(",", ".")
+    mode = "AMAN" if global_cpc < 120 else "NORMAL"
+    print(f"MODE={mode}")
 
-kill_names = ", ".join(f"{r['name']} (CPC {r['cpc']:.0f}, {fmt(r['spend'])})" for r in kill[:20])
-watch_names = ", ".join(f"{r['name']} (CTR {r['ctr']:.2f}%, impr {r['impressions']}, CPC {r['cpc']})" for r in watch[:20])
-winner_names = ", ".join(f"{r['name']} (spend {fmt(r['spend'])}, clicks {r['clicks']})" for r in winners[:20])
+    # 4. Layers
+    monsters = []
+    watch = []
+    winners = []
+    auto_on = []
+    lc_list = []
 
-conflict_rules = [r["name"] for r in rules.get("data", []) if any(k in r["name"].upper() for k in ["CPC","CTR","PAUSE","STOP"])]
+    for cid in active_ids:
+        c = by_cid.get(cid, {})
+        row = insights_map.get(cid, {})
+        name = c.get("name", "")
+        try:
+            cpc = float(row.get("cpc") or 0)
+        except Exception:
+            cpc = 0.0
+        try:
+            spend = float(row.get("spend") or 0)
+        except Exception:
+            spend = 0.0
+        try:
+            clicks = int(row.get("clicks") or 0)
+        except Exception:
+            clicks = 0
 
-report = f"""🛡️ SATPAM 0858 — {now}
-ACTIVE: {len(active)} | OFF_: {len(off)} | PAUSED_OTHER: {len(paused_other)}
-⚠️ KILL: {kill_names or 'none'}
-👀 WATCH: {watch_names or 'none'}
-🌟 WINNERS: {winner_names or 'none'}
-💰 Total spend 7d: {fmt(total_spend)}
-🔧 Rules: {len(rules.get('data',[]))} total — conflicts {', '.join(conflict_rules[:10]) or 'none'}
-"""
-print(report)
+        off = name.startswith("OFF_")
+        if off:
+            continue
+
+        if cpc >= 500 and spend > 1000:
+            monsters.append(name)
+        elif cpc > 200 and clicks == 0 and spend > 500:
+            monsters.append(name)
+        elif cpc > 200 and clicks > 0 and spend > 2000:
+            watch.append(name)
+        elif cpc < 120 and clicks > 5 and spend > 10000:
+            winners.append(name)
+
+        if "ON_LC_" in name and cpc < 120:
+            lc_list.append(name)
+
+    # 5. Auto-ON candidates (paused non-OFF_)
+    auto_on = []
+    for c in campaigns:
+        if c["status"] != "PAUSED":
+            continue
+        name = c.get("name", "")
+        if name.startswith("OFF_") or name.startswith("DEAD_"):
+            continue
+        cid = c["id"]
+        row = insights_map.get(cid, {})
+        try:
+            cpc = float(row.get("cpc") or 0)
+        except Exception:
+            cpc = 0.0
+        try:
+            clicks = int(row.get("clicks") or 0)
+        except Exception:
+            clicks = 0
+        try:
+            spend = float(row.get("spend") or 0)
+        except Exception:
+            spend = 0.0
+        if cpc < 200 and clicks > 3 and spend > 2000:
+            auto_on.append(name)
+
+    # apply actions if NORMAL
+    acted_monster = 0
+    acted_auto_on = 0
+    acted_winner = 0
+    if mode == "NORMAL":
+        for name in monsters:
+            cid = next((c["id"] for c in campaigns if c.get("name") == name and c["status"] == "ACTIVE"), None)
+            if cid:
+                time.sleep(1.5)
+                res = api_post(cid, {"status": "PAUSED"})
+                acted_monster += 1
+        for name in auto_on:
+            cid = next((c["id"] for c in campaigns if c.get("name") == name and c["status"] == "PAUSED"), None)
+            if cid:
+                time.sleep(1.5)
+                res = api_post(cid, {"status": "ACTIVE"})
+                acted_auto_on += 1
+        for name in winners:
+            cid = next((c["id"] for c in campaigns if c.get("name") == name and c["status"] == "ACTIVE"), None)
+            if cid:
+                time.sleep(1.5)
+                res = api_post(cid, {"name": f"🌟_{name}"})
+                acted_winner += 1
+
+    # Meta automated rules
+    rules_data = api_get(f"{ACT_ID}/adrules_library?fields=id,name&limit=50")
+    rules = rules_data.get("data", [])
+    pause_rules = [r for r in rules if any(k in (r.get("name") or "").upper() for k in ["OFF", "STOPLOSS", "RULE SPENT", "SENTINEL", "BATAS"])]
+
+    # Report
+    print(f"🛡️ SATPAM 0858 {ts}")
+    print(f"ACTIVE:{len(active_ids)} | PAUSED:{len(paused_ids)} | Global CPC:Rp{global_cpc:.0f} | Mode:{mode}")
+    if monsters:
+        print(f"💀 MONSTER ({acted_monster} acted): {monsters}")
+    else:
+        print("💀 MONSTER: —")
+    if watch:
+        print(f"👀 WATCH: {watch}")
+    else:
+        print("👀 WATCH: —")
+    print(f"🌟 WINNER: {acted_winner} — {winners if winners else '—'}")
+    print(f"✅ AUTO-ON: {acted_auto_on} — {auto_on if auto_on else '—'}")
+    print(f"💰 LC: {len(lc_list)} campaigns")
+    print(f"⚠️ Meta rules: {len(rules)} ({len(pause_rules)} pause-trigger)")
+
+if __name__ == "__main__":
+    main()
