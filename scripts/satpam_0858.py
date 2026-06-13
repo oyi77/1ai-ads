@@ -1,23 +1,13 @@
 #!/usr/bin/env python3
-"""SATPAM 0858 (Kakriput) — patrol cron for Meta Ads account."""
+"""SATPAM 0858 (Kakriput) — engine-backed patrol for cron."""
+import json, sys, os, urllib.request, urllib.parse
+from datetime import datetime
+from pathlib import Path
 
-import json
-import time
-import urllib.request
-import urllib.parse
-import urllib.error
-from datetime import datetime, timedelta
-
-# === CONFIG ===
-ACT_ID = "435670549443081"
-API_VER = "v22.0"
-API_BASE = f"https://graph.facebook.com/{API_VER}"
-ENV_PATH = "/home/openclaw/projects/1ai-ads/.env"
-OUTPUT_PATH = "/tmp/_sATPAM_0858.txt"
-
-# === TOKEN LOADER (pitfall #56) ===
+# Token loader — read from .env file directly by key, no shell sourcing
 def load_token():
-    for line in open(ENV_PATH).read().splitlines():
+    env_path = Path("/home/openclaw/projects/1ai-ads/.env")
+    for line in env_path.read_text().splitlines():
         if not line or line.startswith("#"):
             continue
         if line.split("=", 1)[0] == "META_ACCESS_TOKEN":
@@ -25,203 +15,202 @@ def load_token():
     raise RuntimeError("META_ACCESS_TOKEN not found in .env")
 
 TOKEN = load_token()
+print(f"Token loaded: {len(TOKEN)} chars")
 
-# === HELPERS ===
-def api_get(endpoint, params=None):
-    """GET request with token auto-injected."""
-    url = f"{API_BASE}/{endpoint}"
-    if params:
-        url += "?" + urllib.parse.urlencode(params)
-    url += "&access_token=" + urllib.parse.quote(TOKEN)
-    req = urllib.request.Request(url, method="GET")
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            return json.loads(resp.read())
-    except urllib.error.HTTPError as e:
-        body = e.read().decode()
-        return {"_http_error": e.code, "_body": body}
-    except Exception as e:
-        return {"_exception": str(e)}
+# Verify engine is importable
+HERE = Path("/home/openclaw/projects/1ai-ads")
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
 
-def api_post(endpoint, data):
-    """POST request with token auto-injected."""
-    url = f"{API_BASE}/{endpoint}"
-    data["access_token"] = TOKEN
-    # Serialize nested dicts/lists as JSON strings
-    for k in list(data.keys()):
-        if isinstance(data[k], (dict, list)):
-            data[k] = json.dumps(data[k])
-    qs = urllib.parse.urlencode(data).encode()
-    req = urllib.request.Request(url, data=qs, method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            return json.loads(resp.read())
-    except urllib.error.HTTPError as e:
-        body = e.read().decode()
-        return {"_http_error": e.code, "_body": body}
-    except Exception as e:
-        return {"_exception": str(e)}
+import vilona_trakpro_engine as engine
 
-def pause_campaign(cid):
-    return api_post(f"{cid}", {"status": "PAUSED"})
+ACT = "act_435670549443081"
+API = "https://graph.facebook.com/v22.0"
+OUT = "/tmp/satpam_0858_latest.json"
 
-def activate_campaign(cid):
-    return api_post(f"{cid}", {"status": "ACTIVE"})
+def fb_get(endpoint, fields=None, limit=None, time_range=None, level=None, filtering=None):
+    """Reuse engine's fb_get with current token."""
+    params = {"access_token": TOKEN}
+    if fields:
+        params["fields"] = fields
+    if limit:
+        params["limit"] = str(limit)
+    if time_range:
+        params["time_range"] = time_range
+    if level:
+        params["level"] = level
+    if filtering:
+        params["filtering"] = filtering
+    url = f"{API}/{endpoint}"
+    qs = "&".join(f"{k}={urllib.parse.quote(str(v))}" for k, v in params.items())
+    full = f"{url}?{qs}"
+    req = urllib.request.Request(full)
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.loads(resp.read())
 
-def rename_campaign(cid, new_name):
-    return api_post(f"{cid}", {"name": new_name})
+# Verify account access
+print("Verifying account access...")
+try:
+    acct = fb_get(f"{ACT}", fields="name,id")
+    print(f"Account: {acct.get('name')} ({acct.get('id')})")
+except Exception as e:
+    print(f"ACCOUNT CHECK FAILED: {e}")
+    # Save blocker and exit
+    out = {
+        "timestamp": datetime.now().isoformat(),
+        "mode": "BLOCKER",
+        "error": f"Account introspection failed: {e}",
+        "act": ACT,
+    }
+    Path(OUT).write_text(json.dumps(out, indent=2))
+    sys.exit(2)
 
-# === DATE RANGE ===
-today = datetime.now().date()
-since = (today - timedelta(days=7)).isoformat()
-until = today.isoformat()
+# Fetch today's insights for global CPC
+print("Fetching today's insights for global CPC...")
+today_str = datetime.now().strftime("%Y-%m-%d")
+try:
+    insights = fb_get(
+        f"{ACT}/insights",
+        fields="campaign_id,campaign_name,spend,clicks,cpc,ctr,impressions",
+        time_range=json.dumps({"since": today_str, "until": today_str}),
+        level="campaign",
+        limit="200",
+    )
+    rows = insights.get("data", [])
+    print(f"Insights rows today: {len(rows)}")
+    
+    total_spend = sum(float(r.get("spend", 0) or 0) for r in rows)
+    total_clicks = sum(int(r.get("clicks", 0) or 0) for r in rows)
+    global_cpc = total_spend / total_clicks if total_clicks > 0 else 0.0
+    
+    print(f"Global CPC today: Rp{global_cpc:.1f} (spend={total_spend:.0f}, clicks={total_clicks})")
+except Exception as e:
+    print(f"INSIGHTS FETCH FAILED: {e}")
+    out = {
+        "timestamp": datetime.now().isoformat(),
+        "mode": "BLOCKER",
+        "error": f"Insights fetch failed (HTTP 403 possible): {e}",
+        "act": ACT,
+        "account_name": acct.get("name"),
+    }
+    Path(OUT).write_text(json.dumps(out, indent=2))
+    sys.exit(3)
 
-# === FETCH CAMPAIGNS ===
-campaigns = []
-next_url = f"act_{ACT_ID}/campaigns?fields=id,name,status&limit=200"
-while next_url:
-    result = api_get(next_url)
-    if isinstance(result, dict) and "data" in result:
-        campaigns.extend(result["data"])
-        next_url = result.get("paging", {}).get("next")
-        if next_url:
-            # Append token to raw next URL (pitfall #69)
-            sep = "&" if "?" in next_url else "?"
-            next_url = next_url + sep + "access_token=" + urllib.parse.quote(TOKEN)
-    else:
-        break
-    time.sleep(0.6)
+# Determine mode matching skill criteria
+if global_cpc <= 80:
+    mode = "AMAN"
+elif global_cpc <= 120:
+    mode = "WATCH"
+else:
+    mode = "NORMAL"
 
-# === FETCH INSIGHTS ===
-insights = []
-next_url = (
-    f"act_{ACT_ID}/insights?fields=campaign_id,campaign_name,spend,cpc,clicks,ctr,impressions"
-    f"&time_range={{\"since\":\"{since}\",\"until\":\"{until}\"}}"
-    f"&level=campaign&limit=200"
-)
-while next_url:
-    result = api_get(next_url)
-    if isinstance(result, dict) and "data" in result:
-        insights.extend(result["data"])
-        next_url = result.get("paging", {}).get("next")
-        if next_url:
-            sep = "&" if "?" in next_url else "?"
-            next_url = next_url + sep + "access_token=" + urllib.parse.quote(TOKEN)
-    else:
-        break
-    time.sleep(0.6)
+print(f"Mode: {mode}")
 
-# === BUILD INSIGHTS MAP ===
-ins_map = {}
-for row in insights:
-    cid = row.get("campaign_id")
+# Fetch campaigns
+print("Fetching campaigns...")
+campaigns_data = fb_get(f"{ACT}/campaigns", fields="id,name,status,effective_status,daily_budget", limit="200")
+campaigns = campaigns_data.get("data", [])
+print(f"Campaigns fetched: {len(campaigns)}")
+
+active_camps = [c for c in campaigns if c.get("status") == "ACTIVE"]
+off_camps = [c for c in campaigns if c.get("name", "").startswith("OFF_")]
+star_camps = [c for c in campaigns if c.get("name", "").startswith("🌟_")]
+
+print(f"Active: {len(active_camps)} | OFF_: {len(off_camps)} | 🌟: {len(star_camps)}")
+
+# Build insight lookup
+insight_map = {}
+for r in rows:
+    cid = r.get("campaign_id")
     if cid:
-        ins_map[cid] = row
+        insight_map[cid] = r
 
-# === CAMP MAP ===
-camp_map = {c["id"]: c for c in campaigns}
-
-# === GLOBAL CPC ===
-total_spend = 0.0
-total_clicks = 0
-for row in insights:
-    try:
-        total_spend += float(row.get("spend", 0) or 0)
-        total_clicks += int(row.get("clicks", 0) or 0)
-    except (ValueError, TypeError):
-        pass
-
-global_cpc = total_spend / total_clicks if total_clicks > 0 else 0.0
-mode = "AMAN" if global_cpc < 120 else "NORMAL"
-
-# === CLASSIFY ===
-monster_list = []
+# MONSTER hunt (always)
+monsters = []
 watch_list = []
-winner_list = []
-auto_on_list = []
-lc_list = []
-
-for cid, camp in camp_map.items():
-    name = camp.get("name", "")
-    status = camp.get("status", "")
-    ins = ins_map.get(cid, {})
+for c in campaigns:
+    cid = c.get("id")
+    name = c.get("name", "")
+    ins = insight_map.get(cid, {})
     cpc = float(ins.get("cpc", 0) or 0)
-    clicks = int(ins.get("clicks", 0) or 0)
     spend = float(ins.get("spend", 0) or 0)
-
-    # Skip OFF_ prefix campaigns entirely
-    if name.startswith("OFF_"):
-        continue
-
-    if status != "ACTIVE":
-        continue
-
-    # MONSTER
+    clicks = int(ins.get("clicks", 0) or 0)
+    
     if cpc >= 500 and spend > 1000:
-        monster_list.append((cid, name, cpc, spend, "CPC>=500+spend>1K"))
+        monsters.append(f"{name} (CPC Rp{cpc:.0f}, spend Rp{spend:.0f})")
     elif cpc > 200 and clicks == 0 and spend > 500:
-        monster_list.append((cid, name, cpc, spend, "CPC>200+0clicks+spend>500"))
+        watch_list.append(f"{name} (CPC Rp{cpc:.0f}, spend Rp{spend:.0f})")
 
-    # WATCH
-    elif cpc > 200 and clicks > 0 and spend > 2000:
-        watch_list.append((cid, name, cpc, spend))
+# Winner scan + LC scale (AMAN mode: report only)
+winners = []
+lc_eligible = []
+auto_unpause_candidates = []
 
-    # WINNER
-    elif cpc < 120 and clicks > 5 and spend > 10000:
-        winner_list.append((cid, name, cpc, spend))
-
-    # LC SCALE (has "LC" in name and CPC < 120)
-    if "LC" in name.upper() and cpc < 120 and spend > 0:
-        lc_list.append((cid, name, cpc, spend))
-
-# AUTO-ON: PAUSED non-OFF_ + CPC < 200 + clicks > 3 + spend > 2000
-for cid, camp in camp_map.items():
-    name = camp.get("name", "")
-    status = camp.get("status", "")
-    if status != "PAUSED" or name.startswith("OFF_"):
-        continue
-    ins = ins_map.get(cid, {})
+for c in campaigns:
+    cid = c.get("id")
+    name = c.get("name", "")
+    status = c.get("status", "")
+    ins = insight_map.get(cid, {})
     cpc = float(ins.get("cpc", 0) or 0)
     clicks = int(ins.get("clicks", 0) or 0)
     spend = float(ins.get("spend", 0) or 0)
-    if cpc < 200 and clicks > 3 and spend > 2000:
-        auto_on_list.append((cid, name, cpc, spend))
+    
+    if "LC" in name.upper() and cpc < 120 and spend < 20000 and spend > 0 and clicks > 0:
+        lc_eligible.append(name)
+    
+    if cpc < 120 and clicks > 3 and spend > 2000 and status == "PAUSED" and not name.startswith("OFF_"):
+        auto_unpause_candidates.append(name)
+    
+    if cpc < 120 and clicks > 5 and spend > 10000:
+        winners.append(name)
 
-# === ACTIONS ===
-renamed_winners = []
-action_count = 0
+# Count renamed today (look for 🌟_ prefix in active campaigns)
+renamed_today = sum(1 for c in campaigns if c.get("name", "").startswith("🌟_"))
 
-if mode == "NORMAL":
-    # MONSTER: pause + rename OFF_
-    for cid, name, cpc, spend, reason in monster_list:
-        pause_campaign(cid)
-        time.sleep(1.5)
-        new_name = f"OFF_{name}"
-        rename_campaign(cid, new_name)
-        time.sleep(1.5)
-        renamed_winners.append(f"OFF_{name}")
-        action_count += 2
+report = {
+    "timestamp": datetime.now().isoformat(),
+    "act": ACT,
+    "account_name": acct.get("name"),
+    "mode": mode,
+    "global_cpc": round(global_cpc, 1),
+    "active": len(active_camps),
+    "off": len(off_camps),
+    "star": len(star_camps),
+    "monsters": monsters,
+    "watch": watch_list,
+    "winners": winners,
+    "winners_count": len(winners),
+    "renamed_today": renamed_today,
+    "lc_eligible": lc_eligible,
+    "lc_eligible_count": len(lc_eligible),
+    "auto_unpause_candidates": auto_unpause_candidates,
+    "auto_unpause_count": len(auto_unpause_candidates),
+    "total_campaigns": len(campaigns),
+    "spend_today": round(total_spend, 0),
+    "clicks_today": total_clicks,
+}
 
-    # AUTO-ON: activate
-    for cid, name, cpc, spend in auto_on_list:
-        activate_campaign(cid)
-        time.sleep(1.5)
-        action_count += 1
+Path(OUT).write_text(json.dumps(out := report, indent=2, ensure_ascii=False))
 
-# === REPORT ===
-lines = []
-lines.append(f"🛡️ SATPAM 0858 {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-lines.append(f"ACTIVE:{len([c for c in campaigns if c['status']=='ACTIVE'])} | Global CPC:Rp{global_cpc:.0f} | Mode:{mode}")
-lines.append(f"💀 MONSTER: {'; '.join([f'{n} (Rp{cpc:.0f})' for _,n,cpc,_,_ in monster_list]) if monster_list else '—'}")
-lines.append(f"👀 WATCH: {'; '.join([f'{n} (Rp{cpc:.0f})' for _,n,cpc,_ in watch_list]) if watch_list else '—'}")
-lines.append(f"🌟 WINNER: {len(winner_list)} — {'; '.join([n for _,n,_,_ in winner_list]) if winner_list else '—'}")
-lines.append(f"✅ AUTO-ON: {len(auto_on_list)}")
-lines.append(f"💰 LC: {len(lc_list)}")
-lines.append(f"⚠️ Meta rules: 0 — DELETE jika ada PAUSE rules")
-
-report = "\n".join(lines)
-
-with open(OUTPUT_PATH, "w") as f:
-    f.write(report)
-
-print(report)
+# Print report in requested format
+print("\n" + "="*60)
+print(f"🛡️ SATPAM 0858 {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+print(f"ACTIVE:{len(active_camps)} | OFF_:{len(off_camps)} | 🌟:{len(star_camps)} | Global CPC:Rp{global_cpc:.0f} | Mode:{mode}")
+print(f"💀 MONSTER: {len(monsters)}")
+for m in monsters[:10]:
+    print(f"   {m}")
+print(f"👀 WATCH: {len(watch_list)}")
+for w in watch_list[:10]:
+    print(f"   {w}")
+print(f"🌟 WINNER: {len(winners)} renamed:{renamed_today}")
+for w in winners[:10]:
+    print(f"   {w}")
+print(f"✅ AUTO-ON: {len(auto_unpause_candidates)}")
+for a in auto_unpause_candidates[:10]:
+    print(f"   {a}")
+print(f"💰 LC eligible: {len(lc_eligible)}")
+for l in lc_eligible[:10]:
+    print(f"   {l}")
+print(f"⚠️ Meta rules: (not checked this run)")
+print("="*60)
+print(f"\nReport saved to {OUT}")

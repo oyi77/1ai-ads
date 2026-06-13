@@ -1,259 +1,148 @@
-#!/usr/bin/env python3
-"""SATPAM 1041 nightly minimum-v3 (stdlib only, 2026-06-13 fixes)."""
-import json
-import os
 import sys
+import json
 import time
-from datetime import datetime, timezone, timedelta
-from urllib.request import Request, urlopen
-from urllib.parse import urlencode
+import urllib.parse
+from datetime import datetime
+from pathlib import Path
 
-ENGINE_ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-ACT_ID = "act_380721031313330"
-API_BASE = f"https://graph.facebook.com/v22.0/{ACT_ID}"
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent))
 
-FIELDS_LIMIT = "id,name,status,daily_budget,effective_status,start_time,stop_time,lifetime_budget,spend,cpc"
 
 def load_token():
-    env_path = os.path.join(ENGINE_ROOT, ".env")
-    if not os.path.exists(env_path):
-        raise RuntimeError(f".env not found: {env_path}")
-    for line in open(env_path, encoding="utf-8").read().splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
+    env_path = "/home/openclaw/projects/1ai-ads/.env"
+    for line in open(env_path, "r", encoding="utf-8").read().splitlines():
+        if not line or line.startswith("#"):
             continue
-        if line.split("=", 1)[0] == "META_ACCESS_TOKEN":
+        key = line.split("=", 1)[0]
+        if key == "META_ACCESS_TOKEN":
             return line.split("=", 1)[1].strip()
-    raise RuntimeError("META_ACCESS_TOKEN missing in .env")
+    raise RuntimeError("META_ACCESS_TOKEN not found")
 
-def api_get(endpoint, params, timeout=30):
-    url = f"{API_BASE}/{endpoint.lstrip('/')}"
-    if params:
-        url = f"{url}?{urlencode(params)}"
-    req = Request(url, headers={"Authorization": f"Bearer {load_token()}"})
-    with urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read())
 
-def api_post(endpoint, body, timeout=30):
-    url = f"{API_BASE}/{endpoint.lstrip('/')}"
-    data = dict(body)
-    data["access_token"] = load_token()
-    for k in list(data.keys()):
-        if isinstance(data[k], (dict, list)):
-            data[k] = json.dumps(data[k])
-    req = Request(url, data=urlencode(data).encode(), method="POST")
-    try:
-        with urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read())
-    except Exception as e:
-        return {"_error": str(e)}
+TOKEN = load_token()
+API = "https://graph.facebook.com/v22.0"
+ACT = "act_380721031313330"
+TODAY = "2026-06-13"
 
-def pause_campaign(cid):
-    return bool(api_post(cid, {"status": "PAUSED"}).get("success"))
+import importlib.util
+spec = importlib.util.spec_from_file_location("engine", str(HERE / "vilona_trakpro_engine.py"))
+engine = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(engine)
+fb_get = engine.fb_get
+fb_post = engine.fb_post
 
-def rename_campaign(cid, new_name):
-    return bool(api_post(cid, {"name": new_name}).get("success"))
-
-def bump_budget(cid, pct=0.20, cap=50000):
-    c = api_get(f"{cid}", {"fields": "daily_budget"})
-    old_budget = c.get("daily_budget")
-    old = int(old_budget) if old_budget is not None else 0
-    if old <= 0:
-        return 0
-    new = int(min(old * (1 + pct), cap))
-    if new == old:
-        return old
-    return new if api_post(cid, {"daily_budget": str(new)}).get("success") else old
-
-def extract_taglink(name):
-    known = [
-        "rakpiringpengering",
-        "setelanbajukaosmihugajah",
-        "setelangajahthaialand",
-        "rakdapur3",
-        "rakdapur",
-        "atayasetelankaosanak",
-        "abera",
-        "pintulipatgeser",
-        "hijab",
-        "organizerpullout",
-        "kitchenrack",
-        "dapur",
-        "rak",
-        "baju",
-        "rakpiring",
-        "setelan",
-        "gajah",
-        "kaos",
-    ]
-    n = name.strip()
-    blob = n.lower().replace(" ", "_")
-    for pfx in ("off_", "dead_", "\U0001f31f_", "on_lc_", "scale_", "lc_", "tc_", "bc_", "bidcap_", "cbo_", "abo_", "test_", "testing_", "bid_", "prof", "glw", "id", "my"):
-        if blob.startswith(pfx):
-            blob = blob[len(pfx):]
-    parts = [p for p in blob.split("_") if p]
-    for p in parts:
-        if p in known:
-            return p
-    return parts[0] if parts else n
-
-def chunker(seq, n):
-    for i in range(0, len(seq), n):
-        yield seq[i:i + n]
-
-def now_wib():
-    return datetime.now(timezone(timedelta(hours=7)))
-
-def ins_keyed(ids):
-    out = {}
-    since = (now_wib() - timedelta(days=6)).strftime("%Y-%m-%d")
-    until = now_wib().strftime("%Y-%m-%d")
-    fields = "campaign_id,spend,cpc,clicks,ctr,impressions,actions"
-    for batch in chunker(ids, 25):
-        body = {
-            "time_range": json.dumps({"since": since, "until": until}),
-            "filtering": json.dumps([{"field": "campaign.id", "operator": "IN", "value": batch}]),
-            "level": "campaign",
-            "fields": fields,
-            "limit": "200",
-        }
+# 1) Account-level insights -> global CPC
+acc_ins = fb_get(
+    f"{ACT}/insights",
+    fields="spend,clicks,cpc",
+    time_range=json.dumps({"since": TODAY, "until": TODAY}),
+    level="account",
+    limit="1",
+)
+acc_spend = 0.0
+acc_clicks = 0
+acc_cpc = None
+if acc_ins and acc_ins.get("data"):
+    row = acc_ins["data"][0]
+    acc_spend = float(row.get("spend", 0) or 0)
+    acc_clicks = int(row.get("clicks", 0) or 0)
+    acc_cpc = row.get("cpc")
+    if acc_cpc is not None:
         try:
-            rows = api_get("insights", body).get("data", []) or []
+            acc_cpc = float(acc_cpc)
         except Exception:
-            rows = []
-        for r in rows:
-            cid = r.get("campaign_id")
-            if cid:
-                out[cid] = r
-        time.sleep(1.5)
-    return out
+            acc_cpc = None
 
-def global_cpc_today():
-    today = now_wib().strftime("%Y-%m-%d")
-    body = {
-        "time_range": json.dumps({"since": today, "until": today}),
-        "level": "account",
-        "fields": "spend,clicks,cpc",
-    }
-    data = api_get("insights", body).get("data", []) or []
-    acct = data[0] if data else {}
-    spend = float(acct.get("spend") or 0)
-    clicks = float(acct.get("clicks") or 0)
-    return spend / clicks if clicks > 0 else 0.0
-
-def campaign_inventory():
-    seen = set()
-    out = []
-    params = {"fields": FIELDS_LIMIT, "limit": 200}
-    nxt = "campaigns"
-    while nxt:
-        try:
-            data = api_get(nxt, params)
-        except Exception as e:
-            break
-        if not isinstance(data, dict):
-            break
-        chunk = [c for c in data.get("data", []) if c.get("id") not in seen]
-        out.extend(chunk)
-        seen.update(c.get("id") for c in chunk)
-        paging = data.get("paging") or {}
-        nxt = paging.get("next")
-        params = None
-        time.sleep(0.6)
-    return out
-
-def main():
-    ts = now_wib().strftime("%Y-%m-%d %H:%M WIB")
-    try:
-        act_name = api_get("", {"fields": "account_name"}).get("account_name", ACT_ID)
-    except Exception:
-        act_name = ACT_ID
-
-    try:
-        all_camps = campaign_inventory()
-    except Exception:
-        all_camps = []
-
-    active = [c for c in all_camps if c.get("status") == "ACTIVE"]
-    off_ = [c for c in all_camps if c.get("name", "").startswith("OFF_")]
-    stars = [c for c in all_camps if c.get("name", "").startswith("\U0001f31f_")]
+if acc_cpc is None or acc_clicks <= 0:
     global_cpc = 0.0
-    try:
-        global_cpc = global_cpc_today()
-    except Exception:
-        pass
+else:
+    global_cpc = acc_spend / acc_clicks
 
-    mode = "AMAN" if global_cpc < 120 else "WASPADA"
+mode = "AMAN" if global_cpc < 120 else "WASPADA"
+ts = datetime.now().strftime("%H:%M")
 
-    q = [c["id"] for c in active]
-    ins_map = ins_keyed(q) if q else {}
+# 2) Campaign list + insights
+camp_ins = fb_get(
+    f"{ACT}/insights",
+    fields="campaign_id,campaign_name,spend,clicks,cpc,ctr",
+    time_range=json.dumps({"since": TODAY, "until": TODAY}),
+    level="campaign",
+    limit="200",
+)
+ins_map = {}
+if camp_ins and camp_ins.get("data"):
+    for r in camp_ins["data"]:
+        cid = r.get("campaign_id")
+        if cid:
+            ins_map[cid] = {
+                "spend": float(r.get("spend", 0) or 0),
+                "clicks": int(r.get("clicks", 0) or 0),
+                "cpc": float(r.get("cpc", 0) or 0),
+                "ctr": float(r.get("ctr", 0) or 0),
+                "name": r.get("campaign_name", ""),
+            }
 
-    monsters = []
-    watch = []
-    winners = []
-    lc_scales = []
+campaigns = fb_get(f"{ACT}/campaigns", fields="id,name,status", limit="200")
+active_n = 0
+off_n = 0
+star_n = 0
+monsters = []
+watches = []
+winners = []
+lc_targets = []
 
-    for c in active:
-        cid = c["id"]
-        name = c.get("name", "")
-        ins = ins_map.get(cid, {})
-        cpc = float(ins.get("cpc") or 0)
-        clicks = int(ins.get("clicks") or 0)
-        spend = float(ins.get("spend") or 0)
-        if (cpc >= 500 and spend > 1000) or (cpc >= 1000 and spend > 500):
-            monsters.append({"id": cid, "name": name, "cpc": int(cpc), "spend": int(spend), "tag": extract_taglink(name)})
-        if cpc > 200 and clicks == 0 and spend > 500:
-            watch.append({"id": cid, "name": name, "cpc": int(cpc), "spend": int(spend), "tag": extract_taglink(name)})
+if campaigns and campaigns.get("data"):
+    for c in campaigns["data"]:
+        st = c.get("status", "")
+        nm = c.get("name", "")
+        if st == "ACTIVE":
+            active_n += 1
+        if nm.startswith("OFF_"):
+            off_n += 1
+        if nm.startswith("\u2605_"):
+            star_n += 1
+        info = ins_map.get(c["id"], {})
+        cpc = info.get("cpc", 0)
+        spend = info.get("spend", 0)
+        clicks = info.get("clicks", 0)
+        if mode == "WASPADA":
+            if cpc >= 500 and spend > 1000:
+                monsters.append((nm, cpc, spend))
+            if cpc > 200 and clicks == 0 and spend > 500:
+                watches.append((nm, cpc, spend))
         if cpc < 120 and clicks > 5 and spend > 10000:
-            winners.append({"id": cid, "name": name, "cpc": int(cpc), "clicks": clicks, "spend": int(spend), "tag": extract_taglink(name)})
-        if "LC" in name.upper() and cpc < 120 and clicks > 0:
-            lc_scales.append({"id": cid, "name": name, "cpc": int(cpc), "clicks": clicks, "spend": int(spend)})
+            winners.append((nm, cpc, spend, clicks))
+        if "LC" in nm and cpc < 120 and clicks > 0:
+            lc_targets.append((c["id"], nm, spend))
 
-    monster_names = []
-    watch_names = []
-    winner_names = []
-    lc_done = 0
+# 3) LC scale +20% up to 50k
+lc_scaled = 0
+for cid, nm, spend in lc_targets:
+    try:
+        if spend <= 0:
+            continue
+        new_budget = min(50000, int(spend * 1.2))
+        if new_budget <= spend:
+            new_budget = min(50000, spend + 2000)
+        if new_budget > 50000:
+            new_budget = 50000
+        res = fb_post(cid, daily_budget=new_budget, access_token=TOKEN)
+        if res is not None:
+            lc_scaled += 1
+        time.sleep(1.2)
+    except Exception as e:
+        print(f"LC scale failed {nm}: {e}", file=sys.stderr)
 
-    if mode == "WASPADA":
-        for m in monsters:
-            try:
-                ok = pause_campaign(m["id"])
-                if ok:
-                    rename_campaign(m["id"], f"OFF_{m['name']}")
-                    monster_names.append(m["name"])
-            except Exception:
-                pass
-            time.sleep(0.7)
-        for w in watch:
-            try:
-                if pause_campaign(w["id"]):
-                    watch_names.append(w["name"])
-            except Exception:
-                pass
-            time.sleep(0.7)
-    else:
-        monster_names = [f"{m['name']}(CPC Rp{m['cpc']})" for m in monsters]
-        watch_names = [f"{w['name']}(CPC Rp{w['cpc']})" for w in watch]
+# 4) Report
+monster_names = ", ".join([f"{n} (Rp{cpc:.0f}, Rp{spend:.0f})" for n,cpc,spend in monsters]) if monsters else "none"
+watch_names = ", ".join([f"{n} (Rp{cpc:.0f}, Rp{spend:.0f})" for n,cpc,spend in watches]) if watches else "none"
+winner_names = ", ".join([f"{n} Rp{cpc:.0f} {clicks}kl" for n,cpc,spend,clicks in winners[:10]]) if winners else "none"
 
-    winner_names = [f"{x['name']} | CPC Rp{x['cpc']} | clicks {x['clicks']}" for x in winners[:20]]
-    for s in lc_scales[:10]:
-        try:
-            new_b = bump_budget(s["id"], 0.20, 50000)
-            if new_b:
-                lc_done += 1
-        except Exception:
-            pass
-        time.sleep(0.6)
-
-    report_lines = [
-        "\U0001f6e1\ufe0f SATPAM 1041 " + ts,
-        f"ACTIVE:{len(active)} | Global CPC:Rp{global_cpc:.0f} | Mode:{mode}",
-        "\U0001f480 MONSTER: " + (", ".join(monster_names) if monster_names else "none"),
-        "\U0001f440 WATCH: " + (", ".join(watch_names) if watch_names else "none"),
-        "\U0001f31f WINNER: " + (", ".join(winner_names) if winner_names else "none"),
-        f"\U0001f4b0 LC SCALE: {lc_done} campaigns naik budget",
-    ]
-    print("\n".join(report_lines))
-
-if __name__ == "__main__":
-    main()
+report = f"\U0001f6e1\ufe0f SATPAM 1041 {TODAY} {ts}\n"
+report += f"ACTIVE:{active_n} | Global CPC:Rp{global_cpc:.0f} | Mode:{mode}\n"
+report += f"\U0001f480 MONSTER: {len(monsters)}: {monster_names}\n"
+report += f"\U0001f441\ufe0f WATCH: {len(watches)}: {watch_names}\n"
+report += f"\u2605\ufe0f WINNER: {len(winners)}: {winner_names}\n"
+report += f"\U0001f4b0 LC SCALE: {lc_scaled} naik budget\n"
+print(report)
