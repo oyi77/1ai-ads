@@ -17,7 +17,7 @@ CB_STATE = os.path.join('/tmp', '0858_cb_state.json')
 ACC = ACCOUNTS["0858"]
 ACT_ID = ACC["id"]
 CAP = 200000
-CPC_KILL = 250
+CPC_KILL = 120  # SOP: CPC > 120 → kill
 
 def fb_get(endpoint, **params):
     params["access_token"] = ACCESS_TOKEN
