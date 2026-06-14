@@ -67,9 +67,11 @@ def cb_trip():
     return f"🚨 CB-1041 TRIP: Spend Rp{spend:,} > Rp{CAP:,} | {len(paused)} paused"
 
 def cpc_kill():
+    protected = set(ACC.get("manual_managed", []))
     camps = fb_get(f"{ACT_ID}/campaigns", fields="id,name,status", limit=200)
     active = [c for c in camps.get("data", []) 
-              if c.get("status") == "ACTIVE" and not c["name"].startswith("OFF_")]
+              if c.get("status") == "ACTIVE" and not c["name"].startswith("OFF_")
+              and c["name"] not in protected]
     if not active:
         return []
     since = (DT() - timedelta(days=2)).strftime("%Y-%m-%d")
