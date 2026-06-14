@@ -5,10 +5,10 @@ Reports only, no auto-pause in testing. Hard cap Rp 20rb.
 """
 import json, sys, urllib.request, urllib.parse
 from datetime import datetime, timedelta
-from pathlib import Path
+import os
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(SCRIPT_DIR / "scripts"))
+PROJECT = os.path.expanduser('~/projects/1ai-ads')
+sys.path.insert(0, os.path.join(PROJECT, 'scripts'))
 from vilona_trakpro_engine import ACCESS_TOKEN, API
 
 WIB = timedelta(hours=7)

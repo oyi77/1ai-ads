@@ -4,16 +4,16 @@ PROTOCOL 13 — Circuit Breaker & CPC Kill for 1041 (Nyamiresep act_380721031313
 """
 import json, os, sys, urllib.request, urllib.parse
 from datetime import datetime, timedelta
-from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(SCRIPT_DIR / "scripts"))
+# Import from project — cron runs with workdir set
+PROJECT = os.path.expanduser('~/projects/1ai-ads')
+sys.path.insert(0, os.path.join(PROJECT, 'scripts'))
 from vilona_trakpro_engine import ACCESS_TOKEN, API, ACCOUNTS, log
 
 WIB = timedelta(hours=7)
 DT = lambda: datetime.utcnow() + WIB
 today = DT().strftime("%Y-%m-%d")
-CB_STATE = Path("/tmp/1041_cb_state.json")
+CB_STATE = os.path.join('/tmp', '1041_cb_state.json')
 ACC = ACCOUNTS["1041"]
 ACT_ID = ACC["id"]
 CAP = 300000
@@ -46,10 +46,8 @@ def get_today_spend():
         return 0
 
 def save_cb_state(paused_ids):
-    CB_STATE.write_text(json.dumps({
-        "ts": DT().isoformat(),
-        "paused_ids": paused_ids,
-    }))
+    with open(CB_STATE, 'w') as f:
+        json.dump({"ts": DT().isoformat(), "paused_ids": paused_ids}, f)
 
 def cb_trip():
     spend = get_today_spend()
