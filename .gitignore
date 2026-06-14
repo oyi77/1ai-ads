@@ -31,3 +31,4 @@ outputs/
 logs/
 ops/*.log
 ops/*.json
+scripts/archive/
