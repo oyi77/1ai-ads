@@ -230,7 +230,7 @@ ACCOUNTS = {
         "cpc_safe_cbo": 80, "cpc_danger_cbo": 120,
         "cpc_safe_abo": 150, "cpc_danger_abo": 250,
         "budget_cap_per_camp": 500000,
-        "tags": ["rakpiringpengering", "organizerpullout", "Dongkrakelektrik"],
+        "tags": ["rakpiringpengering", "organizerpullout", "Dongkrakelektrik", "setelanbajukaosmihugajah", "setelangajahthaialand"],
     },
     "1041": {
         "id": "act_380721031313330",
