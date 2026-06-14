@@ -73,26 +73,36 @@ def cpc_kill():
     if not active:
         return []
     since = (DT() - timedelta(days=2)).strftime("%Y-%m-%d")
+    # Include 'actions' to compute dashboard CPC from link_clicks
     insights = fb_get(f"{ACT_ID}/insights",
-        fields="campaign_id,campaign_name,spend,clicks,cpc,ctr",
+        fields="campaign_id,campaign_name,spend,clicks,cpc,ctr,actions",
         time_range=json.dumps({"since": since, "until": today}),
         level="campaign", limit=200)
     by_id = {}
     for d in insights.get("data", []):
+        lc = 0
+        for a in d.get("actions", []):
+            if a.get("action_type") in ("link_click", "outbound_click"):
+                lc += int(float(a.get("value", 0)))
+        spend = int(float(d.get("spend", 0)))
+        # Dashboard CPC = spend / link_clicks (not total clicks)
+        dcpc = int(spend / max(lc, 1)) if lc > 0 else int(float(d.get("cpc", 0)))
         by_id[d["campaign_id"]] = {
-            "spend": int(float(d.get("spend", 0))),
+            "spend": spend,
             "clicks": int(d.get("clicks", 0)),
             "cpc": float(d.get("cpc", 0)),
+            "link_clicks": lc,
+            "dcpc": dcpc,
         }
     killed = []
     for c in active:
         ci = by_id.get(c["id"], {})
-        cpc = ci.get("cpc", 0)
+        dcpc = ci.get("dcpc", ci.get("cpc", 0))  # Dashboard CPC, fallback to API
         spend = ci.get("spend", 0)
-        if cpc > CPC_KILL and spend > 2000:
+        if dcpc > CPC_KILL and spend > 2000:
             try:
                 fb_post(c["id"], status="PAUSED")
-                killed.append(f"💀 {c['name'][:40]} — CPC Rp{int(cpc)}")
+                killed.append(f"💀 {c['name'][:40]} — CPC Rp{int(dcpc)}")
             except:
                 pass
     return killed
