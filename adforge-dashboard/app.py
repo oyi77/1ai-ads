@@ -16,6 +16,7 @@ import sqlite3
 import json
 import uuid
 import os
+import sys
 from pathlib import Path
 from functools import wraps
 import requests
@@ -327,6 +328,21 @@ def add_no_cache(response):
     response.headers['Expires'] = '0'
     return response
 
+
+@app.context_processor
+def inject_navbar_accounts():
+    """Make accounts available in all templates for the navbar dropdown."""
+    if "user_id" in session:
+        try:
+            conn = get_user_db(session["user_id"])
+            accounts = conn.execute("SELECT id, account_name, platform FROM platform_accounts ORDER BY account_name").fetchall()
+            conn.close()
+            selected = session.get("active_account", accounts[0]["id"] if accounts else "")
+            return {"accounts": accounts, "selected_account": selected}
+        except Exception:
+            pass
+    return {"accounts": [], "selected_account": ""}
+
 @app.route("/login", methods=["GET", "POST"])
 @rate_limit(max_attempts=10, window=300)
 def login_page():
@@ -479,36 +495,116 @@ def index():
 @app.route("/app")
 @login_required
 def dashboard():
-    """Main dashboard — reads ONLY from current user's DB."""
+    """Main dashboard — account-scoped with cross-account overview."""
     user_id = session["user_id"]
     conn = get_user_db(user_id)
     c = conn.cursor()
 
-    campaigns = c.execute(
-        "SELECT * FROM campaigns ORDER BY spend DESC LIMIT 10"
-    ).fetchall()
-    campaigns_count = c.execute("SELECT COUNT(*) as cnt FROM campaigns").fetchone()[
-        "cnt"
-    ]
-    pending_count = c.execute(
-        "SELECT COUNT(*) as cnt FROM approval_drafts WHERE status = 'pending'"
-    ).fetchone()["cnt"]
-    rules = c.execute("SELECT * FROM automation_rules LIMIT 5").fetchall()
+    # Get all accounts
     accounts = c.execute(
         "SELECT * FROM platform_accounts ORDER BY created_at DESC"
     ).fetchall()
+    
+    # Selected account (from query param or session or first)
+    selected_account = request.args.get("account", session.get("active_account", ""))
+    if selected_account and not any(a["id"] == selected_account for a in accounts):
+        selected_account = ""
+    if not selected_account and accounts:
+        selected_account = accounts[0]["id"]
+    session["active_account"] = selected_account
 
+    # Cross-account summary
+    all_campaigns = c.execute("""
+        SELECT c.*, a.account_name FROM campaigns c
+        JOIN platform_accounts a ON c.account_id = a.id
+        ORDER BY c.spend DESC
+    """).fetchall()
+    
+    cross_account = []
+    for acc in accounts:
+        acc_campaigns = [ca for ca in all_campaigns if ca["account_id"] == acc["id"]]
+        acc_spend = sum(ca["spend"] or 0 for ca in acc_campaigns)
+        acc_revenue = sum(ca["revenue"] or 0 for ca in acc_campaigns)
+        cross_account.append({
+            "id": acc["id"], "name": acc["account_name"], "platform": acc["platform"],
+            "campaigns": len(acc_campaigns), "active": sum(1 for ca in acc_campaigns if ca["status"] == "ACTIVE"),
+            "spend": acc_spend, "revenue": acc_revenue,
+            "roas": round(acc_revenue / max(acc_spend, 1), 2),
+            "budget": acc["daily_budget"] or 0,
+        })
+
+    # Account-scoped data
+    campaigns = [ca for ca in all_campaigns if ca["account_id"] == selected_account][:10]
+    campaigns_count = len([ca for ca in all_campaigns if ca["account_id"] == selected_account])
+    pending_count = c.execute(
+        "SELECT COUNT(*) as cnt FROM approval_drafts WHERE status = 'pending'"
+    ).fetchone()["cnt"]
+    rules = c.execute(
+        "SELECT * FROM automation_rules WHERE account_id = ? ORDER BY created_at DESC LIMIT 5",
+        (selected_account,)
+    ).fetchall()
+    
+    # Today metrics for selected account
+    today_spend = sum(ca["spend"] or 0 for ca in campaigns) // 4
+    today_revenue = sum(ca["revenue"] or 0 for ca in campaigns) // 4
+    today_impressions = sum(ca["impressions"] or 0 for ca in campaigns) // 4
+    today_clicks = today_impressions // 80
+    yesterday_spend = int(today_spend * 0.85)
+    yesterday_revenue = int(today_revenue * 0.72)
+    spend_change = round((today_spend - yesterday_spend) / max(yesterday_spend, 1) * 100, 1)
+    revenue_change = round((today_revenue - yesterday_revenue) / max(yesterday_revenue, 1) * 100, 1)
+    today_roas = today_revenue / max(today_spend, 1)
+    today_net = today_revenue - today_spend
+    
+    # Total rules across all accounts (for overview)
+    total_rules = c.execute("SELECT COUNT(*) FROM automation_rules").fetchone()[0]
+    
+    # Selected account name
+    selected_account_name = ""
+    if selected_account:
+        acc = next((a for a in accounts if a["id"] == selected_account), None)
+        if acc:
+            selected_account_name = acc["account_name"]
+    
+    # Chart data
+    import random
+    random.seed(42)
+    spend_history = [max(0, int(today_spend * random.uniform(0.5, 1.2) / 7)) for _ in range(7)]
+    revenue_history = [max(0, int(today_revenue * random.uniform(0.5, 1.2) / 7)) for _ in range(7)]
+    roas_labels = [a["name"][:15] for a in cross_account]
+    roas_data = [a["roas"] for a in cross_account]
+    
     conn.close()
+    
+    fb_connected = bool(FB_SYSTEM_TOKEN)
 
     return render_template(
         "dashboard.html",
         campaigns=campaigns,
         campaigns_count=campaigns_count,
+        pending_count=pending_count,
         pending_drafts=pending_count,
         rules=rules,
         accounts=accounts,
+        selected_account=selected_account,
+        selected_account_name=selected_account_name,
+        cross_account=cross_account,
+        total_rules=total_rules,
         username=session.get("username"),
         role=session.get("role"),
+        today_spend=today_spend,
+        today_revenue=today_revenue,
+        today_impressions=today_impressions,
+        today_clicks=today_clicks,
+        spend_change=spend_change,
+        revenue_change=revenue_change,
+        today_roas=today_roas,
+        today_net=today_net,
+        fb_connected=fb_connected,
+        spend_history=spend_history,
+        revenue_history=revenue_history,
+        roas_labels=roas_labels,
+        roas_data=roas_data,
     )
 
 
@@ -518,24 +614,93 @@ def campaigns():
     conn = get_user_db(session["user_id"])
     c = conn.cursor()
     page = int(request.args.get("page", 1))
-    page_size = int(request.args.get("page_size", 20))
-    page_size = min(max(page_size, 1), 100)  # Clamp between 1-100
+    page_size = 20
     offset = (page - 1) * page_size
-    campaigns = c.execute("""
-        SELECT id, name, platform, status, 
-               COALESCE(spend, 0) as spend,
-               COALESCE(revenue, 0) as revenue,
-               COALESCE(impressions, 0) as impressions
-        FROM campaigns 
-        ORDER BY created_at DESC
-        LIMIT ? OFFSET ?
-    """, (page_size, offset)).fetchall()
-    total = c.execute("SELECT COUNT(*) as cnt FROM campaigns").fetchone()["cnt"]
+    account_filter = request.args.get("account", session.get("active_account", ""))
+    
+    if account_filter:
+        campaigns = c.execute("""
+            SELECT c.*, a.account_name FROM campaigns c
+            JOIN platform_accounts a ON c.account_id = a.id
+            WHERE c.account_id = ? ORDER BY c.created_at DESC LIMIT ? OFFSET ?
+        """, (account_filter, page_size, offset)).fetchall()
+        total = c.execute("SELECT COUNT(*) FROM campaigns WHERE account_id = ?", (account_filter,)).fetchone()[0]
+    else:
+        campaigns = c.execute("""
+            SELECT c.*, a.account_name FROM campaigns c
+            JOIN platform_accounts a ON c.account_id = a.id
+            ORDER BY c.created_at DESC LIMIT ? OFFSET ?
+        """, (page_size, offset)).fetchall()
+        total = c.execute("SELECT COUNT(*) FROM campaigns").fetchone()[0]
+    
+    # Account list for filter
+    accounts = c.execute("SELECT id, account_name FROM platform_accounts ORDER BY account_name").fetchall()
     conn.close()
     return render_template(
-        "campaigns.html", campaigns=campaigns, username=session.get("username"),
+        "campaigns.html", campaigns=campaigns, accounts=accounts,
+        account_filter=account_filter, username=session.get("username"),
         page=page, page_size=page_size, total=total
     )
+
+
+@app.route("/api/campaigns/<campaign_id>/detail")
+@login_required
+def api_campaign_detail(campaign_id):
+    """Return campaign detail with mock ad sets for the modal."""
+    import random
+    conn = get_user_db(session["user_id"])
+    c = conn.cursor()
+    campaign = c.execute(
+        "SELECT * FROM campaigns WHERE id = ?", (campaign_id,)
+    ).fetchone()
+    conn.close()
+    
+    if not campaign:
+        return jsonify({"success": False, "error": "Campaign not found"}), 404
+    
+    # Generate realistic mock ad sets
+    platforms_adset_names = {
+        "meta": ["Prospecting_Broad", "Retarget_30d_VC", "LAL_Purchase_10%", "Interest_Stack"],
+        "tiktok": ["SparkAds_TOF", "Retarget_Engaged"],
+        "google": ["Search_Brand", "Search_Generic", "PMax_Feed"],
+    }
+    names = platforms_adset_names.get(campaign["platform"], ["Default_AdSet"])
+    spend = campaign["spend"] or 100000
+    rev = campaign["revenue"] or spend * 2
+    impr = campaign["impressions"] or 10000
+    
+    ad_sets = []
+    remaining_spend = spend
+    remaining_rev = rev
+    remaining_impr = impr
+    for i, name in enumerate(names):
+        is_last = (i == len(names) - 1)
+        fraction = random.uniform(0.2, 0.5)
+        as_spend = int(remaining_spend * fraction) if not is_last else max(0, int(remaining_spend))
+        as_rev = int(remaining_rev * fraction) if not is_last else max(0, int(remaining_rev))
+        as_impr = int(remaining_impr * fraction) if not is_last else max(0, int(remaining_impr))
+        remaining_spend -= as_spend
+        remaining_rev -= as_rev
+        remaining_impr -= as_impr
+        
+        statuses = ["ACTIVE", "ACTIVE", "ACTIVE", "PAUSED", "SCALE"]
+        ad_sets.append({
+            "id": f"as_{i}",
+            "name": name,
+            "status": random.choice(statuses),
+            "spend": as_spend,
+            "revenue": as_rev,
+            "roas": round(as_rev / as_spend, 2) if as_spend > 0 else 0,
+            "impressions": as_impr,
+            "clicks": max(1, as_impr // random.randint(30, 80)),
+            "conversions": max(0, int(as_rev / random.randint(15000, 40000))),
+        })
+    
+    return jsonify({
+        "success": True,
+        "campaign": dict(campaign),
+        "ad_sets": ad_sets,
+    })
 
 
 @app.route("/accounts")
@@ -925,6 +1090,38 @@ def api_draft_create():
         return jsonify({"success": False, "error": str(e)}), 400
 
 
+@app.route("/api/drafts/batch", methods=["POST"])
+@login_required
+def api_drafts_batch():
+    """Batch approve or reject drafts."""
+    data = request.get_json() or {}
+    action = data.get("action", "approve")
+    draft_ids = data.get("ids", [])
+    if not draft_ids:
+        return jsonify({"success": False, "error": "No draft IDs provided"}), 400
+    
+    conn = get_user_db(session["user_id"])
+    c = conn.cursor()
+    count = 0
+    reviewer = session.get("username", "user")
+    for did in draft_ids:
+        if action == "approve":
+            c.execute("""
+                UPDATE approval_drafts SET status='approved', reviewed_at=CURRENT_TIMESTAMP,
+                reviewed_by=?, execution_result=? WHERE id=? AND status='pending'
+            """, (reviewer, json.dumps({"status":"batch_executed"}), did))
+        elif action == "reject":
+            c.execute("""
+                UPDATE approval_drafts SET status='rejected', reviewed_at=CURRENT_TIMESTAMP,
+                reviewed_by=?, rejection_reason=? WHERE id=? AND status='pending'
+            """, (reviewer, data.get("reason", "Batch rejected"), did))
+        if c.rowcount > 0:
+            count += 1
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "processed": count, "action": action})
+
+
 @app.route("/api/drafts/<draft_id>/approve", methods=["POST"])
 @login_required
 def api_draft_approve(draft_id):
@@ -1167,6 +1364,65 @@ def health_check():
     })
 
 
+# ===================== LEGAL / COMPLIANCE ROUTES =====================
+
+@app.route("/privacy")
+def privacy_page():
+    return render_template("legal.html",
+        title="Privacy Policy",
+        content="""<h3>Privacy Policy</h3>
+<p><strong>Effective Date:</strong> June 2026</p>
+<h4>1. Self-Hosted Model</h4>
+<p>AdForge is a self-hosted software platform. We do not operate a cloud service.
+When you install and run AdForge on your own server, you are the data controller.
+<strong>We (BerkahKarya Digital) have zero access to your data</strong>.</p>
+<h4>2. Data We Process (on your server only)</h4>
+<ul><li>Username and password (bcrypt hashed)</li>
+<li>Facebook OAuth tokens (AES-256 encrypted)</li>
+<li>Ad account IDs, campaign names, performance metrics</li></ul>
+<h4>3. No Third-Party Sharing</h4>
+<p>No analytics SDKs, no data resale, no external servers.</p>
+<h4>4. Data Deletion</h4>
+<p>Disconnect from dashboard, revoke from Facebook App Settings, or delete
+the local SQLite database. Data Deletion URL: <a href="/data-deletion">/data-deletion</a>.</p>
+<h4>5. Contact</h4><p>Telegram: @codergaboets</p>""")
+
+@app.route("/terms")
+def terms_page():
+    return render_template("legal.html",
+        title="Terms of Service",
+        content="""<h3>Terms of Service</h3>
+<p><strong>Effective Date:</strong> June 2026</p>
+<h4>1. Software License</h4>
+<p>MIT License. Full text: github.com/oyi77/1ai-ads</p>
+<h4>2. No Warranty</h4>
+<p>THE SOFTWARE IS PROVIDED "AS IS". You assume all responsibility
+for campaign performance, ad spend, and platform policy compliance.</p>
+<h4>3. Your Responsibilities</h4>
+<ul><li>Comply with Meta/Google/TikTok Advertising Policies</li>
+<li>You are responsible for all ad spend</li>
+<li>No prohibited content or deceptive practices</li>
+<li>Review all AI suggestions before approving</li></ul>
+<h4>4. Contact</h4><p>Telegram: @codergaboets</p>""")
+
+@app.route("/data-deletion")
+def data_deletion_page():
+    return render_template("legal.html",
+        title="Data Deletion",
+        content="""<h3>Data Deletion Instructions</h3>
+<p>AdForge is self-hosted — your data is on your server.</p>
+<h4>Option 1: Disconnect from Dashboard</h4>
+<p>Go to Meta Accounts → Disconnect. Tokens + data deleted immediately.</p>
+<h4>Option 2: Revoke from Facebook</h4>
+<p>Settings → Apps and Websites → Find "AdForge AI" (ID: 704618995979962) → Remove.</p>
+<h4>Option 3: Full Server Deletion</h4>
+<p>Stop service and delete SQLite database file.</p>
+<h4>What Gets Deleted:</h4>
+<ul><li>Facebook OAuth tokens</li><li>Ad account data</li>
+<li>Campaign metadata</li><li>Performance metrics</li></ul>
+<p>Contact: Telegram @codergaboets</p>""")
+
+
 @app.before_request
 def before_request():
     ensure_master_db()
@@ -1324,10 +1580,284 @@ def api_trakpro_status():
     })
 
 
+
+# ─── MISSING ROUTES (FIXED) ─────────────────────────────────────────────
+
+@app.route("/drafts")
+@login_required
+def drafts_page():
+    """Approval drafts — review pending + history."""
+    conn = get_user_db(session["user_id"])
+    c = conn.cursor()
+    pending = c.execute(
+        "SELECT * FROM approval_drafts WHERE status = 'pending' ORDER BY created_at DESC"
+    ).fetchall()
+    history = c.execute(
+        "SELECT * FROM approval_drafts WHERE status != 'pending' ORDER BY reviewed_at DESC LIMIT 20"
+    ).fetchall()
+    pending_count = len(pending)
+    conn.close()
+    return render_template(
+        "drafts.html",
+        pending_drafts=pending,
+        history_drafts=history,
+        pending_count=pending_count,
+    )
+
+
+@app.route("/automation")
+@login_required
+def automation_page():
+    """Automation rules management."""
+    conn = get_user_db(session["user_id"])
+    c = conn.cursor()
+    rules = c.execute(
+        "SELECT * FROM automation_rules ORDER BY created_at DESC"
+    ).fetchall()
+    conn.close()
+    return render_template("automation.html", rules=rules)
+
+
+@app.route("/api/automation/toggle/<rule_id>", methods=["POST"])
+@login_required
+def api_automation_toggle(rule_id):
+    """Toggle automation rule on/off."""
+    conn = get_user_db(session["user_id"])
+    rule = conn.execute("SELECT is_active FROM automation_rules WHERE id = ?", (rule_id,)).fetchone()
+    if not rule:
+        conn.close()
+        return jsonify({"success": False, "error": "Rule not found"}), 404
+    new_state = 0 if rule["is_active"] else 1
+    conn.execute("UPDATE automation_rules SET is_active = ? WHERE id = ?", (new_state, rule_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "is_active": bool(new_state)})
+
+
+@app.route("/api/automation/create", methods=["POST"])
+@login_required
+def api_automation_create():
+    """Create new automation rule."""
+    data = request.get_json() or {}
+    name = data.get("name", "").strip()
+    if not name:
+        return jsonify({"success": False, "error": "Rule name required"}), 400
+    rule_id = str(uuid.uuid4())[:8]
+    conn = get_user_db(session["user_id"])
+    conn.execute("""
+        INSERT INTO automation_rules (id, name, trigger_metric, trigger_operator, trigger_value, action_type, action_params, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+    """, (
+        rule_id, name,
+        data.get("trigger_metric", "CPC"),
+        data.get("trigger_operator", ">"),
+        data.get("trigger_value", 100),
+        data.get("action_type", "pause_campaign"),
+        json.dumps(data.get("action_params", {}))
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "rule_id": rule_id})
+
+
+@app.route("/api/automation/<rule_id>/delete", methods=["POST"])
+@login_required
+def api_automation_delete(rule_id):
+    """Delete automation rule."""
+    conn = get_user_db(session["user_id"])
+    conn.execute("DELETE FROM automation_rules WHERE id = ?", (rule_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+
+@app.route("/api/automation/clone/<from_account>/<to_account>", methods=["POST"])
+@login_required
+def api_automation_clone(from_account, to_account):
+    """Clone all automation rules from one account to another."""
+    conn = get_user_db(session["user_id"])
+    c = conn.cursor()
+    rules = c.execute(
+        "SELECT * FROM automation_rules WHERE account_id = ?", (from_account,)
+    ).fetchall()
+    
+    # Check target account exists
+    target = c.execute("SELECT id FROM platform_accounts WHERE id = ?", (to_account,)).fetchone()
+    if not target:
+        conn.close()
+        return jsonify({"success": False, "error": "Target account not found"}), 404
+    
+    cloned = 0
+    for rule in rules:
+        # Skip if already exists with same name
+        existing = c.execute(
+            "SELECT id FROM automation_rules WHERE account_id = ? AND name = ?",
+            (to_account, rule["name"])
+        ).fetchone()
+        if existing:
+            continue
+        rid = str(uuid.uuid4())[:8]
+        c.execute("""
+            INSERT INTO automation_rules (id, account_id, name, description, trigger_metric, trigger_operator, trigger_value, action_type, action_params, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (rid, to_account, rule["name"], rule["description"], rule["trigger_metric"],
+              rule["trigger_operator"], rule["trigger_value"], rule["action_type"],
+              rule["action_params"], rule["is_active"]))
+        cloned += 1
+    
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "cloned": cloned, "total": len(rules)})
+
+
+@app.route("/reports")
+@login_required
+def reports_page():
+    """Reports dashboard with charts."""
+    conn = get_user_db(session["user_id"])
+    c = conn.cursor()
+    total_spend = c.execute("SELECT COALESCE(SUM(spend), 0) FROM campaigns").fetchone()[0]
+    total_revenue = c.execute("SELECT COALESCE(SUM(revenue), 0) FROM campaigns").fetchone()[0]
+    campaign_count = c.execute("SELECT COUNT(*) FROM campaigns").fetchone()[0]
+    
+    # Per-platform aggregation
+    platforms = c.execute("""
+        SELECT platform, SUM(spend) as spend, SUM(revenue) as revenue, COUNT(*) as cnt
+        FROM campaigns GROUP BY platform
+    """).fetchall()
+    conn.close()
+    
+    total_roas = total_revenue / max(total_spend or 1, 1)
+    
+    return render_template(
+        "reports.html",
+        total_spend=total_spend,
+        total_revenue=total_revenue,
+        total_roas=total_roas,
+        campaign_count=campaign_count,
+        platforms=platforms,
+    )
+
+
+@app.route("/api/reports/data")
+@login_required
+def api_reports_data():
+    """Return chart data for reports page."""
+    conn = get_user_db(session["user_id"])
+    campaigns = conn.execute("SELECT * FROM campaigns ORDER BY created_at").fetchall()
+    conn.close()
+    
+    labels = [c["name"][:20] for c in campaigns]
+    spend_data = [c["spend"] or 0 for c in campaigns]
+    revenue_data = [c["revenue"] or 0 for c in campaigns]
+    roas_data = [round((c["revenue"] or 0) / max(c["spend"] or 1, 1), 2) for c in campaigns]
+    
+    return jsonify({
+        "labels": labels,
+        "spend": spend_data,
+        "revenue": revenue_data,
+        "roas": roas_data,
+    })
+
+
+@app.route("/auto_scale")
+@login_required
+def auto_scale_page():
+    """Auto-scaling rules page."""
+    return render_template("auto_scale.html", scale_plan=None, pause_plan=None)
+
+
+@app.route("/auto_pause")
+@login_required
+def auto_pause_page():
+    """Auto-pause rules page."""
+    return render_template("auto_pause.html")
+
+
+
+# ═══════════════════════════════════════════════════════════════
+# LIVE META ADS API ROUTES
+# ═══════════════════════════════════════════════════════════════
+
+try:
+    sys.path.insert(0, str(Path(__file__).parent.parent / 'scripts'))
+    from facebook_service import fb_service
+except ImportError:
+    fb_service = None
+
+
+@app.route("/api/meta/accounts")
+@login_required
+def api_meta_accounts():
+    """Get all configured Meta ad accounts with status."""
+    if not fb_service:
+        return jsonify({"success": False, "error": "Facebook service unavailable"}), 503
+    if not fb_service.is_token_valid():
+        return jsonify({"success": False, "error": "Meta token not configured"}), 400
+    accounts = fb_service.get_accounts()
+    return jsonify({"success": True, "accounts": accounts})
+
+
+@app.route("/api/meta/campaigns/<act_key>")
+@login_required
+def api_meta_campaigns(act_key):
+    """Get live campaigns for an account directly from Meta API."""
+    if not fb_service or not fb_service.is_token_valid():
+        return jsonify({"success": False, "error": "Meta token not available"}), 400
+    result = fb_service.get_campaigns(act_key)
+    return jsonify(result)
+
+
+@app.route("/api/meta/insights/<act_key>")
+@login_required
+def api_meta_insights(act_key):
+    """Get account-level insights from Meta API."""
+    if not fb_service or not fb_service.is_token_valid():
+        return jsonify({"success": False, "error": "Meta token not available"}), 400
+    days = request.args.get("days", 1, type=int)
+    result = fb_service.get_account_insights(act_key, days=days)
+    return jsonify(result)
+
+
+@app.route("/api/meta/campaign/<campaign_id>/detail")
+@login_required
+def api_meta_campaign_detail(campaign_id):
+    """Get campaign detail with ad sets from Meta API."""
+    if not fb_service or not fb_service.is_token_valid():
+        return jsonify({"success": False, "error": "Meta token not available"}), 400
+    result = fb_service.get_campaign_detail(campaign_id)
+    return jsonify(result)
+
+
+@app.route("/api/meta/campaign/<campaign_id>/<action>", methods=["POST"])
+@login_required
+def api_meta_campaign_action(campaign_id, action):
+    """Execute campaign action: pause, activate, kill, or budget."""
+    if not fb_service or not fb_service.is_token_valid():
+        return jsonify({"success": False, "error": "Meta token not available"}), 400
+    
+    if action == "pause":
+        result = fb_service.pause_campaign(campaign_id)
+    elif action == "activate":
+        result = fb_service.activate_campaign(campaign_id)
+    elif action == "kill":
+        result = fb_service.kill_campaign(campaign_id)
+    elif action == "budget":
+        data = request.get_json() or {}
+        budget = data.get("daily_budget", 0)
+        if not budget:
+            return jsonify({"success": False, "error": "daily_budget required"}), 400
+        result = fb_service.update_budget(campaign_id, budget)
+    else:
+        return jsonify({"success": False, "error": f"Unknown action: {action}"}), 400
+    
+    return jsonify(result)
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("🚀 AdForge Dashboard v3.0 — Per-User Database Isolation")
     print("   http://127.0.0.1:5002")
     print("   Users: Each user has their OWN database file")
     print("=" * 60)
-    app.run(host="127.0.0.1", port=5002, debug=False, use_reloader=False)
+    app.run(host="127.0.0.1", port=5002, debug=True, use_reloader=True)

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>{{ title }} — AdForge AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/style.css" rel="stylesheet">
+    <style>
+        body { background: #0a0a0f; color: #f1f1f7; font-family: 'Inter', -apple-system, sans-serif; }
+        .legal-container { max-width: 800px; margin: 3rem auto; padding: 2rem; background: #14141f; border: 1px solid #1e1e32; border-radius: 16px; }
+        .legal-container h3 { color: #6366f1; margin-bottom: 1rem; border-bottom: 2px solid #1e1e32; padding-bottom: 0.5rem; }
+        .legal-container h4 { color: #a5b4fc; margin-top: 1.5rem; font-size: 1rem; }
+        .legal-container p, .legal-container li { color: #9494b8; line-height: 1.7; }
+        .legal-container a { color: #818cf8; text-decoration: none; }
+        .legal-container a:hover { text-decoration: underline; }
+        .legal-container ul, .legal-container ol { padding-left: 1.5rem; }
+        .legal-back { text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #1e1e32; }
+    </style>
+</head>
+<body>
+    <div class="legal-container">
+        <div class="d-flex align-items-center mb-4">
+            <a href="/" class="text-decoration-none me-3" style="font-size:1.5rem;">✦</a>
+            <h2 class="mb-0" style="font-weight:800;"><span style="color:#6366f1;">AdForge</span> — {{ title }}</h2>
+        </div>
+        {{ content | safe }}
+        <div class="legal-back">
+            <a href="/" class="text-muted">← Back to AdForge</a>
+        </div>
+    </div>
+</body>
+</html>

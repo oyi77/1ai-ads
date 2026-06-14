@@ -1,0 +1,151 @@
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+
+from vilona_trakpro_engine import fb_get, fb_post, ACCESS_TOKEN
+
+ACT = "act_380721031313330"
+
+import time
+from datetime import datetime, timedelta
+
+today = datetime.now().date()
+since = (today - timedelta(days=3)).isoformat()
+until = today.isoformat()
+
+
+def api_get(endpoint, params=None):
+    return fb_get(f"{ACT}/{endpoint}", params=params)
+
+
+def api_post(endpoint, body):
+    return fb_post(f"{ACT}/{endpoint}", body=body)
+
+
+campaigns = []
+next_url = None
+while True:
+    if next_url:
+        sep = "&" if "?" in next_url else "?"
+        req = next_url + sep + "access_token=" + ACCESS_TOKEN
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode())
+    else:
+        data = api_get("campaigns", {
+            "fields": "id,name,status,daily_budget,lifetime_budget",
+            "limit": "200",
+        })
+    campaigns.extend(data.get("data", []))
+    next_url = data.get("paging", {}).get("next")
+    if not next_url:
+        break
+    time.sleep(1.5)
+
+insights = []
+next_url = None
+while True:
+    if next_url:
+        sep = "&" if "?" in next_url else "?"
+        req = next_url + sep + "access_token=" + ACCESS_TOKEN
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode())
+    else:
+        data = api_get("insights", {
+            "fields": "campaign_id,campaign_name,spend,clicks,cpc,ctr",
+            "time_range": json.dumps({"since": since, "until": until}),
+            "level": "campaign",
+            "limit": "200",
+        })
+    insights.extend(data.get("data", []))
+    next_url = data.get("paging", {}).get("next")
+    if not next_url:
+        break
+    time.sleep(1.5)
+
+by = {}
+for c in campaigns:
+    by[c["id"]] = {
+        "id": c["id"],
+        "name": c.get("name", ""),
+        "status": c.get("status", ""),
+        "daily_budget": c.get("daily_budget"),
+        "lifetime_budget": c.get("lifetime_budget"),
+        "spend": 0.0,
+        "clicks": 0,
+        "cpc": 0.0,
+        "ctr": 0.0,
+    }
+for i in insights:
+    cid = i.get("campaign_id")
+    if cid and cid in by:
+        by[cid]["spend"] = float(i.get("spend", 0) or 0)
+        by[cid]["clicks"] = int(i.get("clicks", 0) or 0)
+        by[cid]["cpc"] = float(i.get("cpc", 0) or 0)
+        by[cid]["ctr"] = float(i.get("ctr", 0) or 0)
+
+apps = list(by.values())
+total_spend = sum(a["spend"] for a in apps)
+total_clicks = sum(a["clicks"] for a in apps)
+global_cpc = total_spend / total_clicks if total_clicks > 0 else 0.0
+
+active_count = sum(1 for a in apps if a["status"] == "ACTIVE")
+off_count = sum(1 for a in apps if a["name"].startswith("OFF_"))
+star_count = sum(1 for a in apps if a["name"].startswith("🌟_"))
+mode = "AMAN" if global_cpc < 120 else "AKTIF"
+
+monster_killed = []
+watch_paused = []
+winners = []
+lc_scaled = []
+
+if global_cpc >= 120:
+    for a in apps:
+        cid = a["id"]
+        name = a["name"]
+        cpc = a["cpc"]
+        spend = a["spend"]
+        clicks = a["clicks"]
+        status = a["status"]
+
+        if status != "ACTIVE" or name.startswith("OFF_") or name.startswith("DEAD_"):
+            continue
+
+        try:
+            if cpc >= 500 and spend > 1000:
+                api_post(cid, {"name": f"OFF_{name}"})
+                api_post(cid, {"status": "PAUSED"})
+                monster_killed.append(name)
+                time.sleep(1.5)
+                continue
+            if cpc > 200 and clicks == 0 and spend > 500:
+                api_post(cid, {"status": "PAUSED"})
+                monster_killed.append(name)
+                time.sleep(1.5)
+                continue
+            if cpc < 120 and clicks > 5 and spend > 10000:
+                new_name = f"🌟_{name}" if not name.startswith("🌟_") else name
+                if new_name != name:
+                    api_post(cid, {"name": new_name})
+                winners.append(new_name)
+                time.sleep(1.5)
+                continue
+            if "LC" in name.upper() and cpc < 120:
+                raw_b = a.get("daily_budget")
+                if raw_b is not None:
+                    old = float(raw_b)
+                    if old > 0:
+                        new_b = old * 1.2
+                        if new_b > 50000:
+                            new_b = 50000
+                        api_post(cid, {"daily_budget": int(new_b)})
+                        lc_scaled.append(name)
+                        time.sleep(1.5)
+        except Exception:
+            pass
+
+report = f"""🛡️ SATPAM 1041 {until}
+ACTIVE:{active_count} | OFF_:{off_count} | 🌟:{star_count} | Global CPC:Rp{int(global_cpc)} | Mode:{mode}
+💀 MONSTER KILLED: {len(monster_killed)}
+    {"/1041.py

@@ -5,7 +5,7 @@ import time
 from datetime import datetime, timedelta
 
 # === CONFIG ===
-ACCOUNT_ID = "act_380721031313330"
+ACCOUNT_ID = "act_435670549443081"
 TOKEN_PATH = "/home/openclaw/projects/1ai-ads/.env"
 API_VERSION = "v22.0"
 BASE_URL = f"https://graph.facebook.com/{API_VERSION}/{ACCOUNT_ID}"

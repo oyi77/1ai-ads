@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Campaigns{% endblock %}
+{% block page_title %}Campaigns{% endblock %}
+{% block breadcrumb %}Campaign Management{% endblock %}
+
 {% block content %}
 
 <div class="page-header">
     <div>
         <h1>Campaigns</h1>
-        <p>All tracked ad campaigns — {{ campaigns|length }} total</p>
+        <p>{{ total }} total campaigns tracked</p>
     </div>
     <div class="page-actions">
         <button class="btn btn-outline btn-sm" onclick="location.reload()">
@@ -16,77 +19,82 @@
 
 <div class="card">
     <div class="card-header">
-        <h5><i class="bi bi-table"></i> Campaign List</h5>
+        <h3><i class="bi bi-megaphone"></i> Campaign List</h3>
         <div class="d-flex gap-2 align-items-center">
-            <input type="text" id="campaignSearch" class="form-control" placeholder="Search campaigns..." style="width:200px;padding:6px 12px;font-size:.78rem">
+            {% if accounts %}
+            <select onchange="window.location.href='/campaigns?account='+this.value"
+                    style="background:var(--bg-elevated);border:1px solid var(--border-strong);color:var(--text-primary);border-radius:var(--radius-sm);padding:6px 12px;font-size:0.75rem;min-width:160px;cursor:pointer;outline:none;font-family:var(--font)">
+                <option value="">All Accounts</option>
+                {% for a in accounts %}
+                <option value="{{ a.id }}" {% if account_filter == a.id %}selected{% endif %}>{{ a.account_name[:22] }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
+            <input type="text" id="campaignSearch" placeholder="Search campaigns..."
+                   style="background:var(--bg-elevated);border:1px solid var(--border-strong);color:var(--text-primary);border-radius:var(--radius-sm);padding:6px 12px;font-size:0.75rem;width:200px;outline:none;font-family:var(--font)">
         </div>
     </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table id="campaignsTable">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Platform</th>
-                        <th>Status</th>
-                        <th>Spend</th>
-                        <th>Revenue</th>
-                        <th>ROAS</th>
-                        <th>Impressions</th>
-                        <th>Created</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for c in campaigns %}
-                    <tr class="campaign-row">
-                        <td><strong style="color:var(--text);font-size:.78rem">{{ c.name }}</strong></td>
-                        <td><span class="badge badge-info">{{ c.platform }}</span></td>
-                        <td>
-                            {% if c.status == 'ACTIVE' %}
-                            <span class="badge badge-success">Active</span>
-                            {% elif c.status == 'PAUSED' %}
-                            <span class="badge badge-warning">Paused</span>
-                            {% elif c.status in ('KILL','KILLED') %}
-                            <span class="badge badge-danger">Killed</span>
-                            {% elif c.status in ('SCALE','WINNING') %}
-                            <span class="badge badge-purple">{{ c.status }}</span>
-                            {% else %}
-                            <span class="badge badge-neutral">{{ c.status }}</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-mono">Rp{{ "{:,.0f}".format(c.spend or 0) }}</td>
-                        <td class="text-mono">Rp{{ "{:,.0f}".format(c.revenue or 0) }}</td>
-                        <td class="text-mono">
-                            {% if c.spend and c.spend > 0 %}
-                            <span style="color:{% if (c.revenue or 0)/c.spend >= 1 %}#22c55e{% else %}#ef4444{% endif %}">
-                                {{ "%.2f"|format((c.revenue or 0)/c.spend) }}x
-                            </span>
-                            {% else %}
-                            <span class="text-muted">—</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-mono">{{ "{:,.0f}".format(c.impressions or 0) }}</td>
-                        <td class="text-muted text-xs">{{ c.created_at[:10] if c.created_at else '—' }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="8">
-                            <div class="empty-state">
-                                <i class="bi bi-megaphone"></i>
-                                <h3>No Campaigns Found</h3>
-                                <p>Campaigns will appear here once you connect your ad accounts and they sync data.</p>
-                                <a href="/accounts" class="btn btn-primary mt-3">Connect Accounts</a>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <div class="table-wrap">
+        <table id="campaignsTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Platform</th>
+                    <th>Status</th>
+                    <th>Spend</th>
+                    <th>Revenue</th>
+                    <th>ROAS</th>
+                    <th>Impressions</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in campaigns %}
+                <tr class="campaign-row clickable" onclick="showCampaignDetail('{{ c.id }}')">
+                    <td style="font-weight:500;color:var(--text-primary);max-width:220px" class="text-truncate">{{ c.name }}</td>
+                    <td><span class="badge badge-info">{{ c.platform }}</span></td>
+                    <td>
+                        {% if c.status == 'ACTIVE' %}<span class="badge badge-success"><span class="live-dot"></span> Active</span>
+                        {% elif c.status == 'PAUSED' %}<span class="badge badge-warning">Paused</span>
+                        {% elif c.status in ('KILL','KILLED') %}<span class="badge badge-danger">Killed</span>
+                        {% elif c.status in ('SCALE','WINNING') %}<span class="badge badge-purple">{{ c.status }}</span>
+                        {% else %}<span class="badge badge-neutral">{{ c.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-mono">Rp{{ "{:,.0f}".format(c.spend or 0) }}</td>
+                    <td class="text-mono">Rp{{ "{:,.0f}".format(c.revenue or 0) }}</td>
+                    <td class="text-mono">
+                        {% if c.spend and c.spend > 0 %}
+                        <span style="font-weight:600;{% if (c.revenue or 0)/c.spend >= 2 %}color:var(--green){% elif (c.revenue or 0)/c.spend >= 1 %}color:var(--amber){% else %}color:var(--red){% endif %}">
+                            {{ "%.2f"|format((c.revenue or 0)/c.spend) }}x
+                        </span>
+                        {% else %}<span style="color:var(--text-tertiary)">—</span>{% endif %}
+                    </td>
+                    <td class="text-mono">{{ "{:,.0f}".format(c.impressions or 0) }}</td>
+                    <td style="font-size:0.7rem;color:var(--text-tertiary)">{{ c.created_at[:10] if c.created_at else '—' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="bi bi-megaphone"></i>
+                            <h3>No Campaigns Found</h3>
+                            <p>Campaigns will appear here once you connect your ad accounts and sync data.</p>
+                            <a href="/accounts" class="btn btn-accent btn-sm mt-2">Connect Accounts</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-    <div class="card-footer text-center">
-        <small class="text-muted">Showing {{ campaigns|length }} campaign(s) — <a href="/accounts" style="color:var(--accent-l)">Connect more accounts</a> to see all campaigns</small>
+    {% if campaigns %}
+    <div class="card-footer text-center" style="font-size:0.72rem;color:var(--text-tertiary)">
+        Showing {{ campaigns|length }} of {{ total }} campaigns
+        {% if page > 1 %}<a href="?page={{ page-1 }}{% if account_filter %}&account={{ account_filter }}{% endif %}" style="margin-left:8px">← Prev</a>{% endif %}
+        {% if campaigns|length == page_size %}<a href="?page={{ page+1 }}{% if account_filter %}&account={{ account_filter }}{% endif %}" style="margin-left:8px">Next →</a>{% endif %}
     </div>
+    {% endif %}
 </div>
 
 {% endblock %}
@@ -94,7 +102,6 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Client-side search filter
     var searchInput = document.getElementById('campaignSearch');
     if (searchInput) {
         searchInput.addEventListener('input', function() {
@@ -106,5 +113,79 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+</script>
+
+<!-- CAMPAIGN DETAIL MODAL -->
+<div class="modal-overlay" id="campaignDetailModal" style="display:none">
+    <div class="modal-box" style="max-width:720px">
+        <div class="modal-header">
+            <div class="modal-title" id="cdTitle">Campaign Detail</div>
+            <button class="btn btn-ghost btn-icon" onclick="closeCampaignDetail()">✕</button>
+        </div>
+        <div id="cdContent">
+            <div class="loading-inline"><div class="loading-spinner" style="width:20px;height:20px;border-width:2px;margin:0"></div> Loading...</div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline btn-sm" onclick="closeCampaignDetail()">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function showCampaignDetail(cid) {
+    document.getElementById('campaignDetailModal').style.display = 'flex';
+    document.getElementById('cdContent').innerHTML = '<div class="loading-inline"><div class="loading-spinner" style="width:20px;height:20px;border-width:2px;margin:0"></div> Loading...</div>';
+    
+    fetch('/api/campaigns/' + cid + '/detail')
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) {
+            document.getElementById('cdContent').innerHTML = '<p class="text-danger p-3">' + (data.error || 'Failed') + '</p>';
+            return;
+        }
+        var c = data.campaign;
+        var roas = c.spend > 0 ? (c.revenue / c.spend).toFixed(2) : '0';
+        
+        var html = '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:16px;background:var(--bg-elevated);border-radius:var(--radius);margin-bottom:16px">';
+        html += '<div><div style="font-weight:600;color:var(--text-primary);margin-bottom:6px">' + c.name + '</div>';
+        html += '<span class="badge badge-info">' + (c.platform||'meta').toUpperCase() + '</span> ';
+        html += '<span class="badge badge-' + (c.status==='ACTIVE'?'success':c.status==='PAUSED'?'warning':c.status==='KILL'?'danger':'neutral') + '">' + (c.status||'?') + '</span></div>';
+        html += '<div style="text-align:right"><div style="font-size:1.3rem;font-weight:700;color:var(--text-primary)">Rp' + Number(c.spend||0).toLocaleString() + '</div><div style="font-size:0.68rem;color:var(--text-tertiary)">Total Spend</div></div>';
+        html += '</div>';
+        
+        html += '<div class="stat-grid" style="margin-bottom:16px">';
+        html += '<div class="stat-card success"><div class="stat-label">Revenue</div><div class="stat-value" style="font-size:1.1rem">Rp' + Number(c.revenue||0).toLocaleString() + '</div></div>';
+        html += '<div class="stat-card accent"><div class="stat-label">ROAS</div><div class="stat-value" style="font-size:1.1rem">' + roas + 'x</div></div>';
+        html += '<div class="stat-card purple"><div class="stat-label">Impressions</div><div class="stat-value" style="font-size:1.1rem">' + Number(c.impressions||0).toLocaleString() + '</div></div>';
+        html += '<div class="stat-card" style="--accent:var(--cyan)"><div class="stat-label">Clicks</div><div class="stat-value" style="font-size:1.1rem">' + Number(c.clicks||0).toLocaleString() + '</div></div>';
+        html += '</div>';
+        
+        if (data.ad_sets && data.ad_sets.length > 0) {
+            html += '<div style="font-size:0.78rem;font-weight:600;color:var(--text-secondary);margin-bottom:10px">Ad Sets (' + data.ad_sets.length + ')</div>';
+            html += '<div class="table-wrap" style="max-height:260px;overflow-y:auto"><table><thead><tr><th>Name</th><th>Status</th><th>Spend</th><th>Revenue</th><th>ROAS</th><th>Impressions</th><th>Conversions</th></tr></thead><tbody>';
+            data.ad_sets.forEach(function(as) {
+                html += '<tr><td style="color:var(--text-primary);font-size:0.75rem">' + as.name + '</td>';
+                html += '<td><span class="badge badge-' + (as.status==='ACTIVE'?'success':as.status==='PAUSED'?'warning':'neutral') + '" style="font-size:0.63rem">' + as.status + '</span></td>';
+                html += '<td class="text-mono" style="font-size:0.72rem">Rp' + Number(as.spend).toLocaleString() + '</td>';
+                html += '<td class="text-mono" style="font-size:0.72rem">Rp' + Number(as.revenue).toLocaleString() + '</td>';
+                html += '<td class="text-mono" style="font-size:0.72rem;font-weight:600;color:' + (as.roas>=2?'var(--green)':as.roas>=1?'var(--amber)':'var(--red)') + '">' + as.roas.toFixed(2) + 'x</td>';
+                html += '<td class="text-mono" style="font-size:0.72rem">' + Number(as.impressions).toLocaleString() + '</td>';
+                html += '<td class="text-mono" style="font-size:0.72rem">' + (as.conversions||0) + '</td></tr>';
+            });
+            html += '</tbody></table></div>';
+        }
+        
+        document.getElementById('cdTitle').textContent = c.name;
+        document.getElementById('cdContent').innerHTML = html;
+    })
+    .catch(e => {
+        document.getElementById('cdContent').innerHTML = '<p class="text-danger p-3">Error: ' + e.message + '</p>';
+    });
+}
+
+function closeCampaignDetail() {
+    document.getElementById('campaignDetailModal').style.display = 'none';
+}
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCampaignDetail(); });
 </script>
 {% endblock %}

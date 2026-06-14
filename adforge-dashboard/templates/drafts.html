@@ -1,194 +1,205 @@
 {% extends "base.html" %}
-
-{% block title %}Approval Drafts - AdForge{% endblock %}
+{% block title %}Drafts{% endblock %}
+{% block page_title %}Approval Drafts{% endblock %}
+{% block breadcrumb %}Review Queue{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-  <div class="row mb-4">
-    <div class="col">
-      <h1>
-        <i class="bi bi-check-circle"></i> Approval Drafts
+
+<div class="page-header">
+    <div>
+        <h1>Approval Drafts</h1>
+        <p>Review and approve AI-generated campaign changes before they go live</p>
+    </div>
+    <div class="page-actions">
         {% if pending_count > 0 %}
-        <span class="badge bg-danger">{{ pending_count }} pending</span>
+        <span class="badge badge-warning">{{ pending_count }} pending</span>
+        {% else %}
+        <span class="badge badge-success">All Clear</span>
         {% endif %}
-      </h1>
-      <p class="text-muted">Review and approve AI-generated campaign changes before they go live.</p>
     </div>
-  </div>
-
-  <!-- PENDING DRAFTS -->
-  {% if pending_drafts %}
-  <div class="row">
-    <div class="col-12">
-      <div class="card border-warning mb-4">
-        <div class="card-header bg-warning text-dark">
-          <h5 class="mb-0">
-            <i class="bi bi-hourglass-split"></i> Pending Approval ({{ pending_drafts|length }})
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            {% for draft in pending_drafts %}
-            <div class="col-md-6 mb-3">
-              <div class="card h-100 border-left-warning">
-                <div class="card-body">
-                  <!-- Type Badge -->
-                  <div class="mb-2">
-                    {% if draft.type == 'campaign_change' %}
-                      <span class="badge bg-primary">Campaign Change</span>
-                    {% elif draft.type == 'rule_change' %}
-                      <span class="badge bg-info">Rule Change</span>
-                    {% elif draft.type == 'budget_change' %}
-                      <span class="badge bg-success">Budget Change</span>
-                    {% elif draft.type == 'ad_change' %}
-                      <span class="badge bg-secondary">Ad Change</span>
-                    {% endif %}
-                    <small class="text-muted d-block mt-1">{{ draft.created_at }}</small>
-                  </div>
-
-                  <!-- Summary -->
-                  <h6 class="card-title">{{ draft.summary }}</h6>
-
-                  <!-- Details -->
-                  {% if draft.details_json %}
-                  <div class="bg-light p-2 rounded mb-3" style="max-height: 150px; overflow-y: auto;">
-                    <code style="font-size: 0.85rem; white-space: pre-wrap;">{{ draft.details_json }}</code>
-                  </div>
-                  {% endif %}
-
-                  <!-- Proposed by -->
-                  {% if draft.proposed_by %}
-                  <small class="text-muted d-block mb-2">Proposed by: <strong>{{ draft.proposed_by }}</strong></small>
-                  {% endif %}
-
-                  <!-- Action Buttons -->
-                  <div class="btn-group w-100" role="group">
-                    <button class="btn btn-sm btn-success" onclick="approveDraft('{{ draft.id }}', '{{ draft.summary }}')">
-                      <i class="bi bi-check-circle"></i> Approve
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="rejectDraft('{{ draft.id }}')">
-                      <i class="bi bi-x-circle"></i> Reject
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  {% else %}
-  <div class="alert alert-success">
-    <i class="bi bi-check-circle"></i> No pending drafts. All changes are approved!
-  </div>
-  {% endif %}
-
-  <!-- HISTORY -->
-  {% if history_drafts %}
-  <div class="row">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-header bg-light">
-          <h5 class="mb-0">
-            <i class="bi bi-clock-history"></i> Recent History
-          </h5>
-        </div>
-        <div class="table-responsive">
-          <table class="table table-sm table-hover mb-0">
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>Summary</th>
-                <th>Status</th>
-                <th>Reviewed At</th>
-                <th>Reviewed By</th>
-                <th>Reason</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for draft in history_drafts %}
-              <tr>
-                <td>
-                  {% if draft.type == 'campaign_change' %}
-                    <span class="badge bg-primary">Campaign</span>
-                  {% elif draft.type == 'rule_change' %}
-                    <span class="badge bg-info">Rule</span>
-                  {% elif draft.type == 'budget_change' %}
-                    <span class="badge bg-success">Budget</span>
-                  {% else %}
-                    <span class="badge bg-secondary">{{ draft.type }}</span>
-                  {% endif %}
-                </td>
-                <td>{{ draft.summary }}</td>
-                <td>
-                  {% if draft.status == 'approved' %}
-                    <span class="badge bg-success">Approved</span>
-                  {% else %}
-                    <span class="badge bg-danger">Rejected</span>
-                  {% endif %}
-                </td>
-                <td><small>{{ draft.reviewed_at }}</small></td>
-                <td>{{ draft.reviewed_by or '-' }}</td>
-                <td>{{ draft.rejection_reason or '-' }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-  {% endif %}
 </div>
 
+<!-- PENDING DRAFTS -->
+{% if pending_drafts %}
+<div class="filter-bar" id="batchBar">
+    <label style="cursor:pointer;display:flex;align-items:center;gap:6px">
+        <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" style="accent-color:var(--accent)">
+        <span style="font-size:0.78rem;color:var(--text-primary)">Select All ({{ pending_drafts|length }})</span>
+    </label>
+    <span id="selectedCount" style="font-size:0.73rem;color:var(--text-secondary);display:none"></span>
+    <div class="flex-grow-1"></div>
+    <button class="btn btn-success btn-sm" onclick="batchAction('approve')" id="btnBatchApprove" disabled>
+        <i class="bi bi-check-circle"></i> Approve Selected
+    </button>
+    <button class="btn btn-danger btn-sm" onclick="batchAction('reject')" id="btnBatchReject" disabled>
+        <i class="bi bi-x-circle"></i> Reject Selected
+    </button>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px">
+    {% for draft in pending_drafts %}
+    <div class="card" style="border-left:4px solid var(--amber)" id="draft-{{ draft.id }}">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <input type="checkbox" class="draft-checkbox" value="{{ draft.id }}" onchange="updateBatchButtons()" style="accent-color:var(--accent);width:16px;height:16px">
+                    <div>
+                        {% if draft.type == 'campaign_change' %}<span class="badge badge-info">Campaign Change</span>
+                        {% elif draft.type == 'rule_change' %}<span class="badge badge-purple">Rule Change</span>
+                        {% elif draft.type == 'budget_change' %}<span class="badge badge-success">Budget Change</span>
+                        {% elif draft.type == 'ad_change' %}<span class="badge badge-warning">Ad Change</span>
+                        {% else %}<span class="badge badge-neutral">{{ draft.type }}</span>
+                        {% endif %}
+                    </div>
+                    <small style="font-size:0.68rem;color:var(--text-tertiary)">{{ draft.created_at[:19] if draft.created_at else '' }}</small>
+                </div>
+            </div>
+            <div style="font-weight:600;color:var(--text-primary);margin-bottom:8px">{{ draft.summary }}</div>
+            {% if draft.details_json %}
+            <div style="background:var(--bg-elevated);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:12px;max-height:100px;overflow-y:auto">
+                <code style="font-size:0.7rem;white-space:pre-wrap;color:var(--text-secondary);font-family:var(--font-mono)">{{ draft.details_json }}</code>
+            </div>
+            {% endif %}
+            {% if draft.proposed_by %}
+            <small style="font-size:0.68rem;color:var(--text-tertiary);display:block;margin-bottom:10px">Proposed by: <strong style="color:var(--accent)">{{ draft.proposed_by }}</strong></small>
+            {% endif %}
+            <div class="d-flex gap-2">
+                <button class="btn btn-success btn-sm flex-grow-1" onclick="approveDraft('{{ draft.id }}', '{{ draft.summary|e }}')">
+                    <i class="bi bi-check-circle"></i> Approve
+                </button>
+                <button class="btn btn-danger btn-sm flex-grow-1" onclick="rejectDraft('{{ draft.id }}')">
+                    <i class="bi bi-x-circle"></i> Reject
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <i class="bi bi-check-circle" style="color:var(--green)"></i>
+    <h3>No Pending Drafts</h3>
+    <p>All AI-proposed changes have been reviewed. New drafts appear when automation detects optimization opportunities.</p>
+</div>
+{% endif %}
+
+<!-- HISTORY -->
+{% if history_drafts %}
+<div class="card">
+    <div class="card-header">
+        <h3><i class="bi bi-clock-history"></i> Recent History</h3>
+        <span class="badge badge-neutral">{{ history_drafts|length }} reviewed</span>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Type</th><th>Summary</th><th>Status</th><th>Reviewed</th><th>By</th><th>Reason</th></tr>
+            </thead>
+            <tbody>
+                {% for draft in history_drafts %}
+                <tr>
+                    <td>
+                        {% if draft.type == 'campaign_change' %}<span class="badge badge-info">Campaign</span>
+                        {% elif draft.type == 'rule_change' %}<span class="badge badge-purple">Rule</span>
+                        {% elif draft.type == 'budget_change' %}<span class="badge badge-success">Budget</span>
+                        {% else %}<span class="badge badge-neutral">{{ draft.type }}</span>{% endif %}
+                    </td>
+                    <td style="max-width:280px" class="text-truncate">{{ draft.summary }}</td>
+                    <td>
+                        {% if draft.status == 'approved' %}<span class="badge badge-success">Approved</span>
+                        {% else %}<span class="badge badge-danger">Rejected</span>{% endif %}
+                    </td>
+                    <td style="font-size:0.7rem;color:var(--text-tertiary)">{{ draft.reviewed_at[:19] if draft.reviewed_at else '—' }}</td>
+                    <td>{{ draft.reviewed_by or '—' }}</td>
+                    <td style="font-size:0.7rem;color:var(--text-tertiary);max-width:180px" class="text-truncate">{{ draft.rejection_reason or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirmModal" style="display:none">
+    <div class="modal-box" style="max-width:440px">
+        <div class="modal-header">
+            <div class="modal-title" id="confirmTitle">Confirm</div>
+            <button class="btn btn-ghost btn-icon" onclick="closeConfirmModal()">✕</button>
+        </div>
+        <div class="text-center mb-3"><div style="font-size:2rem;margin-bottom:8px" id="confirmIcon">⚠️</div>
+        <div id="confirmMsg" style="color:var(--text-secondary);font-size:0.85rem">Are you sure?</div></div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeConfirmModal()">Cancel</button>
+            <button class="btn" id="confirmActionBtn" onclick="executeConfirm()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
 <script>
+var _confirmCallback = null;
+
+function openConfirmModal(icon, title, msg, btnClass, btnText, callback) {
+    document.getElementById('confirmIcon').textContent = icon;
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMsg').textContent = msg;
+    var btn = document.getElementById('confirmActionBtn');
+    btn.className = 'btn ' + (btnClass || 'btn-accent');
+    btn.textContent = btnText || 'Confirm';
+    _confirmCallback = callback;
+    document.getElementById('confirmModal').style.display = 'flex';
+}
+function closeConfirmModal() { document.getElementById('confirmModal').style.display = 'none'; _confirmCallback = null; }
+function executeConfirm() { if (_confirmCallback) _confirmCallback(); closeConfirmModal(); }
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeConfirmModal(); });
+
 function approveDraft(draftId, summary) {
-  if (confirm(`Approve draft: "${summary}"?\n\nThis action cannot be undone.`)) {
-    fetch(`/api/drafts/${draftId}/approve`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reviewed_by: 'user' })
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        alert('✅ Draft approved and executed!');
-        location.reload();
-      } else {
-        alert('❌ Error: ' + data.error);
-      }
-    })
-    .catch(e => alert('Error: ' + e));
-  }
+    openConfirmModal('✅', 'Approve Draft', summary, 'btn-success', 'Approve', function() {
+        fetch('/api/drafts/' + draftId + '/approve', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({reviewed_by:'user'}) })
+        .then(r=>r.json())
+        .then(data => {
+            if (data.success) { showToast('Approved', 'Draft executed', 'success'); setTimeout(()=>location.reload(),800); }
+            else showToast('Error', data.error||'Failed', 'error');
+        }).catch(e => showToast('Error', e.message, 'error'));
+    });
+}
+function rejectDraft(draftId) {
+    openConfirmModal('❌', 'Reject Draft', 'Enter a reason for rejection:', 'btn-danger', 'Reject', function() {
+        var reason = prompt('Why are you rejecting this draft?'); if (reason===null) return;
+        fetch('/api/drafts/' + draftId + '/reject', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({reviewed_by:'user',reason:reason}) })
+        .then(r=>r.json())
+        .then(data => {
+            if (data.success) { showToast('Rejected', 'Draft rejected', 'warning'); setTimeout(()=>location.reload(),800); }
+            else showToast('Error', data.error||'Failed', 'error');
+        }).catch(e => showToast('Error', e.message, 'error'));
+    });
 }
 
-function rejectDraft(draftId) {
-  const reason = prompt('Why are you rejecting this draft?');
-  if (reason !== null) {
-    fetch(`/api/drafts/${draftId}/reject`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reviewed_by: 'user', reason: reason })
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        alert('❌ Draft rejected');
-        location.reload();
-      } else {
-        alert('Error: ' + data.error);
-      }
-    })
-    .catch(e => alert('Error: ' + e));
-  }
+function toggleSelectAll(cb) { document.querySelectorAll('.draft-checkbox').forEach(c => c.checked = cb.checked); updateBatchButtons(); }
+function updateBatchButtons() {
+    var checked = document.querySelectorAll('.draft-checkbox:checked');
+    var count = checked.length;
+    document.getElementById('btnBatchApprove').disabled = (count===0);
+    document.getElementById('btnBatchReject').disabled = (count===0);
+    var label = document.getElementById('selectedCount');
+    if (count>0) { label.style.display='inline';label.textContent=count+' selected'; }
+    else label.style.display='none';
+}
+function batchAction(action) {
+    var checked = document.querySelectorAll('.draft-checkbox:checked');
+    var ids = Array.from(checked).map(c=>c.value); if(ids.length===0) return;
+    var verb = action==='approve'?'Approve':'Reject';
+    openConfirmModal(action==='approve'?'✅':'❌','Batch '+verb, verb+' '+ids.length+' drafts?',action==='approve'?'btn-success':'btn-danger',verb,function(){
+        fetch('/api/drafts/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:action,ids:ids})})
+        .then(r=>r.json())
+        .then(data=>{
+            if(data.success){showToast('Done',data.processed+' drafts '+(action==='approve'?'approved':'rejected'),'success');setTimeout(()=>location.reload(),800);}
+            else showToast('Error',data.error||'Failed','error');
+        }).catch(e=>showToast('Error',e.message,'error'));
+    });
 }
 </script>
-
-<style>
-.border-left-warning {
-  border-left: 4px solid #ffc107 !important;
-}
-</style>
 {% endblock %}

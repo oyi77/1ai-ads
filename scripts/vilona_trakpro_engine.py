@@ -231,6 +231,14 @@ ACCOUNTS = {
         "cpc_safe_abo": 150, "cpc_danger_abo": 250,
         "budget_cap_per_camp": 500000,
         "tags": ["rakpiringpengering", "organizerpullout", "Dongkrakelektrik", "setelanbajukaosmihugajah", "setelangajahthaialand"],
+        "manual_managed": [
+            "ON_ON_VILONA_organizerpullout_FBonly",
+            "🌟_🌟_🌟_🌟_BIDCAP_Organizer_organizerpullout_Dapur_0603",
+            "🌟_ON__Kakriput_organizerpullout_INT06",
+            "🌟_🌟_🌟_🌟_🌟_🌟_TEST_setelanbajukaosmihugajah_shoppingFashiOFF",
+            "🌟_🌟_🌟_🌟_🌟_🌟_🌟_LC_0858_setelanbajukaosmihugajah_fashiOn",
+            "Scale_setelangajahthaialand_Belanja_26-40",
+        ],
     },
     "1041": {
         "id": "act_380721031313330",

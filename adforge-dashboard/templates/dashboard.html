@@ -1,212 +1,368 @@
 {% extends "base.html" %}
 {% block title %}Dashboard{% endblock %}
+{% block page_title %}Command Center{% endblock %}
+{% block breadcrumb %}Overview{% endblock %}
+
 {% block content %}
 
-<div class="loading-overlay" id="pageLoading" style="display:none">
-    <div style="text-align:center">
-        <div class="loading-spinner"></div>
-        <div class="loading-text">Loading your dashboard...</div>
-    </div>
+<!-- ═══ CROSS-ACCOUNT CHIPS ═══ -->
+<div class="filter-bar">
+    <span style="font-size:0.7rem;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em">Accounts</span>
+    {% for acc in cross_account %}
+    <a href="/app?account={{ acc.id }}" class="account-chip {% if selected_account == acc.id %}active{% endif %}">
+        <span class="status-dot {% if acc.active > 0 %}live{% else %}offline{% endif %}"></span>
+        {{ acc.name[:18] }}
+        <span style="font-size:0.63rem;color:var(--text-tertiary);font-family:var(--font-mono)">Rp{{ "{:,.0f}".format(acc.spend)|replace(",",".") }}</span>
+    </a>
+    {% endfor %}
 </div>
 
-<div class="page-header">
-    <div>
-        <h1>AdForge Dashboard</h1>
-        <p>AI-Powered Ads Management &amp; Automation — {{ username }}</p>
-    </div>
-    <div class="page-actions">
-        <span class="badge badge-success"><i class="bi bi-check-circle"></i> System Online</span>
-        <button class="btn btn-outline btn-sm" onclick="location.reload()" title="Refresh data">
-            <i class="bi bi-arrow-clockwise"></i> Refresh
-        </button>
-    </div>
-</div>
-
-<!-- Stats Cards -->
-<div class="grid-4 mb-4">
+<!-- ═══ KPI STAT CARDS ═══ -->
+<div class="stat-grid">
     <div class="stat-card accent">
-        <div class="d-flex justify-content-between align-items-start">
-            <div>
-                <div class="stat-label">Total Campaigns</div>
-                <div class="stat-value">{{ campaigns_count }}</div>
-            </div>
-            <div class="text-accent"><i class="bi bi-megaphone fs-3"></i></div>
+        <div class="stat-label">Today Spend</div>
+        <div class="stat-value">Rp{{ "{:,.0f}".format(today_spend) }}</div>
+        <div class="stat-change {% if spend_change >= 0 %}up{% else %}down{% endif %}">
+            {% if spend_change >= 0 %}▲{% else %}▼{% endif %} {{ spend_change|abs }}% vs yesterday
         </div>
-    </div>
-    <div class="stat-card warning">
-        <div class="d-flex justify-content-between align-items-start">
-            <div>
-                <div class="stat-label">Pending Drafts</div>
-                <div class="stat-value">{{ pending_drafts }}</div>
-            </div>
-            <div class="text-warning"><i class="bi bi-hourglass-split fs-3"></i></div>
-        </div>
-        {% if pending_drafts > 0 %}
-        <a href="/drafts" class="btn btn-warning mt-2 w-100">Review Now</a>
-        {% endif %}
     </div>
     <div class="stat-card success">
-        <div class="d-flex justify-content-between align-items-start">
-            <div>
-                <div class="stat-label">Automation Rules</div>
-                <div class="stat-value">{{ rules|length }}</div>
-            </div>
-            <div class="text-success"><i class="bi bi-gear fs-3"></i></div>
+        <div class="stat-label">Today Revenue</div>
+        <div class="stat-value">Rp{{ "{:,.0f}".format(today_revenue) }}</div>
+        <div class="stat-change {% if revenue_change >= 0 %}up{% else %}down{% endif %}">
+            {% if revenue_change >= 0 %}▲{% else %}▼{% endif %} {{ revenue_change|abs }}% vs yesterday
         </div>
     </div>
     <div class="stat-card purple">
-        <div class="d-flex justify-content-between align-items-start">
-            <div>
-                <div class="stat-label">Platform Accounts</div>
-                <div class="stat-value">{{ accounts|length }}</div>
-            </div>
-            <div style="color:var(--purple)"><i class="bi bi-layers fs-3"></i></div>
+        <div class="stat-label">ROAS</div>
+        <div class="stat-value">{{ "%.1f"|format(today_roas) }}x</div>
+        <div class="stat-change {{ 'up' if today_roas >= 2 else 'down' }}">
+            Net: Rp{{ "{:,.0f}".format(today_net) }}
         </div>
-        <small class="text-muted">{{ accounts|selectattr('platform')|list|length }} connected</small>
-        <a href="/accounts" class="btn btn-outline mt-2 w-100">Manage Accounts</a>
+    </div>
+    <div class="stat-card cyan">
+        <div class="stat-label">Impressions</div>
+        <div class="stat-value">{{ "{:,.0f}".format(today_impressions) }}</div>
+        <div class="stat-change up">
+            {{ today_clicks }} clicks
+        </div>
+    </div>
+    <div class="stat-card" style="--accent:var(--amber)">
+        <div class="stat-label">Active Campaigns</div>
+        <div class="stat-value">{{ campaigns_count }}</div>
+        <div class="stat-change" style="color:var(--text-secondary)">
+            {{ cross_account|length }} accounts
+        </div>
+    </div>
+    <div class="stat-card" style="--accent:var(--pink)">
+        <div class="stat-label">Automation Rules</div>
+        <div class="stat-value">{{ total_rules }}</div>
+        <div class="stat-change" style="color:var(--text-secondary)">
+            {{ pending_drafts }} pending drafts
+        </div>
     </div>
 </div>
 
-<!-- Main Content -->
-<div class="row g-3">
-    <!-- Campaigns Table -->
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="bi bi-megaphone"></i> Active Campaigns</h5>
-                <a href="/campaigns" class="btn btn-outline btn-sm">View All</a>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Campaign</th>
-                                <th>Platform</th>
-                                <th>Status</th>
-                                <th>Spend</th>
-                                <th>Revenue</th>
-                                <th>Impressions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for campaign in campaigns %}
-                            <tr>
-                                <td><strong style="color:var(--text)">{{ campaign.name }}</strong></td>
-                                <td><span class="badge badge-info">{{ campaign.platform }}</span></td>
-                                <td>
-                                    {% if campaign.status == 'ACTIVE' %}
-                                    <span class="badge badge-success">Active</span>
-                                    {% elif campaign.status == 'PAUSED' %}
-                                    <span class="badge badge-warning">Paused</span>
-                                    {% elif campaign.status == 'KILL' %}
-                                    <span class="badge badge-danger">Killed</span>
-                                    {% else %}
-                                    <span class="badge badge-neutral">{{ campaign.status }}</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-mono">Rp{{ "{:,.0f}".format(campaign.spend or 0) }}</td>
-                                <td class="text-mono">Rp{{ "{:,.0f}".format(campaign.revenue or 0) }}</td>
-                                <td class="text-mono">{{ "{:,.0f}".format(campaign.impressions or 0) }}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="6">
-                                    <div class="empty-state">
-                                        <i class="bi bi-megaphone"></i>
-                                        <h3>No Campaigns Yet</h3>
-                                        <p>Connect your ad accounts to start tracking campaigns automatically.</p>
-                                        <a href="/accounts" class="btn btn-primary mt-3">Connect Accounts</a>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+<!-- ═══ CHARTS ═══ -->
+<div class="chart-grid">
+    <div class="chart-card">
+        <div class="chart-title">Spend & Revenue Trend</div>
+        <div class="chart-wrap">
+            <canvas id="chartSpendRevenue"></canvas>
         </div>
     </div>
-
-    <!-- Sidebar -->
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="bi bi-gear"></i> Automation Rules</h5>
-                <a href="/automation" class="btn btn-outline btn-sm">Manage</a>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table-sm">
-                        <thead>
-                            <tr>
-                                <th>Rule</th>
-                                <th>Trigger</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for rule in rules %}
-                            <tr>
-                                <td><small style="color:var(--text)">{{ rule.name }}</small></td>
-                                <td><small><code>{{ rule.trigger_metric }}</code></small></td>
-                                <td>
-                                    {% if rule.is_active %}
-                                    <span class="badge badge-success" style="font-size:.6rem">ON</span>
-                                    {% else %}
-                                    <span class="badge badge-neutral" style="font-size:.6rem">OFF</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="3">
-                                    <div class="empty-state" style="padding:24px 16px">
-                                        <i class="bi bi-gear" style="font-size:2rem"></i>
-                                        <h3>No Rules</h3>
-                                        <p>Automation rules help optimize campaigns automatically.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+    <div class="chart-card">
+        <div class="chart-title">Campaign ROAS Comparison</div>
+        <div class="chart-wrap">
+            <canvas id="chartRoas"></canvas>
         </div>
+    </div>
+</div>
 
-        <div class="card mt-3">
-            <div class="card-header">
-                <h5><i class="bi bi-lightning"></i> Quick Actions</h5>
-            </div>
-            <div class="card-body">
-                <div class="d-grid gap-2">
-                    <a href="/drafts" class="btn btn-primary btn-sm">
-                        <i class="bi bi-check-circle"></i> Review Drafts
-                        {% if pending_drafts > 0 %}
-                        <span class="nav-badge nav-badge-danger">{{ pending_drafts }}</span>
+<!-- ═══ CROSS-ACCOUNT OVERVIEW TABLE ═══ -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="bi bi-grid-3x3-gap"></i> Cross-Account Overview</h3>
+        <div>
+            <button class="btn btn-outline btn-sm" onclick="syncFromMeta()" id="btnSync">
+                <i class="bi bi-cloud-download"></i> Sync from Meta
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="location.reload()">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        </div>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Account</th>
+                    <th>Platform</th>
+                    <th>Status</th>
+                    <th>Campaigns</th>
+                    <th>Spend</th>
+                    <th>Revenue</th>
+                    <th>ROAS</th>
+                    <th>Daily Budget</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for acc in cross_account %}
+                <tr class="clickable" onclick="window.location.href='/app?account={{ acc.id }}'">
+                    <td style="font-weight:600;color:var(--text-primary)">{{ acc.name }}</td>
+                    <td><span class="badge badge-info">{{ acc.platform.upper() }}</span></td>
+                    <td>
+                        {% if acc.active > 0 %}
+                        <span class="badge badge-success"><span class="live-dot"></span> {{ acc.active }} active</span>
+                        {% else %}
+                        <span class="badge badge-neutral">Idle</span>
                         {% endif %}
-                    </a>
-                    <a href="/campaigns" class="btn btn-outline btn-sm">
-                        <i class="bi bi-plus-circle"></i> View Campaigns
-                    </a>
-                    <a href="/0858" class="btn btn-outline btn-sm">
-                        <i class="bi bi-graph-up"></i> 0858 Engine Dashboard
-                    </a>
-                </div>
-            </div>
+                    </td>
+                    <td>{{ acc.campaigns }}</td>
+                    <td class="text-mono">Rp{{ "{:,.0f}".format(acc.spend) }}</td>
+                    <td class="text-mono">Rp{{ "{:,.0f}".format(acc.revenue) }}</td>
+                    <td>
+                        <span style="font-weight:700;{% if acc.roas >= 2 %}color:var(--green){% elif acc.roas >= 1 %}color:var(--amber){% else %}color:var(--red){% endif %}">
+                            {{ "%.1f"|format(acc.roas) }}x
+                        </span>
+                    </td>
+                    <td style="color:var(--text-tertiary)">
+                        {% if acc.budget > 0 %}Rp{{ "{:,.0f}".format(acc.budget) }}{% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not cross_account %}
+                <tr><td colspan="8" class="text-center" style="padding:40px;color:var(--text-tertiary)">No accounts connected yet. <a href="/accounts">Add your first account →</a></td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ═══ CAMPAIGNS TABLE ═══ -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="bi bi-megaphone"></i> {{ selected_account_name or 'All' }} Campaigns</h3>
+        <a href="/campaigns" class="btn btn-ghost btn-sm">View All →</a>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Campaign</th>
+                    <th>Status</th>
+                    <th>Spend</th>
+                    <th>Impressions</th>
+                    <th>Clicks</th>
+                    <th>CTR</th>
+                    <th>ROAS</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in campaigns %}
+                <tr>
+                    <td style="font-weight:500;color:var(--text-primary);max-width:200px" class="text-truncate">{{ c.name }}</td>
+                    <td>
+                        {% if c.status == 'ACTIVE' %}
+                        <span class="badge badge-success"><span class="live-dot"></span> Active</span>
+                        {% elif c.status == 'PAUSED' %}
+                        <span class="badge badge-warning">Paused</span>
+                        {% else %}
+                        <span class="badge badge-neutral">{{ c.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-mono">Rp{{ "{:,.0f}".format(c.spend or 0) }}</td>
+                    <td class="text-mono">{{ "{:,.0f}".format(c.impressions or 0) }}</td>
+                    <td class="text-mono">{{ "{:,.0f}".format(c.clicks or 0) }}</td>
+                    <td>{{ "%.2f"|format((c.clicks or 0) / ([c.impressions or 1, 1]|max) * 100) }}%</td>
+                    <td>
+                        <span style="font-weight:700;{% if (c.roas or 0) >= 2 %}color:var(--green){% elif (c.roas or 0) >= 1 %}color:var(--amber){% else %}color:var(--red){% endif %}">
+                            {{ "%.1f"|format(c.roas or 0) }}x
+                        </span>
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            {% if c.status == 'ACTIVE' %}
+                            <button class="btn btn-warning btn-sm" onclick="campaignAction('{{ c.id }}','pause')" title="Pause">⏸</button>
+                            {% else %}
+                            <button class="btn btn-success btn-sm" onclick="campaignAction('{{ c.id }}','activate')" title="Activate">▶</button>
+                            {% endif %}
+                            <button class="btn btn-danger btn-sm" onclick="campaignAction('{{ c.id }}','kill')" title="Kill">✕</button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not campaigns %}
+                <tr><td colspan="8" class="text-center" style="padding:40px;color:var(--text-tertiary)">
+                    <i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:8px;opacity:0.3"></i>
+                    No campaigns yet. Click <strong>Sync from Meta</strong> to pull live data.
+                </td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ═══ AUTOMATION RULES ═══ -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="bi bi-lightning-charge"></i> Active Automation Rules</h3>
+        <a href="/automation" class="btn btn-ghost btn-sm">Manage →</a>
+    </div>
+    {% if rules %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Rule</th><th>Trigger</th><th>Action</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                {% for r in rules %}
+                <tr>
+                    <td style="font-weight:500;color:var(--text-primary)">{{ r.name }}</td>
+                    <td style="font-family:var(--font-mono);font-size:0.72rem">
+                        {{ r.trigger_metric }} {{ r.trigger_operator }} {{ r.trigger_value }}
+                    </td>
+                    <td><span class="badge badge-purple">{{ r.action_type }}</span></td>
+                    <td>
+                        {% if r.is_active %}
+                        <span class="badge badge-success">ON</span>
+                        {% else %}
+                        <span class="badge badge-neutral">OFF</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body">
+        <div class="empty-state">
+            <i class="bi bi-lightning-charge"></i>
+            <h3>No automation rules</h3>
+            <p>Create rules to auto-scale winners, pause losers, and manage budgets on autopilot.</p>
+            <a href="/automation" class="btn btn-accent btn-sm mt-2">Create Your First Rule</a>
         </div>
     </div>
+    {% endif %}
 </div>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Hide loading overlay
-    var loader = document.getElementById('pageLoading');
-    if (loader) setTimeout(function() { loader.style.display = 'none'; }, 200);
-});
+// Chart: Spend vs Revenue Trend
+(function(){
+    const ctx = document.getElementById('chartSpendRevenue');
+    if(!ctx) return;
+    const labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Spend',
+                data: {{ spend_history|default([120,95,140,110,155,98,130])|tojson }},
+                backgroundColor: 'rgba(0,229,255,0.25)',
+                borderColor: 'rgba(0,229,255,0.6)',
+                borderWidth: 1,
+                borderRadius: 4
+            },{
+                label: 'Revenue',
+                data: {{ revenue_history|default([180,140,210,165,230,150,195])|tojson }},
+                backgroundColor: 'rgba(52,211,153,0.25)',
+                borderColor: 'rgba(52,211,153,0.6)',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {legend:{labels:{color:'#8892a8',font:{size:11},padding:16,usePointStyle:true}}},
+            scales: {
+                x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#4b5568',font:{size:10}}},
+                y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#4b5568',font:{size:10},callback:v=>'Rp'+v}}
+            }
+        }
+    });
+})();
+
+// Chart: ROAS Comparison
+(function(){
+    const ctx = document.getElementById('chartRoas');
+    if(!ctx) return;
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ roas_labels|default(['0858','1041','1134','Glow','TikTok','Google'])|tojson }},
+            datasets: [{
+                label: 'ROAS',
+                data: {{ roas_data|default([2.4,1.8,3.1,1.2,2.0,0.8])|tojson }},
+                backgroundColor: [
+                    'rgba(0,229,255,0.3)','rgba(167,139,250,0.3)','rgba(52,211,153,0.3)',
+                    'rgba(251,191,36,0.3)','rgba(244,114,182,0.3)','rgba(248,113,113,0.3)'
+                ],
+                borderColor: [
+                    'rgba(0,229,255,0.7)','rgba(167,139,250,0.7)','rgba(52,211,153,0.7)',
+                    'rgba(251,191,36,0.7)','rgba(244,114,182,0.7)','rgba(248,113,113,0.7)'
+                ],
+                borderWidth: 1,
+                borderRadius: 6
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {legend:{display:false}},
+            scales: {
+                x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#4b5568',font:{size:10},callback:v=>v+'x'}},
+                y:{grid:{display:false},ticks:{color:'#8892a8',font:{size:10}}}
+            }
+        }
+    });
+})();
+
+// Campaign actions
+window.campaignAction = function(campaignId, action) {
+    const labels = {pause:'Pause',activate:'Activate',kill:'Kill'};
+    if(!confirm(labels[action] + ' this campaign?')) return;
+    showLoading('Processing...');
+    fetch('/api/campaign/' + campaignId + '/action', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:action})
+    })
+    .then(r=>r.json())
+    .then(data=>{
+        hideLoading();
+        if(data.success) showToast('Success', 'Campaign ' + action + 'd', 'success');
+        else showToast('Error', data.error||'Failed', 'error');
+        setTimeout(()=>location.reload(), 800);
+    })
+    .catch(e=>{hideLoading();showToast('Error',e.message,'error')});
+};
+
+// Sync from Meta
+window.syncFromMeta = function() {
+    const btn = document.getElementById('btnSync');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="loading-spinner" style="width:14px;height:14px;border-width:2px;margin:0"></div> Syncing...';
+    fetch('/api/meta/sync', {method:'POST'})
+    .then(r=>r.json())
+    .then(data=>{
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-cloud-download"></i> Sync from Meta';
+        if(data.success) {
+            showToast('Synced', data.campaigns + ' campaigns updated', 'success');
+            setTimeout(()=>location.reload(), 1000);
+        } else {
+            showToast('Sync Failed', data.error||'Unknown error', 'error');
+        }
+    })
+    .catch(e=>{btn.disabled=false;btn.innerHTML='<i class="bi bi-cloud-download"></i> Sync from Meta';showToast('Error',e.message,'error')});
+};
 </script>
 {% endblock %}
