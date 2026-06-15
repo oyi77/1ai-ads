@@ -57,12 +57,15 @@ def cb_trip():
     active = [c for c in camps.get("data", []) 
               if c.get("status") == "ACTIVE" and not c["name"].startswith("OFF_")]
     paused = []
+    errors = []
     for c in active:
         try:
-            fb_post(c["id"], status="PAUSED")
+            resp = fb_post(c["id"], status="PAUSED")
             paused.append(c["id"])
-        except:
-            pass
+        except Exception as e:
+            errors.append(f"{c['id']}:{c['name'][:30]} → {e}")
+    if not paused and active:
+        return f"🚨 CB-1041 TRIP FAILED: Spend Rp{spend:,} > Rp{CAP:,} | 0/{len(active)} paused | ERRORS: {errors[:3]}"
     save_cb_state(paused)
     return f"🚨 CB-1041 TRIP: Spend Rp{spend:,} > Rp{CAP:,} | {len(paused)} paused"
 
