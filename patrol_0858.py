@@ -42,15 +42,18 @@ def get_today_spend():
             time_range=json.dumps({"since": today, "until": today}),
             level="account")
         return int(float(d.get("data", [{}])[0].get("spend", 0)))
-    except:
-        return 0
+    except Exception as e:
+        print(f"⚠️ get_today_spend FAILED: {e}")
+        return -1  # -1 = unknown, not 0
 
 def save_cb_state(paused_ids):
     with open(CB_STATE, 'w') as f:
         json.dump({"ts": DT().isoformat(), "paused_ids": paused_ids}, f)
 
-def cb_trip():
-    spend = get_today_spend()
+def cb_trip(spend):
+    """CB trip — uses spend from MAIN to avoid double-fetch race condition."""
+    if spend < 0:
+        return "⚠️ CB-0858: Spend UNKNOWN — API error, skip CB this cycle"
     if spend < CAP:
         return None
     camps = fb_get(f"{ACT_ID}/campaigns", fields="id,name,status", limit=200)
@@ -78,7 +81,6 @@ def cpc_kill():
     if not active:
         return []
     since = (DT() - timedelta(days=2)).strftime("%Y-%m-%d")
-    # Include 'actions' to compute dashboard CPC from link_clicks
     insights = fb_get(f"{ACT_ID}/insights",
         fields="campaign_id,campaign_name,spend,clicks,cpc,ctr,actions",
         time_range=json.dumps({"since": since, "until": today}),
@@ -90,7 +92,6 @@ def cpc_kill():
             if a.get("action_type") in ("link_click", "outbound_click"):
                 lc += int(float(a.get("value", 0)))
         spend = int(float(d.get("spend", 0)))
-        # Dashboard CPC = spend / link_clicks (not total clicks)
         dcpc = int(spend / max(lc, 1)) if lc > 0 else int(float(d.get("cpc", 0)))
         by_id[d["campaign_id"]] = {
             "spend": spend,
@@ -102,17 +103,17 @@ def cpc_kill():
     killed = []
     for c in active:
         ci = by_id.get(c["id"], {})
-        dcpc = ci.get("dcpc", ci.get("cpc", 0))  # Dashboard CPC, fallback to API
+        dcpc = ci.get("dcpc", ci.get("cpc", 0))
         spend = ci.get("spend", 0)
         if dcpc > CPC_KILL and spend > 2000:
             try:
                 fb_post(c["id"], status="PAUSED")
                 killed.append(f"💀 {c['name'][:40]} — CPC Rp{int(dcpc)}")
-            except:
-                pass
+            except Exception as e:
+                print(f"⚠️ CPC kill failed: {c['name'][:30]} → {e}")
     return killed
 
-# MAIN
+# MAIN — single spend fetch, shared with cb_trip
 spend = get_today_spend()
 camps = fb_get(f"{ACT_ID}/campaigns", fields="id,name,status", limit=200)
 active = [c for c in camps.get("data", []) 
@@ -121,7 +122,7 @@ paused_non_off = [c for c in camps.get("data", [])
                   if c.get("status") == "PAUSED" and not c["name"].startswith("OFF_")]
 off_count = sum(1 for c in camps.get("data", []) if c["name"].startswith("OFF_"))
 
-trip_msg = cb_trip()
+trip_msg = cb_trip(spend)  # Pass spend — no double fetch!
 if trip_msg:
     print(trip_msg)
 else:
