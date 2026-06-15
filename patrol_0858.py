@@ -41,7 +41,10 @@ def get_today_spend():
             fields="spend",
             time_range=json.dumps({"since": today, "until": today}),
             level="account")
-        return int(float(d.get("data", [{}])[0].get("spend", 0)))
+        data = d.get("data", [])
+        if not data:
+            return 0  # No active campaigns = no spend = 0
+        return int(float(data[0].get("spend", 0)))
     except Exception as e:
         print(f"⚠️ get_today_spend FAILED: {e}")
         return -1  # -1 = unknown, not 0
