@@ -1,6 +1,0 @@
-🛡️ SATPAM 0858 — 2026-06-11
-ACTIVE: 104 | OFF_: 36
-⚠️ KILL: none
-👀 WATCH: GEO_rakpiringpengering_INT10 (CPC=189 spend=114397); 🌟_GEO_rakpiringpengering_INT07 (CPC=176 spend=303960); GEO_rakpiringpengering_INT08 (CPC=179 spend=372838); 🌟_GEO_rakpiringpengering_INT04 (CPC=176 spend=206060); 🌟_Organizer_organizerpullout_FashiOFF_BIDCAP_0603 (CPC=137 spend=63851); 🌟_BIDCAP_Organizer_organizerpullout_DapurShop_0603 (CPC=124 spend=10868); Organizer_organizerpullout_Broad2_0603 (CPC=146 spend=7448); 0858_organizer_jewelry (CPC=128 spend=8290); 0858_organizer_pelancOFFg (CPC=140 spend=7281); Organizer_organizerpullout_Travel_0603 (CPC=155 spend=280821); 🌟_GEO_rakpiringpengering_E-commerce payment system (CPC=185 spend=33710); GEO_rakpiringpengering_Gelang (CPC=182 spend=8729)
-🌟 WINNERS: none
-💰 Total spend 7d: Rp2,703,914

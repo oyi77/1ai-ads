@@ -9,6 +9,8 @@ db/users/users/
 *.log
 .DS_Store
 .env
+.env.*
+!.env.example
 .omc/state/
 .omc/
 .server_pid
@@ -19,16 +21,46 @@ __pycache__/
 opencli-adapter/.omc/
 
 # Data files — working data, not source code
-data/shopee/*.csv
-data/shopee/*.json
-data/*.json
+data/**/*.json
+data/**/*.csv
+data/**/*.txt
+data/**/*.md
 backups/
 adforge.db
-.env
 .fb_token_0858
 
+# Runtime state files
+autonomy/**/*.json
+autonomy/**/*.log
+state/
+tmp_*.json
+.tmp_*.json
+tmp_checks.json
+tmp_data/
+tmp_*.sh
+tmp_*.mjs
+tmp_*.py
+
+# Reports and test outputs
+reports/*.json
+reports/*.txt
+reports/*.md
+reports/*.png
+test-results/
 outputs/
+
+# Logs and operations
 logs/
 ops/*.log
 ops/*.json
+ops/*.jsonl
+ops/supervisor.heartbeat
 scripts/archive/
+
+# Databases everywhere
+*.db
+*.db-shm
+*.db-wal
+
+# Keep archived Python source code in version control
+!backups/archived-scripts/*.py
