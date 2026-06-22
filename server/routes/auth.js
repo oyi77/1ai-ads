@@ -11,8 +11,8 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
   const router = Router();
 
   const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
+    windowMs: config.rateLimitWindowMs,
+    max: config.rateLimitMax,
     message: { success: false, error: 'Too many attempts, please try again later.' },
     standardHeaders: true,
     legacyHeaders: false,

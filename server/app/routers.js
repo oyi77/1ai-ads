@@ -1,3 +1,4 @@
+import config from '../config/index.js';
 import rateLimit from 'express-rate-limit';
 import { createAuthRouter } from '../routes/auth.js';
 import { createTrendingRouter } from '../routes/trending.js';
@@ -48,8 +49,8 @@ import { createCampaignMonitorRouter } from '../routes/campaign-monitor.js';
 
 export function createRouters({ app, repos, services }) {
  const publicRateLimit = rateLimit({
- windowMs: 15 * 60 * 1000,
- max: 100,
+ windowMs: config.rateLimitWindowMs,
+ max: config.rateLimitMax,
  message: { success: false, error: 'Too many requests, please try again later.' },
  standardHeaders: true,
  legacyHeaders: false,
