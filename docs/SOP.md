@@ -1,77 +1,82 @@
 # 🛡️ VILONA META ADS — GLOBAL SOP
 
-> Last updated: 2026-06-15 WIB
-> Berlaku untuk: 0858 (Kakriput), 1041 (Nyamiresep)
+> Last updated: 2026-06-22 WIB
+> Berlaku untuk: 3 akun aktif
 
 ---
 
-## 1. STRUKTUR SATPAM
+## 1. AD ACCOUNTS
 
-| Job | Interval | Akun | Aksi |
-|-----|----------|------|------|
-| `satpam-1041` | 5 menit | 1041 | Monitor + rename + kill |
-| `satpam-0858` | 5 menit | 0858 | Monitor + rename + kill |
-| `lc-auto-clone` | ⏸️ PAUSED | — | Manual dulu |
-| Report harian | 00:05 WIB | Semua | Kirim ke @Berkahkaryaautosalesbot |
+| Account ID | Nama |
+|------------|------|
+| `act_435670549443081` | 0858 |
+| `act_380721031313330` | 1041 |
+| `act_1181078009580337` | 1340 |
 
----
-
-## 2. GLOBAL CPC GATE (LAYER 0)
-
-**Hitung:** `global_cpc = total_spend_7d / total_clicks_7d` (semua campaign aktif)
-
-| Global CPC | Mode | Aksi |
-|------------|------|------|
-| < 120 | 🟢 AMAN | JANGAN bunuh siapapun. Watch doang. |
-| 120-200 | 🟡 HATI-HATI | Bunuh CPC ≥ 500 aja |
-| > 200 | 🔴 BAHAYA | Bunuh CPC > 200 + 0 clicks |
+**Config**: `config/satpam.py` → `SatpamConfig.AD_ACCOUNTS`
 
 ---
 
-## 3. MONSTER KILLER (per-campaign)
+## 2. SPEND CAP (per akun)
 
-| Kondisi | Aksi |
-|---------|------|
-| CPC ≥ 500 + spend > Rp 1,000 | 💀 **OFF_ + PAUSE** |
-| CPC > 200 + 0 clicks + spend > Rp 500 | 👀 **PAUSE** (no OFF_) |
-| CPC > 200 + clicks > 0 + spend > Rp 5,000 | 👀 **WATCH** (jangan bunuh) |
-| CPC ≤ 200 | ✅ Aman |
+| Parameter | Value |
+|-----------|-------|
+| Total spend harian | **Rp 300.000** per akun |
+| Scope | Semua campaign aktif digabung |
+| Aksi saat cap terlewati | Pause semua campaign aktif (kecuali OFF_) |
 
-**Rule: Global CPC < 120 → Monster killer DIMATIKAN. Gak ada yg dibunuh.**
-
----
-
-## 4. WINNER DETECTION
-
-| Kondisi | Status |
-|---------|--------|
-| CPC < 120 + clicks ≥ 5 + spend > Rp 10,000 | 🌟 **WINNER** → rename `🌟_{nama}` |
-| CPC < 120 + clicks > 0 | ✅ LC-SCALE candidate |
-| CPC 120-200 + clicks > 0 | ✅ KEEP |
-
-**🌟 WINNER tidak auto-scale. Hanya rename. Manual dulu.**
+**Config**: `config/satpam.py` → `SatpamConfig.SPEND_CAP_PER_ACCOUNT`
+**Implementation**: `scheduler/rules/satpam.py` → `evaluate_spend_cap()`
 
 ---
 
-## 5. LC BUDGET RULES
+## 3. SATPAM RULES (CPR = Cost Per Outbound Click)
 
-| Kondisi | Aksi |
-|---------|------|
-| Campaign LC_ + CPC < 120 | Naikin budget **+20%** (max 1x/hari) |
-| Budget cap LC | Rp 50,000/hari (stop di sini) |
-| LC dengan CPC > 200 | JANGAN naikin |
+**Result** = Outbound Clicks (link clicks to website)
+**CPR** = Cost Per Outbound Click = `spend / outbound_clicks`
+**Data window**: Last 7 days (excluding today) untuk evaluasi, real-time untuk spend cap
+
+| # | Kondisi | Aksi | Catatan |
+|---|---------|------|---------|
+| 1 | CPR 7d < 130 **AND** Result > 1 | ✅ **ON** | Kecuali OFF_ |
+| 2 | CPR > 130 **AND** Result > 5 | ❌ **OFF (PAUSE)** | Kecuali OFF_ |
+| 3 | Result > 0 **AND** CPR < 130 | ✅ **ON** | Kecuali OFF_ |
+| 4 | Spend > 130 **AND** Result = 0 | ❌ **OFF (PAUSE)** | Kecuali OFF_ |
+
+**Config**: `config/satpam.py` → `SatpamConfig.CPR_THRESHOLD`, `SPEND_KILL_THRESHOLD`
+**Implementation**: `scheduler/rules/satpam.py` → `evaluate_campaign()`
 
 ---
 
-## 6. AUTO-UNPAUSE
+## 4. RULE DETAIL
 
-| Kondisi | Aksi |
-|---------|------|
-| CPC < 120 + spend > 2K + status PAUSED + bukan OFF_ | **UNPAUSE** |
+### Rule 1: Re-Activation (CPR 7d bagus)
+- **Kondisi**: Campaign PAUSED + CPR last 7d (excl today) < Rp 130 + clicks > 1
+- **Aksi**: Resume campaign
+- **Note**: Hanya campaign yang di-pause oleh satpam, bukan manual
+- **Code**: `scheduler/rules/satpam.py` → `rule_1_reactive()`
+
+### Rule 2: Stop-Loss (CPR mahal + banyak hasil)
+- **Kondisi**: Campaign ACTIVE + CPR > Rp 130 + clicks > 5
+- **Aksi**: Pause campaign
+- **Note**: Campaign sudah banyak spending tapi gak efisien
+- **Code**: `scheduler/rules/satpam.py` → `rule_2_stop_loss()`
+
+### Rule 3: Re-Activation (ada hasil + CPR bagus)
+- **Kondisi**: Campaign PAUSED + clicks > 0 + CPR < Rp 130
+- **Aksi**: Resume campaign
+- **Note**: Subset dari Rule 1, covers campaign dengan 1 click
+- **Code**: `scheduler/rules/satpam.py` → `rule_3_reactive_clicks()`
+
+### Rule 4: Early Kill (spending tanpa hasil)
+- **Kondisi**: Campaign ACTIVE + spend > Rp 130 + clicks = 0
+- **Aksi**: Pause campaign
+- **Note**: Buang campaign yang gak menghasilkan
+- **Code**: `scheduler/rules/satpam.py` → `rule_4_early_kill()`
 
 ---
 
-## 7. NAMING CONVENTION
+## 5. NAMING CONVENTION
 
 | Prefix | Arti | Action |
 |--------|------|--------|
@@ -80,59 +85,111 @@
 | `OFF_` | Sampah permanen | 🚫 NEVER TOUCH |
 | `DEAD_` | Trash | Bisa dihapus |
 
----
-
-## 8. ACCOUNT-SPECIFIC
-
-| Parameter | 0858 Kakriput | 1041 Nyamiresep |
-|-----------|:------------:|:------------:|
-| CPC Kill | 200 | 200 |
-| Monster Kill | 500 | 500 |
-| Global CPC Safe | < 120 | < 120 |
-| LC Budget Max | Rp 50K | Rp 50K |
-| Auto-Unpause | ✅ ON | ✅ ON |
+**Implementation**: `scheduler/common.py` → `CampaignData.is_off`
 
 ---
 
-## 9. REPORT FORMAT (tiap 5m)
+## 6. HARD RULES
+
+1. **OFF_ = HARAM disentuh** — jangan pause/resume/rename
+   - **Code**: `scheduler/rules/satpam.py` → `should_skip()`
+
+2. **Total spend cap Rp 300K/hari per akun** — pause semua saat cap terlewati
+   - **Code**: `scheduler/rules/satpam.py` → `evaluate_spend_cap()`
+
+3. **CPR threshold = Rp 130** — batas efisiensi
+   - **Config**: `config/satpam.py` → `SatpamConfig.CPR_THRESHOLD`
+
+4. **Hanya resume campaign yang di-pause oleh satpam**, bukan manual
+   - **Code**: `scheduler/common.py` → `GuardBase.is_guard_paused()`
+
+5. **Token dibaca dari DB**, bukan hardcoded
+   - **Code**: `scheduler/common.py` → `GuardBase.get_token_for_account()`
+
+---
+
+## 7. REPORT FORMAT (tiap 5m)
 
 ```
-🛡️ SATPAM {AKUN} {timestamp}
-ACTIVE:{n} | Global CPC:Rp{x}
+🛡️ SATPAM {ACCOUNT_ID} {timestamp}
+ACTIVE:{n} | PAUSED:{n} | Spend:Rp{x}/300K
 
-💀 MONSTER: {list}
-👀 WATCH: {list}  
-🌟 WINNER: {list}
-📈 LC SCALE: {list budget naik}
+CPR (7d avg): Rp{x}
+
+⚡ RE-ACTIVE: {list (Rule 1/3)}
+🛑 PAUSED: {list (Rule 2/4)}
+🚨 SPEND CAP: {list if cap hit}
 
 Aksi: {ringkasan}
 ```
 
----
-
-## 10. REPORT HARIAN (00:05 WIB ke @Berkahkaryaautosalesbot)
-
-```
-📊 LAPORAN HARIAN {tanggal}
-0858: ACTIVE={n} | Global CPC=Rp{x} | Spend=Rp{x} | Monster={n} | 🌟={n}
-1041: ACTIVE={n} | Global CPC=Rp{x} | Spend=Rp{x} | Monster={n} | 🌟={n}
-
-Aksi hari ini:
-- Monster dibunuh: {n}
-- Di-unpause: {n}
-- LC budget naik: {n}
-- Winner ditandai: {n}
-
-Total spend: Rp{total}
-```
+**Implementation**: `scheduler/notifier.py` → `Notifier.send_action_alert()`
 
 ---
 
-## 11. HARD RULES
+## 8. META API FIELDS
 
-1. **Global CPC < 120 → JANGAN BUNUH SIAPAPUN**
-2. **OFF_ = HARAM disentuh**
-3. **Jangan hapus campaign yg ada spend/konversi**
-4. **LC budget naik max +20% per hari, cap Rp 50K**
-5. **🌟 winner tidak auto-clone — manual dulu**
-6. **Token dibaca dari file, bukan `source .env`**
+```
+insights:
+  - campaign_id
+  - spend
+  - outbound_clicks (result = link clicks)
+  - cost_per_outbound_click (CPR)
+
+campaigns:
+  - id, name, status
+```
+
+**Implementation**: `scheduler/insights.py` → `parse_campaign_row()`
+
+---
+
+## 9. SCHEDULE
+
+| Job | Interval | File |
+|-----|----------|------|
+| Realtime Guard | Every 5 min | `scheduler/realtime_guard.py` |
+| Daily Eval Guard | 01:00 WIB | `scheduler/daily_eval_guard.py` |
+| Bid Satpam | Every 5 min | `scheduler/bid_satpam.py` |
+| Spend Guard | Every 5 min | `scheduler/spend_guard.py` |
+| Daily Dashboard | 07:00 WIB | `scheduler/daily_dashboard.py` |
+
+**Config**: `scheduler/jobs.py` → `init_scheduler()`
+
+---
+
+## 10. TESTING
+
+| Test Type | File | Coverage |
+|-----------|------|----------|
+| Unit Tests | `tests/test_satpam_rules.py` | 37 tests, 100% rule coverage |
+| Integration Tests | `tests/test_guard_integration.py` | 13 tests, 90%+ guard coverage |
+
+**Run tests**: `pytest tests/ -v`
+
+---
+
+## 11. MONITORING
+
+### Metrics
+- `satpam_campaign_actions_total` - Total actions taken
+- `satpam_guard_duration_seconds` - Guard execution time
+- `satpam_spend_cap_violations_total` - Spend cap hits
+- `satpam_api_calls_total` - Meta API calls
+
+**Implementation**: `scheduler/metrics.py` → `MetricsCollector`
+
+### Health Checks
+- Redis connection
+- Meta token validity
+- Scheduler status
+
+**Implementation**: `scheduler/health.py` → `HealthChecker`
+**Endpoint**: `GET /health`
+
+### Logging
+- Structured JSON logs
+- Campaign-level context
+- Performance metrics
+
+**Implementation**: `scheduler/logging.py` → `setup_structured_logging()`
