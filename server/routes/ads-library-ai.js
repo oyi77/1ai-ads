@@ -6,8 +6,8 @@ import config from '../config/index.js';
 
 const log = createLogger('ads-library-ai');
 
-const GRAPHQL_ENDPOINT = 'https://www.facebook.com/api/graphql/';
-const SEARCH_DOC_ID = '29650582277919185';
+const GRAPHQL_ENDPOINT = config.adsLibraryAi.endpoint;
+const SEARCH_DOC_ID = config.adsLibraryAi.docId;
 const SEARCH_FRIENDLY_NAME = 'AdLibraryFilterContextProviderQuery';
 const COOKIES_KEY = 'ads_library_ai_cookies';
 const DEFAULT_COUNTRY = 'ID';

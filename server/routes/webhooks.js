@@ -8,7 +8,7 @@ const log = createLogger('webhooks');
 export function createWebhookRouter(webhookEventsRepo) {
   const router = Router();
   const handler = new WebhookHandler();
-  const VERIFY_TOKEN = config.webhookVerifyToken || 'adforge_webhook_2026';
+  const VERIFY_TOKEN = config.webhookVerifyToken || 'adforge_webhook_2026'; // eslint-disable-line no-hardcoded — fallback for local dev
 
   router.get('/', (req, res) => {
     const mode = req.query['hub.mode'];

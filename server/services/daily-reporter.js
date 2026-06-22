@@ -1,3 +1,4 @@
+import config from '../config/index.js';
 import { createLogger } from '../lib/logger.js';
 import { NotificationService } from './notification-service.js';
 
@@ -153,7 +154,7 @@ ${report.newRecommendations?.length ? '💡 ' + report.newRecommendations.length
       }
     };
     
-    this._interval = setInterval(checkAndSend, 5 * 60 * 1000);
+    this._interval = setInterval(checkAndSend, config.intervals.dailyReporterCheck);
     return () => {
       clearInterval(this._interval);
       log.info('Daily reporter stopped');

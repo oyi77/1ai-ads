@@ -61,7 +61,7 @@ export function createApp(params) {
   // Proxy Telegram webhook requests to Hermes bot (port 8443)
   app.use('/webhook', async (req, res) => {
     try {
-      const targetUrl = `http://127.0.0.1:8443${req.originalUrl}`;
+      const targetUrl = `${config.hermesBotUrl}${req.originalUrl}`;
       const response = await fetch(targetUrl, {
         method: req.method,
         headers: { 'Content-Type': 'application/json' },
@@ -80,7 +80,7 @@ export function createApp(params) {
   // Cloudflare WAF blocks unknown POST paths; use a standard-looking path
   app.post('/api/payments/notify', async (req, res) => {
     try {
-      const targetUrl = `http://127.0.0.1:8443/webhook/scalev`;
+      const targetUrl = `${config.hermesBotUrl}/webhook/scalev`;
       const response = await fetch(targetUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

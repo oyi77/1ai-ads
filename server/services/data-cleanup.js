@@ -1,3 +1,4 @@
+import config from '../config/index.js';
 import { CleanupRepository } from '../repositories/cleanup.js';
 import { createLogger } from '../lib/logger.js';
 
@@ -12,7 +13,7 @@ export class DataCleanup {
   start(intervalMs = 7 * 24 * 60 * 60 * 1000) {
     log.info('DataCleanup started (runs weekly)');
     this._interval = setInterval(() => this.run(), intervalMs);
-    setTimeout(() => this.run(), 60 * 1000);
+    setTimeout(() => this.run(), config.intervals.cleanupInitialDelay);
   }
 
   stop() {

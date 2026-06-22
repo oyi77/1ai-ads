@@ -1,3 +1,4 @@
+import config from '../config/index.js';
 /**
  * Cache Service for Ads Library
  *
@@ -13,7 +14,7 @@ import { createLogger } from '../lib/logger.js';
 const log = createLogger('cache-service');
 
 const DEFAULT_TTL = 3600 * 1000; // 1 hour in ms
-const CLEANUP_INTERVAL = 10 * 60 * 1000; // 10 minutes
+const CLEANUP_INTERVAL = config.intervals.cacheCleanup;
 const MAX_CACHE_SIZE = 1000;
 
 export class CacheService {

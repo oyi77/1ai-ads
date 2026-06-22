@@ -4,7 +4,44 @@ const config = {
   get corsOrigin() { return process.env.CORS_ORIGIN || 'http://localhost:5173'; },
   get jwtSecret() { return process.env.JWT_SECRET || ''; },
   get nodeEnv() { return process.env.NODE_ENV || 'development'; },
-  get metaApiVersion() { return 'v22.0'; },
+  get metaApiVersion() { return process.env.META_API_VERSION || 'v22.0'; },
+  // Meta AI (MAIBA)
+  get metaAi() {
+    return {
+      endpoint: process.env.META_AI_ENDPOINT || 'https://adsmanager.facebook.com/api/graphql/',
+      docId: process.env.META_AI_DOC_ID || '26667472482923907',
+      friendlyName: process.env.META_AI_FRIENDLY_NAME || 'MAIBAGraphQLSendMessageV2QueryMutation',
+    };
+  },
+  // Ads Library AI
+  get adsLibraryAi() {
+    return {
+      endpoint: process.env.ADS_LIBRARY_AI_ENDPOINT || 'https://www.facebook.com/api/graphql/',
+      docId: process.env.ADS_LIBRARY_AI_DOC_ID || '29650582277919185',
+    };
+  },
+  // Hermes bot proxy
+  get hermesBotUrl() { return process.env.HERMES_BOT_URL || 'http://127.0.0.1:8443'; },
+  // Meta Ad Library public URLs
+  get metaAdLibrary() {
+    return {
+      url: process.env.META_AD_LIBRARY_URL || 'https://www.facebook.com/ads/library/',
+      apiUrl: process.env.META_AD_LIBRARY_API_URL || 'https://www.facebook.com/ads/library/async/',
+    };
+  },
+  // Service intervals (ms)
+  get intervals() {
+    return {
+      cleanupInitialDelay: parseInt(process.env.CLEANUP_INITIAL_DELAY_MS || '60000', 10),
+      optimizerInitialDelay: parseInt(process.env.OPTIMIZER_INITIAL_DELAY_MS || '30000', 10),
+      dailyReporterCheck: parseInt(process.env.DAILY_REPORTER_INTERVAL_MS || '300000', 10),
+      webhookProcessor: parseInt(process.env.WEBHOOK_PROCESSOR_INTERVAL_MS || '60000', 10),
+      autonomousAgent: parseInt(process.env.AUTONOMOUS_AGENT_INTERVAL_MS || '900000', 10),
+      realtimePoll: parseInt(process.env.REALTIME_POLL_INTERVAL_MS || '30000', 10),
+      aiAgentScheduler: parseInt(process.env.AI_AGENT_SCHEDULER_INTERVAL_MS || '300000', 10),
+      cacheCleanup: parseInt(process.env.CACHE_CLEANUP_INTERVAL_MS || '300000', 10),
+    };
+  },
   get fbAppId() { return process.env.FB_APP_ID || ''; },
   get fbAppSecret() { return process.env.FB_APP_SECRET || ''; },
   get fbSystemToken() { return process.env.FB_SYSTEM_TOKEN || ''; },

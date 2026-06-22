@@ -1,3 +1,4 @@
+import config from '../config/index.js';
 import { WebSocketServer } from 'ws';
 import { createLogger } from '../lib/logger.js';
 
@@ -11,7 +12,7 @@ export class RealtimeService {
     this.clients = new Set();
     this.metrics = new Map(); // campaignId -> latest metrics
     this.pollInterval = null;
-    this.POLL_MS = 30000; // 30s
+    this.POLL_MS = config.intervals.realtimePoll;
   }
 
   /**

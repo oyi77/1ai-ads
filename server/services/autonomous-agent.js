@@ -11,6 +11,7 @@
  * This class only coordinates: scheduler loop + service wiring.
  */
 
+import config from '../config/index.js';
 import { createLogger } from '../lib/logger.js';
 import { FacebookConnectionService } from './facebook-connection.js';
 import { RuleEvaluator } from './rule-evaluator.js';
@@ -66,7 +67,7 @@ export class AutonomousAgent {
       this._runAutonomousCycle().catch(err =>
         log.error('Autonomous mode error', { error: err.message })
       );
-    }, 5 * 60 * 1000);
+    }, config.intervals.autonomousAgent);
 
     return () => clearInterval(this.scheduler);
   }

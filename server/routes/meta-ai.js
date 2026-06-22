@@ -4,9 +4,9 @@ import config from '../config/index.js';
 
 const log = createLogger('meta-ai');
 
-const MAIBA_ENDPOINT = 'https://adsmanager.facebook.com/api/graphql/';
-const MAIBA_DOC_ID = '26667472482923907';
-const MAIBA_FRIENDLY_NAME = 'MAIBAGraphQLSendMessageV2QueryMutation';
+const MAIBA_ENDPOINT = config.metaAi.endpoint;
+const MAIBA_DOC_ID = config.metaAi.docId;
+const MAIBA_FRIENDLY_NAME = config.metaAi.friendlyName;
 const COOKIES_KEY = 'meta_ai_cookies';
 const ACCOUNT_KEY = 'meta_ai_ad_account_id';
 

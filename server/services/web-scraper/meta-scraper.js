@@ -1,3 +1,4 @@
+import config from '../../config/index.js';
 /**
  * Meta Ads Library Scraper
  *
@@ -13,8 +14,8 @@ import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('meta-scraper');
 
-const META_AD_LIBRARY_URL = 'https://www.facebook.com/ads/library/';
-const META_AD_LIBRARY_API = 'https://www.facebook.com/ads/library/async/';
+const META_AD_LIBRARY_URL = config.metaAdLibrary.url;
+const META_AD_LIBRARY_API = config.metaAdLibrary.apiUrl;
 
 /**
  * CSS selectors for Meta Ad Library elements.

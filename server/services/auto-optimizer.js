@@ -1,3 +1,4 @@
+import config from '../config/index.js';
 /**
  * Auto-Optimizer (Pareto Engine)
  * Evaluates automation rules against campaign performance.
@@ -22,7 +23,7 @@ export class AutoOptimizer {
     log.info(`AutoOptimizer started (check every ${intervalMs / 1000 / 60}min)`);
     this._interval = setInterval(() => this.evaluate().catch(e => log.error('AutoOptimizer error', { message: e.message })), intervalMs);
     // Also run once on start (after 30s delay to let server boot)
-    setTimeout(() => this.evaluate().catch(e => log.error('AutoOptimizer initial error', { message: e.message })), 30000);
+    setTimeout(() => this.evaluate().catch(e => log.error('AutoOptimizer initial error', { message: e.message })), config.intervals.optimizerInitialDelay);
   }
 
   stop() {
