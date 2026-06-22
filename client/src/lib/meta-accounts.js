@@ -4,7 +4,7 @@ export const metaAccounts = {
   // GET /api/meta/accounts - Fetch all Ad Accounts
   fetchAccounts: async () => {
     try {
-      const response = await api.get('/meta/accounts');
+      const response = await api.get('/meta/');
       return response.data;
     } catch (err) {
       console.error('Failed to fetch meta accounts:', err);

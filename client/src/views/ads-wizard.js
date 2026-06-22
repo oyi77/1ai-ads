@@ -215,18 +215,18 @@ export async function renderAdWizard(el) {
       });
     });
 
-    // Step options
-    el.querySelectorAll('[data-option]').forEach(btn => {
+    // Step options — match all three data-attribute variants
+    el.querySelectorAll('[data-option], [data-audience-option], [data-framework-option]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const group = btn.closest('.grid');
-        const optionType = btn.dataset.option;
-        const field = btn.dataset.field;
+        const group = btn.closest('.flex, .grid');
+        const optionType = btn.dataset.option || btn.dataset.audienceOption || btn.dataset.frameworkOption;
+        const fieldMap = { option: 'goal', audienceOption: 'ageRange', frameworkOption: 'framework' };
+        const field = btn.dataset.option ? 'goal' : btn.dataset.audienceOption ? 'ageRange' : 'framework';
 
         if (group) {
-          // For single-value options
           group.querySelectorAll('button').forEach(b => b.classList.remove('bg-emerald-500', 'border-emerald-500', 'text-white'));
           btn.classList.add('bg-emerald-500', 'border-emerald-500', 'text-white');
-          state.formData[field] = btn.dataset[option];
+          state.formData[field] = optionType;
         }
       });
     });

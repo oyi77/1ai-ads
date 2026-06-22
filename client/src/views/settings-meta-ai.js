@@ -1,3 +1,4 @@
+import { api } from '../lib/api.js';
 import { esc } from '../lib/escape.js';
 
 export function renderMetaAiSection() {
@@ -41,11 +42,11 @@ export function renderMetaAiSection() {
   `;
 }
 
-export function bindMetaAiSection(el, state, rerender) {
+export function bindMetaAiSection(el, state, { loadData, render }) {
   const attachMetaAiHandlers = () => {
     api.get('/meta-ai/status').then(({ data }) => {
-      const el = document.getElementById('meta-ai-status');
-      if (el) el.innerHTML = data.configured
+      const statusEl = document.getElementById('meta-ai-status');
+      if (statusEl) statusEl.innerHTML = data.configured
         ? `<span class="text-emerald-400">✓ configured (source: ${esc(data.source)})</span>`
         : `<span class="text-amber-400">⚠ not configured — paste cookies below</span>`;
     }).catch(() => {});
@@ -62,8 +63,8 @@ export function bindMetaAiSection(el, state, rerender) {
         result.textContent = '✓ saved';
         result.className = 'text-xs text-emerald-400';
         const status = await api.get('/meta-ai/status');
-        const statusEl = document.getElementById('meta-ai-status');
-        if (statusEl) statusEl.innerHTML = `<span class="text-emerald-400">✓ configured (source: ${esc(status.data.source)})</span>`;
+        const statusEl2 = document.getElementById('meta-ai-status');
+        if (statusEl2) statusEl2.innerHTML = `<span class="text-emerald-400">✓ configured (source: ${esc(status.data.source)})</span>`;
       } catch (err) {
         result.textContent = '✗ ' + err.message;
         result.className = 'text-xs text-red-400';
@@ -77,8 +78,8 @@ export function bindMetaAiSection(el, state, rerender) {
         el.querySelector('#meta-ai-cookies').value = '';
         el.querySelector('#meta-ai-account').value = '';
         const status = await api.get('/meta-ai/status');
-        const statusEl = document.getElementById('meta-ai-status');
-        if (statusEl) statusEl.innerHTML = `<span class="text-amber-400">⚠ not configured</span>`;
+        const statusEl3 = document.getElementById('meta-ai-status');
+        if (statusEl3) statusEl3.innerHTML = `<span class="text-amber-400">⚠ not configured</span>`;
         el.querySelector('#meta-ai-result').textContent = '✓ cleared';
         el.querySelector('#meta-ai-result').className = 'text-xs text-emerald-400';
       } catch (err) {
@@ -91,7 +92,7 @@ export function bindMetaAiSection(el, state, rerender) {
       result.textContent = 'Testing…';
       result.className = 'text-xs text-slate-400';
       try {
-        const { data } = await api.post('/meta-ai/chat', { message: 'ping' });
+        await api.post('/meta-ai/chat', { message: 'ping' });
         result.textContent = '✓ connection works';
         result.className = 'text-xs text-emerald-400';
       } catch (err) {

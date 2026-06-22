@@ -5,6 +5,15 @@ export function renderDashboard(el) {
     window.location.hash = '/login';
     return;
   }
+  // Define syncAllPlatforms for inline onclick handler
+  window.syncAllPlatforms = async function() {
+    try {
+      await api.post('/meta/sync');
+      window.vn?.success('All platforms synced successfully');
+    } catch (e) {
+      window.vn?.error('Sync failed: ' + e.message);
+    }
+  };
 
   api.get('/campaigns').then(response => {
     const campaigns = response.data || [];

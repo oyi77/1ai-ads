@@ -11,10 +11,25 @@ export function renderBillingSection(state) {
     `;
   }
 
-  const { plan, features, limits } = state.planDetails;
-  const isFree = plan.tier === 'free';
-  const isPro = plan.tier === 'pro';
-  const isEnterprise = plan.tier === 'enterprise';
+  const pd = state.planDetails;
+  // Normalize: API returns flat object, code expects nested
+  const tierMap = { 1: 'free', 2: 'pro', 3: 'enterprise' };
+  const tier = typeof pd.tier === 'number' ? (tierMap[pd.tier] || 'free') : (pd.tier || 'free');
+  const plan = pd.plan || { name: pd.name || 'Free', tier, renewalDate: pd.renewalDate, isAdmin: pd.isAdmin };
+  const features = pd.features
+    ? (Array.isArray(pd.features) && typeof pd.features[0] === 'string'
+        ? pd.features.map(f => ({ label: f.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), enabled: true }))
+        : pd.features)
+    : [];
+  const limits = pd.limits || [
+    { label: 'Ads', value: pd.maxAds ?? 5, usage: 0 },
+    { label: 'Campaigns', value: pd.maxCampaigns ?? 2, usage: 0 },
+    { label: 'Platform Accounts', value: pd.maxPlatformAccounts ?? 1, usage: 0 },
+  ];
+
+  const isFree = tier === 'free';
+  const isPro = tier === 'pro';
+  const isEnterprise = tier === 'enterprise';
 
   return `
     <h2 class="text-2xl font-bold mb-6 text-white">Subscription</h2>
@@ -28,7 +43,7 @@ export function renderBillingSection(state) {
           <div class="space-y-2 text-sm">
             <div class="flex justify-between"><span class="text-slate-400">Plan</span><span class="font-medium text-white">${esc(plan.name)}</span></div>
             <div class="flex justify-between"><span class="text-slate-400">Status</span><span class="font-medium text-emerald-400">Active</span></div>
-            <div class="flex justify-between"><span class="text-slate-400">Renewal</span><span class="font-medium text-white">${esc(plan.renewalDate || 'N/A')}</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">Tier</span><span class="font-medium text-white">${esc(tier)}</span></div>
           </div>
         </div>
 
@@ -38,7 +53,7 @@ export function renderBillingSection(state) {
             ${features.map(feature => `
               <div class="flex items-center gap-2">
                 <span class="text-emerald-400">✓</span>
-                <span class="text-slate-300 ${!feature.enabled ? 'opacity-50' : ''}">${esc(feature.label)}</span>
+                <span class="text-slate-300 ${feature.enabled === false ? 'opacity-50' : ''}">${esc(feature.label || feature)}</span>
               </div>
             `).join('')}
           </div>

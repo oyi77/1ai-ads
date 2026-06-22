@@ -1,3 +1,4 @@
+import { api } from '../lib/api.js';
 import { esc } from '../lib/escape.js';
 
 export function renderAdsLibraryAiSection() {
@@ -34,7 +35,7 @@ export function renderAdsLibraryAiSection() {
   `;
 }
 
-export function bindAdsLibraryAiSection(el, state, rerender) {
+export function bindAdsLibraryAiSection(el, state, { loadData, render }) {
   const attachAdsLibraryAiHandlers = () => {
     api.get('/ads-library-ai/status').then(({ data }) => {
       const status = document.getElementById('adslib-status');

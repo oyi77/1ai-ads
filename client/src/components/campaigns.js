@@ -85,7 +85,7 @@ export function editCampaign(id) {
     const body = Object.fromEntries(formData);
     body.budget = Number(body.budget);
     try {
-      await api.put(`/api/campaigns/${id}`, body);
+      await api.put(`/campaigns/${id}`, body);
       alert('Campaign updated!');
       overlay.remove();
       window.dispatchEvent(new CustomEvent('campaign-updated'));
@@ -98,7 +98,7 @@ export function editCampaign(id) {
 export function optimizeCampaign(id) {
   if (!confirm('Apply AI optimization to this campaign?')) return;
   
-  api.post(`/api/campaigns/${id}/optimize`)
+  api.post(`/campaigns/${id}/optimize`)
     .then(result => {
       alert('Optimization applied! ROAS: ' + result.roas);
     })
@@ -108,7 +108,7 @@ export function optimizeCampaign(id) {
 export function pauseCampaign(id) {
   if (!confirm('Pause this campaign?')) return;
   
-  api.post(`/api/campaigns/${id}/pause`)
+  api.post(`/campaigns/${id}/pause`)
     .then(() => alert('Campaign paused'))
     .catch(err => alert('Failed to pause: ' + err.message));
 }

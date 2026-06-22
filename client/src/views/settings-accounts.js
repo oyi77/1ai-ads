@@ -1,7 +1,7 @@
 import { api } from '../lib/api.js';
 import { esc } from '../lib/escape.js';
 
-export function renderAccountsSection() {
+export function renderAccountsSection(state) {
   const platforms = [
     { id: 'meta', name: 'Meta Ads', desc: 'Facebook & Instagram Ads' },
     { id: 'google', name: 'Google Ads', desc: 'Search and Display Ads' },
@@ -79,6 +79,7 @@ export function renderPlatformFields(p, existing = {}) {
       </div>
       <p class="text-[10px] text-sky-300 mb-2">Click "Connect Facebook" to login with your Meta credentials and automatically connect your Business Manager and Ads Accounts.</p>
     </div>`;
+  if (p === 'google') return `<div class="grid grid-cols-2 gap-4"><div><label class="${label}">Developer Token</label><input type="password" name="developer_token" value="${existing.developer_token || ''}" class="${common}"></div><div><label class="${label}">Customer ID</label><input type="text" name="customer_id" value="${existing.customer_id || ''}" class="${common}" placeholder="123-456-7890"></div></div><div><label class="${label}">Refresh Token</label><input type="password" name="refresh_token" value="${existing.refresh_token || ''}" class="${common}"></div>`;
   if (p === 'tiktok') return `<div><label class="${label}">Access Token</label><input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}"></div>`;
   if (p === 'linkedin') return `<div class="grid grid-cols-2 gap-4"><div><label class="${label}">Access Token</label><input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}"></div><div><label class="${label}">Client ID</label><input type="text" name="client_id" value="${existing.client_id || ''}" class="${common}"></div></div><div><label class="${label}">Client Secret</label><input type="password" name="client_secret" value="${existing.client_secret || ''}" class="${common}"></div>`;
   if (p === 'pinterest') return `<div><label class="${label}">Access Token</label><input type="password" name="access_token" value="${existing.access_token || ''}" class="${common}"></div><div><label class="${label}">Ad Account ID</label><input type="text" name="ad_account_id" value="${existing.ad_account_id || ''}" class="${common}"></div>`;

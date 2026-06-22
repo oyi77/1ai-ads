@@ -1,6 +1,6 @@
 import { api } from '../lib/api.js';
 
-export function renderAutonomousSection() {
+export function renderAutonomousSection(state) {
   return `
     <div class="space-y-6 animate-fadeIn">
       <div class="flex items-center justify-between mb-2">

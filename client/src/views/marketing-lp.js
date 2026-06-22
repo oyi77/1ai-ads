@@ -115,7 +115,6 @@ export async function renderMarketingLP(el) {
         <p class="mt-6 text-slate-500 text-sm">No credit card required. Cancel anytime.</p>
       </section>
 
-    </main>
   </div>
   `;
 }
