@@ -64,3 +64,9 @@ scripts/archive/
 
 # Keep archived Python source code in version control
 !backups/archived-scripts/*.py
+
+# Separate project (not part of 1ai-ads)
+asisten-jualan/
+
+# Auto-generated operational data
+data/vilona_trakpro_alerts.jsonl
