@@ -26,7 +26,7 @@ interface AttributionMatch {
 export function AttributionPage() {
   const { data: summaryData, isLoading: summaryLoading, error: summaryError } = useQuery({
     queryKey: ['attribution-summary'],
-    queryFn: () => api.get<AttributionSummary>('/attribution/summary'),
+    queryFn: () => api.get<AttributionSummary>('/attribution/dashboard'),
   });
 
   const { data: matchesData, isLoading: matchesLoading, error: matchesError } = useQuery({

@@ -23,7 +23,7 @@ export function CompetitorsPage() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['competitor-insights'],
-    queryFn: () => api.get<CompetitorInsight[]>('/competitor-spy/insights'),
+    queryFn: () => api.get<CompetitorInsight[]>('/competitor-spy'),
   });
 
   const analyzeMut = useMutation({

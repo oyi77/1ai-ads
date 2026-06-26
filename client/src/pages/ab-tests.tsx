@@ -32,12 +32,12 @@ export function ABTestsPage() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['ab-tests'],
-    queryFn: () => api.get<ABTest[]>('/ab-tests'),
+    queryFn: () => api.get<ABTest[]>('/testing/ab-tests'),
   });
 
   const createMut = useMutation({
     mutationFn: (payload: { name: string; metric: string; variants: { name: string }[] }) =>
-      api.post('/ab-tests', payload),
+      api.post('/testing/ab-tests', payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ab-tests'] });
       setForm({ name: '', metric: 'ctr', variant_a: '', variant_b: '' });
@@ -47,7 +47,7 @@ export function ABTestsPage() {
 
   const updateMut = useMutation({
     mutationFn: ({ id, ...body }: { id: string; status: string }) =>
-      api.put(`/ab-tests/${id}`, body),
+      api.put(`/testing/ab-tests/${id}`, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ab-tests'] }),
   });
 

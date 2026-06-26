@@ -27,12 +27,12 @@ export function AutomationPage() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['automation-rules'],
-    queryFn: () => api.get<AutomationRule[]>('/automation/rules'),
+    queryFn: () => api.get<AutomationRule[]>('/automation'),
   });
 
   const createMut = useMutation({
     mutationFn: (payload: Omit<AutomationRule, 'id' | 'created_at' | 'is_active'>) =>
-      api.post('/automation/rules', payload),
+      api.post('/automation', payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['automation-rules'] });
       setForm({ name: '', trigger_metric: 'spend', trigger_operator: 'greater_than', trigger_value: '', action: 'pause' });
@@ -42,12 +42,12 @@ export function AutomationPage() {
 
   const toggleMut = useMutation({
     mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
-      api.put(`/automation/rules/${id}`, { is_active }),
+      api.post(`/automation/toggle/${id}`, { is_active }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation-rules'] }),
   });
 
   const deleteMut = useMutation({
-    mutationFn: (id: string) => api.del(`/automation/rules/${id}`),
+    mutationFn: (id: string) => api.post(`/automation/delete/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation-rules'] }),
   });
 
