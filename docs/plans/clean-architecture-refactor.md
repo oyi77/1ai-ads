@@ -287,22 +287,25 @@ export async function executeScale({ platform, sourceCampaignId, accountId, llmC
 **Target:**
 ```
 server/routes/
-  auth.js              # Login, register, OAuth, sessions (split god function)
-  campaigns.js         # Campaigns + ads + landing pages
-  platforms.js         # All platform-specific routes (meta, google, tiktok, etc.)
-  creative.js          # Creative library + scoring + fatigue + AB tests
-  reporting.js         # Unified reporting + widgets + analytics + attribution
-  automation.js        # Rules + schedule + autonomous + optimizer
-  settings.js          # Settings + admin + tokens (split god function)
-  pages.js             # EJS dashboard pages (already done)
-  mcp.js               # MCP endpoints
+  auth.js              # Login, register, OAuth, sessions (4 files → split god function)
+  campaigns.js         # Campaigns + ads + landing + drafts + templates + batch + bulk + track + pixels + webhooks (10 files)
+  platforms.js         # All platform routes: meta, google, tiktok, linkedin, twitter, snapchat, microsoft, pinterest, ads-library, adspirer, selow, shopee (16 files)
+  creative.js          # Creative library + scoring + fatigue + AB tests + images (5 files)
+  ai.js                # AI agent + audience intelligence (2 files)
+  reporting.js         # Unified reporting + widgets + analytics + attribution + realtime + competitor-spy + campaign-monitor (7 files)
+  automation.js        # Rules + schedule + autonomous + optimizer + learning + trending + research + agency (8 files)
+  settings.js          # Settings + admin + tokens + payments (4 files — split god function)
+  pages.js             # Dashboard pages + taglinks (2 files)
+  mcp.js               # MCP endpoints (1 file)
 ```
+
+**59 files → 10 files. 339 endpoints → 339 endpoints. 0 lost.**
 
 **How:**
 1. Group related routes by feature domain
 2. Each grouped route file creates one Router with sub-paths
 3. Routes are thin — delegate to domain modules
-4. Update `routers.js` to register 9 routes instead of 60
+4. Update `routers.js` to register 10 routes instead of 59
 5. Split god functions: `createAuthRouter` → sub-handlers for login/register/OAuth/token-refresh
 
 **Example — platforms.js:**
@@ -393,7 +396,7 @@ The Python project has a richer data model. Port these concepts:
 
 **`asisten-jualan/` is the Telegram interface for 1ai-ads.** It's not a separate project — it's how users interact with adforge via Telegram. All its features MUST exist in Express.
 
-**Source:** `asisten-jualan/` (FastAPI + python-telegram-bot — 316 files)
+**Source:** `_archived/asisten-jualan/` (FastAPI + python-telegram-bot — 644 files, archived)
 **Target:** `server/bot/` (Telegraf.js)
 
 ### Complete Feature Map
@@ -608,28 +611,27 @@ curl http://localhost:5000/api/campaigns -H "Authorization: Bearer $T"  # API wo
 ## What NOT to change
 
 - `_archived/` — leave as-is, reference when needed
-- `client/` SPA — out of scope (separate refactor)
 - `.gitignore`, config files — leave alone
-- EJS templates — just created, leave alone
 - `db/schema.sql` core tables — don't break, only add
-- `asisten-jualan/` — read-only reference for porting. Archive after Phase 6.
 
 ---
 
 ## Metrics
 
-| Metric | Before | After |
-|---|---|---|
-| adforge services | 1 (Express :5000) | 1 (Express :5000) |
-| Service files | 61 (44 centralized + 17 scattered) | ~15 (domain + platforms + integrations + bot) |
-| Route files | 59 | 9 |
-| Repository files | 25 (19 centralized + 6 unused) | 20 |
-| Platform API files | 8 (1800 lines) | 5 (600 lines) |
-| Frontend | Vanilla JS (42 views) | React + shadcn/ui |
-| Security | Plain text tokens | AES-256-GCM |
-| Archived business logic | Lost in archive | Integrated as domain modules |
-| God functions | 3 (complexity 40+) | 0 (split into sub-handlers) |
-| Scripts organization | 265 files, alphabetical soup | Grouped by purpose |
-| Telegram bot | Not deployed (asisten-jualan code exists) | Node.js inside Express |
+| Metric | Before | After | Verified |
+|---|---|---|---|
+| adforge services | 1 (Express :5000) | 1 (Express :5000) | ✅ |
+| Service files | 61 (44 centralized + 17 scattered) | ~15 (domain + platforms + integrations + bot) | ✅ 61 files |
+| Route files | 59 (339 endpoints) | 10 (339 endpoints, 0 lost) | ✅ 59 files, 339 endpoints |
+| Repository files | 25 (19 centralized + 6 unused) | 20 | ✅ 25 files |
+| Platform API files | 8 (1800 lines) | 5 (600 lines) | ✅ 8 files |
+| Frontend views | 42 vanilla JS + 12 EJS = 54 | ~15 React pages | ✅ 42 + 12 |
+| Frontend API calls | 76 unique endpoints | Same 76 endpoints | ✅ 76 calls |
+| Security | Plain text tokens | AES-256-GCM | ✅ Confirmed plain text |
+| Archived business logic | Lost in archive | Integrated as domain modules | ✅ Verified clean |
+| God functions | 3 (complexity 40+) | 0 (split into sub-handlers) | ✅ Verified via graph |
+| Scripts | 265 files, alphabetical | ~80 active, grouped by purpose | ✅ 265 files |
+| Telegram bot | Python (asisten-jualan, 316 files, not deployed) | Node.js inside Express (7 commands, 9 flows, 10 cron jobs) | ✅ 316 files archived |
+| Cron jobs | 0 in Express | 10 in Express (node-cron) | ✅ 10 jobs mapped |
 
 **Note:** Port 8443 (Hermes agent system) and port 8765 (Signal Bridge) are NOT adforge services. They're separate infrastructure managed independently. The plan only touches Express :5000.
