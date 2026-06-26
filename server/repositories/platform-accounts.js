@@ -1,5 +1,34 @@
 import { v4 as uuid } from 'uuid';
 import { safeParse } from '../lib/safe-parse.js';
+import { encryptToken, decryptToken } from '../lib/crypto.js';
+
+/**
+ * Decrypt a credential value from storage.
+ * Handles both legacy plain-text JSON and new encrypted format.
+ */
+function decryptCredentials(raw) {
+  if (!raw) return null;
+  try {
+    // Try encrypted format first (base64 that decrypts to JSON)
+    const decrypted = decryptToken(raw);
+    return safeParse(decrypted);
+  } catch {
+    // Fall back to legacy plain-text JSON
+    return safeParse(raw);
+  }
+}
+
+/**
+ * Encrypt a credential value for storage.
+ * If ENCRYPTION_KEY is not set, stores as plain JSON (backward compatible).
+ */
+function encryptCredentials(credentials) {
+  const json = typeof credentials === 'string' ? credentials : JSON.stringify(credentials);
+  if (process.env.ENCRYPTION_KEY) {
+    return encryptToken(json);
+  }
+  return json;
+}
 
 export class PlatformAccountsRepository {
   constructor(db) {
@@ -11,7 +40,7 @@ export class PlatformAccountsRepository {
   findById(id) {
     const row = this.db.prepare('SELECT * FROM platform_accounts WHERE id = ?').get(id);
     if (!row) return null;
-    return { ...row, credentials: safeParse(row.credentials) };
+    return { ...row, credentials: decryptCredentials(row.credentials) };
   }
 
   findActiveByUserAndPlatform(userId, platform) {
@@ -19,7 +48,7 @@ export class PlatformAccountsRepository {
       'SELECT * FROM platform_accounts WHERE user_id = ? AND platform = ? AND is_active = 1 LIMIT 1'
     ).get(userId, platform);
     if (!row) return null;
-    return { ...row, credentials: safeParse(row.credentials) };
+    return { ...row, credentials: decryptCredentials(row.credentials) };
   }
 
   findByUserId(userId) {
@@ -37,7 +66,7 @@ export class PlatformAccountsRepository {
       'SELECT * FROM platform_accounts WHERE platform = ? AND is_active = 1 LIMIT 1'
     ).get(platform);
     if (!row) return null;
-    return { ...row, credentials: safeParse(row.credentials) };
+    return { ...row, credentials: decryptCredentials(row.credentials) };
   }
 
   getAccountByPlatformId(platformId) {
@@ -45,7 +74,7 @@ export class PlatformAccountsRepository {
       'SELECT * FROM platform_accounts WHERE id = ? LIMIT 1'
     ).get(platformId);
     if (!row) return null;
-    return { ...row, credentials: safeParse(row.credentials) };
+    return { ...row, credentials: decryptCredentials(row.credentials) };
   }
 
   getAccounts(platform = null) {
@@ -53,12 +82,12 @@ export class PlatformAccountsRepository {
       const rows = this.db.prepare(
         'SELECT * FROM platform_accounts WHERE platform = ? ORDER BY account_name'
       ).all(platform);
-      return rows.map(r => ({ ...r, credentials: safeParse(r.credentials) }));
+      return rows.map(r => ({ ...r, credentials: decryptCredentials(r.credentials) }));
     }
     const rows = this.db.prepare(
       'SELECT * FROM platform_accounts ORDER BY platform, account_name'
     ).all();
-    return rows.map(r => ({ ...r, credentials: safeParse(r.credentials) }));
+    return rows.map(r => ({ ...r, credentials: decryptCredentials(r.credentials) }));
   }
 
   // ── Credential helpers (system-level) ───────────────────────
@@ -80,10 +109,11 @@ export class PlatformAccountsRepository {
 
   create({ user_id, platform, account_name, credentials, is_active = 1 }) {
     const id = uuid();
+    const encrypted = encryptCredentials(credentials);
     this.db.prepare(`
       INSERT INTO platform_accounts (id, user_id, platform, account_name, credentials, is_active)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, user_id, platform, account_name, JSON.stringify(credentials), is_active ? 1 : 0);
+    `).run(id, user_id, platform, account_name, encrypted, is_active ? 1 : 0);
     return this.findById(id);
   }
 
@@ -104,8 +134,8 @@ export class PlatformAccountsRepository {
         if (key === 'is_active' && typeof value === 'boolean') {
           value = value ? 1 : 0;
         }
-        if (key === 'credentials' && typeof value !== 'string') {
-          value = JSON.stringify(value);
+        if (key === 'credentials') {
+          value = encryptCredentials(value);
         }
         params.push(value);
       }
@@ -146,11 +176,8 @@ export class PlatformAccountsRepository {
       'SELECT * FROM platform_accounts WHERE user_id = ? AND platform = ? AND is_active = 1 LIMIT 1'
     ).get(userId, platform);
     if (!row) return null;
-    try {
-      return { ...row, access_token: JSON.parse(row.credentials).access_token };
-    } catch {
-      return { ...row, access_token: row.credentials };
-    }
+    const creds = decryptCredentials(row.credentials);
+    return { ...row, access_token: creds?.access_token || null };
   }
 
   getUsersWithAutoMode() {
