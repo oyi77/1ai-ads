@@ -1,0 +1,5 @@
+<% const title = 'Creative Scoring'; const pageTitle = 'Creative Scoring'; const breadcrumb = 'Creative > Scoring'; const activePage = 'creative-scoring'; %>
+<%- include('../layouts/base', { title, pageTitle, breadcrumb, activePage, username: typeof username !== 'undefined' ? username : '', body: '' }) %>
+<script>
+document.querySelector('.main-content').innerHTML = '<div class="page-header"><div><h1>Creative Scoring</h1><p>AI-powered creative quality scoring</p></div></div><div class="card" style="padding:40px;text-align:center"><i class="bi bi-star" style="font-size:2rem;color:var(--text-tertiary)"></i><p style="margin-top:8px;color:var(--text-tertiary)">Creative scoring will evaluate your ad creatives</p></div>';
+</script>

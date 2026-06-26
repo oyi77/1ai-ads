@@ -1,0 +1,22 @@
+<% const title = 'Campaigns'; const pageTitle = 'Campaigns'; const breadcrumb = 'Campaigns'; const activePage = 'campaigns'; %>
+<%- include('../layouts/base', { title, pageTitle, breadcrumb, activePage, username: typeof username !== 'undefined' ? username : '', body: '' }) %>
+<script>
+document.querySelector('.main-content').innerHTML = `
+<div class="page-header">
+    <div><h1>Campaigns</h1><p>Manage your ad campaigns across platforms</p></div>
+    <div class="page-actions"><button class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Campaign</button></div>
+</div>
+<div class="card"><div class="card-header"><h3 style="font-size:0.85rem"><i class="bi bi-megaphone"></i> All Campaigns</h3></div>
+<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Name</th><th>Platform</th><th>Status</th><th>Budget</th><th>Spend</th><th>ROAS</th></tr></thead>
+<tbody id="tbody"><tr><td colspan="6" style="text-align:center;color:var(--text-tertiary);padding:24px">Loading...</td></tr></tbody></table></div></div>`;
+
+fetch('/api/campaigns').then(function(r){return r.json()}).then(function(data){
+    var c=data.campaigns||data||[];
+    var tb=document.getElementById('tbody');
+    if(!c.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text-tertiary);padding:24px">No campaigns</td></tr>';return}
+    tb.innerHTML=c.map(function(x){
+        var sc=x.status==='ACTIVE'?'badge-success':x.status==='PAUSED'?'badge-warning':'badge-neutral';
+        return '<tr><td style="font-weight:600">'+(x.name||x.id)+'</td><td>'+(x.platform||'—')+'</td><td><span class="badge '+sc+'">'+(x.status||'—')+'</span></td><td style="font-family:var(--font-mono)">Rp '+((x.budget||0)).toLocaleString('id-ID')+'</td><td style="font-family:var(--font-mono)">Rp '+((x.spend||0)).toLocaleString('id-ID')+'</td><td style="font-family:var(--font-mono)">'+((x.roas||0)).toFixed(2)+'x</td></tr>';
+    }).join('');
+}).catch(function(){document.getElementById('tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text-tertiary)">Failed to load</td></tr>'});
+</script>

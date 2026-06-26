@@ -1,0 +1,21 @@
+<% const title = 'Automation'; const pageTitle = 'Automation Rules'; const breadcrumb = 'Automation'; const activePage = 'automation'; %>
+<%- include('../layouts/base', { title, pageTitle, breadcrumb, activePage, username: typeof username !== 'undefined' ? username : '', body: '' }) %>
+<script>
+document.querySelector('.main-content').innerHTML = `
+<div class="page-header">
+    <div><h1>Automation Rules</h1><p>Set triggers and actions for your campaigns</p></div>
+    <div class="page-actions"><button class="btn btn-primary" onclick="showCreateForm()"><i class="bi bi-plus-circle"></i> New Rule</button></div>
+</div>
+<div class="card"><div class="card-header"><h3 style="font-size:0.85rem"><i class="bi bi-lightning-charge"></i> Rules</h3></div>
+<div id="rulesList" style="padding:16px;color:var(--text-tertiary);text-align:center">Loading...</div></div>`;
+
+fetch('/api/automation').then(function(r){return r.json()}).then(function(data){
+    var rules=data.rules||[];
+    var el=document.getElementById('rulesList');
+    if(!rules.length){el.innerHTML='<div style="padding:40px;text-align:center"><i class="bi bi-lightning-charge" style="font-size:2rem;color:var(--text-tertiary)"></i><p style="margin-top:8px">No automation rules yet</p></div>';return}
+    el.innerHTML=rules.map(function(r){
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)"><div><div style="font-weight:600;font-size:0.85rem">'+r.name+'</div><div style="font-size:0.72rem;color:var(--text-tertiary)">'+(r.trigger_metric||'')+' '+(r.trigger_operator||'')+' '+(r.trigger_value||'')+' → '+(r.action_type||'')+'</div></div><div style="display:flex;gap:8px;align-items:center"><span class="badge '+(r.is_active?'badge-success':'badge-neutral')+'">'+(r.is_active?'Active':'Paused')+'</span></div></div>';
+    }).join('');
+});
+function showCreateForm(){window.showToast('Info','Rule creation coming soon','info')}
+</script>

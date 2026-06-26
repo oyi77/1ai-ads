@@ -1,0 +1,5 @@
+<% const title = 'Creative Fatigue'; const pageTitle = 'Creative Fatigue'; const breadcrumb = 'Creative > Fatigue'; const activePage = 'creative-fatigue'; %>
+<%- include('../layouts/base', { title, pageTitle, breadcrumb, activePage, username: typeof username !== 'undefined' ? username : '', body: '' }) %>
+<script>
+document.querySelector('.main-content').innerHTML = '<div class="page-header"><div><h1>Creative Fatigue</h1><p>Detect and respond to ad fatigue signals</p></div></div><div class="card" style="padding:40px;text-align:center"><i class="bi bi-exclamation-triangle" style="font-size:2rem;color:var(--text-tertiary)"></i><p style="margin-top:8px;color:var(--text-tertiary)">Fatigue detection will show at-risk creatives</p></div>';
+</script>

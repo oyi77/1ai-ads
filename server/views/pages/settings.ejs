@@ -1,0 +1,10 @@
+<% const title = 'Settings'; const pageTitle = 'Settings'; const breadcrumb = 'Account > Settings'; const activePage = 'settings'; %>
+<%- include('../layouts/base', { title, pageTitle, breadcrumb, activePage, username: typeof username !== 'undefined' ? username : '', body: '' }) %>
+<script>
+document.querySelector('.main-content').innerHTML = `
+<div class="page-header"><div><h1>Settings</h1><p>Manage your account and integrations</p></div></div>
+<div class="card" style="padding:24px">
+    <h3 style="font-size:0.9rem;margin-bottom:16px"><i class="bi bi-gear"></i> General</h3>
+    <div style="color:var(--text-tertiary);font-size:0.85rem">Settings panel will be populated from your account data.</div>
+</div>`;
+</script>

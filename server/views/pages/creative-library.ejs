@@ -1,0 +1,5 @@
+<% const title = 'Creative Library'; const pageTitle = 'Creative Library'; const breadcrumb = 'Creative > Library'; const activePage = 'creative-library'; %>
+<%- include('../layouts/base', { title, pageTitle, breadcrumb, activePage, username: typeof username !== 'undefined' ? username : '', body: '' }) %>
+<script>
+document.querySelector('.main-content').innerHTML = '<div class="page-header"><div><h1>Creative Library</h1><p>Your ad creatives organized and searchable</p></div></div><div class="card" style="padding:40px;text-align:center"><i class="bi bi-palette" style="font-size:2rem;color:var(--text-tertiary)"></i><p style="margin-top:8px;color:var(--text-tertiary)">Creative library will display your ad assets</p></div>';
+</script>

@@ -1,0 +1,5 @@
+<% const title = 'A/B Tests'; const pageTitle = 'A/B Tests'; const breadcrumb = 'Testing > A/B Tests'; const activePage = 'ab-tests'; %>
+<%- include('../layouts/base', { title, pageTitle, breadcrumb, activePage, username: typeof username !== 'undefined' ? username : '', body: '' }) %>
+<script>
+document.querySelector('.main-content').innerHTML = '<div class="page-header"><div><h1>A/B Tests</h1><p>Manage and monitor your creative experiments</p></div></div><div class="card" style="padding:40px;text-align:center"><i class="bi bi-beaker" style="font-size:2rem;color:var(--text-tertiary)"></i><p style="margin-top:8px;color:var(--text-tertiary)">A/B test results will appear here</p></div>';
+</script>

@@ -1,3 +1,6 @@
+import { createPagesRouter } from '../routes/pages.js';
+import { createTaglinksRouter } from '../routes/taglinks.js';
+import { createAutomationRouter } from '../routes/automation.js';
 import config from '../config/index.js';
 import rateLimit from 'express-rate-limit';
 import { createAuthRouter } from '../routes/auth.js';
@@ -69,6 +72,11 @@ export function createRouters({ app, repos, services }) {
   });
 
   const mcpClient = services.mcpClient;
+
+  // ── Server-Rendered Dashboard Pages (BEFORE API routes) ───
+  app.use('/', createPagesRouter({}));
+  app.use('/api/taglinks', createTaglinksRouter({ userDb: null }));
+  app.use('/api/automation', createAutomationRouter({ rulesRepo: repos.rulesRepo }));
 
   // ── Auth & Core ──────────────────────────────────────────────
   app.use('/api/auth', publicRateLimit, createAuthRouter(repos.usersRepo, repos.refreshTokensRepo, repos.settingsRepo));

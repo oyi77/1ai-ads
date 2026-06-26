@@ -1,0 +1,27 @@
+<% const title = 'Dashboard Builder'; const pageTitle = 'Dashboard Builder'; const breadcrumb = 'Reporting > Widgets'; const activePage = 'dashboard-widgets'; %>
+<%- include('../layouts/base', { title, pageTitle, breadcrumb, activePage, username: typeof username !== 'undefined' ? username : '', body: '' }) %>
+<script>
+document.querySelector('.main-content').innerHTML = `
+<div class="page-header">
+    <div><h1>Dashboard Builder</h1><p>Customize your dashboard with widgets</p></div>
+    <div class="page-actions"><button class="btn btn-primary"><i class="bi bi-plus-circle"></i> Add Widget</button></div>
+</div>
+<div id="widgetGrid" class="metrics-grid">
+    <div class="metric-card" style="cursor:pointer;text-align:center" onclick="window.showToast('Info','Widget picker coming soon','info')">
+        <i class="bi bi-bar-chart" style="font-size:1.5rem;color:var(--accent)"></i>
+        <div style="font-size:0.8rem;font-weight:600;margin-top:6px">Spend Chart</div>
+    </div>
+    <div class="metric-card" style="cursor:pointer;text-align:center" onclick="window.showToast('Info','Widget picker coming soon','info')">
+        <i class="bi bi-graph-up" style="font-size:1.5rem;color:var(--green)"></i>
+        <div style="font-size:0.8rem;font-weight:600;margin-top:6px">Revenue Chart</div>
+    </div>
+    <div class="metric-card" style="cursor:pointer;text-align:center" onclick="window.showToast('Info','Widget picker coming soon','info')">
+        <i class="bi bi-speedometer" style="font-size:1.5rem;color:var(--purple)"></i>
+        <div style="font-size:0.8rem;font-weight:600;margin-top:6px">ROAS Gauge</div>
+    </div>
+    <div class="metric-card" style="cursor:pointer;text-align:center" onclick="window.showToast('Info','Widget picker coming soon','info')">
+        <i class="bi bi-pie-chart" style="font-size:1.5rem;color:var(--cyan)"></i>
+        <div style="font-size:0.8rem;font-weight:600;margin-top:6px">Platform Split</div>
+    </div>
+</div>`;
+</script>

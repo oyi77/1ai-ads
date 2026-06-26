@@ -53,6 +53,15 @@ export function createApp(params) {
 
   app.use(express.json());
 
+  // EJS template engine for server-rendered dashboard pages
+  app.set('view engine', 'ejs');
+  app.set('views', path.join(__dirname, 'views'));
+
+  // Serve dashboard static assets (CSS, JS, images)
+  app.use('/css', express.static(path.join(__dirname, 'public/css')));
+  app.use('/js', express.static(path.join(__dirname, 'public/js')));
+  app.use('/img', express.static(path.join(__dirname, 'public/img')));
+
   const clientPath = path.join(process.cwd(), 'dist');
   app.use(express.static(clientPath));
 

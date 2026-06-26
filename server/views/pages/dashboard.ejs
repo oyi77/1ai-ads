@@ -1,0 +1,100 @@
+<% const title = 'Dashboard'; const pageTitle = 'Dashboard'; const breadcrumb = 'Overview'; const activePage = 'dashboard'; %>
+<%- include('../layouts/base', { title, pageTitle, breadcrumb, activePage, username: typeof username !== 'undefined' ? username : '', body: '' }) %>
+
+<% /* Override body content */ %>
+<script>
+document.querySelector('.main-content').innerHTML = `
+<div class="page-header">
+    <div>
+        <h1>Command Center</h1>
+        <p>Real-time ad performance overview</p>
+    </div>
+</div>
+
+<!-- Metric Cards -->
+<div class="metrics-grid" id="metricCards">
+    <div class="metric-card">
+        <div class="metric-label"><i class="bi bi-cash-stack"></i> Total Spend</div>
+        <div class="metric-value" id="totalSpend">—</div>
+        <div class="metric-sub">Last 30 days</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label"><i class="bi bi-graph-up-arrow"></i> Revenue</div>
+        <div class="metric-value" id="totalRevenue">—</div>
+        <div class="metric-sub">Last 30 days</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label"><i class="bi bi-speedometer"></i> ROAS</div>
+        <div class="metric-value" id="avgRoas">—</div>
+        <div class="metric-sub">Return on ad spend</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label"><i class="bi bi-megaphone"></i> Active Campaigns</div>
+        <div class="metric-value" id="activeCampaigns">—</div>
+        <div class="metric-sub">Currently running</div>
+    </div>
+</div>
+
+<!-- Campaigns Table -->
+<div class="card" style="margin-top:24px">
+    <div class="card-header">
+        <h3 style="font-size:0.85rem"><i class="bi bi-megaphone"></i> Recent Campaigns</h3>
+        <a href="/campaigns" class="btn btn-ghost btn-sm">View All</a>
+    </div>
+    <div style="overflow-x:auto">
+        <table class="data-table" id="campaignsTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Spend</th>
+                    <th>Revenue</th>
+                    <th>ROAS</th>
+                </tr>
+            </thead>
+            <tbody id="campaignsBody">
+                <tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);padding:24px">Loading campaigns...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+`;
+
+// Load data
+fetch('/api/campaigns', { headers: { 'Authorization': 'Bearer ' + (document.cookie.match(/token=([^;]+)/) || ['', ''])[1] } })
+.then(function(r) { return r.json(); })
+.then(function(data) {
+    var campaigns = data.campaigns || data || [];
+    var totalSpend = 0, totalRevenue = 0, active = 0;
+    campaigns.forEach(function(c) {
+        totalSpend += c.spend || 0;
+        totalRevenue += c.revenue || 0;
+        if (c.status === 'ACTIVE' || c.status === 'active') active++;
+    });
+    var roas = totalSpend > 0 ? (totalRevenue / totalSpend).toFixed(2) : '0.00';
+
+    document.getElementById('totalSpend').textContent = 'Rp ' + totalSpend.toLocaleString('id-ID');
+    document.getElementById('totalRevenue').textContent = 'Rp ' + totalRevenue.toLocaleString('id-ID');
+    document.getElementById('avgRoas').textContent = roas + 'x';
+    document.getElementById('activeCampaigns').textContent = active;
+
+    var tbody = document.getElementById('campaignsBody');
+    if (campaigns.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);padding:24px">No campaigns yet</td></tr>';
+        return;
+    }
+    tbody.innerHTML = campaigns.slice(0, 10).map(function(c) {
+        var statusClass = c.status === 'ACTIVE' ? 'badge-success' : c.status === 'PAUSED' ? 'badge-warning' : 'badge-neutral';
+        return '<tr>' +
+            '<td style="font-weight:600">' + (c.name || c.id || '—') + '</td>' +
+            '<td><span class="badge ' + statusClass + '">' + (c.status || 'unknown') + '</span></td>' +
+            '<td style="font-family:var(--font-mono)">Rp ' + ((c.spend || 0)).toLocaleString('id-ID') + '</td>' +
+            '<td style="font-family:var(--font-mono)">Rp ' + ((c.revenue || 0)).toLocaleString('id-ID') + '</td>' +
+            '<td style="font-family:var(--font-mono);color:' + ((c.roas || 0) >= 1 ? 'var(--green)' : 'var(--red)') + '">' + ((c.roas || 0)).toFixed(2) + 'x</td>' +
+            '</tr>';
+    }).join('');
+})
+.catch(function() {
+    document.getElementById('campaignsBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);padding:24px">Failed to load campaigns</td></tr>';
+});
+</script>

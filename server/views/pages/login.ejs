@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — AdForge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <style>
+        body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg-deep); }
+        .login-card { background: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); padding: 40px; width: 100%; max-width: 380px; box-shadow: var(--shadow-lg); }
+        .login-brand { text-align: center; margin-bottom: 32px; }
+        .login-brand-icon { width: 48px; height: 48px; border-radius: var(--radius); background: var(--accent-soft); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 800; margin-bottom: 12px; }
+        .login-brand-text { font-size: 1.3rem; font-weight: 700; color: var(--text-primary); }
+        .login-brand-text span { color: var(--accent); }
+        .login-error { background: var(--red-soft); border: 1px solid var(--red-border); color: var(--red); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 0.8rem; margin-bottom: 16px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-brand">
+            <div class="login-brand-icon">A</div>
+            <div class="login-brand-text">Ad<span>Forge</span></div>
+        </div>
+
+        <div class="login-error" id="loginError"></div>
+
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div style="margin-bottom:16px">
+                <label style="display:block;font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px">Username</label>
+                <input type="text" id="username" name="username" required autocomplete="username"
+                    style="width:100%;padding:10px 14px;background:var(--bg-surface);border:1px solid var(--border-strong);border-radius:var(--radius-sm);color:var(--text-primary);font-family:var(--font);font-size:0.85rem;outline:none;transition:border-color 0.15s"
+                    onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border-strong)'">
+            </div>
+            <div style="margin-bottom:24px">
+                <label style="display:block;font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password"
+                    style="width:100%;padding:10px 14px;background:var(--bg-surface);border:1px solid var(--border-strong);border-radius:var(--radius-sm);color:var(--text-primary);font-family:var(--font);font-size:0.85rem;outline:none;transition:border-color 0.15s"
+                    onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border-strong)'">
+            </div>
+            <button type="submit" id="loginBtn"
+                style="width:100%;padding:11px;background:var(--accent);color:var(--bg-deep);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.15s">
+                Sign In
+            </button>
+        </form>
+    </div>
+
+<script>
+function handleLogin(e) {
+    e.preventDefault();
+    var btn = document.getElementById('loginBtn');
+    var errEl = document.getElementById('loginError');
+    btn.textContent = 'Signing in...';
+    btn.disabled = true;
+    errEl.style.display = 'none';
+
+    fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            username: document.getElementById('username').value,
+            password: document.getElementById('password').value
+        })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            window.location.href = '/app';
+        } else {
+            errEl.textContent = data.error || 'Login failed';
+            errEl.style.display = 'block';
+            btn.textContent = 'Sign In';
+            btn.disabled = false;
+        }
+    })
+    .catch(function(err) {
+        errEl.textContent = 'Connection error';
+        errEl.style.display = 'block';
+        btn.textContent = 'Sign In';
+        btn.disabled = false;
+    });
+}
+</script>
+</body>
+</html>
