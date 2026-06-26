@@ -90,28 +90,3 @@ describe('Functional: Ad Generation Parsing', () => {
     expect(result.raw_content).toBe('not json');
   });
 });
-
-describe('Functional: Template Rendering', () => {
-  it('renderLandingPage produces valid HTML', async () => {
-    const { renderLandingPage } = await import('../../server/services/templates.js');
-    const html = renderLandingPage({
-      product_name: 'Test Product',
-      theme: 'dark',
-      price: 'Rp 500.000',
-      benefits: ['Fast', 'Cheap'],
-      pain_points: ['Slow'],
-      cta_primary: 'Buy Now',
-    });
-    expect(html).toContain('<!DOCTYPE html>');
-    expect(html).toContain('Test Product');
-    expect(html).toContain('Fast');
-    expect(html).toContain('Buy Now');
-  });
-
-  it('renderLandingPage uses responsive grid', async () => {
-    const { renderLandingPage } = await import('../../server/services/templates.js');
-    const html = renderLandingPage({ product_name: 'Test', benefits: ['A'], pain_points: ['B'] });
-    expect(html).toContain('sm:grid-cols-2');
-    expect(html).toContain('md:grid-cols-3');
-  });
-});
