@@ -59,7 +59,7 @@ function renderCreateForm(formEl, listEl) {
     });
 
     try {
-      await api.post('/ab-tests', { name, metric, variants });
+      await api.post('/testing/ab-tests', { name, metric, variants });
       window.vn?.success('A/B test created');
       formEl.classList.add('hidden');
       formEl.innerHTML = '';
@@ -72,7 +72,7 @@ function renderCreateForm(formEl, listEl) {
 
 async function loadTests(container) {
   try {
-    const res = await api.get('/ab-tests');
+    const res = await api.get('/testing/ab-tests');
     const tests = Array.isArray(res) ? res : (res.data || []);
 
     if (!tests.length) {
@@ -121,7 +121,7 @@ async function loadTests(container) {
       const action = btn.dataset.action;
       btn.disabled = true;
       try {
-        await api.post(`/ab-tests/${id}/${action}`);
+        await api.post(`/testing/ab-tests/${id}/${action}`);
         window.vn?.success(`Test ${action === 'start' ? 'started' : 'stopped'}`);
         await loadTests(container);
       } catch (err) {

@@ -92,7 +92,7 @@ export function renderDashboard(el) {
                       ${renderPlatformRow('TikTok Engine', 'In Sync', 'Active', '#000000')}
                       ${renderPlatformRow('Google Ads', 'Stable', 'Verified', '#4285F4')}
                    </div>
-                   <button onclick="syncAllPlatforms()" class="w-full mt-8 py-4 bg-[#161b22] border border-[#30363d] text-white text-[10px] font-black rounded-2xl uppercase tracking-widest hover:bg-[#21262d] transition-all">Re-Sync Satellite Feed</button>
+                   <button id="sync-btn" onclick="syncAllPlatforms()" class="w-full mt-8 py-4 bg-[#161b22] border border-[#30363d] text-white text-[10px] font-black rounded-2xl uppercase tracking-widest hover:bg-[#21262d] transition-all">Re-Sync Satellite Feed</button>
                 </div>
 
                 <!-- Ad Library Bridge -->

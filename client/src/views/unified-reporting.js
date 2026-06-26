@@ -29,8 +29,8 @@ export async function renderUnifiedReporting(el) {
 async function loadUnifiedData(container, dateRange) {
   try {
     const [dashRes, tsRes] = await Promise.all([
-      api.get(`/unified/dashboard?dateRange=${dateRange}`),
-      api.get(`/unified/timeseries?metric=spend&days=30`).catch(() => ({ data: [] })),
+      api.get(`/reporting/unified/dashboard?dateRange=${dateRange}`),
+      api.get(`/reporting/unified/timeseries?metric=spend&days=30`).catch(() => ({ data: [] })),
     ]);
 
     const { totals, byPlatform } = dashRes.data || { totals: {}, byPlatform: [] };

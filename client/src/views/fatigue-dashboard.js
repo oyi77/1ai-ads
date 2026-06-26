@@ -18,7 +18,7 @@ export async function renderFatigueDashboard(el) {
     snapBtn.disabled = true;
     snapBtn.textContent = '⏳ Snapshotting...';
     try {
-      await api.get('/fatigue/snapshot/act_me');
+      await api.get('/creative/fatigue/snapshot/act_me');
       window.vn?.success('Creative snapshot complete');
       await loadFatigueData(content);
     } catch (e) {
@@ -34,7 +34,7 @@ export async function renderFatigueDashboard(el) {
 
 async function loadFatigueData(container) {
   try {
-    const res = await api.get('/fatigue/detect/act_me');
+    const res = await api.get('/creative/fatigue/detect/act_me');
     const fatigued = res.data || [];
     container.innerHTML = '';
 

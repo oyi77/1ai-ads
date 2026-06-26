@@ -7,7 +7,7 @@ export function createCreativeLibraryRouter(creativeLibRepo) {
   router.get('/', async (req, res) => {
     try {
       const { type, tags, platform, sort, limit, offset } = req.query;
-      const result = creativeLibRepo.findAll({
+      const result = creativeLibRepo.list({
         type,
         tags: tags ? tags.split(',').map(t => t.trim()) : undefined,
         platform,

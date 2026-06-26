@@ -62,7 +62,7 @@ function renderAddForm(formEl, grid) {
     const name = formEl.querySelector('#cl-name').value.trim();
     if (!name) { window.vn?.warn('Name required'); return; }
     try {
-      await api.post('/creatives', {
+      await api.post('/creative/library', {
         name,
         type: formEl.querySelector('#cl-type').value,
         hook: formEl.querySelector('#cl-hook').value,
@@ -83,7 +83,7 @@ function renderAddForm(formEl, grid) {
 async function loadCreatives(container, type) {
   try {
     const query = type ? `?type=${type}` : '';
-    const res = await api.get(`/creatives${query}`);
+    const res = await api.get(`/creative/library${query}`);
     const { data: items, total } = res.data || { data: [], total: 0 };
 
     if (!items.length) {
@@ -129,14 +129,14 @@ async function loadCreatives(container, type) {
       const id = btn.dataset.id;
       if (btn.dataset.action === 'use') {
         try {
-          await api.post(`/creatives/${id}/use`);
+          await api.post(`/creative/library/${id}/use`);
           window.vn?.success('Usage recorded');
           await loadCreatives(container, type);
         } catch (err) { window.vn?.error(err.message); }
       } else if (btn.dataset.action === 'delete') {
         if (!confirm('Delete this creative?')) return;
         try {
-          await api.del(`/creatives/${id}`);
+          await api.del(`/creative/library/${id}`);
           window.vn?.success('Deleted');
           await loadCreatives(container, type);
         } catch (err) { window.vn?.error(err.message); }

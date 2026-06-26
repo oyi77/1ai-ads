@@ -7,7 +7,7 @@ export function createDashboardWidgetsRouter(widgetsRepo) {
   router.get('/', async (req, res) => {
     try {
       const userId = req.user?.id || req.userId;
-      const result = widgetsRepo.findByUser(userId);
+      const result = widgetsRepo.getByUser(userId);
       res.json({ success: true, data: result });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -56,7 +56,7 @@ export function createDashboardWidgetsRouter(widgetsRepo) {
         }
       }
       const userId = req.user?.id || req.userId;
-      const result = widgetsRepo.findByUser(userId);
+      const result = widgetsRepo.getByUser(userId);
       res.json({ success: true, data: result });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });

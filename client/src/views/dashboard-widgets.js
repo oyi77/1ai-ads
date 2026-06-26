@@ -72,7 +72,7 @@ function renderWidgetPicker(picker, grid) {
 
     configEl.querySelector('#dw-confirm-add')?.addEventListener('click', async () => {
       try {
-        await api.post('/widgets', {
+        await api.post('/reporting/widgets', {
           widgetType,
           config: { metric: configEl.querySelector('#dw-metric').value },
           size: configEl.querySelector('#dw-size').value,
@@ -90,7 +90,7 @@ function renderWidgetPicker(picker, grid) {
 
 async function loadWidgets(container) {
   try {
-    const res = await api.get('/widgets');
+    const res = await api.get('/reporting/widgets');
     const widgets = res.data || [];
 
     if (!widgets.length) {
@@ -131,7 +131,7 @@ async function loadWidgets(container) {
       const btn = e.target.closest('button[data-action="delete-widget"]');
       if (!btn) return;
       try {
-        await api.del(`/widgets/${btn.dataset.id}`);
+        await api.del(`/reporting/widgets/${btn.dataset.id}`);
         window.vn?.success('Widget removed');
         await loadWidgets(container);
       } catch (err) { window.vn?.error(err.message); }
@@ -144,7 +144,7 @@ async function loadWidgets(container) {
 async function renderWidgetContent(container, type, config) {
   try {
     if (type === 'metric_card') {
-      const res = await api.get(`/unified/dashboard?dateRange=last_7d`);
+      const res = await api.get(`/reporting/unified/dashboard?dateRange=last_7d`);
       const totals = res.data?.totals || {};
       const val = totals[config.metric] ?? 0;
       const formatted = config.metric === 'roas' ? `${val.toFixed(2)}x`
@@ -152,7 +152,7 @@ async function renderWidgetContent(container, type, config) {
         : typeof val === 'number' ? val.toLocaleString() : val;
       container.innerHTML = `<div class="text-2xl font-bold text-sky-400">${formatted}</div><div class="text-xs text-slate-400 mt-1">${(config.metric || 'metric').toUpperCase()}</div>`;
     } else if (type === 'chart_bar') {
-      const res = await api.get(`/unified/dashboard?dateRange=last_7d`);
+      const res = await api.get(`/reporting/unified/dashboard?dateRange=last_7d`);
       const byPlatform = res.data?.byPlatform || [];
       container.innerHTML = '';
       if (byPlatform.length) {
@@ -162,7 +162,7 @@ async function renderWidgetContent(container, type, config) {
         });
       }
     } else if (type === 'chart_donut') {
-      const res = await api.get(`/unified/dashboard?dateRange=last_7d`);
+      const res = await api.get(`/reporting/unified/dashboard?dateRange=last_7d`);
       const byPlatform = res.data?.byPlatform || [];
       container.innerHTML = '';
       if (byPlatform.length) {
