@@ -1854,6 +1854,90 @@ def api_meta_campaign_action(campaign_id, action):
     return jsonify(result)
 
 
+# ── New Feature Routes (proxy to Express backend) ──────────────
+EXPRESS_API = "http://127.0.0.1:5000"
+
+def _proxy_get(path, token):
+    """Proxy GET request to Express backend."""
+    try:
+        r = requests.get(f"{EXPRESS_API}{path}", headers={"Authorization": f"Bearer {token}"}, timeout=10)
+        return r.json() if r.ok else {"success": False, "error": r.text[:200]}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def _proxy_post(path, token, data=None):
+    """Proxy POST request to Express backend."""
+    try:
+        r = requests.post(f"{EXPRESS_API}{path}", headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=data or {}, timeout=10)
+        return r.json() if r.ok else {"success": False, "error": r.text[:200]}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.route("/creative/library")
+@login_required
+def creative_library_page():
+    return render_template("creative_library.html", username=session.get("username"))
+
+
+@app.route("/creative/fatigue")
+@login_required
+def creative_fatigue_page():
+    return render_template("creative_fatigue.html", username=session.get("username"))
+
+
+@app.route("/creative/scoring")
+@login_required
+def creative_scoring_page():
+    return render_template("creative_scoring.html", username=session.get("username"))
+
+
+@app.route("/testing/ab-tests")
+@login_required
+def ab_tests_page():
+    return render_template("ab_tests.html", username=session.get("username"))
+
+
+@app.route("/reporting/unified")
+@login_required
+def unified_reporting_page():
+    return render_template("unified_reporting.html", username=session.get("username"))
+
+
+@app.route("/reporting/widgets")
+@login_required
+def dashboard_widgets_page():
+    return render_template("dashboard_widgets.html", username=session.get("username"))
+
+
+@app.route("/attribution")
+@login_required
+def attribution_page():
+    return render_template("attribution.html", username=session.get("username"))
+
+
+@app.route("/ops/bulk")
+@login_required
+def bulk_ops_page():
+    return render_template("bulk_ops.html", username=session.get("username"))
+
+
+@app.route("/agency")
+@login_required
+def agency_page():
+    return render_template("agency.html", username=session.get("username"))
+
+
+# API proxy endpoints for new features
+@app.route("/api/proxy/<path:subpath>", methods=["GET", "POST"])
+@login_required
+def api_proxy(subpath):
+    """Proxy requests to Express backend API."""
+    token = session.get("api_token", "")
+    if request.method == "GET":
+        return jsonify(_proxy_get(f"/api/{subpath}", token))
+    else:
+        return jsonify(_proxy_post(f"/api/{subpath}", token, request.get_json(silent=True)))
 if __name__ == "__main__":
     print("=" * 60)
     print("🚀 AdForge Dashboard v3.0 — Per-User Database Isolation")

@@ -49,15 +49,50 @@
                 {% if pending_count is defined and pending_count > 0 %}<span class="sidebar-badge">{{ pending_count }}</span>{% endif %}
             </a>
 
+            <div class="sidebar-section">Creative</div>
+            <a href="/creative/library" class="sidebar-link {% if request.path == '/creative/library' %}active{% endif %}">
+                <i class="bi bi-palette"></i> Library
+            </a>
+            <a href="/creative/fatigue" class="sidebar-link {% if request.path == '/creative/fatigue' %}active{% endif %}">
+                <i class="bi bi-exclamation-triangle"></i> Fatigue
+            </a>
+            <a href="/creative/scoring" class="sidebar-link {% if request.path == '/creative/scoring' %}active{% endif %}">
+                <i class="bi bi-star"></i> Scoring
+            </a>
+
+            <div class="sidebar-section">Testing</div>
+            <a href="/testing/ab-tests" class="sidebar-link {% if request.path == '/testing/ab-tests' %}active{% endif %}">
+                <i class="bi bi-beaker"></i> A/B Tests
+            </a>
+
             <div class="sidebar-section">Commerce</div>
             <a href="/taglinks" class="sidebar-link {% if request.path == '/taglinks' %}active{% endif %}">
                 <i class="bi bi-link-45deg"></i> Taglinks
             </a>
 
-            <div class="sidebar-section">Insights</div>
-            <a href="/reports" class="sidebar-link {% if request.path == '/reports' %}active{% endif %}">
-                <i class="bi bi-graph-up-arrow"></i> Reports
+            <div class="sidebar-section">Reporting</div>
+            <a href="/reporting/unified" class="sidebar-link {% if request.path == '/reporting/unified' %}active{% endif %}">
+                <i class="bi bi-graph-up-arrow"></i> Unified
             </a>
+            <a href="/reporting/widgets" class="sidebar-link {% if request.path == '/reporting/widgets' %}active{% endif %}">
+                <i class="bi bi-grid"></i> Widgets
+            </a>
+            <a href="/reports" class="sidebar-link {% if request.path == '/reports' %}active{% endif %}">
+                <i class="bi bi-file-earmark-bar-graph"></i> Reports
+            </a>
+            <a href="/attribution" class="sidebar-link {% if request.path == '/attribution' %}active{% endif %}">
+                <i class="bi bi-diagram-3"></i> Attribution
+            </a>
+
+            <div class="sidebar-section">Operations</div>
+            <a href="/ops/bulk" class="sidebar-link {% if request.path == '/ops/bulk' %}active{% endif %}">
+                <i class="bi bi-layers"></i> Bulk Ops
+            </a>
+            <a href="/agency" class="sidebar-link {% if request.path == '/agency' %}active{% endif %}">
+                <i class="bi bi-building"></i> Agency
+            </a>
+
+            <div class="sidebar-section">Account</div>
             <a href="/accounts" class="sidebar-link {% if request.path == '/accounts' %}active{% endif %}">
                 <i class="bi bi-people"></i> Accounts
             </a>
