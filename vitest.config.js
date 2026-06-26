@@ -7,7 +7,7 @@ export default defineConfig({
       NODE_ENV: 'test',
       JWT_SECRET: 'test-secret-key-for-testing',
     },
-    exclude: ['tests/e2e/**', 'node_modules/**', '_archived/**', 'client-react/**'],
+    exclude: ['tests/e2e/**', 'node_modules/**', '_archived/**', 'client/**'],
     server: {
       deps: {
         externals: ['better-sqlite3'],
