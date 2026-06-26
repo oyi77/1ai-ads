@@ -1,34 +1,62 @@
 import { Router } from 'express';
-import { ABTestService } from '../services/ab-test-service.js';
 
-export function createABTestsRouter(metaApi) {
+export function createABTestsRouter(abTestService) {
   const router = Router();
-  const svc = new ABTestService(metaApi);
 
   router.post('/', async (req, res) => {
-    res.json(await svc.createTest(req.body));
+    try {
+      const test = await abTestService.createTest(req.body);
+      res.json({ success: true, data: test });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   router.get('/', async (_req, res) => {
-    res.json(await svc.getTests());
+    try {
+      const tests = await abTestService.getTests();
+      res.json({ success: true, data: tests });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   router.get('/:id', async (req, res) => {
-    res.json(await svc.getTest(req.params.id));
+    try {
+      const test = await abTestService.getTest(req.params.id);
+      res.json({ success: true, data: test });
+    } catch (err) {
+      res.status(404).json({ success: false, error: err.message });
+    }
   });
 
   router.post('/:id/start', async (req, res) => {
-    res.json(await svc.startTest(req.params.id));
+    try {
+      const test = await abTestService.startTest(req.params.id);
+      res.json({ success: true, data: test });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   router.post('/:id/stop', async (req, res) => {
-    res.json(await svc.stopTest(req.params.id));
+    try {
+      const test = await abTestService.stopTest(req.params.id);
+      res.json({ success: true, data: test });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   router.post('/:id/winner', async (req, res) => {
-    const { winner_id } = req.body;
-    if (!winner_id) return res.status(400).json({ error: 'winner_id required' });
-    res.json(await svc.updateWinner(req.params.id, winner_id));
+    try {
+      const { winner_id } = req.body;
+      if (!winner_id) return res.status(400).json({ success: false, error: 'winner_id required' });
+      const test = await abTestService.updateWinner(req.params.id, winner_id);
+      res.json({ success: true, data: test });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   return router;

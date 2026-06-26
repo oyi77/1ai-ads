@@ -99,4 +99,57 @@ export class AttributionService {
     }
     return stored;
   }
+
+  // --- Multi-touch attribution models ---
+
+  calculateFirstTouch(touchpoints) {
+    if (!touchpoints || !touchpoints.length) return [];
+    return [{ adId: touchpoints[0].adId, weight: 1.0 }];
+  }
+
+  calculateLastTouch(touchpoints) {
+    if (!touchpoints || !touchpoints.length) return [];
+    return [{ adId: touchpoints[touchpoints.length - 1].adId, weight: 1.0 }];
+  }
+
+  calculateLinear(touchpoints) {
+    if (!touchpoints || !touchpoints.length) return [];
+    const weight = 1 / touchpoints.length;
+    return touchpoints.map(tp => ({ adId: tp.adId, weight }));
+  }
+
+  calculateTimeDecay(touchpoints, halfLifeDays = 7) {
+    if (!touchpoints || !touchpoints.length) return [];
+    const now = Date.now();
+    const halfLifeMs = halfLifeDays * 24 * 60 * 60 * 1000;
+    const raw = touchpoints.map(tp => {
+      const age = now - new Date(tp.timestamp || tp.clicked_at || Date.now()).getTime();
+      return { adId: tp.adId, rawWeight: Math.pow(0.5, age / halfLifeMs) };
+    });
+    const total = raw.reduce((s, r) => s + r.rawWeight, 0);
+    return total > 0 ? raw.map(r => ({ adId: r.adId, weight: r.rawWeight / total })) : raw.map(r => ({ adId: r.adId, weight: 0 }));
+  }
+
+  calculatePositionBased(touchpoints) {
+    if (!touchpoints || !touchpoints.length) return [];
+    if (touchpoints.length === 1) return [{ adId: touchpoints[0].adId, weight: 1.0 }];
+    if (touchpoints.length === 2) return touchpoints.map(tp => ({ adId: tp.adId, weight: 0.5 }));
+    const middleWeight = 0.2 / (touchpoints.length - 2);
+    return touchpoints.map((tp, i) => ({
+      adId: tp.adId,
+      weight: i === 0 ? 0.4 : i === touchpoints.length - 1 ? 0.4 : middleWeight,
+    }));
+  }
+
+  calculateAttribution(touchpoints, model = 'linear') {
+    const models = {
+      first_touch: this.calculateFirstTouch,
+      last_touch: this.calculateLastTouch,
+      linear: this.calculateLinear,
+      time_decay: this.calculateTimeDecay,
+      position_based: this.calculatePositionBased,
+    };
+    const fn = models[model] || models.linear;
+    return { model, results: fn.call(this, touchpoints) };
+  }
 }

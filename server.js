@@ -1,18 +1,20 @@
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Load .env BEFORE any application imports — ESM hoists static imports
+const { default: dotenv } = await import('dotenv');
 dotenv.config({ path: join(__dirname, '.env') });
 
-import { createDatabase } from './db/index.js';
-import { backupDatabase } from './db/backup.js';
-import { createApp, startServices } from './server/app.js';
-import { LLMClient } from './server/services/llm-client.js';
-import { MCPClientManager } from './server/services/mcp-client.js';
-import { seedDemoData } from './db/seed.js';
-import config, { validateConfig } from './server/config/index.js';
+const { createDatabase } = await import('./db/index.js');
+const { backupDatabase } = await import('./db/backup.js');
+const { createApp, startServices } = await import('./server/app.js');
+const { LLMClient } = await import('./server/services/llm-client.js');
+const { MCPClientManager } = await import('./server/services/mcp-client.js');
+const { seedDemoData } = await import('./db/seed.js');
+const { default: config, validateConfig } = await import('./server/config/index.js');
 
 // Validate required configuration before starting
 validateConfig();

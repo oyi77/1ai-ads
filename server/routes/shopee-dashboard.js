@@ -119,13 +119,15 @@ export function createShopeeDashboardRouter(shopeeAdapter, settingsRepo, commiss
     try {
       const chunks = [];
       let totalSize = 0;
+      let sizeExceeded = false;
       const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
       req.on('data', (chunk) => {
+        if (sizeExceeded) return;
         totalSize += chunk.length;
         if (totalSize > MAX_SIZE) {
+          sizeExceeded = true;
           res.status(413).json({ success: false, error: 'File too large (max 10MB)' });
-          req.destroy();
           return;
         }
         chunks.push(chunk);

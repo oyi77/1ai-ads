@@ -26,6 +26,11 @@ import { renderDrafts } from './views/drafts.js';
 import { renderAdminUsers } from './views/admin-users.js';
 import { renderShopeeDashboard } from './views/shopee-dashboard.js';
 import { renderCampaignMonitor } from './views/campaign-monitor.js';
+import { renderFatigueDashboard } from './views/fatigue-dashboard.js';
+import { renderAbTests } from './views/ab-tests.js';
+import { renderUnifiedReporting } from './views/unified-reporting.js';
+import { renderCreativeLibrary } from './views/creative-library.js';
+import { renderDashboardWidgets } from './views/dashboard-widgets.js';
 
 const router = new Router(document.getElementById('app'));
 
@@ -77,6 +82,11 @@ router.on('/ads-library-ai', async () => {
   document.getElementById('app').replaceChildren();
   await renderAdsLibraryAiView(document.getElementById('app'));
 });
+router.on('/fatigue', () => { renderFatigueDashboard(document.getElementById('app')); });
+router.on('/ab-tests', () => { renderAbTests(document.getElementById('app')); });
+router.on('/unified', () => { renderUnifiedReporting(document.getElementById('app')); });
+router.on('/creative-library', () => { renderCreativeLibrary(document.getElementById('app')); });
+router.on('/dashboard-builder', () => { renderDashboardWidgets(document.getElementById('app')); });
 
 // Nav visibility - ALL links visible without auth
 function updateNav() {
@@ -108,7 +118,12 @@ function updateNav() {
       'a[href="#/drafts"]',
       'a[href="#/admin/users"]',
       'a[href="#/shopee"]',
-      'a[href="#/campaign-monitor"]'
+      'a[href="#/campaign-monitor"]',
+      'a[href="#/fatigue"]',
+      'a[href="#/ab-tests"]',
+      'a[href="#/unified"]',
+      'a[href="#/creative-library"]',
+      'a[href="#/dashboard-builder"]'
     ];
     allSelectors.forEach(sel => {
       const el = navLinks.querySelector(sel);

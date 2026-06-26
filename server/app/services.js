@@ -34,6 +34,17 @@ import { CompetitorSpyService } from '../services/competitor-spy.js';
 import { DraftService } from '../services/draft-service.js';
 import { FacebookSystemUserService } from '../services/facebook-system-user.js';
 import { CampaignMonitorService } from '../services/campaign-monitor.js';
+import { ABTestService } from '../services/ab-test-service.js';
+import { FatigueDetector } from '../services/fatigue-detector.js';
+import { UnifiedReporter } from '../services/unified-reporter.js';
+import { BulkOperations } from '../services/bulk-operations.js';
+import { ImageGenerator } from '../services/image-generator.js';
+import { AudienceIntelligence } from '../services/audience-intelligence.js';
+import { CreativeScorer } from '../services/creative-scorer.js';
+import { WhiteLabelService } from '../services/white-label.js';
+import { CapiMonitor } from '../services/capi-monitor.js';
+import { CreativeLibraryRepository } from '../repositories/creative-library.js';
+import { DashboardWidgetsRepository } from '../repositories/dashboard-widgets.js';
 
 export function createServices({ db, repos, params }) {
   const llmClient = (params && params.llmClient) || new LLMClient({
@@ -98,6 +109,20 @@ export function createServices({ db, repos, params }) {
 
   const campaignMonitorService = new CampaignMonitorService(metaApi, repos.campaignsRepo, repos.settingsRepo);
 
+  // Phase 1-4 new services
+  const abTestService = new ABTestService(metaApi, db);
+  const fatigueDetector = new FatigueDetector(metaApi, db, { creativeStudio, abTestService });
+  const platformApis = { meta: metaApi, google: googleAdsAPI, tiktok: tiktokAdsAPI, linkedin: linkedinAdsAPI, twitter: twitterAdsAPI, microsoft: microsoftAdsAPI, snapchat: snapchatAdsAPI, pinterest: pinterestAdsAPI };
+  const unifiedReporter = new UnifiedReporter(platformApis, repos.campaignsRepo, db);
+  const bulkOperations = new BulkOperations(metaApi, repos.campaignsRepo, repos.adsRepo);
+  const imageGenerator = new ImageGenerator(llmClient);
+  const audienceIntelligence = new AudienceIntelligence(metaApi, db);
+  const creativeScorer = new CreativeScorer(db, llmClient, repos.settingsRepo);
+  const whiteLabelService = new WhiteLabelService(db, llmClient);
+  const capiMonitor = new CapiMonitor(metaApi, db);
+  const creativeLibraryRepo = new CreativeLibraryRepository(db);
+  const dashboardWidgetsRepo = new DashboardWidgetsRepository(db);
+
   return {
     llmClient, adspirerClient, trendingService, scalevService, paymentService,
     learningService, utmTagger, metaApi, creativeStudio, videoService,
@@ -107,6 +132,9 @@ export function createServices({ db, repos, params }) {
     autonomousAgent, autoOptimizer,
     webhookProcessor, dataCleanup, adIntelligenceService, competitorSpyService,
     draftService, facebookSystemUserService, campaignMonitorService,
+    abTestService, fatigueDetector, unifiedReporter, bulkOperations,
+    imageGenerator, audienceIntelligence, creativeScorer, whiteLabelService,
+    capiMonitor, creativeLibraryRepo, dashboardWidgetsRepo,
     mcpClient: params && params.mcpClient,
   };
 }

@@ -25,5 +25,28 @@ export function createAttributionRouter(attributionService, attributionRepo) {
     res.json(await attributionService.processNewOrders(req.body || {}));
   });
 
+  router.post('/multi-touch', async (req, res) => {
+    try {
+      const { touchpoints, model } = req.body;
+      if (!touchpoints?.length) return res.status(400).json({ success: false, error: 'touchpoints required' });
+      const data = attributionService.calculateAttribution(touchpoints, model);
+      res.json({ success: true, data });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.post('/compare-models', async (req, res) => {
+    try {
+      const { touchpoints } = req.body;
+      if (!touchpoints?.length) return res.status(400).json({ success: false, error: 'touchpoints required' });
+      const models = ['first_touch', 'last_touch', 'linear', 'time_decay', 'position_based'];
+      const data = models.map(model => attributionService.calculateAttribution(touchpoints, model));
+      res.json({ success: true, data });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   return router;
 }

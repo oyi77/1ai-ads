@@ -139,6 +139,8 @@ export function createApp(params) {
     aiAgent: services.aiAgent,
     webhookProcessor: services.webhookProcessor,
     dataCleanup: services.dataCleanup,
+    fatigueDetector: services.fatigueDetector,
+    capiMonitor: services.capiMonitor,
     usersRepo: repos.usersRepo,
   };
 
@@ -147,13 +149,15 @@ export function createApp(params) {
 
 export function startServices(app) {
   const log = createLogger('app');
-  const { autonomousAgent, autoOptimizer, aiAgent, webhookProcessor, dataCleanup, usersRepo } = app.locals._services;
+  const { autonomousAgent, autoOptimizer, aiAgent, webhookProcessor, dataCleanup, fatigueDetector, capiMonitor, usersRepo } = app.locals._services;
 
   autonomousAgent.runAutonomousMode();
   autoOptimizer.start();
   aiAgent.startScheduler(() => usersRepo.findAll().map(u => u.id));
   webhookProcessor.start();
   dataCleanup.start();
+  fatigueDetector.start();
+  capiMonitor.start(() => usersRepo.findAll().map(u => u.id));
 
   log.info('Background services started');
 }

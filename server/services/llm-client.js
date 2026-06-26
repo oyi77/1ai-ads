@@ -169,4 +169,32 @@ export class LLMClient {
     const data = await response.json();
     return data.data || [];
   }
+
+  async generateImage(prompt, { size = '1024x1024', quality = 'standard' } = {}) {
+    let imagesUrl = this.url;
+    if (imagesUrl.includes('/chat/completions')) {
+      imagesUrl = imagesUrl.replace('/chat/completions', '/images/generations');
+    } else {
+      try {
+        const u = new URL(imagesUrl);
+        u.pathname = u.pathname.replace(/\/$/, '').replace(/\/v1\/?$/, '') + '/v1/images/generations';
+        imagesUrl = u.toString();
+      } catch {
+        imagesUrl = imagesUrl.replace(/\/$/, '') + '/images/generations';
+      }
+    }
+    const headers = { 'Content-Type': 'application/json' };
+    if (this.apiKey) headers['Authorization'] = `Bearer ${this.apiKey}`;
+    const response = await fetch(imagesUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ model: 'dall-e-3', prompt, size, quality, n: 1 }),
+    });
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      throw new Error(`Image generation failed (${response.status}): ${errText.substring(0, 200)}`);
+    }
+    const data = await response.json();
+    return data.data?.[0] || { url: null };
+  }
 }

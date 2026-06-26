@@ -46,6 +46,16 @@ import { createDraftRouter } from '../routes/drafts.js';
 import { createShopeeDashboardRouter } from '../routes/shopee-dashboard.js';
 import { createFacebookSystemUserRouter } from '../routes/facebook-system-user.js';
 import { createCampaignMonitorRouter } from '../routes/campaign-monitor.js';
+import { createFatigueRouter } from '../routes/fatigue.js';
+import { createUnifiedReportingRouter } from '../routes/unified-reporting.js';
+import { createBulkRouter } from '../routes/bulk.js';
+import { createCreativeLibraryRouter } from '../routes/creative-library.js';
+import { createDashboardWidgetsRouter } from '../routes/dashboard-widgets.js';
+import { createImagesRouter } from '../routes/images.js';
+import { createAudienceIntelligenceRouter } from '../routes/audience-intelligence.js';
+import { createScoringRouter } from '../routes/scoring.js';
+import { createAgencyRouter } from '../routes/agency.js';
+import { createCapiRouter } from '../routes/capi.js';
 
 export function createRouters({ app, repos, services }) {
  const publicRateLimit = rateLimit({
@@ -90,7 +100,7 @@ export function createRouters({ app, repos, services }) {
  app.use('/api/batch', requireAuth, createBatchRouter(services.metaApi));
  app.use('/api/tokens', requireAuth, createTokenRouter());
  app.use('/api/webhooks', createWebhookRouter(repos.webhookEventsRepo));
- app.use('/api/ab-tests', requireAuth, createABTestsRouter(services.metaApi));
+app.use('/api/ab-tests', requireAuth, createABTestsRouter(services.abTestService));
  app.use('/api/attribution', requireAuth, createAttributionRouter(services.attributionService, repos.attributionRepo));
  app.use('/api/realtime', requireAuth, createRealtimeRouter(services.realtimeService));
  app.use('/api/analytics', requireAuth, createAnalyticsRouter(repos.campaignsRepo));
@@ -103,5 +113,15 @@ export function createRouters({ app, repos, services }) {
  app.use('/api/shopee', requireAuth, createShopeeDashboardRouter(services.shopeeAdapter, repos.settingsRepo, repos.shopeeCommissionsRepo));
  app.use('/api/meta-system', createFacebookSystemUserRouter(services.facebookSystemUserService));
  app.use('/api/campaign-monitor', requireAuth, createCampaignMonitorRouter(services.campaignMonitorService));
- app.use('/t', createTrackRouter(repos.adUtmMapRepo, services.utmTagger));
+app.use('/t', createTrackRouter(repos.adUtmMapRepo, services.utmTagger));
+app.use('/api/fatigue', requireAuth, createFatigueRouter(services.fatigueDetector));
+app.use('/api/unified', requireAuth, createUnifiedReportingRouter(services.unifiedReporter));
+app.use('/api/bulk', requireAuth, createBulkRouter(services.bulkOperations));
+app.use('/api/creatives', requireAuth, createCreativeLibraryRouter(services.creativeLibraryRepo));
+app.use('/api/widgets', requireAuth, createDashboardWidgetsRouter(services.dashboardWidgetsRepo));
+app.use('/api/images', requireAuth, createImagesRouter(services.imageGenerator));
+app.use('/api/audience/intelligence', requireAuth, createAudienceIntelligenceRouter(services.audienceIntelligence));
+app.use('/api/scoring', requireAuth, createScoringRouter(services.creativeScorer));
+app.use('/api/agency', requireAuth, createAgencyRouter(services.whiteLabelService));
+app.use('/api/capi', requireAuth, createCapiRouter(services.capiMonitor));
 }

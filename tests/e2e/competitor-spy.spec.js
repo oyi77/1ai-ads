@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE = 'http://localhost:3001';
+const BASE = 'http://localhost:5173';
 
 // Helper to login (reuse from full-app.spec.js)
 async function loginAs(page, username = 'admin', password = 'admin123') {

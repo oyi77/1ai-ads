@@ -118,6 +118,9 @@ export class NotificationService {
     auto_pause: (data) => `Auto-Pause: Campaign ${data.campaign_id} paused — ${data.reason}`,
     attribution_match: (data) => `Attribution: Order ${data.order_id} matched to ad ${data.ad_id} — revenue ${data.revenue}`,
     circuit_open: (data) => `Circuit Open: ${data.service} failed ${data.failures} times`,
+    'creative:fatigue:detected': (data) => `🎨 Creative Fatigue: Ad ${data.adId || data.ad_id} — severity ${data.severity}, signals: ${(data.signals || []).map(s => s.type).join(', ')}`,
+    'ab:test:completed': (data) => `🧪 A/B Test Completed: ${data.testId || data.test_id} — winner: ${data.winner || 'pending'}`,
+    'ab:test:winner:selected': (data) => `🏆 A/B Winner: Test ${data.testId || data.test_id} — variant ${data.winner || data.winnerId} selected`,
   };
 
   _formatMessage(event, data) {
