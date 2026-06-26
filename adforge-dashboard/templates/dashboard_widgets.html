@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Builder{% endblock %}
+{% block page_title %}Dashboard Builder{% endblock %}
+{% block breadcrumb %}Reporting > Widgets{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1>Dashboard Builder</h1>
+        <p>Customize your dashboard with drag-and-drop widgets</p>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-primary" onclick="openWidgetPicker()">
+            <i class="bi bi-plus-circle"></i> Add Widget
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="saveLayout()">
+            <i class="bi bi-save"></i> Save Layout
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="loadWidgets()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Widget Grid -->
+<div class="row g-4" id="widgetGrid">
+    <div class="col-12 text-center py-5" id="widgetLoading">
+        <div class="loading-inline"><div class="loading-spinner" style="width:24px;height:24px;border-width:3px;margin:0 auto 8px"></div> Loading widgets...</div>
+    </div>
+</div>
+
+<!-- Empty state -->
+<div id="widgetEmpty" style="display:none" class="text-center py-5">
+    <i class="bi bi-grid" style="font-size:2.5rem;color:var(--text-tertiary)"></i>
+    <h3 style="color:var(--text-secondary);margin-top:12px">No Widgets Yet</h3>
+    <p style="color:var(--text-tertiary);font-size:0.8rem">Add widgets to build your custom dashboard</p>
+    <button class="btn btn-accent btn-sm mt-2" onclick="openWidgetPicker()">Add Your First Widget</button>
+</div>
+
+<!-- WIDGET PICKER MODAL -->
+<div class="modal-overlay" id="widgetPicker" style="display:none">
+    <div class="modal-box" style="max-width:600px">
+        <div class="modal-header">
+            <div class="modal-title">Add Widget</div>
+            <button class="btn btn-ghost btn-icon" onclick="closeWidgetPicker()">✕</button>
+        </div>
+        <div style="padding:16px">
+            <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin-bottom:12px">Choose a widget type:</div>
+            <div class="row g-3" id="widgetTypes">
+                <div class="col-md-4">
+                    <div class="card" style="cursor:pointer;text-align:center;padding:16px" onclick="addWidget('spend_chart')">
+                        <i class="bi bi-bar-chart" style="font-size:1.5rem;color:var(--accent)"></i>
+                        <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);margin-top:6px">Spend Chart</div>
+                        <div style="font-size:0.7rem;color:var(--text-tertiary)">Daily spend over time</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card" style="cursor:pointer;text-align:center;padding:16px" onclick="addWidget('revenue_chart')">
+                        <i class="bi bi-graph-up" style="font-size:1.5rem;color:var(--green)"></i>
+                        <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);margin-top:6px">Revenue Chart</div>
+                        <div style="font-size:0.7rem;color:var(--text-tertiary)">Revenue trends</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card" style="cursor:pointer;text-align:center;padding:16px" onclick="addWidget('roas_gauge')">
+                        <i class="bi bi-speedometer" style="font-size:1.5rem;color:var(--purple)"></i>
+                        <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);margin-top:6px">ROAS Gauge</div>
+                        <div style="font-size:0.7rem;color:var(--text-tertiary)">Current ROAS indicator</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card" style="cursor:pointer;text-align:center;padding:16px" onclick="addWidget('top_creatives')">
+                        <i class="bi bi-trophy" style="font-size:1.5rem;color:var(--amber)"></i>
+                        <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);margin-top:6px">Top Creatives</div>
+                        <div style="font-size:0.7rem;color:var(--text-tertiary)">Best performing ads</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card" style="cursor:pointer;text-align:center;padding:16px" onclick="addWidget('platform_pie')">
+                        <i class="bi bi-pie-chart" style="font-size:1.5rem;color:var(--cyan)"></i>
+                        <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);margin-top:6px">Platform Split</div>
+                        <div style="font-size:0.7rem;color:var(--text-tertiary)">Spend by platform</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card" style="cursor:pointer;text-align:center;padding:16px" onclick="addWidget('alerts')">
+                        <i class="bi bi-bell" style="font-size:1.5rem;color:var(--red)"></i>
+                        <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);margin-top:6px">Alerts</div>
+                        <div style="font-size:0.7rem;color:var(--text-tertiary)">Active alerts & warnings</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+var widgets = [];
+
+function loadWidgets() {
+    var grid = document.getElementById('widgetGrid');
+    grid.innerHTML = '<div class="col-12 text-center py-5" id="widgetLoading"><div class="loading-inline"><div class="loading-spinner" style="width:24px;height:24px;border-width:3px;margin:0 auto 8px"></div> Loading widgets...</div></div>';
+
+    fetch('/api/proxy/reporting/widgets')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        widgets = data.widgets || data || [];
+        renderWidgets();
+    })
+    .catch(function(e) {
+        grid.innerHTML = '<div class="col-12"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><h3>Failed to Load</h3><p>' + e.message + '</p><button class="btn btn-outline btn-sm mt-2" onclick="loadWidgets()">Retry</button></div></div>';
+    });
+}
+
+function renderWidgets() {
+    var grid = document.getElementById('widgetGrid');
+    if (!widgets.length) {
+        grid.innerHTML = '';
+        document.getElementById('widgetEmpty').style.display = '';
+        return;
+    }
+    document.getElementById('widgetEmpty').style.display = 'none';
+
+    var typeIcons = {
+        spend_chart: 'bi-bar-chart',
+        revenue_chart: 'bi-graph-up',
+        roas_gauge: 'bi-speedometer',
+        top_creatives: 'bi-trophy',
+        platform_pie: 'bi-pie-chart',
+        alerts: 'bi-bell'
+    };
+
+    var html = '';
+    widgets.forEach(function(w, idx) {
+        var icon = typeIcons[w.type] || 'bi-grid';
+        html += '<div class="col-md-6 widget-item" data-id="' + (w.id || idx) + '">';
+        html += '<div class="card">';
+        html += '<div class="card-header">';
+        html += '<h3 style="font-size:0.85rem"><i class="bi ' + icon + '"></i> ' + (w.title || w.type || 'Widget') + '</h3>';
+        html += '<button class="btn btn-ghost btn-sm" onclick="removeWidget(\'' + (w.id || idx) + '\')" title="Remove"><i class="bi bi-x-lg"></i></button>';
+        html += '</div>';
+        html += '<div style="padding:16px;min-height:120px">';
+        if (w.data) {
+            html += '<pre style="font-size:0.72rem;color:var(--text-secondary);background:var(--bg-elevated);padding:8px;border-radius:var(--radius-sm);overflow:auto;max-height:200px">' + JSON.stringify(w.data, null, 2) + '</pre>';
+        } else {
+            html += '<div style="text-align:center;color:var(--text-tertiary);font-size:0.8rem;padding:20px"><i class="bi bi-grid" style="font-size:1.5rem"></i><br>Widget data will load here</div>';
+        }
+        html += '</div></div></div>';
+    });
+    grid.innerHTML = html;
+}
+
+function addWidget(type) {
+    fetch('/api/proxy/reporting/widgets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: type, title: type.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); }) })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) { showToast('Error', data.error, 'error'); return; }
+        showToast('Added', 'Widget added to dashboard', 'success');
+        closeWidgetPicker();
+        loadWidgets();
+    })
+    .catch(function(e) { showToast('Error', e.message, 'error'); });
+}
+
+function removeWidget(id) {
+    if (!confirm('Remove this widget?')) return;
+    fetch('/api/proxy/reporting/widgets/' + id, { method: 'DELETE' })
+    .then(function(r) { return r.json(); })
+    .then(function() {
+        showToast('Removed', 'Widget removed', 'info');
+        loadWidgets();
+    })
+    .catch(function(e) { showToast('Error', e.message, 'error'); });
+}
+
+function saveLayout() {
+    var order = [];
+    document.querySelectorAll('.widget-item').forEach(function(el) {
+        order.push(el.dataset.id);
+    });
+    fetch('/api/proxy/reporting/widgets/layout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: order })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function() { showToast('Saved', 'Layout saved', 'success'); })
+    .catch(function(e) { showToast('Error', e.message, 'error'); });
+}
+
+function openWidgetPicker() {
+    document.getElementById('widgetPicker').style.display = 'flex';
+}
+function closeWidgetPicker() {
+    document.getElementById('widgetPicker').style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', loadWidgets);
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeWidgetPicker(); });
+</script>
+{% endblock %}

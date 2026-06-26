@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Creative Library{% endblock %}
+{% block page_title %}Creative Library{% endblock %}
+{% block breadcrumb %}Creative > Library{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1>Creative Library</h1>
+        <p>Browse and manage your saved ad creatives</p>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-primary" onclick="openAddModal()">
+            <i class="bi bi-plus-circle"></i> Add Creative
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="loadCreatives()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card" style="margin-bottom:16px">
+    <div style="display:flex;gap:10px;align-items:center;padding:12px 16px;flex-wrap:wrap">
+        <label style="font-size:0.75rem;font-weight:600;color:var(--text-secondary)">Filter by type:</label>
+        <button class="btn btn-sm btn-primary filter-btn" data-type="all" onclick="filterByType('all',this)">All</button>
+        <button class="btn btn-sm btn-outline filter-btn" data-type="copy" onclick="filterByType('copy',this)">
+            <i class="bi bi-file-text"></i> Copy
+        </button>
+        <button class="btn btn-sm btn-outline filter-btn" data-type="image" onclick="filterByType('image',this)">
+            <i class="bi bi-image"></i> Image
+        </button>
+        <button class="btn btn-sm btn-outline filter-btn" data-type="video" onclick="filterByType('video',this)">
+            <i class="bi bi-play-circle"></i> Video
+        </button>
+    </div>
+</div>
+
+<!-- Creatives Grid -->
+<div class="row g-4" id="creativesGrid">
+    <div class="col-12 text-center py-5" id="loadingState">
+        <div class="loading-inline"><div class="loading-spinner" style="width:24px;height:24px;border-width:3px;margin:0 auto 8px"></div> Loading creatives...</div>
+    </div>
+</div>
+
+<!-- Empty state (hidden by default) -->
+<div id="emptyState" style="display:none" class="col-12">
+    <div class="empty-state">
+        <i class="bi bi-palette"></i>
+        <h3>No Creatives Yet</h3>
+        <p>Add your first creative to start building your library.</p>
+        <button class="btn btn-accent btn-sm mt-2" onclick="openAddModal()">Add Creative</button>
+    </div>
+</div>
+
+<!-- ADD CREATIVE MODAL -->
+<div class="modal-overlay" id="addModal" style="display:none">
+    <div class="modal-box" style="max-width:520px">
+        <div class="modal-header">
+            <div class="modal-title">Add Creative</div>
+            <button class="btn btn-ghost btn-icon" onclick="closeAddModal()">✕</button>
+        </div>
+        <form id="addForm" onsubmit="submitCreative(event)">
+            <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+                <div>
+                    <label style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px">Type</label>
+                    <select id="creativeType" required style="width:100%;background:var(--bg-elevated);border:1px solid var(--border-strong);color:var(--text-primary);border-radius:var(--radius-sm);padding:8px 12px;font-size:0.8rem;outline:none;font-family:var(--font)">
+                        <option value="copy">Copy</option>
+                        <option value="image">Image</option>
+                        <option value="video">Video</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px">Hook</label>
+                    <input type="text" id="creativeHook" placeholder="Attention-grabbing headline..." required
+                           style="width:100%;background:var(--bg-elevated);border:1px solid var(--border-strong);color:var(--text-primary);border-radius:var(--radius-sm);padding:8px 12px;font-size:0.8rem;outline:none;font-family:var(--font)">
+                </div>
+                <div>
+                    <label style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px">Body</label>
+                    <textarea id="creativeBody" placeholder="Main ad copy..." required rows="4"
+                              style="width:100%;background:var(--bg-elevated);border:1px solid var(--border-strong);color:var(--text-primary);border-radius:var(--radius-sm);padding:8px 12px;font-size:0.8rem;outline:none;font-family:var(--font);resize:vertical"></textarea>
+                </div>
+                <div>
+                    <label style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px">CTA</label>
+                    <input type="text" id="creativeCTA" placeholder="Shop Now, Learn More..." required
+                           style="width:100%;background:var(--bg-elevated);border:1px solid var(--border-strong);color:var(--text-primary);border-radius:var(--radius-sm);padding:8px 12px;font-size:0.8rem;outline:none;font-family:var(--font)">
+                </div>
+                <div>
+                    <label style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px">Tags (comma-separated)</label>
+                    <input type="text" id="creativeTags" placeholder="sale, summer, fashion"
+                           style="width:100%;background:var(--bg-elevated);border:1px solid var(--border-strong);color:var(--text-primary);border-radius:var(--radius-sm);padding:8px 12px;font-size:0.8rem;outline:none;font-family:var(--font)">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline btn-sm" onclick="closeAddModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-circle"></i> Save Creative</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+var allCreatives = [];
+
+function loadCreatives() {
+    var grid = document.getElementById('creativesGrid');
+    grid.innerHTML = '<div class="col-12 text-center py-5" id="loadingState"><div class="loading-inline"><div class="loading-spinner" style="width:24px;height:24px;border-width:3px;margin:0 auto 8px"></div> Loading creatives...</div></div>';
+
+    fetch('/api/proxy/creative/library')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        allCreatives = data.creatives || data || [];
+        renderCreatives(allCreatives);
+    })
+    .catch(function(e) {
+        grid.innerHTML = '<div class="col-12"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><h3>Failed to Load</h3><p>' + e.message + '</p><button class="btn btn-outline btn-sm mt-2" onclick="loadCreatives()">Retry</button></div></div>';
+    });
+}
+
+function renderCreatives(creatives) {
+    var grid = document.getElementById('creativesGrid');
+    if (!creatives.length) {
+        grid.innerHTML = '';
+        document.getElementById('emptyState').style.display = '';
+        return;
+    }
+    document.getElementById('emptyState').style.display = 'none';
+
+    var html = '';
+    creatives.forEach(function(c) {
+        var typeIcon = c.type === 'image' ? 'bi-image' : c.type === 'video' ? 'bi-play-circle' : 'bi-file-text';
+        var tags = c.tags || [];
+        if (typeof tags === 'string') tags = tags.split(',').map(function(t) { return t.trim(); }).filter(Boolean);
+
+        html += '<div class="col-md-4 creative-card" data-type="' + (c.type || 'copy') + '">';
+        html += '<div class="card" style="height:100%">';
+        html += '<div class="card-header">';
+        html += '<h3 style="font-size:0.85rem"><i class="bi ' + typeIcon + '"></i> ' + (c.hook || 'Untitled') + '</h3>';
+        html += '<span class="badge badge-info">' + (c.type || 'copy') + '</span>';
+        html += '</div>';
+        html += '<div style="padding:12px 16px">';
+        html += '<p style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">' + (c.body || '') + '</p>';
+        html += '<div style="font-size:0.72rem;font-weight:600;color:var(--accent);margin-bottom:8px">CTA: ' + (c.cta || '—') + '</div>';
+        if (tags.length) {
+            html += '<div style="display:flex;flex-wrap:wrap;gap:4px">';
+            tags.forEach(function(t) {
+                html += '<span class="badge badge-neutral" style="font-size:0.65rem">' + t + '</span>';
+            });
+            html += '</div>';
+        }
+        html += '</div>';
+        html += '<div class="card-footer" style="display:flex;justify-content:flex-end;gap:6px">';
+        html += '<button class="btn btn-ghost btn-sm" onclick="deleteCreative(\'' + (c.id || '') + '\')"><i class="bi bi-trash"></i></button>';
+        html += '</div>';
+        html += '</div></div>';
+    });
+    grid.innerHTML = html;
+}
+
+function filterByType(type, btn) {
+    document.querySelectorAll('.filter-btn').forEach(function(b) {
+        b.className = b.className.replace('btn-primary', 'btn-outline');
+    });
+    btn.className = btn.className.replace('btn-outline', 'btn-primary');
+
+    if (type === 'all') {
+        renderCreatives(allCreatives);
+    } else {
+        renderCreatives(allCreatives.filter(function(c) { return c.type === type; }));
+    }
+}
+
+function openAddModal() {
+    document.getElementById('addModal').style.display = 'flex';
+}
+function closeAddModal() {
+    document.getElementById('addModal').style.display = 'none';
+    document.getElementById('addForm').reset();
+}
+
+function submitCreative(e) {
+    e.preventDefault();
+    var tags = document.getElementById('creativeTags').value.split(',').map(function(t) { return t.trim(); }).filter(Boolean);
+    var payload = {
+        type: document.getElementById('creativeType').value,
+        hook: document.getElementById('creativeHook').value,
+        body: document.getElementById('creativeBody').value,
+        cta: document.getElementById('creativeCTA').value,
+        tags: tags
+    };
+
+    fetch('/api/proxy/creative/library', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) { showToast('Error', data.error, 'error'); return; }
+        showToast('Success', 'Creative saved to library', 'success');
+        closeAddModal();
+        loadCreatives();
+    })
+    .catch(function(e) { showToast('Error', e.message, 'error'); });
+}
+
+function deleteCreative(id) {
+    if (!id || !confirm('Delete this creative?')) return;
+    fetch('/api/proxy/creative/library/' + id, { method: 'DELETE' })
+    .then(function(r) { return r.json(); })
+    .then(function() {
+        showToast('Deleted', 'Creative removed', 'info');
+        loadCreatives();
+    })
+    .catch(function(e) { showToast('Error', e.message, 'error'); });
+}
+
+document.addEventListener('DOMContentLoaded', loadCreatives);
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeAddModal(); });
+</script>
+{% endblock %}

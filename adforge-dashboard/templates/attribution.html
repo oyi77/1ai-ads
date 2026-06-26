@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}Attribution{% endblock %}
+{% block page_title %}Attribution{% endblock %}
+{% block breadcrumb %}Reporting > Attribution{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1>Multi-Touch Attribution</h1>
+        <p>Understand how each touchpoint contributes to conversions</p>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-outline btn-sm" onclick="loadAttribution()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Model Selection -->
+<div class="card" style="margin-bottom:16px">
+    <div style="padding:16px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+            <label style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px">Attribution Model</label>
+            <select id="attributionModel"
+                    style="width:100%;background:var(--bg-elevated);border:1px solid var(--border-strong);color:var(--text-primary);border-radius:var(--radius-sm);padding:8px 12px;font-size:0.8rem;outline:none;font-family:var(--font)">
+                <option value="last_touch">Last Touch</option>
+                <option value="first_touch">First Touch</option>
+                <option value="linear">Linear</option>
+                <option value="time_decay">Time Decay</option>
+                <option value="position_based">Position-Based (U-shaped)</option>
+                <option value="data_driven">Data-Driven</option>
+            </select>
+        </div>
+        <div style="min-width:150px">
+            <label style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px">Period (days)</label>
+            <input type="number" id="attrPeriod" value="30" min="1" max="365"
+                   style="width:100%;background:var(--bg-elevated);border:1px solid var(--border-strong);color:var(--text-primary);border-radius:var(--radius-sm);padding:8px 12px;font-size:0.8rem;outline:none;font-family:var(--font)">
+        </div>
+        <button class="btn btn-primary" onclick="runAttribution()">
+            <i class="bi bi-diagram-3"></i> Analyze
+        </button>
+        <button class="btn btn-outline" onclick="compareModels()">
+            <i class="bi bi-bar-chart-steps"></i> Compare Models
+        </button>
+    </div>
+</div>
+
+<!-- Loading -->
+<div id="attrLoading" class="text-center py-5" style="display:none">
+    <div class="loading-inline"><div class="loading-spinner" style="width:24px;height:24px;border-width:3px;margin:0 auto 8px"></div> Analyzing attribution...</div>
+</div>
+
+<!-- Results Display -->
+<div id="attrResults" style="display:none">
+    <!-- Summary Stats -->
+    <div class="stat-grid" id="attrStats" style="margin-bottom:16px"></div>
+
+    <!-- Touchpoint Breakdown -->
+    <div class="card" id="touchpointCard">
+        <div class="card-header">
+            <h3><i class="bi bi-diagram-3"></i> Touchpoint Attribution</h3>
+            <span class="badge badge-info" id="modelBadge">—</span>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Touchpoint</th>
+                        <th>Channel</th>
+                        <th>Conversions</th>
+                        <th>Attributed %</th>
+                        <th>Revenue</th>
+                        <th>Weight</th>
+                    </tr>
+                </thead>
+                <tbody id="touchpointBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Compare Models View -->
+<div id="compareResults" style="display:none">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="bi bi-bar-chart-steps"></i> Model Comparison</h3>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Channel</th>
+                        <th>Last Touch</th>
+                        <th>First Touch</th>
+                        <th>Linear</th>
+                        <th>Time Decay</th>
+                        <th>Position</th>
+                    </tr>
+                </thead>
+                <tbody id="compareBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function runAttribution() {
+    var model = document.getElementById('attributionModel').value;
+    var period = document.getElementById('attrPeriod').value;
+
+    document.getElementById('attrLoading').style.display = '';
+    document.getElementById('attrResults').style.display = 'none';
+    document.getElementById('compareResults').style.display = 'none';
+
+    fetch('/api/proxy/attribution/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: model, period_days: parseInt(period) })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        document.getElementById('attrLoading').style.display = 'none';
+        if (data.error) { showToast('Error', data.error, 'error'); return; }
+
+        document.getElementById('modelBadge').textContent = model.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+
+        // Stats
+        var stats = data.summary || {};
+        var statsHtml = '';
+        var statItems = [
+            { label: 'Total Conversions', value: Number(stats.total_conversions || 0).toLocaleString(), icon: 'bi-bullseye' },
+            { label: 'Total Revenue', value: '$' + Number(stats.total_revenue || 0).toLocaleString(), icon: 'bi-cash' },
+            { label: 'Unique Paths', value: Number(stats.unique_paths || 0).toLocaleString(), icon: 'bi-signpost' },
+            { label: 'Avg Path Length', value: (stats.avg_path_length || 0).toFixed(1) + ' touches', icon: 'bi-arrow-right' }
+        ];
+        statItems.forEach(function(s) {
+            statsHtml += '<div class="stat-card"><div class="stat-label"><i class="bi ' + s.icon + '"></i> ' + s.label + '</div><div class="stat-value" style="font-size:1.1rem">' + s.value + '</div></div>';
+        });
+        document.getElementById('attrStats').innerHTML = statsHtml;
+
+        // Touchpoints
+        var touchpoints = data.touchpoints || data.channels || [];
+        var tbody = document.getElementById('touchpointBody');
+        if (touchpoints.length) {
+            var html = '';
+            touchpoints.forEach(function(tp) {
+                var weight = (tp.attribution_pct || tp.weight || 0);
+                var weightColor = weight >= 30 ? 'var(--green)' : weight >= 15 ? 'var(--amber)' : 'var(--text-secondary)';
+                html += '<tr>';
+                html += '<td style="font-weight:500;color:var(--text-primary)">' + (tp.touchpoint || tp.name || '—') + '</td>';
+                html += '<td><span class="badge badge-neutral">' + (tp.channel || '—') + '</span></td>';
+                html += '<td class="text-mono" style="font-size:0.75rem">' + Number(tp.conversions || 0).toLocaleString() + '</td>';
+                html += '<td class="text-mono" style="font-size:0.75rem;font-weight:600;color:' + weightColor + '">' + weight.toFixed(1) + '%</td>';
+                html += '<td class="text-mono" style="font-size:0.75rem">$' + Number(tp.revenue || 0).toLocaleString() + '</td>';
+                html += '<td><div style="background:var(--bg-elevated);border-radius:4px;height:8px;overflow:hidden"><div style="background:' + weightColor + ';height:100%;width:' + Math.min(weight, 100) + '%"></div></div></td>';
+                html += '</tr>';
+            });
+            tbody.innerHTML = html;
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>No attribution data available.</p></div></td></tr>';
+        }
+        document.getElementById('attrResults').style.display = '';
+    })
+    .catch(function(e) {
+        document.getElementById('attrLoading').style.display = 'none';
+        showToast('Error', e.message, 'error');
+    });
+}
+
+function compareModels() {
+    var period = document.getElementById('attrPeriod').value;
+
+    document.getElementById('attrLoading').style.display = '';
+    document.getElementById('attrResults').style.display = 'none';
+    document.getElementById('compareResults').style.display = 'none';
+
+    fetch('/api/proxy/attribution/compare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ period_days: parseInt(period) })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        document.getElementById('attrLoading').style.display = 'none';
+        if (data.error) { showToast('Error', data.error, 'error'); return; }
+
+        var comparisons = data.comparisons || data.models || [];
+        var tbody = document.getElementById('compareBody');
+
+        if (comparisons.length) {
+            var channels = {};
+            comparisons.forEach(function(m) {
+                (m.channels || []).forEach(function(ch) {
+                    if (!channels[ch.name]) channels[ch.name] = {};
+                    channels[ch.name][m.model] = ch.pct || ch.weight || 0;
+                });
+            });
+
+            var html = '';
+            Object.keys(channels).forEach(function(name) {
+                var ch = channels[name];
+                html += '<tr>';
+                html += '<td style="font-weight:500;color:var(--text-primary)">' + name + '</td>';
+                ['last_touch', 'first_touch', 'linear', 'time_decay', 'position_based'].forEach(function(m) {
+                    var val = ch[m] || 0;
+                    html += '<td class="text-mono" style="font-size:0.75rem">' + val.toFixed(1) + '%</td>';
+                });
+                html += '</tr>';
+            });
+            tbody.innerHTML = html;
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>No comparison data available.</p></div></td></tr>';
+        }
+        document.getElementById('compareResults').style.display = '';
+    })
+    .catch(function(e) {
+        document.getElementById('attrLoading').style.display = 'none';
+        showToast('Error', e.message, 'error');
+    });
+}
+
+function loadAttribution() {
+    document.getElementById('attrResults').style.display = 'none';
+    document.getElementById('compareResults').style.display = 'none';
+}
+</script>
+{% endblock %}

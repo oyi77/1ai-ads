@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Creative Scoring{% endblock %}
+{% block page_title %}Creative Scoring{% endblock %}
+{% block breadcrumb %}Creative > Scoring{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1>Creative Scoring</h1>
+        <p>Score your ad copy before you launch — get instant feedback and suggestions</p>
+    </div>
+</div>
+
+<!-- Input Form -->
+<div class="card" style="margin-bottom:16px">
+    <div class="card-header">
+        <h3><i class="bi bi-star"></i> Score a Creative</h3>
+    </div>
+    <form id="scoreForm" onsubmit="scoreCreative(event)">
+        <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+                <div style="flex:1;min-width:200px">
+                    <label style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px">Hook</label>
+                    <input type="text" id="scoreHook" placeholder="The attention-grabbing first line..." required
+                           style="width:100%;background:var(--bg-elevated);border:1px solid var(--border-strong);color:var(--text-primary);border-radius:var(--radius-sm);padding:8px 12px;font-size:0.8rem;outline:none;font-family:var(--font)">
+                </div>
+                <div style="min-width:150px">
+                    <label style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px">Platform</label>
+                    <select id="scorePlatform" required
+                            style="width:100%;background:var(--bg-elevated);border:1px solid var(--border-strong);color:var(--text-primary);border-radius:var(--radius-sm);padding:8px 12px;font-size:0.8rem;outline:none;font-family:var(--font)">
+                        <option value="meta">Meta</option>
+                        <option value="tiktok">TikTok</option>
+                        <option value="google">Google</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px">Body</label>
+                <textarea id="scoreBody" placeholder="Main ad body text..." required rows="4"
+                          style="width:100%;background:var(--bg-elevated);border:1px solid var(--border-strong);color:var(--text-primary);border-radius:var(--radius-sm);padding:8px 12px;font-size:0.8rem;outline:none;font-family:var(--font);resize:vertical"></textarea>
+            </div>
+            <div>
+                <label style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px">CTA</label>
+                <input type="text" id="scoreCTA" placeholder="Shop Now, Learn More..." required
+                       style="width:100%;background:var(--bg-elevated);border:1px solid var(--border-strong);color:var(--text-primary);border-radius:var(--radius-sm);padding:8px 12px;font-size:0.8rem;outline:none;font-family:var(--font)">
+            </div>
+        </div>
+        <div class="card-footer" style="display:flex;justify-content:flex-end">
+            <button type="submit" class="btn btn-primary" id="scoreBtn">
+                <i class="bi bi-star"></i> Score Creative
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Score Display -->
+<div id="scoreResults" style="display:none">
+    <!-- Overall Score -->
+    <div class="card" style="margin-bottom:16px;text-align:center;padding:24px">
+        <div style="font-size:0.75rem;font-weight:600;color:var(--text-secondary);margin-bottom:8px">OVERALL SCORE</div>
+        <div id="overallScore" style="font-size:3rem;font-weight:800;margin-bottom:4px">—</div>
+        <div id="scoreLabel" style="font-size:0.85rem;font-weight:500;color:var(--text-secondary)">—</div>
+    </div>
+
+    <!-- Breakdown Grid -->
+    <div class="stat-grid" id="breakdownGrid" style="margin-bottom:16px"></div>
+
+    <!-- Suggestions -->
+    <div class="card" id="suggestionsCard">
+        <div class="card-header">
+            <h3><i class="bi bi-lightbulb"></i> Suggestions</h3>
+        </div>
+        <div id="suggestionsList" style="padding:16px"></div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function scoreCreative(e) {
+    e.preventDefault();
+    var btn = document.getElementById('scoreBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="loading-spinner" style="width:14px;height:14px;border-width:2px;margin:0;display:inline-block"></div> Scoring...';
+
+    var payload = {
+        hook: document.getElementById('scoreHook').value,
+        body: document.getElementById('scoreBody').value,
+        cta: document.getElementById('scoreCTA').value,
+        platform: document.getElementById('scorePlatform').value
+    };
+
+    fetch('/api/proxy/creative/scoring', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-star"></i> Score Creative';
+
+        if (data.error) { showToast('Error', data.error, 'error'); return; }
+
+        var score = data.score || data.overall_score || 0;
+        var scoreEl = document.getElementById('overallScore');
+        scoreEl.textContent = score + '/100';
+
+        if (score >= 80) { scoreEl.style.color = 'var(--green)'; document.getElementById('scoreLabel').textContent = 'Excellent'; }
+        else if (score >= 60) { scoreEl.style.color = 'var(--cyan)'; document.getElementById('scoreLabel').textContent = 'Good'; }
+        else if (score >= 40) { scoreEl.style.color = 'var(--amber)'; document.getElementById('scoreLabel').textContent = 'Average'; }
+        else { scoreEl.style.color = 'var(--red)'; document.getElementById('scoreLabel').textContent = 'Needs Work'; }
+
+        // Breakdown
+        var breakdown = data.breakdown || {};
+        var grid = document.getElementById('breakdownGrid');
+        var categories = [
+            { key: 'hook_strength', label: 'Hook Strength', icon: 'bi-bullseye' },
+            { key: 'body_clarity', label: 'Body Clarity', icon: 'bi-card-text' },
+            { key: 'cta_effectiveness', label: 'CTA Effectiveness', icon: 'bi-cursor' },
+            { key: 'emotional_appeal', label: 'Emotional Appeal', icon: 'bi-heart' }
+        ];
+        var gridHtml = '';
+        categories.forEach(function(cat) {
+            var val = breakdown[cat.key] || breakdown[cat.key.replace('_', '')] || '—';
+            var cardClass = val >= 80 ? 'success' : val >= 60 ? '' : val >= 40 ? '' : '';
+            gridHtml += '<div class="stat-card ' + cardClass + '"><div class="stat-label"><i class="bi ' + cat.icon + '"></i> ' + cat.label + '</div><div class="stat-value">' + val + '</div></div>';
+        });
+        grid.innerHTML = gridHtml;
+
+        // Suggestions
+        var suggestions = data.suggestions || data.recommendations || [];
+        var sugCard = document.getElementById('suggestionsCard');
+        var sugList = document.getElementById('suggestionsList');
+        if (suggestions.length) {
+            var sHtml = '<ul style="list-style:none;padding:0;margin:0">';
+            suggestions.forEach(function(s) {
+                sHtml += '<li style="padding:8px 0;border-bottom:1px solid var(--border);font-size:0.82rem;color:var(--text-secondary);display:flex;gap:8px;align-items:flex-start">';
+                sHtml += '<i class="bi bi-lightbulb" style="color:var(--amber);flex-shrink:0;margin-top:2px"></i>';
+                sHtml += '<span>' + (typeof s === 'string' ? s : s.text || s.message || JSON.stringify(s)) + '</span>';
+                sHtml += '</li>';
+            });
+            sHtml += '</ul>';
+            sugList.innerHTML = sHtml;
+            sugCard.style.display = '';
+        } else {
+            sugCard.style.display = 'none';
+        }
+
+        document.getElementById('scoreResults').style.display = '';
+        showToast('Scored', 'Creative scored ' + score + '/100', score >= 60 ? 'success' : 'warning');
+    })
+    .catch(function(e) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-star"></i> Score Creative';
+        showToast('Error', e.message, 'error');
+    });
+}
+</script>
+{% endblock %}
