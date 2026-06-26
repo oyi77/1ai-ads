@@ -5,7 +5,7 @@ import { TrendingService } from '../services/trending.js';
 import { ScalevService } from '../services/scalev.js';
 import { PaymentService } from '../services/payments.js';
 import { LearningService } from '../services/learning.js';
-import { MetaAdsAPI } from '../services/meta-api.js';
+import { getPlatform, getAllPlatforms, MetaAdsAPI } from '../platforms/index.js';
 import { CreativeStudio } from '../services/creative-studio.js';
 import { MetaVideoService } from '../services/meta-video-service.js';
 import { ContentScheduler } from '../services/content-scheduler.js';
