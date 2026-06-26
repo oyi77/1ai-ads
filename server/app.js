@@ -8,6 +8,7 @@ import { createLogger } from './lib/logger.js';
 import { createRepositories } from './app/repositories.js';
 import { createServices } from './app/services.js';
 import { createRouters } from './app/routers.js';
+import { initBot } from './bot/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -119,6 +120,9 @@ export function createApp(params) {
   });
 
   createRouters({ app, repos, services });
+
+  // Initialize Telegram bot (if TELEGRAM_BOT_TOKEN is set)
+  initBot(app, { repos, services });
 
   app.use((req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/assets') || req.path.startsWith('/t/') || req.path.startsWith('/favicon.ico')) {
