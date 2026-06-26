@@ -127,6 +127,70 @@ All endpoints are prefixed with `/api`. Protected endpoints require `Authorizati
 | POST | `/api/settings/accounts/activate` | Set active account |
 | DELETE | `/api/settings/accounts` | Remove account |
 
+
+## MCP (Model Context Protocol)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/mcp/sse` | Protected | SSE connection for MCP client |
+| POST | `/api/mcp/messages` | Protected | Send MCP message |
+| GET | `/api/mcp/status` | Protected | MCP server status |
+| POST | `/api/mcp/connect` | Protected | Connect to platform MCP |
+| POST | `/api/mcp/disconnect` | Protected | Disconnect platform MCP |
+| GET | `/api/mcp/tools/:platform` | Protected | List platform tools |
+| POST | `/api/mcp/call` | Protected | Call MCP tool |
+
+## Reporting & Analytics
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/reporting/unified` | Cross-platform unified report |
+| GET | `/api/reporting/widgets` | Dashboard widgets config |
+| GET | `/api/analytics` | Campaign analytics |
+| GET | `/api/reports/export/csv` | Download campaign data as CSV |
+| GET | `/api/attribution/summary` | Attribution summary |
+| GET | `/api/attribution/matches` | Conversion attribution matches |
+
+## Creative
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/creative/library` | List saved creatives |
+| POST | `/api/creative/library` | Save creative |
+| GET | `/api/creative/fatigue/detect/:id` | Detect creative fatigue |
+| POST | `/api/creative/generate` | Generate ad copies (AI) |
+| POST | `/api/creative/score` | Score creative quality |
+
+## Automation
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/automation/rules` | List automation rules |
+| POST | `/api/automation/rules` | Create rule |
+| PUT | `/api/automation/rules/:id` | Update rule |
+| DELETE | `/api/automation/rules/:id` | Delete rule |
+
+## A/B Tests
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/ab-tests` | List A/B tests |
+| POST | `/api/ab-tests` | Create test |
+| PUT | `/api/ab-tests/:id` | Update test |
+
+## Competitor Spy
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/competitor-spy/insights` | Get competitor insights |
+| POST | `/api/competitor-spy/analyze` | Analyze competitor |
+
+## Health
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/health` | Public | Health check (`{"status":"ok"}`) |
+
 ## Response Format
 
 All endpoints return:

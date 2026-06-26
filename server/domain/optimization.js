@@ -17,19 +17,19 @@ const log = createLogger('domain:optimization');
 
 // ── Profitability ────────────────────────────────────────────
 
-const PLATFORM_TAX_RATE = 0.06;
+const PLATFORM_TAX_RATE = parseFloat(process.env.PLATFORM_TAX_RATE || '0.06');
 
 export const ROAS_THRESHOLDS = {
-  SCALE_UP: 2.0,
-  PROFITABLE: 1.0,
-  STOP_LOSS: 0.7,
+  SCALE_UP: parseFloat(process.env.ROAS_SCALE_UP || '2.0'),
+  PROFITABLE: parseFloat(process.env.ROAS_PROFITABLE || '1.0'),
+  STOP_LOSS: parseFloat(process.env.ROAS_STOP_LOSS || '0.7'),
 };
 
 export const METRIC_THRESHOLDS = {
-  CTR_MIN: 1.0,
-  CTR_SCALE: 2.0,
-  CPC_MAX: 200,
-  CPC_SCALE: 120,
+  CTR_MIN: parseFloat(process.env.CTR_MIN || '1.0'),
+  CTR_SCALE: parseFloat(process.env.CTR_SCALE || '2.0'),
+  CPC_MAX: parseFloat(process.env.CPC_MAX || '200'),
+  CPC_SCALE: parseFloat(process.env.CPC_SCALE || '120'),
 };
 
 export function calculateEffectiveCost(totalSpend) {
@@ -96,9 +96,9 @@ export function generateReport({ product, day, totalDays, spend, commission }) {
 // ── Stoploss Engine ──────────────────────────────────────────
 
 const STOPLOSS_CONFIG = {
-  ROAS_DROP_THRESHOLD: 0.30,
-  BUDGET_REDUCTION_FACTOR: 0.50,
-  MAX_CONSECUTIVE_DROPS: 3,
+  ROAS_DROP_THRESHOLD: parseFloat(process.env.STOPLOSS_ROAS_DROP || '0.30'),
+  BUDGET_REDUCTION_FACTOR: parseFloat(process.env.STOPLOSS_BUDGET_REDUCTION || '0.50'),
+  MAX_CONSECUTIVE_DROPS: parseInt(process.env.STOPLOSS_MAX_DROPS || '3', 10),
 };
 
 export function calculateRoasDrop(currentROAS, previousROAS) {
@@ -156,9 +156,7 @@ export function canIncreaseBudget(roasIsDropping) {
 
 // ── Scale Manager ────────────────────────────────────────────
 
-const BUDGET_LADDER = [
-  200_000, 500_000, 1_000_000, 2_000_000, 5_000_000, 10_000_000,
-];
+const BUDGET_LADDER = (process.env.BUDGET_LADDER || '200000,500000,1000000,2000000,5000000,10000000').split(',').map(Number);
 
 const HIDDEN_INTERESTS_PROMPT = `You are a Facebook Ads expert finding hidden interests for Shopee Affiliate products.
 
@@ -219,4 +217,37 @@ export function discoverBudgetCap(currentBudget, roasIsDropping) {
   }
   const nextBudget = BUDGET_LADDER[currentIdx + 1];
   return { nextBudget, reason: `Scale up: Rp ${currentBudget.toLocaleString('id-ID')} → Rp ${nextBudget.toLocaleString('id-ID')}` };
+}
+
+
+// ── Dayparting Engine ────────────────────────────────────────
+
+/**
+ * Evaluate time-of-day budget adjustment.
+ * All values configurable via environment variables.
+ * @param {object} campaign — campaign record
+ * @param {number} hourOfDay — 0-23 in configured timezone
+ * @returns {{ action: string, factor: number, reason: string }}
+ */
+export function evaluateDayparting(campaign, hourOfDay) {
+  const peakHours = (process.env.DAYPARTING_PEAK_HOURS || '9,10,11,18,19,20,21').split(',').map(Number);
+  const offPeakHours = (process.env.DAYPARTING_OFFPEAK_HOURS || '0,1,2,3,4,5,6').split(',').map(Number);
+  const peakFactor = parseFloat(process.env.DAYPARTING_PEAK_FACTOR || '1.3');
+  const offPeakFactor = parseFloat(process.env.DAYPARTING_OFFPEAK_FACTOR || '0.5');
+
+  if (peakHours.includes(hourOfDay)) {
+    return {
+      action: 'INCREASE_BUDGET',
+      factor: peakFactor,
+      reason: `Peak hours (${hourOfDay}:00) — increase spend by ${Math.round((peakFactor - 1) * 100)}%`,
+    };
+  }
+  if (offPeakHours.includes(hourOfDay)) {
+    return {
+      action: 'DECREASE_BUDGET',
+      factor: offPeakFactor,
+      reason: `Off-peak hours (${hourOfDay}:00) — reduce spend by ${Math.round((1 - offPeakFactor) * 100)}%`,
+    };
+  }
+  return { action: 'MAINTAIN', factor: 1.0, reason: `Normal hours (${hourOfDay}:00)` };
 }

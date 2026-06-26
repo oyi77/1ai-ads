@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import config from '../config/index.js';
 import rateLimit from 'express-rate-limit';
 import { createTrackRouter } from '../routes/track.js';
@@ -31,7 +33,14 @@ export function createRouters({ app, repos, services }) {
   const deps = { repos, services, publicRateLimit, mcpClient };
 
   // ── Server-Rendered Dashboard Pages (BEFORE API routes) ───
-  app.use('/', createPagesGroupRouter());
+  // Only serve EJS pages when React SPA dist doesn't exist.
+  // When dist/index.html exists, the SPA handles all non-API routes.
+  const spaIndexPath = path.join(process.cwd(), 'dist', 'index.html');
+  const spaExists = fs.existsSync(spaIndexPath);
+
+  if (!spaExists) {
+    app.use('/', createPagesGroupRouter());
+  }
 
   // ── Auth & Core ──────────────────────────────────────────────
   app.use('/api', createAuthGroupRouter(deps));

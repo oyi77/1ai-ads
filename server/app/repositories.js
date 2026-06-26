@@ -17,6 +17,7 @@ import { AttributionRepository } from '../repositories/attribution.js';
 import { ContentSchedulerQueueRepository } from '../repositories/content-scheduler-queue.js';
 import { DraftsRepository } from '../repositories/drafts.js';
 import { ShopeeCommissionsRepository } from '../repositories/shopee-commissions.js';
+import { AuditLogRepository } from '../repositories/audit-log.js';
 
 export function createRepositories(db) {
   const scheduleRepo = new ScheduleRepository(db);
@@ -47,5 +48,6 @@ export function createRepositories(db) {
     contentSchedulerQueueRepo,
     draftsRepo: new DraftsRepository(db),
     shopeeCommissionsRepo: new ShopeeCommissionsRepository(db),
+    auditRepo: new AuditLogRepository(db),
   };
 }

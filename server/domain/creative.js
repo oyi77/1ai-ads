@@ -154,3 +154,23 @@ export function detectFatigue(history) {
 
   return { fatigued: signals.length > 0, severity, signals };
 }
+
+
+// ── Creative Rotation ─────────────────────────────────────────
+
+/**
+ * Determine if creative should be rotated based on fatigue and age.
+ * All thresholds configurable via environment variables.
+ * @param {object} fatigueResult — from detectFatigue()
+ * @param {number} daysRunning — days the creative has been running
+ * @returns {{ rotate: boolean, urgency?: string }}
+ */
+export function shouldRotateCreative(fatigueResult, daysRunning) {
+  const mediumFatigueDays = parseInt(process.env.CREATIVE_ROTATION_MEDIUM_DAYS || '7', 10);
+  const preventiveDays = parseInt(process.env.CREATIVE_ROTATION_PREVENTIVE_DAYS || '14', 10);
+
+  if (fatigueResult.fatigued && fatigueResult.severity === 'high') return { rotate: true, urgency: 'immediate' };
+  if (fatigueResult.fatigued && fatigueResult.severity === 'medium' && daysRunning > mediumFatigueDays) return { rotate: true, urgency: 'soon' };
+  if (daysRunning > preventiveDays) return { rotate: true, urgency: 'preventive' };
+  return { rotate: false };
+}

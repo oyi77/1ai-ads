@@ -1,403 +1,180 @@
-# AdForge - AI-Powered Autonomous Ads Management System
+# AdForge — AI-Powered Ad Management Platform
 
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-green.svg)
-![Alibaba Cloud](https://img.shields.io/badge/Alibaba-Cloud-orange.svg)
-![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
+![Node](https://img.shields.io/badge/Node.js-22-green.svg)
+![React](https://img.shields.io/badge/React-19-blue.svg)
+![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)
 
-## 🎯 Overview
+## Stack
 
-AdForge is an enterprise-grade, AI-powered autonomous ads management system that automatically optimizes digital advertising campaigns across multiple platforms (Facebook, Google Ads, TikTok) with zero manual intervention.
+- **Backend:** Express 5 + SQLite (better-sqlite3)
+- **Frontend:** React 19 + TypeScript + Tailwind CSS 4 + shadcn/ui
+- **Bot:** Telegraf (Telegram) — 7 commands, 10 cron jobs
+- **Security:** AES-256-GCM encryption, Helmet, audit logging, JWT auth
+- **MCP:** Model Context Protocol server with 13 tools (SSE transport)
+- **Deploy:** Docker Compose, auto-restart on boot
 
-**Key Features:**
-- ✅ Fully autonomous campaign optimization (24/7)
-- ✅ Multi-platform support (Facebook, Google, TikTok)
-- ✅ Intelligent budget allocation & scaling
-- ✅ Real-time performance monitoring
-- ✅ Automated alerts via Telegram/WhatsApp
-- ✅ Enterprise-grade security (KMS encryption)
-- ✅ Production-ready architecture
+## Quick Start
 
----
-
-## 🏗️ Architecture
-
-### Technology Stack
-
-**Backend:**
-- Python 3.10+
-- FastAPI
-- SQLAlchemy ORM
-- Async/Await patterns
-
-**Cloud Infrastructure (Alibaba Cloud):**
-- **ECS** - Elastic Compute Service (Application servers)
-- **RDS** - PostgreSQL Database (Production data)
-- **Redis** - In-memory caching layer
-- **OSS** - Object Storage Service (File storage)
-- **Log Service** - Centralized logging & analytics
-- **KMS** - Key Management Service (Encryption)
-- **Function Compute** - Serverless autonomous tasks
-- **Cloud Monitor** - Health monitoring & alerting
-
-**Frontend:**
-- React 18+
-- Tailwind CSS
-- Real-time dashboards
-
----
-
-## 📂 Repository Structure
-
-```
-1ai-ads/
-├── src/
-│   ├── alibaba_cloud_integration.py    ← MAIN PROOF OF ALIBABA CLOUD
-│   ├── main.py
-│   ├── autonomous_manager.py
-│   ├── rules_engine.py
-│   └── models.py
-│
-├── deployment/
-│   ├── alibaba-cloud-deploy.yml        ← DEPLOYMENT CONFIGURATION
-│   ├── docker-compose.yml
-│   └── Dockerfile
-│
-├── docs/
-│   ├── alibaba-cloud-deployment.md     ← ARCHITECTURE DOCUMENTATION
-│   ├── API.md
-│   └── DEPLOYMENT.md
-│
-├── client/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── views/
-│   │   └── App.jsx
-│   └── index.html
-│
-├── tests/
-│   ├── test_rules.py
-│   ├── test_executor.py
-│   └── test_apis.py
-│
-├── README.md
-├── LICENSE
-├── requirements.txt
-├── docker-compose.yml
-└── .env.example
-```
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.10+
-- Docker & Docker Compose (recommended)
-- Alibaba Cloud account (for production)
-
-### Local Development
+### Docker (production)
 
 ```bash
-# 1. Clone repository
 git clone https://github.com/oyi77/1ai-ads.git
 cd 1ai-ads
-
-# 2. Setup Python environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Configure environment
-cp .env.example .env
-# Edit .env with your credentials
-
-# 5. Run application
-python src/main.py
-
-# 6. Access API
-# http://localhost:8000/docs (Swagger UI)
+cp .env.example .env  # Configure JWT_SECRET, ENCRYPTION_KEY, TELEGRAM_BOT_TOKEN
+npm install            # Install deps for build
+cd client && npm install && npm run build && cd ..  # Build React SPA
+docker compose up -d   # Start on port 5000
 ```
 
-### Docker Deployment
+### Local development
 
 ```bash
-# Build and run with Docker Compose
-docker-compose up -d
+npm install
+cd client && npm run dev  # Vite :5173 (proxies to :5000)
+# In another terminal:
+node server.js            # Express :5000
+```
 
-# Check status
-docker-compose ps
+## Architecture
+
+```
+Cloudflare Tunnel → nginx :6969 → Docker container :5000
+├── /api/*       → REST API (10 grouped route files)
+├── /api/mcp/sse → MCP SSE endpoint (agent access)
+├── /app         → React dashboard (12 pages)
+├── /health      → Health check
+└── SPA fallback → index.html for all non-API routes
+```
+
+### Layered Backend
+
+```
+Routes → Services → Repositories → DB (SQLite)
+  ↓
+Domain (pure business logic — no DB, no API calls)
+  ↓
+Scheduler (10 cron jobs wired to domain functions)
+```
+
+## Key Features
+
+- **8 platform integrations** — Meta, Google, TikTok, LinkedIn, Twitter, Snapchat, Microsoft, Pinterest
+- **Autonomous 24/7 optimization** — stoploss, scaling, dayparting, bid satpam
+- **Telegram bot** — manage ads from chat (7 commands, 10 automated jobs)
+- **AI-powered ad copy** — BerkahKarya 4-model framework (PAS, Gravitasi, Hasil x3, P2P)
+- **Creative fatigue detection** — auto-detect declining performance, suggest rotation
+- **Cross-platform unified reporting** — aggregate metrics across all platforms
+- **AES-256-GCM credential encryption** — platform tokens encrypted at rest
+- **Audit logging** — all mutations tracked in `audit_log` table
+- **Helmet security headers** — X-Content-Type-Options, X-Frame-Options, HSTS
+- **CSV export** — download campaign data via `GET /api/reports/export/csv`
+- **Configurable thresholds** — all optimization constants via env vars with sensible defaults
+- **MCP server** — 13 tools for AI agent access via SSE transport
+
+## MCP Server (Agent Access)
+
+AdForge exposes a Model Context Protocol server at `GET /api/mcp/sse` (requires JWT auth).
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `1ai-ads_list_campaigns` | List all campaigns with performance metrics |
+| `1ai-ads_get_analytics` | Get analytics for a specific campaign |
+| `1ai-ads_list_landing_pages` | List all landing pages |
+| `1ai-ads_generate_ad_copy` | Generate ad copy using BerkahKarya framework |
+| `1ai-ads_analyze_competitor` | Analyze competitor ad strategy |
+| `1ai-ads_get_optimization_suggestions` | Get AI optimization suggestions |
+| `1ai-ads_list_ads` | List all ads with creative details |
+| `1ai-ads_create_campaign` | Create a new campaign |
+| `1ai-ads_update_campaign` | Update campaign settings |
+| `1ai-ads_get_profitability` | Calculate ROAS, profit, status |
+| `1ai-ads_generate_landing_page` | AI-generate landing page HTML |
+| `1ai-ads_score_creative` | Score a creative (0-100) |
+| `1ai-ads_detect_fatigue` | Detect creative fatigue from history |
+
+### Connect via MCP
+
+```bash
+# Using @modelcontextprotocol/sdk
+npx @modelcontextprotocol/inspector http://localhost:5000/api/mcp/sse
+```
+
+## Scheduler Jobs (10 cron jobs)
+
+| # | Job | Schedule | What it does |
+|---|-----|----------|--------------|
+| 1 | Campaign Monitor | Every 6h | Evaluates stoploss, scale eligibility, generates reports |
+| 2 | Bid Satpam | Every 5m | Enforces bid caps (BID_SATPAM_MIN/MAX/TARGET) |
+| 3 | Daily Dashboard | 07:00 WIB | Sends formatted daily report via Telegram |
+| 4 | Token Health | Every 6h | Verifies Meta API tokens, alerts on expiry |
+| 5 | Spend Guard | Every 5m | Compares spend to automation rules |
+| 6 | Subscription Check | 09:00 WIB | Monitors payment expiry |
+| 7 | Follow-up Engine | Every :30 | Flags WINNING campaigns not yet scaled |
+| 8 | Meta Sync | Every 6h at :30 | Syncs remote campaigns to local DB |
+| 9 | Daily Eval Guard | 01:00 WIB | Evaluates all active campaigns for underperformance |
+| 10 | Auto-scale | Triggered | Runs when campaign monitor detects WINNING status |
+
+## React Pages (12)
+
+| Page | Route | Description |
+|------|-------|-------------|
+| Login | `/login` | Authentication (login + register) |
+| Dashboard | `/app` | Command center with metrics cards + campaigns table |
+| Campaigns | `/campaigns` | Campaign management (CRUD, activate, pause) |
+| Creative Library | `/creative-library` | Save, organize, reuse best-performing creatives |
+| Creative Fatigue | `/creative-fatigue` | Detect and refresh fatigued creatives |
+| A/B Tests | `/ab-tests` | A/B test management with variant tracking |
+| Reporting | `/reporting` | Unified cross-platform reporting + CSV export |
+| Automation | `/automation` | CRUD automation rules with toggle |
+| Competitors | `/competitors` | Competitor analysis dashboard |
+| Attribution | `/attribution` | UTM-based conversion attribution |
+| Widgets | `/widgets` | Dashboard widget configuration |
+| Settings | `/settings` | Connected accounts, account info, sign out |
+
+## Docker
+
+```bash
+# Build and start
+docker compose up -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
+
+# Stop
+docker compose down
+
+# Rebuild after code changes
+docker compose up -d --build
 ```
 
----
+- Auto-restarts on crash (`restart: unless-stopped`)
+- Auto-starts on host reboot (Docker enabled via systemd)
+- Healthcheck on `/health` every 30s
+- Data persisted to `./data/` (SQLite), logs to `./logs/`
 
-## 🎨 Autonomous System Features
+## Environment Variables
 
-### 1. Budget Management Rules
-- Daily budget caps
-- Automatic budget scaling to top performers
-- Weekly budget reallocation
-- Minimum spend thresholds
+See `.env.example` for all 40+ configurable variables. Key groups:
 
-**Example:**
-```python
-if campaign.roas >= 3.0 and campaign.spend >= 100000:
-    # Increase budget by 10% (max Rp 500K/day)
-    increase_budget(campaign_id, 10, max_daily=500000)
+- **Security:** `JWT_SECRET`, `ENCRYPTION_KEY`, `CSRF_SECRET`
+- **Telegram:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+- **Optimization:** `ROAS_SCALE_UP`, `ROAS_STOP_LOSS`, `CTR_MIN`, `CPC_MAX`, `BUDGET_LADDER`
+- **Dayparting:** `DAYPARTING_PEAK_HOURS`, `DAYPARTING_PEAK_FACTOR`, `DAYPARTING_TIMEZONE`
+- **Creative:** `CREATIVE_ROTATION_MEDIUM_DAYS`, `CREATIVE_ROTATION_PREVENTIVE_DAYS`
+- **Bid Satpam:** `BID_SATPAM_MIN`, `BID_SATPAM_MAX`, `BID_SATPAM_TARGET`
 
-elif campaign.roas < 1.5 and campaign.spend >= 500000:
-    # Pause campaign for 48 hours
-    pause_campaign(campaign_id, duration=172800)
-```
+All have sensible defaults. Nothing breaks if env vars are missing.
 
-### 2. Performance Optimization
-- ROAS-based optimization
-- CPC (Cost Per Click) optimization
-- Conversion rate tracking
-- Frequency capping
-
-### 3. Time-Based Rules
-- Daypart scheduling (budget adjustment by hour)
-- Seasonal adjustments
-- Scheduled reports
-
-### 4. Autonomous Operation
-- Runs 24/7 without manual intervention
-- Checks campaigns every 5 minutes
-- Auto-executes optimization actions
-- Logs all decisions for audit trail
-
----
-
-## 🔗 API Endpoints
-
-### Health & Status
-```
-GET  /                           # Root endpoint
-GET  /health                     # Health check
-GET  /cloud-info                 # Alibaba Cloud deployment info
-GET  /metrics                    # System metrics
-```
-
-### Campaign Management
-```
-GET  /campaigns/active           # List active campaigns
-POST /campaigns/optimize         # Trigger autonomous optimization
-GET  /campaigns/{campaign_id}    # Get campaign details
-```
-
-### Storage & Logging
-```
-GET  /storage/files              # List files in OSS
-GET  /logs/latest                # Get latest application logs
-POST /logs/query                 # Query logs
-```
-
-### Authentication
-```
-POST /auth/login                 # User login
-POST /auth/refresh               # Refresh token
-GET  /auth/profile               # Get user profile
-```
-
----
-
-## 🔐 Security Features
-
-✅ **Encryption at Rest** - KMS encryption for all sensitive data
-✅ **Encryption in Transit** - TLS/SSL for all connections
-✅ **Secret Management** - Alibaba Cloud KMS for secrets
-✅ **Access Control** - Role-based access control (RBAC)
-✅ **Audit Logging** - Complete audit trail of all actions
-✅ **Rate Limiting** - API rate limiting to prevent abuse
-✅ **Input Validation** - Zod schema validation on all inputs
-
----
-
-## 📊 Monitoring & Observability
-
-### Real-time Dashboards
-- Campaign performance metrics
-- Budget utilization tracking
-- ROAS trends
-- Error rates & alerts
-
-### Logging
-- Centralized logging via Alibaba Log Service
-- Structured JSON logging
-- Performance metrics logging
-- Error tracking & alerting
-
-### Alerts
-- Email notifications for critical events
-- Telegram alerts for real-time updates
-- WhatsApp notifications for urgent issues
-- Custom alert rules configurable
-
----
-
-## 🧪 Testing
+## Testing
 
 ```bash
-# Run all tests
-pytest tests/
-
-# Run specific test file
-pytest tests/test_rules.py -v
-
-# Run with coverage
-pytest --cov=src tests/
-
-# Run integration tests
-pytest tests/integration/ -v
+npm test              # Unit tests (Vitest) — 1118 tests, 65 files
+npm run test:e2e      # E2E tests (Playwright)
 ```
 
-### Test Coverage
-- Unit tests: Rules engine, executor, API endpoints
-- Integration tests: Database, cache, API interactions
-- E2E tests: Full campaign optimization workflow
+## License
 
----
-
-## 📦 Deployment
-
-### Alibaba Cloud Deployment
-
-```bash
-# 1. Create Alibaba Cloud resources
-# - ECS instances
-# - RDS PostgreSQL database
-# - Redis cache cluster
-# - OSS bucket
-# - VPC & security groups
-
-# 2. Configure environment
-export ALIBABA_ACCESS_KEY_ID=***
-export ALIBABA_ACCESS_KEY_SECRET=***
-export ALIBABA_REGION=ap-southeast-1
-
-# 3. Deploy application
-docker-compose -f deployment/docker-compose.yml up -d
-
-# 4. Verify deployment
-curl https://api.adforge.cloud/health
-```
-
-### Configuration Files
-- `deployment/alibaba-cloud-deploy.yml` - Full infrastructure as code
-- `docker-compose.yml` - Container orchestration
-- `.env.example` - Environment variables template
-
-See `docs/DEPLOYMENT.md` for detailed deployment guide.
-
----
-
-## 🤖 AI Integration
-
-### Qwen LLM Integration
-- Campaign analysis using Qwen AI
-- Anomaly detection in performance metrics
-- Smart recommendation engine
-- Natural language insights generation
-
-### Machine Learning
-- Predictive ROAS modeling
-- Audience segmentation
-- Budget allocation optimization
-- Trend forecasting
-
----
-
-## 📈 Performance Metrics
-
-### System Performance
-- **Optimization Cycle Time**: < 5 seconds
-- **API Response Time**: < 200ms (p95)
-- **System Uptime**: 99.9%+
-- **Data Processing**: 1000+ campaigns/cycle
-
-### Business Metrics
-- **Average ROAS Improvement**: 15-25%
-- **Cost Reduction**: 10-20% (wasted spend)
-- **CTR Improvement**: +20%
-- **Conversion Rate**: +15%
-
----
-
-## 📚 Documentation
-
-- **[API Documentation](docs/API.md)** - Complete API reference
-- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment
-- **[Architecture](docs/alibaba-cloud-deployment.md)** - System design
-- **[Contributing](CONTRIBUTING.md)** - How to contribute
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues
-
----
-
-## 🔄 Continuous Integration/Deployment
-
-### CI/CD Pipeline
-- GitHub Actions for automated testing
-- Alibaba Cloud DevOps for deployments
-- Automated Docker image builds
-- Canary deployments to production
-
----
-
-## 📝 License
-
-This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
-
----
-
-## 👥 Team
-
-- **Lead Developer**: OpenClaw AI
-- **Architecture**: Enterprise Cloud Patterns
-- **Deployment**: Alibaba Cloud Specialists
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
----
-
-## 🐛 Bug Reports & Support
-
-- **Issues**: [GitHub Issues](https://github.com/oyi77/1ai-ads/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/oyi77/1ai-ads/discussions)
-- **Email**: support@adforge.io
-
----
-
-## 📞 Contact
-
-- **GitHub**: [@oyi77](https://github.com/oyi77)
-- **Project Repository**: [1ai-ads](https://github.com/oyi77/1ai-ads)
-
----
-
-## 🙏 Acknowledgments
-
-- Alibaba Cloud for infrastructure
-- Qwen AI for LLM capabilities
-- Community contributors
-
----
-
-**Built with ❤️ using Alibaba Cloud | © 2026 AdForge Contributors**
+MIT © 2026 AdForge Contributors

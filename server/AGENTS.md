@@ -18,7 +18,10 @@ Express 5 backend providing REST API for 1ai-ads. Follows a layered architecture
 | `services/` | Business logic and data aggregation — see `services/AGENTS.md` |
 | `lib/` | Core utilities (LLM, MCP, API adapters, generators) — see `lib/AGENTS.md` |
 | `repositories/` | Direct SQLite queries — see `repositories/AGENTS.md` |
-| `middleware/` | Auth, validation, rate limiting — see `middleware/AGENTS.md` |
+| `middleware/` | Auth, audit, Helmet, validation, rate limiting — see `middleware/AGENTS.md` |
+| `domain/` | Pure business logic (optimization, workflow, reporting, creative, attribution) — no DB, no API calls |
+| `bot/` | Telegram bot (Telegraf) — commands, scenes, scheduler, middleware |
+| `platforms/` | Platform API registry — `getPlatform('meta')` returns configured client |
 
 ## For AI Agents
 

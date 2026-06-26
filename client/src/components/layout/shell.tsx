@@ -1,10 +1,21 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Megaphone, Settings, LogOut, Menu } from 'lucide-react';
+import {
+  LayoutDashboard, Megaphone, Settings, LogOut, Menu,
+  Library, Activity, FlaskConical, BarChart3, Zap, Eye, GitBranch, LayoutGrid,
+} from 'lucide-react';
 import { useState } from 'react';
 
 const navItems = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/campaigns', label: 'Campaigns', icon: Megaphone },
+  { to: '/creative-library', label: 'Creative Library', icon: Library },
+  { to: '/creative-fatigue', label: 'Creative Fatigue', icon: Activity },
+  { to: '/ab-tests', label: 'A/B Tests', icon: FlaskConical },
+  { to: '/reporting', label: 'Reporting', icon: BarChart3 },
+  { to: '/automation', label: 'Automation', icon: Zap },
+  { to: '/competitors', label: 'Competitors', icon: Eye },
+  { to: '/attribution', label: 'Attribution', icon: GitBranch },
+  { to: '/widgets', label: 'Widgets', icon: LayoutGrid },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -31,7 +42,7 @@ export function Shell() {
           {sidebarOpen && <span style={{ fontWeight: 700, fontSize: '1rem' }}>Ad<span style={{ color: 'var(--accent)' }}>Forge</span></span>}
         </div>
 
-        <nav style={{ flex: 1, padding: '12px 8px' }}>
+        <nav style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
           {navItems.map(item => (
             <NavLink
               key={item.to}

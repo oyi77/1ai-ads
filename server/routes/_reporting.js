@@ -17,5 +17,21 @@ export function createReportingGroupRouter({ repos, services }) {
   router.use('/realtime', requireAuth, createRealtimeRouter(services.realtimeService));
   router.use('/competitor-spy', requireAuth, createCompetitorSpyRouter(repos.competitorsRepo, services.adIntelligenceService, services.competitorSpyService));
   router.use('/campaign-monitor', requireAuth, createCampaignMonitorRouter(services.campaignMonitorService));
+
+  // CSV Export — download campaign data as CSV
+  router.get('/reports/export/csv', requireAuth, (req, res) => {
+    const campaigns = repos.campaignsRepo?.findAll?.() || [];
+    const header = 'Name,Status,Spend,Revenue,ROAS,Impressions,Clicks,Conversions';
+    const rows = campaigns.map(c => {
+      const spend = c.spend || 0;
+      const revenue = c.revenue || 0;
+      const roas = spend > 0 ? (revenue / spend).toFixed(2) : '0.00';
+      return `"${(c.name || '').replace(/"/g, '""')}",${c.status || ''},${spend},${revenue},${roas},${c.impressions || 0},${c.clicks || 0},${c.conversions || 0}`;
+    });
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=report.csv');
+    res.send([header, ...rows].join('\n'));
+  });
+
   return router;
 }

@@ -8,6 +8,9 @@ import { createLogger } from './lib/logger.js';
 import { createRepositories } from './app/repositories.js';
 import { createServices } from './app/services.js';
 import { createRouters } from './app/routers.js';
+import helmet from 'helmet';
+import { auditLog } from './middleware/audit.js';
+import { AuditLogRepository } from './repositories/audit-log.js';
 import { initBot } from './bot/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -51,6 +54,8 @@ export function createApp(params) {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   }));
+
+  app.use(helmet());
 
   app.use(express.json());
 
@@ -118,6 +123,10 @@ export function createApp(params) {
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+
+  const auditRepo = new AuditLogRepository(db);
+  repos.auditRepo = auditRepo;
+  app.use(auditLog(auditRepo));
 
   createRouters({ app, repos, services });
 
