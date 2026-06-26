@@ -389,57 +389,115 @@ The Python project has a richer data model. Port these concepts:
 
 ---
 
-## Phase 6: Build Telegram Bot (NEW feature)
+## Phase 6: Port Telegram Interface (asisten-jualan → Express)
 
-**Goal:** Add Telegram bot capability to Express. NOT a migration — `asisten-jualan/` is not running.
+**`asisten-jualan/` is the Telegram interface for 1ai-ads.** It's not a separate project — it's how users interact with adforge via Telegram. All its features MUST exist in Express.
 
-**Reference code:** `asisten-jualan/` (FastAPI + python-telegram-bot — 316 files, not deployed)
-**Build with:** `server/bot/` (Telegraf.js — most popular Node.js Telegram framework)
+**Source:** `asisten-jualan/` (FastAPI + python-telegram-bot — 316 files)
+**Target:** `server/bot/` (Telegraf.js)
 
-**What to port:**
+### Complete Feature Map
 
-| asisten-jualan module | Express equivalent | Notes |
-|---|---|---|
-| `bot/handlers/start.py` | `server/bot/commands/start.js` | Onboarding, welcome message |
-| `bot/handlers/quick_start.py` | `server/bot/scenes/` | Multi-step wizard (campaign create, ad create) |
-| `bot/handlers/monitor.py` | `server/bot/commands/monitor.js` | Campaign monitoring, rule creation |
-| `bot/handlers/settings_update.py` | `server/bot/commands/settings.js` | Account switching, token management |
-| `bot/handlers/admin.py` | `server/bot/commands/admin.js` | Admin stats, user management, broadcast |
-| `bot/handlers/panduan.py` | `server/bot/commands/help.js` | Help/guide command |
-| `scheduler/bid_satpam.py` | `server/bot/scheduler.js` | Bid cap guard (cron job) |
-| `scheduler/auto_scale.py` | `server/domain/optimization.js` | Auto-scale (called by scheduler) |
-| `scheduler/daily_report.py` | `server/bot/scheduler.js` | Daily report (cron job) |
-| `scheduler/evaluator.py` | `server/domain/optimization.js` | Campaign evaluation |
-| `hermes/engine.py` | `server/integrations/llm.js` | Multi-model routing (already planned) |
+**Bot Commands (7):**
+
+| Command | asisten-jualan file | Express equivalent | Description |
+---|---|---|---|
+| `/start` | `bot/handlers/start.py` | `server/bot/commands/start.js` | Onboarding, welcome flow |
+| `/menu` | `bot/handlers/quick_start.py` | `server/bot/commands/menu.js` | Main menu with inline buttons |
+| `/cancel` | `bot/handlers/quick_start.py` | `server/bot/commands/menu.js` | Cancel current flow |
+| `/help` | `bot/handlers/panduan.py` | `server/bot/commands/help.js` | Help/guide |
+| `/status` | `bot/handlers/quick_start.py` | `server/bot/commands/status.js` | Account/campaign status |
+| `/settings` | `bot/handlers/settings_update.py` | `server/bot/commands/settings.js` | Token, account switching |
+| `/pricing` | `bot/handlers/quick_start.py` | `server/bot/commands/pricing.js` | Pricing plans + checkout |
+
+**Bot Flows (multi-step wizards via inline buttons):**
+
+| Flow | asisten-jualan file | Express equivalent | Description |
+---|---|---|---|
+| Campaign create | `bot/handlers/quick_start.py` → `buat_command` | `server/bot/scenes/campaign-create.js` | Step-by-step campaign wizard |
+| Ad copy create | `bot/handlers/quick_start.py` → `cerita_command` | `server/bot/scenes/ad-copy.js` | AI-powered ad copy generation |
+| Landing page create | `bot/handlers/quick_start.py` → `lp_command` | `server/bot/scenes/landing-page.js` | LP builder with preview |
+| Edit LP | `bot/handlers/quick_start.py` → `edit_command` | `server/bot/scenes/lp-edit.js` | Edit headline/price/image/testimoni |
+| Image handling | `bot/handlers/quick_start.py` → `gambar_command` | `server/bot/scenes/image.js` | Upload + position picker |
+| Layout editing | `bot/handlers/quick_start.py` → `layout_command` | `server/bot/scenes/layout.js` | Section-by-section LP layout |
+| Iklan/ads setup | `bot/handlers/quick_start.py` → `iklan_command` | `server/bot/scenes/ad-setup.js` | Campaign dashboard + sync |
+| Monitor rules | `bot/handlers/monitor.py` | `server/bot/commands/monitor.js` | Set spend/ROAS/CTR rules |
+| Admin panel | `bot/handlers/admin.py` | `server/bot/commands/admin.js` | Stats, users, grant, broadcast |
+
+**Scheduled Jobs (10 cron jobs):**
+
+| Job | asisten-jualan file | Schedule | Express equivalent |
+---|---|---|---|
+| Campaign monitor | `scheduler/campaign_monitor.py` | Every 6h | `server/bot/scheduler.js` → `campaignMonitorJob` |
+| Subscription check | `scheduler/daily_report.py` | 09:00 WIB | `server/bot/scheduler.js` → `subscriptionCheckJob` |
+| Follow-up engine | `scheduler/follow_up.py` | Every hour :30 | `server/bot/scheduler.js` → `followUpJob` |
+| Meta campaign sync | `scheduler/meta_sync_job.py` | Every 6h :30 | `server/bot/scheduler.js` → `metaSyncJob` |
+| Realtime spend guard | `scheduler/realtime_guard.py` | Every 5min | `server/bot/scheduler.js` → `spendGuardJob` |
+| Daily eval guard | `scheduler/daily_eval_guard.py` | 01:00 WIB | `server/bot/scheduler.js` → `dailyEvalJob` |
+| Bid satpam | `scheduler/bid_satpam.py` | Every 5min | `server/bot/scheduler.js` → `bidSatpamJob` |
+| Daily dashboard | `scheduler/daily_dashboard.py` | 07:00 WIB | `server/bot/scheduler.js` → `dailyDashboardJob` |
+| Token health check | `scheduler/token_health.py` | Every 6h :15 | `server/bot/scheduler.js` → `tokenHealthJob` |
+| Auto-scale | `scheduler/auto_scale.py` | Triggered | `server/domain/optimization.js` → `executeScaling()` |
+
+**Bot Infrastructure:**
+
+| Feature | asisten-jualan | Express equivalent |
+---|---|---|
+| Rate limiting | `bot/middleware/rate_limit.py` | `server/middleware/rate-limit.js` (already exists) |
+| Button cleanup | `bot/handlers/common.py` | `server/bot/middleware/cleanup.js` |
+| Error recovery | `main.py:317-458` (bulletproof error handler) | `server/bot/middleware/error-handler.js` |
+| Session state | Redis (`aioredis`) | In-memory Map or SQLite (no Redis dependency) |
+| AI engine | `hermes/engine.py` (multi-model routing) | `server/integrations/llm.js` (port routing logic) |
+| Credential encryption | `security/crypto.py` (AES-256-GCM) | `server/lib/crypto.js` (Phase 0) |
 
 **How:**
-1. `npm install telegraf` — Telegram bot framework
+1. `npm install telegraf` — Telegram bot framework for Node.js
 2. Create `server/bot/index.js` — bot initialization, webhook setup
-3. Port command handlers one by one (start → monitor → reports → settings → admin)
-4. Port scheduler jobs (bid_satpam, daily_report) using `node-cron`
-5. Wire bot into Express app (mount at `/webhook/telegram`)
-6. Update nginx: `/webhook/telegram` → Express:5000 (instead of Hermes:8443)
-7. Stop Hermes service, archive `asisten-jualan/`
+3. Port commands one by one (start → menu → settings → monitor → admin)
+4. Port flows (campaign-create → ad-copy → landing-page → lp-edit)
+5. Port scheduler jobs using `node-cron` (10 cron jobs)
+6. Port AI engine routing to `server/integrations/llm.js`
+7. Wire bot into Express app (mount at `/webhook/telegram`)
+8. Update nginx: `/webhook/telegram` → Express:5000
 
 **Telegram webhook in Express:**
 ```js
 // server/bot/index.js
 import { Telegraf } from 'telegraf';
+import { initScheduler } from './scheduler.js';
 
 export function initBot(app) {
   const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
   
-  // Register commands
+  // Commands
   bot.start(startHandler);
-  bot.command('monitor', monitorHandler);
-  bot.command('report', reportHandler);
-  // ...
+  bot.command('menu', menuHandler);
+  bot.command('settings', settingsHandler);
+  bot.command('status', statusHandler);
+  bot.help(helpHandler);
+  bot.command('pricing', pricingHandler);
+  
+  // Callback queries (inline buttons)
+  bot.action(/^menu:/, menuButtonHandler);
+  bot.action(/^settings:/, settingsCallbackHandler);
+  bot.action(/^monitor:/, monitorCallbackHandler);
+  bot.action(/^rule:/, ruleCallbackHandler);
+  bot.action(/^scale_confirm:/, scaleConfirmHandler);
+  bot.action(/^iklan:/, iklanActionHandler);
+  
+  // Message router (text/photo input)
+  bot.on('text', messageRouter);
+  bot.on('photo', messageRouter);
+  
+  // Error handler (bulletproof — never crashes)
+  bot.catch(errorHandler);
   
   // Mount webhook on Express
   app.use(bot.webhookCallback('/webhook/telegram'));
-  
-  // Set webhook
   bot.telegram.setWebhook('https://adforge.aitradepulse.com/webhook/telegram');
+  
+  // Start scheduled jobs
+  initScheduler(bot);
   
   return bot;
 }
@@ -447,14 +505,14 @@ export function initBot(app) {
 
 **Nginx change:**
 ```nginx
-# Before (Hermes)
+# Before
 location /webhook/ { proxy_pass http://127.0.0.1:8443; }
 
-# After (Express)
+# After
 location /webhook/telegram { proxy_pass http://127.0.0.1:5000; }
 ```
 
-**Impact:** New capability. Telegram bot integrated into Express.
+**Impact:** All asisten-jualan features available via Telegram, running inside Express. No Python dependency.
 
 ---
 
