@@ -104,17 +104,21 @@ export function createSettingsRouter(settingsRepo, llmClient, db, metaApi) {
   // --- Multi-account API ---
 
   router.get('/accounts', (req, res) => {
-    const { platform } = req.query;
-    const accounts = settingsRepo.getAccounts(platform);
-    // Mask sensitive fields
-    const safe = accounts.map(acc => {
-      const maskedCreds = {};
-      for (const [k, v] of Object.entries(acc.credentials)) {
-        maskedCreds[k] = v ? `${String(v).slice(0, 4)}****` : null;
-      }
-      return { ...acc, credentials: maskedCreds };
-    });
-    res.json({ success: true, data: safe });
+    try {
+      const { platform } = req.query;
+      const accounts = settingsRepo.getAccounts ? settingsRepo.getAccounts(platform) : [];
+      const safe = (Array.isArray(accounts) ? accounts : []).map(acc => {
+        const creds = acc.credentials || {};
+        const maskedCreds = {};
+        for (const [k, v] of Object.entries(creds)) {
+          maskedCreds[k] = v ? `${String(v).slice(0, 4)}****` : null;
+        }
+        return { ...acc, credentials: maskedCreds };
+      });
+      res.json({ success: true, data: safe });
+    } catch (err) {
+      res.json({ success: true, data: [] });
+    }
   });
 
   router.post('/accounts', (req, res) => {

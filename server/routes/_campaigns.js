@@ -12,7 +12,7 @@ import { requireAuth } from '../middleware/auth.js';
 
 export function createCampaignsGroupRouter({ repos, services }) {
   const router = Router();
-  router.use('/campaigns', requireAuth, createCampaignsRouter(services.orchestrator, services.metaApi, services.creativeStudio, repos.campaignsRepo));
+  router.use('/campaigns', requireAuth, createCampaignsRouter(services.orchestrator, services.metaApi, services.creativeStudio, repos.campaignsRepo, repos.adsRepo));
   router.use('/ads', requireAuth, createAdsRouter(repos.adsRepo, services.creativeStudio));
   router.use('/landing', requireAuth, createLandingRouter(repos.landingRepo, services.llmClient));
   router.use('/drafts', requireAuth, createDraftRouter(services.draftService));

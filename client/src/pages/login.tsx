@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../lib/api';
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
@@ -14,20 +15,10 @@ export function LoginPage() {
     setError('');
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        localStorage.setItem('1ai-ads_token', data.data.accessToken);
-        navigate('/app');
-      } else {
-        setError(data.error || 'Login failed');
-      }
-    } catch {
-      setError('Connection error');
+      await api.login(username, password);
+      navigate('/app');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Connection error');
     } finally {
       setLoading(false);
     }

@@ -15,13 +15,16 @@ COPY .env.example ./
 # Copy built frontend
 COPY dist/ ./dist/
 
-# Create data directory for SQLite
-RUN mkdir -p /app/data /app/logs
+# Create data directory for SQLite and set up non-root user
+RUN mkdir -p /app/data /app/logs && \
+    addgroup -S app && adduser -S app -G app && \
+    chown -R app:app /app
 
 # Environment
 ENV NODE_ENV=production
 ENV PORT=5000
 ENV DB_PATH=/app/data/1ai-ads.db
+USER app
 
 EXPOSE 5000
 

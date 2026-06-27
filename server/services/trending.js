@@ -48,8 +48,8 @@ export class TrendingService {
       return cached;
     }
 
-    if (config.trendingExternalSource === 'mock') {
-      log.info('Mock mode enabled, returning empty trends');
+    if (!config.externalTrendingApi.url) {
+      log.info('No external trending API configured, returning empty');
       return [];
     }
 

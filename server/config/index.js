@@ -56,11 +56,11 @@ const config = {
   },
   get bkHubUrl() { return process.env.BK_HUB_URL || 'http://localhost:9099'; },
   get competitorUrls() { return process.env.COMPETITOR_URLS || ''; },
-  get trendingExternalSource() { return process.env.TRENDING_EXTERNAL_SOURCE || 'mock'; },
+  get trendingExternalSource() { return process.env.TRENDING_EXTERNAL_SOURCE || 'api'; },
   get externalTrendingApi() {
     return {
-      url: process.env.EXTERNAL_TRENDING_API_URL || 'https://api.example.com/trending',
-      apiKey: process.env.EXTERNAL_TRENDING_API_KEY || 'placeholder-key',
+      url: process.env.EXTERNAL_TRENDING_API_URL || '',
+      apiKey: process.env.EXTERNAL_TRENDING_API_KEY || '',
       cacheTTL: parseInt(process.env.TRENDING_CACHE_TTL || '3600', 10),
     };
   },
@@ -114,6 +114,9 @@ const config = {
 export function validateConfig() {
   if (!config.jwtSecret) {
     throw new Error('FATAL: JWT_SECRET environment variable is required. Set it in .env before starting the server.');
+  }
+  if (!process.env.ENCRYPTION_KEY || process.env.ENCRYPTION_KEY.length < 64) {
+    throw new Error('FATAL: ENCRYPTION_KEY must be a 64-char hex string (32 bytes). Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
   }
 }
 

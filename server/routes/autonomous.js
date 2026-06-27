@@ -11,6 +11,16 @@ export function createAutonomousRouter(settingsRepo, platformAccountsRepo, campa
     res.json({ service: 'autonomous', endpoints: ['POST /connect-facebook', 'GET /facebook-accounts', 'POST /link-account', 'POST /check-campaigns', 'POST /rules'] });
   });
 
+  // GET /api/autonomous/status — autonomous agent status
+  router.get('/status', (req, res) => {
+    try {
+      const enabled = autonomousAgent?.isEnabled?.() ?? false;
+      res.json({ success: true, data: { enabled, running: enabled } });
+    } catch (err) {
+      res.json({ success: true, data: { enabled: false, running: false } });
+    }
+  });
+
   // POST /api/autonomous/connect-facebook - Exchange OAuth code for access token
   router.post('/connect-facebook', async (req, res) => {
     try {

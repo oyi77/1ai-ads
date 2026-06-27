@@ -16,6 +16,7 @@ import {
 } from '../domain/optimization.js';
 import { calculateCampaignStats, formatDailyReport } from '../domain/reporting.js';
 import { detectFatigue } from '../domain/creative.js';
+import { backupDatabase } from '../../db/backup.js';
 
 const log = createLogger('bot:scheduler');
 
@@ -352,7 +353,19 @@ export function initScheduler(bot, deps) {
   //     Auto-scale runs when campaign monitor (job 1) detects
   //     WINNING status and evaluateScaleEligibility returns canScale.
   //     Handled inside campaign monitor job above.
+
+  // ────────────────────────────────────────────────────────────
+  // 11. Database Backup — every 6 hours
+  // ────────────────────────────────────────────────────────────
+  cron.schedule('0 */6 * * *', () => {
+    log.info('Running database backup job');
+    try {
+      backupDatabase(config.dbPath, process.cwd());
+    } catch (err) {
+      log.error('Backup cron job failed', { error: err.message });
+    }
+  });
   // ────────────────────────────────────────────────────────────
 
-  log.info('Bot scheduler initialized with 10 cron jobs');
+  log.info('Bot scheduler initialized with 11 cron jobs');
 }

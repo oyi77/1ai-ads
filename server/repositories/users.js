@@ -48,4 +48,8 @@ export class UsersRepository {
     this.db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...params);
     return this.findById(id);
   }
+
+  delete(id) {
+    this.db.prepare('DELETE FROM users WHERE id = ?').run(id);
+  }
 }

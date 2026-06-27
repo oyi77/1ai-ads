@@ -10,6 +10,7 @@ const schemaPath = join(__dirname, 'schema.sql');
 export function createDatabase(dbPath) {
  const db = new Database(dbPath);
  db.pragma('journal_mode = WAL');
+ db.pragma('foreign_keys = ON');
 
  const schema = readFileSync(schemaPath, 'utf-8');
  db.exec(schema);

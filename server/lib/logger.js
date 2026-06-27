@@ -4,10 +4,16 @@ const LOG_LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
 const currentLevel = LOG_LEVELS[config.logLevel] || LOG_LEVELS.info;
 
 function formatMessage(level, module, message, meta) {
-  const timestamp = new Date().toISOString();
-  const base = `[${timestamp}] [${level.toUpperCase()}]${module ? ` [${module}]` : ''} ${message}`;
-  if (meta !== undefined) return `${base} ${JSON.stringify(meta)}`;
-  return base;
+  const entry = {
+    timestamp: new Date().toISOString(),
+    level,
+    module,
+    message,
+  };
+  if (meta !== undefined) {
+    entry.meta = typeof meta === 'string' ? meta : meta;
+  }
+  return JSON.stringify(entry);
 }
 
 export function createLogger(module) {

@@ -12,7 +12,7 @@ import { requireAuth } from '../middleware/auth.js';
 
 export function createAutomationGroupRouter({ repos, services, publicRateLimit }) {
   const router = Router();
-  router.use('/automation', createAutomationRouter({ rulesRepo: repos.rulesRepo }));
+  router.use('/automation', requireAuth, createAutomationRouter({ rulesRepo: repos.rulesRepo }));
   router.use('/schedule', requireAuth, createScheduleRouter(repos.db));
   router.use('/autonomous', requireAuth, createAutonomousRouter(repos.settingsRepo, repos.platformAccountsRepo, repos.campaignsRepo, repos.rulesRepo, services.autonomousAgent));
   router.use('/optimizer', requireAuth, createOptimizerRouter(repos.rulesRepo, services.autoOptimizer));

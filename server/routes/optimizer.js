@@ -3,6 +3,22 @@ import { Router } from 'express';
 export function createOptimizerRouter(rulesRepo, optimizer) {
   const router = Router();
 
+
+  // GET /status — optimizer status summary
+  router.get('/status', (req, res, next) => {
+    try {
+      const rules = rulesRepo.getAll(req.user.id);
+      res.json({
+        success: true,
+        data: {
+          running: true,
+          rules_count: Array.isArray(rules) ? rules.length : 0,
+          active_rules: Array.isArray(rules) ? rules.filter(r => r.enabled).length : 0,
+          last_run: optimizer?.lastRun || null,
+        },
+      });
+    } catch (err) { next(err); }
+  });
   // List all rules for current user
   router.get('/rules', (req, res, next) => {
     try {
@@ -49,6 +65,16 @@ export function createOptimizerRouter(rulesRepo, optimizer) {
   });
 
   // Manually trigger evaluation
+
+  // POST /run — alias for /evaluate
+  router.post('/run', async (req, res) => {
+    try {
+      const result = await optimizer.evaluate();
+      res.json({ success: true, data: result });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
   router.post('/evaluate', async (req, res) => {
     try {
       const result = await optimizer.evaluate();
@@ -60,3 +86,4 @@ export function createOptimizerRouter(rulesRepo, optimizer) {
 
   return router;
 }
+// 1782541969

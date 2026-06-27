@@ -38,9 +38,59 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 
 startServices(app);
 
-// Attach realtime service after services are started
-if (app.locals.realtimeService) {
-  app.locals.realtimeService.attach(server);
+// ── Real-time Meta Sync (every 15 minutes) ─────────────
+{
+  const { MetaAdsAPI } = await import('./server/services/meta-api.js');
+  const syncInterval = 15 * 60 * 1000;
+
+  async function syncFromMeta() {
+    try {
+      const metaApi = new MetaAdsAPI(app.locals.settingsRepo);
+      const campaignsRepo = app.locals.campaignsRepo;
+      if (!campaignsRepo) return;
+      const accounts = await metaApi.getAdAccounts();
+      if (!accounts || accounts.length === 0) return;
+      let total = 0;
+      for (const account of accounts) {
+        try {
+          const campaigns = await metaApi.getCampaigns(account.id);
+          const insightsMap = campaigns.length > 0
+            ? await metaApi.getMultiCampaignInsights(campaigns.map(c => c.id))
+            : {};
+          for (const c of campaigns) {
+            const ins = insightsMap[c.id] || {};
+            const spendVal = parseFloat(ins.spend || 0);
+            const revenueVal = parseFloat(ins.revenue || 0);
+            campaignsRepo.upsert({
+              platform: 'meta', campaign_id: c.id, name: c.name, status: c.status,
+              budget: c.dailyBudget || c.lifetimeBudget || 0,
+              spend: spendVal, revenue: revenueVal,
+              impressions: parseInt(ins.impressions || 0), clicks: parseInt(ins.clicks || 0),
+              conversions: parseInt(ins.conversions || 0),
+              roas: spendVal > 0 ? Math.round((revenueVal / spendVal) * 100) / 100 : 0,
+            });
+            total++;
+          }
+        } catch (err) {
+          console.error('[auto-sync] Account error:', account.id, err.message);
+        }
+      }
+      console.log('[auto-sync] Synced ' + total + ' campaigns from ' + accounts.length + ' accounts');
+    } catch (err) {
+      console.error('[auto-sync] Sync failed:', err.message);
+    }
+  }
+
+  setTimeout(syncFromMeta, 30000);
+  setInterval(syncFromMeta, syncInterval);
+  console.log('[auto-sync] Real-time Meta sync enabled (every 15 min)');
+
+  // Start WebSocket realtime polling
+  if (app.locals.realtimeService) {
+    app.locals.realtimeService.attach(server);
+    app.locals.realtimeService.startPolling();
+    console.log('[realtime] WebSocket server started on /ws/realtime');
+  }
 }
 
 process.on('SIGTERM', () => {

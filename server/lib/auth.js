@@ -14,7 +14,7 @@ const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '30d';
 
 export function hashPassword(plain) {
-  return bcrypt.hashSync(plain, 10);
+  return bcrypt.hashSync(plain, 12);
 }
 
 export function verifyPassword(plain, hash) {

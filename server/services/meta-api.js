@@ -36,7 +36,9 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     // 3. Active platform account from platform_accounts table
     if (this.settingsRepo) {
       const creds = this.settingsRepo.getCredentials('meta');
+      if (typeof creds === 'string' && creds.length > 10) return creds;
       if (creds?.access_token) return creds.access_token;
+      if (creds?.token) return creds.token;
     }
     throw new ConfigurationError('Meta access token not configured. Connect a Facebook account in Settings.');
   }
@@ -117,7 +119,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
 
   async getCampaignInsights(campaignId, { datePreset = 'last_30d' } = {}) {
     const data = await this._get(`/${campaignId}/insights`, {
-      fields: 'campaign_name,spend,impressions,clicks,ctr,cpc,actions,cost_per_action_type',
+      fields: 'campaign_name,spend,impressions,clicks,ctr,cpc,actions,action_values,cost_per_action_type',
       date_preset: datePreset,
     });
     return this._parseInsights(data.data?.[0]);
@@ -135,7 +137,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     for (const chunk of chunks) {
       const data = await this._get('/', {
         ids: chunk.join(','),
-        fields: `insights.date_preset(${datePreset}){spend,impressions,clicks,ctr,cpc,actions,cost_per_action_type}`,
+        fields: `insights.date_preset(${datePreset}){spend,impressions,clicks,ctr,cpc,actions,action_values,cost_per_action_type}`,
       });
       for (const [id, res] of Object.entries(data)) {
         allResults[id] = this._parseInsights(res.insights?.data?.[0]);
@@ -146,7 +148,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
 
   async getAccountInsights(accountId, { datePreset = 'last_30d' } = {}) {
     const data = await this._get(`/${accountId}/insights`, {
-      fields: 'spend,impressions,clicks,ctr,cpc,actions,cost_per_action_type',
+      fields: 'spend,impressions,clicks,ctr,cpc,actions,action_values,cost_per_action_type',
       date_preset: datePreset,
     });
     return this._parseInsights(data.data?.[0]);
@@ -383,10 +385,21 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       actions[a.action_type] = parseInt(a.value);
     }
 
+    const actionValues = {};
+    for (const v of (raw.action_values || [])) {
+      actionValues[v.action_type] = parseFloat(v.value);
+    }
+
     const costPerAction = {};
     for (const c of (raw.cost_per_action_type || [])) {
       costPerAction[c.action_type] = parseFloat(c.value);
     }
+
+    // Extract revenue from purchase values
+    const revenue = actionValues.purchase
+      || actionValues.onsite_conversion?.post_save
+      || actionValues.offsite_conversion?.fb_pixel_purchase
+      || 0;
 
     return {
       spend: parseFloat(raw.spend || 0),
@@ -394,10 +407,11 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       clicks: parseInt(raw.clicks || 0),
       ctr: parseFloat(raw.ctr || 0),
       cpc: parseFloat(raw.cpc || 0),
+      revenue: revenue,
       linkClicks: actions.link_click || 0,
       landingPageViews: actions.landing_page_view || 0,
       videoViews: actions.video_view || 0,
-      conversions: actions.onsite_conversion?.total_messaging_connection || actions.purchase || 0,
+      conversions: actions.purchase || actions.onsite_conversion?.total_messaging_connection || 0,
       postEngagement: actions.post_engagement || 0,
       costPerLinkClick: costPerAction.link_click || 0,
       costPerLandingPageView: costPerAction.landing_page_view || 0,

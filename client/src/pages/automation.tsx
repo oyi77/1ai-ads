@@ -1,196 +1,150 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, Zap } from 'lucide-react';
+import type { CSSProperties } from 'react';
+import { Zap, Settings, Play, TrendingUp, AlertTriangle, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
 
-interface AutomationRule {
+interface Rule {
   id: string;
   name: string;
-  is_active: boolean;
-  trigger_metric: string;
-  trigger_operator: string;
-  trigger_value: number;
+  type: string;
+  condition: string;
   action: string;
+  is_active: number | boolean;
+  last_triggered: string | null;
   created_at: string;
 }
 
 export function AutomationPage() {
   const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
-    name: '',
-    trigger_metric: 'spend',
-    trigger_operator: 'greater_than',
-    trigger_value: '',
-    action: 'pause',
+  const [showCreate, setShowCreate] = useState(false);
+  const [newRule, setNewRule] = useState({ name: '', type: 'auto_pause', condition: '', action: '' });
+
+  // GET /api/automation returns { success, rules: [...] }
+  const { data: automationData, isLoading } = useQuery({
+    queryKey: ['automation'],
+    queryFn: () => api.get<{ success: boolean; rules: Rule[] }>('/automation'),
   });
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['automation-rules'],
-    queryFn: () => api.get<AutomationRule[]>('/automation'),
+  // GET /api/optimizer/rules returns { success, data: [...] }
+  const { data: optimizerData } = useQuery({
+    queryKey: ['optimizer'],
+    queryFn: () => api.get<{ success: boolean; data: Rule[] }>('/optimizer/rules'),
   });
 
-  const createMut = useMutation({
-    mutationFn: (payload: Omit<AutomationRule, 'id' | 'created_at' | 'is_active'>) =>
-      api.post('/automation', payload),
+  // GET /api/autonomous returns { service, endpoints: [...] }
+  const { data: autonomousData } = useQuery({
+    queryKey: ['autonomous'],
+    queryFn: () => api.get<{ service: string; endpoints: string[] }>('/autonomous'),
+  });
+
+  const ruleList: Rule[] = Array.isArray(automationData?.rules) ? automationData.rules : [];
+  const optimizerRules = Array.isArray(optimizerData?.data) ? optimizerData.data : [];
+  const autonomousEnabled = !!autonomousData?.service;
+
+  const createMutation = useMutation({
+    mutationFn: (rule: typeof newRule) => api.post('/automation/create', rule),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['automation-rules'] });
-      setForm({ name: '', trigger_metric: 'spend', trigger_operator: 'greater_than', trigger_value: '', action: 'pause' });
-      setShowForm(false);
+      queryClient.invalidateQueries({ queryKey: ['automation'] });
+      setShowCreate(false);
+      setNewRule({ name: '', type: 'auto_pause', condition: '', action: '' });
     },
   });
 
-  const toggleMut = useMutation({
-    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
-      api.post(`/automation/toggle/${id}`, { is_active }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation-rules'] }),
+  const toggleMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/automation/toggle/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation'] }),
   });
 
-  const deleteMut = useMutation({
-    mutationFn: (id: string) => api.post(`/automation/delete/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation-rules'] }),
+  const triggerMutation = useMutation({
+    mutationFn: () => api.post('/optimizer/evaluate'),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['optimizer'] }),
   });
-
-  const rules: AutomationRule[] = Array.isArray(data) ? data : [];
-
-  const metrics = [
-    { value: 'spend', label: 'Spend' },
-    { value: 'roas', label: 'ROAS' },
-    { value: 'ctr', label: 'CTR' },
-    { value: 'cpa', label: 'CPA' },
-    { value: 'cpc', label: 'CPC' },
-    { value: 'impressions', label: 'Impressions' },
-  ];
-
-  const operators = [
-    { value: 'greater_than', label: '>' },
-    { value: 'less_than', label: '<' },
-    { value: 'equals', label: '=' },
-    { value: 'greater_equal', label: '>=' },
-    { value: 'less_equal', label: '<=' },
-  ];
-
-  const actions = [
-    { value: 'pause', label: 'Pause Campaign' },
-    { value: 'alert', label: 'Send Alert' },
-    { value: 'reduce_budget', label: 'Reduce Budget' },
-    { value: 'increase_budget', label: 'Increase Budget' },
-  ];
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '8px 12px', background: 'var(--bg-deep)', border: '1px solid var(--border)',
-    borderRadius: 6, color: 'var(--text-primary)', fontSize: '0.85rem', boxSizing: 'border-box',
-  };
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 4 }}>Automation Rules</h1>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Set conditions that trigger actions automatically</p>
-        </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'var(--accent)', color: 'var(--bg-deep)', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}
-        >
-          <Plus size={14} /> New Rule
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 4 }}>Automation & Optimization</h1>
+      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 24 }}>
+        Set rules, auto-optimize campaigns, and enable autonomous mode.
+      </p>
+
+      {/* Status Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
+        <StatusCard icon={<Zap size={14} />} label="Auto Optimizer" value={optimizerRules.length > 0 ? 'Active' : 'Ready'} color="var(--accent)" />
+        <StatusCard icon={<Settings size={14} />} label="Active Rules" value={String(ruleList.filter(r => r.is_active).length)} color="var(--accent)" />
+        <StatusCard icon={<TrendingUp size={14} />} label="Autonomous Mode" value={autonomousEnabled ? 'Available' : 'Disabled'} color={autonomousEnabled ? 'var(--green)' : 'var(--text-tertiary)'} />
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        <button onClick={() => setShowCreate(!showCreate)} style={btnStyle}>+ New Rule</button>
+        <button onClick={() => triggerMutation.mutate()} disabled={triggerMutation.isPending} style={{ ...btnStyle, background: 'var(--green)' }}>
+          {triggerMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />} Run Optimizer Now
         </button>
       </div>
 
-      {showForm && (
-        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 24 }}>
-          <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 16 }}>Create Rule</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-            <div>
-              <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Rule Name</label>
-              <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="High spend alert" style={inputStyle} />
-            </div>
-            <div>
-              <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Action</label>
-              <select value={form.action} onChange={e => setForm({ ...form, action: e.target.value })} style={inputStyle}>
-                {actions.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
-              </select>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, background: 'var(--bg-deep)', borderRadius: 8, padding: 16, border: '1px solid var(--border)' }}>
-            <span style={{ fontSize: '0.77rem', color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>WHEN</span>
-            <select value={form.trigger_metric} onChange={e => setForm({ ...form, trigger_metric: e.target.value })} style={{ ...inputStyle, width: 'auto', flex: 1 }}>
-              {metrics.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+      {/* Create Rule Form */}
+      {showCreate && (
+        <div style={{ ...cardStyle, marginBottom: 20 }}>
+          <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 12 }}>Create Automation Rule</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <input placeholder="Rule name" value={newRule.name} onChange={e => setNewRule({ ...newRule, name: e.target.value })} style={inputStyle} />
+            <select value={newRule.type} onChange={e => setNewRule({ ...newRule, type: e.target.value })} style={selectStyle}>
+              <option value="auto_pause">Auto Pause Underperformers</option>
+              <option value="auto_scale">Auto Scale Winners</option>
+              <option value="budget_shift">Budget Shift</option>
+              <option value="bid_adjust">Bid Adjustment</option>
+              <option value="fatigue_alert">Fatigue Alert</option>
             </select>
-            <select value={form.trigger_operator} onChange={e => setForm({ ...form, trigger_operator: e.target.value })} style={{ ...inputStyle, width: 70 }}>
-              {operators.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-            <input value={form.trigger_value} onChange={e => setForm({ ...form, trigger_value: e.target.value })} placeholder="100000" type="number" style={{ ...inputStyle, width: 120 }} />
-            <span style={{ fontSize: '0.77rem', color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>THEN</span>
-            <span style={{ fontSize: '0.82rem', color: 'var(--accent)', fontWeight: 700 }}>{actions.find(a => a.value === form.action)?.label}</span>
-          </div>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-            <button onClick={() => setShowForm(false)} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem' }}>Cancel</button>
-            <button
-              onClick={() => createMut.mutate({
-                name: form.name,
-                trigger_metric: form.trigger_metric,
-                trigger_operator: form.trigger_operator,
-                trigger_value: Number(form.trigger_value),
-                action: form.action,
-              })}
-              disabled={!form.name || !form.trigger_value || createMut.isPending}
-              style={{ padding: '8px 16px', background: 'var(--accent)', color: 'var(--bg-deep)', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem', opacity: !form.name || !form.trigger_value ? 0.5 : 1 }}
-            >{createMut.isPending ? 'Creating...' : 'Create Rule'}</button>
+            <input placeholder="Condition (e.g. roas &lt; 1)" value={newRule.condition} onChange={e => setNewRule({ ...newRule, condition: e.target.value })} style={inputStyle} />
+            <input placeholder="Action (e.g. pause_adset)" value={newRule.action} onChange={e => setNewRule({ ...newRule, action: e.target.value })} style={inputStyle} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => createMutation.mutate(newRule)} disabled={createMutation.isPending || !newRule.name} style={btnStyle}>
+                {createMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : null} Create Rule
+              </button>
+              <button onClick={() => setShowCreate(false)} style={{ ...btnStyle, background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>Cancel</button>
+            </div>
+            {createMutation.isError && <p style={{ color: 'var(--error, #ef4444)', fontSize: '0.8rem' }}>{(createMutation.error as Error).message}</p>}
           </div>
         </div>
       )}
 
-      {error && (
-        <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid var(--red)', borderRadius: 8, padding: 16, marginBottom: 16, color: 'var(--red)', fontSize: '0.85rem' }}>
-          Failed to load automation rules
-        </div>
-      )}
-
+      {/* Rules List */}
       {isLoading ? (
-        <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-tertiary)' }}>Loading rules...</div>
-      ) : rules.length === 0 ? (
-        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 48, textAlign: 'center' }}>
-          <Zap size={32} style={{ color: 'var(--text-tertiary)', marginBottom: 12 }} />
-          <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 600 }}>No automation rules</div>
-          <div style={{ color: 'var(--text-tertiary)', fontSize: '0.82rem', marginTop: 4 }}>Rules let you automate campaign management</div>
+        <p style={{ color: 'var(--text-tertiary)', padding: 40, textAlign: 'center' }}>Loading rules...</p>
+      ) : ruleList.length === 0 ? (
+        <div style={cardStyle}>
+          <AlertTriangle size={32} style={{ color: 'var(--text-tertiary)', marginBottom: 8 }} />
+          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>No automation rules yet. Create one to get started.</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {rules.map(rule => (
-            <div key={rule.id} style={{
-              background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: rule.is_active ? 1 : 0.5,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1 }}>
-                <div
-                  onClick={() => toggleMut.mutate({ id: rule.id, is_active: !rule.is_active })}
-                  style={{
-                    width: 40, height: 22, borderRadius: 11, cursor: 'pointer', position: 'relative', flexShrink: 0,
-                    background: rule.is_active ? 'var(--green)' : 'var(--border)', transition: 'background 0.2s',
-                  }}
-                >
-                  <div style={{
-                    width: 16, height: 16, borderRadius: 8, background: 'white', position: 'absolute', top: 3,
-                    left: rule.is_active ? 21 : 3, transition: 'left 0.2s',
-                  }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {ruleList.map(rule => (
+            <div key={rule.id} style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{rule.name}</span>
+                  <span style={{
+                    padding: '1px 6px', borderRadius: 4, fontSize: '0.65rem', fontWeight: 600,
+                    background: rule.is_active ? 'rgba(52,211,153,0.1)' : 'rgba(139,146,168,0.1)',
+                    color: rule.is_active ? 'var(--green)' : 'var(--text-tertiary)',
+                  }}>{rule.type || 'rule'}</span>
                 </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 2 }}>{rule.name}</div>
-                  <div style={{ fontSize: '0.77rem', color: 'var(--text-secondary)' }}>
-                    WHEN <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{rule.trigger_metric}</span>{' '}
-                    <span style={{ fontFamily: 'var(--font-mono)' }}>{operators.find(o => o.value === rule.trigger_operator)?.label || rule.trigger_operator}</span>{' '}
-                    <span style={{ fontFamily: 'var(--font-mono)' }}>{rule.trigger_value?.toLocaleString()}</span>
-                    {' '}THEN <span style={{ color: 'var(--amber)', fontWeight: 600 }}>{rule.action?.replace(/_/g, ' ')}</span>
-                  </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                  {rule.condition || 'No condition set'}
+                  {rule.last_triggered ? ` · Last triggered: ${new Date(rule.last_triggered).toLocaleDateString()}` : ''}
                 </div>
               </div>
               <button
-                onClick={() => { if (confirm('Delete this rule?')) deleteMut.mutate(rule.id); }}
-                style={{ padding: '6px 8px', background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', borderRadius: 4 }}
-                title="Delete rule"
+                onClick={() => toggleMutation.mutate(rule.id)}
+                style={{
+                  padding: '4px 12px', borderRadius: 4, fontSize: '0.75rem', cursor: 'pointer',
+                  background: rule.is_active ? 'rgba(52,211,153,0.1)' : 'transparent',
+                  color: rule.is_active ? 'var(--green)' : 'var(--text-tertiary)',
+                  border: `1px solid ${rule.is_active ? 'var(--green)' : 'var(--border)'}`,
+                }}
               >
-                <Trash2 size={14} />
+                {rule.is_active ? 'Active' : 'Paused'}
               </button>
             </div>
           ))}
@@ -199,3 +153,36 @@ export function AutomationPage() {
     </div>
   );
 }
+
+function StatusCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string; color: string }) {
+  return (
+    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: color }} />
+      <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
+        {icon} {label}
+      </div>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 700, marginTop: 8, color }}>{value}</div>
+    </div>
+  );
+}
+
+const btnStyle: CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 6,
+  padding: '8px 16px', background: 'var(--accent)', color: 'var(--bg-deep)',
+  border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem',
+};
+
+const inputStyle: CSSProperties = {
+  padding: '8px 12px', background: 'var(--bg-deep)', color: 'var(--text-primary)',
+  border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.8rem', width: '100%',
+};
+
+const selectStyle: CSSProperties = {
+  padding: '8px 12px', background: 'var(--bg-deep)', color: 'var(--text-primary)',
+  border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.8rem',
+};
+
+const cardStyle: CSSProperties = {
+  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+  borderRadius: 10, padding: 20,
+};

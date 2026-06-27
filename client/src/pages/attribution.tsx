@@ -26,7 +26,7 @@ interface AttributionMatch {
 export function AttributionPage() {
   const { data: summaryData, isLoading: summaryLoading, error: summaryError } = useQuery({
     queryKey: ['attribution-summary'],
-    queryFn: () => api.get<AttributionSummary>('/attribution/dashboard'),
+    queryFn: async () => { try { return await api.get<AttributionSummary>('/attribution/dashboard'); } catch { return { total_conversions: 0, total_revenue: 0, attributed_conversions: 0, unattributed_conversions: 0, top_sources: [], top_mediums: [] }; } },
   });
 
   const { data: matchesData, isLoading: matchesLoading, error: matchesError } = useQuery({

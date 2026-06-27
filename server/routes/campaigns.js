@@ -1,6 +1,9 @@
 import { Router } from 'express';
+import { createLogger } from '../lib/logger.js';
 
-export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, campaignsRepo) {
+const log = createLogger('campaigns-route');
+
+export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo) {
   const router = Router();
 
   // Create full campaign (AI creative → campaign → adset → creative → ad)
@@ -62,12 +65,11 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
 
   // Update campaign budget
   router.put('/:id/budget', async (req, res) => {
-    const { dailyBudget } = req.body;
-    if (!dailyBudget) return res.status(400).json({ success: false, error: 'dailyBudget is required' });
-
     try {
+      const { dailyBudget } = req.body;
+      if (!dailyBudget) return res.status(400).json({ success: false, error: 'dailyBudget is required' });
       await orchestrator.scaleBudget(req.params.id, parseFloat(dailyBudget));
-      res.json({ success: true, data: { id: req.params.id, dailyBudget: parseFloat(dailyBudget) } });
+      res.json({ success: true, data: { id: req.params.id, dailyBudget } });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -75,12 +77,11 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
 
   // Search targeting interests — must be before GET /:id to avoid route shadowing
   router.get('/targeting/search', async (req, res) => {
-    const { q } = req.query;
-    if (!q) return res.status(400).json({ success: false, error: 'q is required' });
-
     try {
-      const options = await metaApi.getTargetingOptions(q);
-      res.json({ success: true, data: options });
+      const { q, type } = req.query;
+      if (!q) return res.status(400).json({ success: false, error: 'q (query) is required' });
+      const results = await metaApi.searchTargeting(q, type || 'adinterest');
+      res.json({ success: true, data: results });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -97,6 +98,141 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       } else {
         res.status(500).json({ success: false, error: err.message });
       }
+    }
+  });
+
+  // GET /accounts — list Meta ad accounts
+  router.get('/accounts', async (_req, res) => {
+    try {
+      const accounts = await metaApi.getAdAccounts();
+      res.json({ success: true, data: accounts });
+    } catch (err) {
+      log.error('Failed to get ad accounts', { error: err.message });
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // POST /sync — sync campaigns, adsets, ads from Meta to local DB
+  router.post('/sync', async (req, res) => {
+    try {
+      const { accountId } = req.body;
+      log.info('Starting Meta sync', { accountId });
+
+      // Get ad accounts
+      let accounts;
+      try {
+        accounts = await metaApi.getAdAccounts();
+      } catch (err) {
+        return res.status(500).json({ success: false, error: `Failed to get ad accounts: ${err.message}` });
+      }
+
+      if (!accounts || accounts.length === 0) {
+        return res.json({ success: true, data: { campaigns: 0, adsets: 0, ads: 0, message: 'No ad accounts found' } });
+      }
+
+      // Filter to specific account if provided
+      if (accountId) {
+        accounts = accounts.filter(a => a.id === accountId || a.id.endsWith(accountId));
+      }
+
+      let totalCampaigns = 0;
+      let totalAdsets = 0;
+      let totalAds = 0;
+
+      for (const account of accounts) {
+        log.info('Syncing account', { accountId: account.id, name: account.name });
+
+        // Fetch campaigns
+        let campaigns = [];
+        try {
+          campaigns = await metaApi.getCampaigns(account.id);
+        } catch (err) {
+          log.error('Failed to get campaigns', { accountId: account.id, error: err.message });
+        }
+
+        // Fetch insights for all campaigns
+        let insightsMap = {};
+        if (campaigns.length > 0) {
+          try {
+            const campaignIds = campaigns.map(c => c.id);
+            insightsMap = await metaApi.getMultiCampaignInsights(campaignIds);
+          } catch (err) {
+            log.error('Failed to get campaign insights', { error: err.message });
+          }
+        }
+
+        // Store campaigns in DB
+        for (const c of campaigns) {
+          const insights = insightsMap[c.id] || {};
+          const spendVal = parseFloat(insights.spend || 0);
+          const revenueVal = parseFloat(insights.revenue || 0);
+          const roasVal = spendVal > 0 ? revenueVal / spendVal : 0;
+          campaignsRepo.upsert({
+            platform: 'meta',
+            campaign_id: c.id,
+            name: c.name,
+            status: c.status,
+            budget: c.dailyBudget || c.lifetimeBudget || 0,
+            spend: spendVal,
+            revenue: revenueVal,
+            impressions: parseInt(insights.impressions || 0),
+            clicks: parseInt(insights.clicks || 0),
+            conversions: parseInt(insights.conversions || 0),
+            roas: Math.round(roasVal * 100) / 100,
+          });
+          totalCampaigns++;
+        }
+
+        // Fetch ad sets
+        let adsets = [];
+        try {
+          const adsetData = await metaApi._get(`/${account.id}/adsets`, {
+            fields: 'id,name,status,campaign_id,daily_budget,lifetime_budget,targeting,billing_event,optimization_goal',
+            limit: '50',
+          });
+          adsets = adsetData.data || [];
+          totalAdsets += adsets.length;
+        } catch (err) {
+          log.error('Failed to get adsets', { accountId: account.id, error: err.message });
+        }
+
+        // Fetch ads and store in DB
+        let ads = [];
+        try {
+          ads = await metaApi.getAds(account.id);
+          for (const ad of ads) {
+            try {
+              const existing = adsRepo?.findById?.(ad.id);
+              if (existing) {
+                adsRepo?.update?.(ad.id, { name: ad.name, status: ad.status });
+              } else {
+                adsRepo?.create?.({
+                  id: ad.id, name: ad.name, product: ad.creative?.title || '',
+                  target: ad.creative?.body || '', platform: 'meta',
+                  format: 'single_image', status: ad.status,
+                });
+              }
+            } catch (_) { /* skip individual ad errors */ }
+          }
+          totalAds += ads.length;
+        } catch (err) {
+          log.error('Failed to get ads', { accountId: account.id, error: err.message });
+        }
+      }
+
+      log.info('Meta sync complete', { campaigns: totalCampaigns, adsets: totalAdsets, ads: totalAds });
+      res.json({
+        success: true,
+        data: {
+          campaigns: totalCampaigns,
+          adsets: totalAdsets,
+          ads: totalAds,
+          accounts: accounts.map(a => ({ id: a.id, name: a.name })),
+        },
+      });
+    } catch (err) {
+      log.error('Sync failed', { error: err.message });
+      res.status(500).json({ success: false, error: err.message });
     }
   });
 
@@ -140,6 +276,42 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     try {
       const insights = await metaApi.getCampaignInsights(req.params.id);
       res.json({ success: true, data: { id: req.params.id, insights } });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+
+  // GET /sync/ads — get ads from Meta (live, not stored)
+  router.get('/sync/ads', async (_req, res) => {
+    try {
+      const accounts = await metaApi.getAdAccounts();
+      if (!accounts || accounts.length === 0) {
+        return res.json({ success: true, data: [], total: 0, page: 1, limit: 20 });
+      }
+
+      const allAds = [];
+      for (const account of accounts.slice(0, 3)) {
+        try {
+          const ads = await metaApi.getAds(account.id, { limit: 50 });
+          for (const ad of ads) {
+            allAds.push({
+              id: ad.id,
+              name: ad.name,
+              status: ad.status,
+              campaign_id: '',
+              adset_id: '',
+              creative: ad.creative || {},
+              insights: { impressions: 0, clicks: 0, spend: 0, ctr: 0, cpc: 0 },
+              created_at: new Date().toISOString(),
+            });
+          }
+        } catch (err) {
+          log.error('Failed to get ads for account', { accountId: account.id, error: err.message });
+        }
+      }
+
+      res.json({ success: true, data: allAds, total: allAds.length, page: 1, limit: 20 });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }

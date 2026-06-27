@@ -17,10 +17,12 @@
     "test:functional": "vitest run tests/functional/",
     "test:qa": "node qa.mjs",
     "test:all": "vitest run && node qa.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "lint": "eslint server/ --ext .js"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
+    "@vitest/coverage-v8": "^4.1.9",
     "supertest": "^7.2.2",
     "vite": "^8.0.3",
     "vitest": "^4.1.2"
@@ -32,6 +34,7 @@
     "axios": "^1.15.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.8.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "ejs": "^6.0.1",

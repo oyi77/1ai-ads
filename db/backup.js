@@ -1,4 +1,5 @@
 import fs from 'fs';
+import Database from 'better-sqlite3';
 import { join } from 'path';
 import { createLogger } from '../server/lib/logger.js';
 
@@ -14,6 +15,20 @@ export function backupDatabase(dbPath, rootDir) {
 
     fs.copyFileSync(dbPath, backupPath);
     log.info(`Database backed up to ${backupPath}`);
+
+    // Integrity check on the backup
+    try {
+      const backupDb = new Database(backupPath, { readonly: true });
+      const result = backupDb.pragma('integrity_check');
+      backupDb.close();
+      if (result[0]?.integrity_check !== 'ok') {
+        log.error('Backup integrity check failed', { backupPath, result });
+      } else {
+        log.info('Backup integrity check passed', { backupPath });
+      }
+    } catch (checkErr) {
+      log.error('Backup integrity check error', { backupPath, error: checkErr.message });
+    }
 
     const backups = fs.readdirSync(backupDir)
       .filter(f => f.endsWith('.backup'))

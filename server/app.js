@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import config from './config/index.js';
 import { createLogger } from './lib/logger.js';
 import { createRepositories } from './app/repositories.js';
@@ -11,7 +12,16 @@ import { createRouters } from './app/routers.js';
 import helmet from 'helmet';
 import { auditLog } from './middleware/audit.js';
 import { AuditLogRepository } from './repositories/audit-log.js';
+import { getMetricsText, metricsMiddleware } from './lib/metrics.js';
 import { initBot } from './bot/index.js';
+
+// ── Sentry (optional, env-gated) ──────────────────────
+if (process.env.SENTRY_DSN) {
+  try {
+    const Sentry = await import('@sentry/node');
+    Sentry.init({ dsn: process.env.SENTRY_DSN, environment: process.env.NODE_ENV || 'development' });
+  } catch { /* @sentry/node not installed — skip */ }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,8 +66,9 @@ export function createApp(params) {
   }));
 
   app.use(helmet());
-
+  app.use(metricsMiddleware);
   app.use(express.json());
+  app.use(cookieParser());
 
   // EJS template engine for server-rendered dashboard pages
   app.set('view engine', 'ejs');
@@ -94,11 +105,18 @@ export function createApp(params) {
   // Proxy Scalev payment callback → Hermes bot (port 8443)
   // Cloudflare WAF blocks unknown POST paths; use a standard-looking path
   app.post('/api/payments/notify', async (req, res) => {
+    const signature = req.headers['x-scalev-signature'];
+    if (!signature) {
+      return res.status(401).json({ error: 'Missing signature' });
+    }
     try {
       const targetUrl = `${config.hermesBotUrl}/webhook/scalev`;
       const response = await fetch(targetUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Scalev-Signature': signature,
+        },
         body: JSON.stringify(req.body),
         signal: AbortSignal.timeout(30000),
       });
@@ -118,6 +136,12 @@ export function createApp(params) {
       app.locals.pendingVideos[jobId] = { videoUrl, thumbnailUrl, receivedAt: Date.now() };
     }
     res.json({ received: true });
+  });
+
+  // ── Prometheus Metrics ──────────────────────────────────────
+  app.get('/metrics', (_req, res) => {
+    res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+    res.send(getMetricsText());
   });
 
   app.get('/health', (_req, res) => {
@@ -155,6 +179,7 @@ export function createApp(params) {
     res.status(status).json({ success: false, error: config.nodeEnv === 'production' ? 'Internal Server Error' : err.message });
   });
 
+  app.locals.realtimeService = services.realtimeService;
   app.locals._services = {
     autonomousAgent: services.autonomousAgent,
     autoOptimizer: services.autoOptimizer,

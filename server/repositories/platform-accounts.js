@@ -14,7 +14,11 @@ function decryptCredentials(raw) {
     return safeParse(decrypted);
   } catch {
     // Fall back to legacy plain-text JSON
-    return safeParse(raw);
+    const parsed = safeParse(raw);
+    if (parsed !== null) return parsed;
+    // If it's a plain string (like a raw access token), return as-is
+    if (typeof raw === 'string' && raw.length > 5) return raw;
+    return null;
   }
 }
 

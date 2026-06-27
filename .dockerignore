@@ -1,0 +1,13 @@
+.env
+.env.*
+.git
+.github
+node_modules
+_archived
+backups
+data
+logs
+tests
+*.md
+!README.md
+!CHANGELOG.md
