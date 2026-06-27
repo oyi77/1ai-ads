@@ -1,7 +1,8 @@
 import { safeFetch } from '../lib/platform-client.js';
 import config from '../config/index.js';
 import { BasePlatformApiClient } from '../lib/base-platform-api.js';
-import { ConfigurationError, PlatformError } from '../lib/errors.js';
+import { ConfigurationError } from '../lib/errors.js';
+import { FacebookAdsApi } from 'facebook-nodejs-business-sdk';
 
 const log = config.log?.metaApi ? undefined : undefined; // will use base class logger
 const BASE = `https://graph.facebook.com/${config.metaApiVersion}`;
@@ -43,27 +44,44 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     throw new ConfigurationError('Meta access token not configured. Connect a Facebook account in Settings.');
   }
 
-  // Override: Meta uses access_token as query param, not Authorization header
-  async _get(path, params = {}) {
-    const url = new URL(`${this._baseUrl}${path}`);
-    url.searchParams.set('access_token', this._getToken());
-    for (const [k, v] of Object.entries(params)) {
-      url.searchParams.set(k, v);
-    }
-    const res = await safeFetch('meta', url.toString());
-    return await res.json();
+  // Convert '/me/adaccounts' → ['v19.0', 'me', 'adaccounts'] for SDK array-path mode
+  _sdkPath(path) {
+    return [config.metaApiVersion, ...path.split('/').filter(Boolean)];
   }
 
-  // Override: Meta uses access_token as query param
+  // Override: uses SDK (array-path mode) as primary, safeFetch as fallback
+  async _get(path, params = {}) {
+    const token = this._getToken();
+    try {
+      const api = FacebookAdsApi.init(token);
+      return await api.call('GET', this._sdkPath(path), params);
+    } catch {
+      const url = new URL(`${this._baseUrl}${path}`);
+      url.searchParams.set('access_token', token);
+      for (const [k, v] of Object.entries(params)) {
+        url.searchParams.set(k, v);
+      }
+      const res = await safeFetch('meta', url.toString());
+      return await res.json();
+    }
+  }
+
+  // Override: uses SDK as primary, safeFetch as fallback
   async _post(path, body = {}) {
-    const url = new URL(`${this._baseUrl}${path}`);
-    url.searchParams.set('access_token', this._getToken());
-    const res = await safeFetch('meta', url.toString(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    return await res.json();
+    const token = this._getToken();
+    try {
+      const api = FacebookAdsApi.init(token);
+      return await api.call('POST', this._sdkPath(path), body);
+    } catch {
+      const url = new URL(`${this._baseUrl}${path}`);
+      url.searchParams.set('access_token', token);
+      const res = await safeFetch('meta', url.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return await res.json();
+    }
   }
 
   // Aliases for backward compatibility with orchestrator/agent
@@ -71,10 +89,16 @@ export class MetaAdsAPI extends BasePlatformApiClient {
   async apiPost(path, body) { return this._post(path, body); }
   async apiUpdate(path, body) { return this._post(path, body); }
   async apiDelete(path) {
-    const url = new URL(`${this._baseUrl}${path}`);
-    url.searchParams.set('access_token', this._getToken());
-    const res = await safeFetch('meta', url.toString(), { method: 'DELETE' });
-    return await res.json();
+    const token = this._getToken();
+    try {
+      const api = FacebookAdsApi.init(token);
+      return await api.call('DELETE', this._sdkPath(path));
+    } catch {
+      const url = new URL(`${this._baseUrl}${path}`);
+      url.searchParams.set('access_token', token);
+      const res = await safeFetch('meta', url.toString(), { method: 'DELETE' });
+      return await res.json();
+    }
   }
 
   // --- Account Management ---
@@ -254,7 +278,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     if (updates.name) body.name = updates.name;
     if (updates.status) body.status = updates.status;
     if (updates.dailyBudget !== undefined) body.daily_budget = Math.round(updates.dailyBudget * 100);
-    const data = await this._post(`/${campaignId}`, body);
+    const _data = await this._post(`/${campaignId}`, body);
     return { success: true, id: campaignId };
   }
 
@@ -263,7 +287,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     if (updates.status) body.status = updates.status;
     if (updates.dailyBudget !== undefined) body.daily_budget = Math.round(updates.dailyBudget * 100);
     if (updates.targeting) body.targeting = updates.targeting;
-    const data = await this._post(`/${adsetId}`, body);
+    const _data = await this._post(`/${adsetId}`, body);
     return { success: true, id: adsetId };
   }
 
@@ -329,18 +353,15 @@ export class MetaAdsAPI extends BasePlatformApiClient {
   }
 
   async getAdLibrary({ query, country = 'ID', limit = 20 } = {}) {
-    const token = this._getToken();
-    const url = new URL(`${BASE}/ads_archive`);
-    url.searchParams.set('access_token', token);
-    url.searchParams.set('ad_reached_countries', JSON.stringify([country]));
-    url.searchParams.set('ad_active_status', 'ACTIVE');
-    url.searchParams.set('ad_type', 'ALL');
-    url.searchParams.set('fields', 'id,page_name,ad_creative_bodies,ad_creative_link_titles,ad_snapshot_url,ad_delivery_start_time,publisher_platforms,spend,impressions');
-    url.searchParams.set('limit', String(limit));
-    if (query) url.searchParams.set('search_terms', query);
-
-    const res = await safeFetch('meta', url.toString());
-    const data = await res.json();
+    const params = {
+      ad_reached_countries: JSON.stringify([country]),
+      ad_active_status: 'ACTIVE',
+      ad_type: 'ALL',
+      fields: 'id,page_name,ad_creative_bodies,ad_creative_link_titles,ad_snapshot_url,ad_delivery_start_time,publisher_platforms,spend,impressions',
+      limit: String(limit),
+    };
+    if (query) params.search_terms = query;
+    const data = await this._get('/ads_archive', params);
     return data.data || [];
   }
 

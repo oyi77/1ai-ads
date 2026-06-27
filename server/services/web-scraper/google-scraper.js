@@ -8,7 +8,7 @@
  * Handles: iframe content, dynamic loading, pagination.
  */
 
-import { BaseScraper, PuppeteerPool, RequestQueue } from './base-scraper.js';
+import { BaseScraper } from './base-scraper.js';
 import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('google-scraper');
@@ -151,7 +151,7 @@ export class GoogleScraper extends BaseScraper {
    * Scrape via Puppeteer with search + scroll.
    * @private
    */
-  async _scrapeViaPuppeteer(query, { country, adType, limit }) {
+  async _scrapeViaPuppeteer(query, { country: _country, adType: _adType, limit }) {
     const browser = await this.pool.acquire();
     if (!browser) return [];
 
@@ -254,7 +254,7 @@ export class GoogleScraper extends BaseScraper {
    * Google's transparency center is heavily JS-rendered so this may not yield much.
    * @private
    */
-  async _scrapeViaFetch(query, { country, limit }) {
+  async _scrapeViaFetch(query, { country: _country, limit }) {
     const url = `${GOOGLE_ADS_TRANSPARENCY_URL}?q=${encodeURIComponent(query)}`;
 
     const response = await this._rateLimitedFetch(url);

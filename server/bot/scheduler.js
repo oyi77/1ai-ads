@@ -15,7 +15,6 @@ import {
   evaluateMetrics,
 } from '../domain/optimization.js';
 import { calculateCampaignStats, formatDailyReport } from '../domain/reporting.js';
-import { detectFatigue } from '../domain/creative.js';
 import { backupDatabase } from '../../db/backup.js';
 
 const log = createLogger('bot:scheduler');
@@ -44,7 +43,7 @@ async function safeSend(bot, text, extra) {
  * @param {{ repos: object, services: object }} deps
  */
 export function initScheduler(bot, deps) {
-  const WIB_OFFSET = 7 * 60 * 60 * 1000; // UTC+7
+  const _WIB_OFFSET = 7 * 60 * 60 * 1000; // UTC+7
 
   // ────────────────────────────────────────────────────────────
   // 1. Campaign Monitor — every 6 hours
@@ -183,13 +182,13 @@ export function initScheduler(bot, deps) {
             const metaApi = deps.services?.metaApi;
             if (!metaApi) continue;
             await metaApi.getMe?.(account.credentials.access_token);
-          } catch (err) {
+          } catch {
             expired++;
             log.warn('Token expired', { account: account.account_name });
             await safeSend(bot, `🔴 Token expired for *${account.account_name}*`, { parse_mode: 'Markdown' });
             try {
               deps.repos?.platformAccountsRepo?.update?.(account.id, { health_status: 'expired' });
-            } catch (_) { /* best-effort DB update */ }
+            } catch { /* best-effort DB update */ }
           }
         }
       }

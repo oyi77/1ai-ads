@@ -245,7 +245,7 @@ export class MetaAdapter extends BasePlatformAdapter {
 
   // ---- Private: Scraper fallback ----
 
-  async _searchViaScraper(query, { country, activeStatus, limit }) {
+  async _searchViaScraper(query, { country, activeStatus: _activeStatus, limit }) {
     log.info('Falling back to Meta web scraper', { query });
 
     const scrapedAds = await this.scraper.scrapeAdsLibrary(query, { country, limit });

@@ -1,6 +1,6 @@
-import { safeFetch } from '../lib/platform-client.js';
+import GoogleAdsApi from 'google-ads-api';
 import { BasePlatformApiClient } from '../lib/base-platform-api.js';
-import { ConfigurationError, PlatformError } from '../lib/errors.js';
+import { ConfigurationError } from '../lib/errors.js';
 
 const BASE = 'https://googleads.googleapis.com/v18';
 
@@ -21,37 +21,35 @@ export class GoogleAdsAPI extends BasePlatformApiClient {
     return creds;
   }
 
-  async _query(customerId, gaql) {
-    const creds = this._getConfig();
-    const res = await safeFetch('google', `${BASE}/customers/${customerId}/googleAds:searchStream`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${creds.oauth_token}`,
-        'developer-token': creds.developer_token,
-        'Content-Type': 'application/json',
-        ...(creds.login_customer_id && { 'login-customer-id': creds.login_customer_id }),
-      },
-      body: JSON.stringify({ query: gaql }),
+  _initClient() {
+    const cfg = this._getConfig();
+    return new GoogleAdsApi({
+      client_id: cfg.client_id,
+      client_secret: cfg.client_secret,
+      developer_token: cfg.developer_token,
     });
-    const data = await res.json();
-    
-    const results = [];
-    for (const batch of (data || [])) {
-      if (batch.results) results.push(...batch.results);
-    }
-    return results;
+  }
+
+  _getCustomer(customerId) {
+    const cfg = this._getConfig();
+    const client = this._initClient();
+    return client.Customer({
+      refresh_token: cfg.oauth_token,
+      customer_id: customerId,
+      ...(cfg.login_customer_id && { login_customer_id: cfg.login_customer_id }),
+    });
+  }
+
+  async _query(customerId, gaql) {
+    const customer = this._getCustomer(customerId);
+    return customer.query(gaql);
   }
 
   async listAccounts() {
     const creds = this._getConfig();
-    const res = await safeFetch('google', `${BASE}/customers:listAccessibleCustomers`, {
-      headers: {
-        'Authorization': `Bearer ${creds.oauth_token}`,
-        'developer-token': creds.developer_token,
-      },
-    });
-    const data = await res.json();
-    return (data.resourceNames || []).map(r => r.replace('customers/', ''));
+    const client = this._initClient();
+    const response = await client.listAccessibleCustomers(creds.oauth_token);
+    return (response.resource_names || []).map(r => r.replace('customers/', ''));
   }
 
   async syncAllAccounts() {
@@ -130,50 +128,28 @@ export class GoogleAdsAPI extends BasePlatformApiClient {
     `);
   }
 
-  async _mutate(customerId, resource, operations) {
-    const creds = this._getConfig();
-    const res = await safeFetch('google', `${BASE}/customers/${customerId}/${resource}:mutate`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${creds.oauth_token}`,
-        'developer-token': creds.developer_token,
-        'Content-Type': 'application/json',
-        ...(creds.login_customer_id && { 'login-customer-id': creds.login_customer_id }),
-      },
-      body: JSON.stringify({ operations }),
-    });
-    return await res.json();
-  }
-
-  async createCampaign(customerId, { name, status = 'PAUSED', dailyBudgetMicros, advertisingChannelType = 'SEARCH' }) {
+  async createCampaign(customerId, { name, status = 'PAUSED', dailyBudgetMicros: _dailyBudgetMicros, advertisingChannelType = 'SEARCH' }) {
     this.log.info('Creating Google Ads campaign', { customerId, name });
-    const result = await this._mutate(customerId, 'campaigns', [{
-      create: {
-        name,
-        status,
-        advertisingChannelType,
-        campaignBudget: `customers/${customerId}/campaignBudgets/-1`,
-      },
+    const customer = this._getCustomer(customerId);
+    const response = await customer.campaigns.create([{
+      name,
+      status,
+      advertising_channel_type: advertisingChannelType,
+      campaign_budget: `customers/${customerId}/campaignBudgets/-1`,
     }]);
-    this.log.info('Google Ads campaign created', { campaignId: result.results?.[0]?.resourceName });
-    return { resourceName: result.results?.[0]?.resourceName };
+    this.log.info('Google Ads campaign created', { campaignId: response.results?.[0]?.resource_name });
+    return { resourceName: response.results?.[0]?.resource_name };
   }
 
   async updateCampaign(customerId, campaignId, { name, status }) {
     this.log.info('Updating Google Ads campaign', { customerId, campaignId });
-    const updateMask = [];
-    const updateFields = {};
-    if (name) { updateFields.name = name; updateMask.push('name'); }
-    if (status) { updateFields.status = status; updateMask.push('status'); }
+    const customer = this._getCustomer(customerId);
+    const campaign = { resource_name: `customers/${customerId}/campaigns/${campaignId}` };
+    if (name) campaign.name = name;
+    if (status) campaign.status = status;
 
-    const result = await this._mutate(customerId, 'campaigns', [{
-      update: {
-        resourceName: `customers/${customerId}/campaigns/${campaignId}`,
-        ...updateFields,
-      },
-      updateMask: updateMask.join(','),
-    }]);
+    const response = await customer.campaigns.update([campaign]);
     this.log.info('Google Ads campaign updated', { campaignId });
-    return { resourceName: result.results?.[0]?.resourceName };
+    return { resourceName: response.results?.[0]?.resource_name };
   }
 }

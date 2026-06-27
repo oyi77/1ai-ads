@@ -1,6 +1,6 @@
 import { safeFetch } from '../lib/platform-client.js';
 import { BasePlatformApiClient } from '../lib/base-platform-api.js';
-import { ConfigurationError, PlatformError } from '../lib/errors.js';
+import { ConfigurationError } from '../lib/errors.js';
 
 const BASE = 'https://adsapi.snapchat.com/v1';
 

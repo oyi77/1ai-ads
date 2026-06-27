@@ -109,6 +109,7 @@ const config = {
   // Platform: Shopee
   get shopeeSellerIds() { return process.env.SHOPEE_SELLER_IDS || ''; },
   get shopeeApiUrl() { return process.env.SHOPEE_API_URL || ''; },
+  get nangoSecretKey() { return process.env.NANGO_SECRET_KEY || ''; },
 };
 
 export function validateConfig() {

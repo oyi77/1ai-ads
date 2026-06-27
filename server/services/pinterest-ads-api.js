@@ -160,7 +160,7 @@ export class PinterestAdsAPI extends BasePlatformApiClient {
       name,
       status,
       objective_type: objectiveType,
-      ...(dailySpendCap != null && { daily_spend_cap: dailySpendCap }),
+      ...(dailySpendCap !== null && dailySpendCap !== undefined && { daily_spend_cap: dailySpendCap }),
     };
     try {
       const data = await this._post(
@@ -182,9 +182,9 @@ export class PinterestAdsAPI extends BasePlatformApiClient {
   async updateCampaign(campaignId, updates) {
     this.log.info('Updating Pinterest campaign', { campaignId });
     const body = {};
-    if (updates.name != null) body.name = updates.name;
-    if (updates.status != null) body.status = updates.status;
-    if (updates.dailySpendCap != null) body.daily_spend_cap = updates.dailySpendCap;
+    if (updates.name !== null && updates.name !== undefined) body.name = updates.name;
+    if (updates.status !== null && updates.status !== undefined) body.status = updates.status;
+    if (updates.dailySpendCap !== null && updates.dailySpendCap !== undefined) body.daily_spend_cap = updates.dailySpendCap;
     try {
       const res = await safeFetch('pinterest', `${this._baseUrl}/campaigns/${campaignId}`, {
         method: 'PATCH',

@@ -435,7 +435,7 @@ export class BaseScraper {
    * @param {number} [options.limit] - Max results
    * @returns {Promise<Array>} Scraped ad data
    */
-  async scrapeAdsLibrary(query, options = {}) {
+  async scrapeAdsLibrary(query, _options = {}) {
     throw new Error(`${this.constructor.name} must implement scrapeAdsLibrary(query, options)`);
   }
 
@@ -445,7 +445,7 @@ export class BaseScraper {
    * @param {string} pageUrl - URL of the ad detail page
    * @returns {Promise<Object>} Extracted metadata
    */
-  async extractAdMetadata(pageUrl) {
+  async extractAdMetadata(_pageUrl) {
     throw new Error(`${this.constructor.name} must implement extractAdMetadata(pageUrl)`);
   }
 
@@ -470,10 +470,14 @@ export class BaseScraper {
         },
       };
 
-      // Note: proxy support for fetch requires a proxy agent (e.g., https-proxy-agent)
-      // This is a placeholder - actual proxy usage would be configured via agent
       if (proxy) {
-        log.debug('Using proxy for request', { url });
+        try {
+          const { ProxyAgent } = await import('undici');
+          options.dispatcher = new ProxyAgent(proxy);
+          log.debug('Using proxy for request', { url, proxy });
+        } catch (err) {
+          log.warn('Failed to create proxy agent, falling back to direct', { proxy, error: err.message });
+        }
       }
 
       const response = await fetch(url, options);
@@ -503,7 +507,7 @@ export class BaseScraper {
     const tagMatch = selector.match(/^(\w+)(?:\[([^\]]+)\])?(?:\.([\w-]+))?$/);
     if (!tagMatch) return '';
 
-    const [, tag, attr, className] = tagMatch;
+    const [, tag, _attr, className] = tagMatch;
     let pattern;
     if (className) {
       pattern = new RegExp(`<${tag}[^>]*class="[^"]*${className}[^"]*"[^>]*>(.*?)</${tag}>`, 'gs');

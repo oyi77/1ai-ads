@@ -108,7 +108,7 @@ export class BasePlatformAdapter {
    * @param {string} [options.source='api'] - Preferred data source ('api', 'scrape', 'auto')
    * @returns {Promise<AdSearchResult>} Search results
    */
-  async searchAds(query, options = {}) {
+  async searchAds(query, _options = {}) {
     throw new Error(`${this.constructor.name} must implement searchAds(query, options)`);
   }
 
@@ -118,7 +118,7 @@ export class BasePlatformAdapter {
    * @param {string} adId - Platform-specific ad identifier
    * @returns {Promise<NormalizedAd>} Detailed ad information
    */
-  async getAdDetails(adId) {
+  async getAdDetails(_adId) {
     throw new Error(`${this.constructor.name} must implement getAdDetails(adId)`);
   }
 

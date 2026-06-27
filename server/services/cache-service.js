@@ -88,7 +88,7 @@ export class CacheService {
       this._evictOldest();
     }
 
-    const effectiveTTL = ttl != null ? ttl : this.defaultTTL;
+    const effectiveTTL = ttl !== null && ttl !== undefined ? ttl : this.defaultTTL;
     this.store.set(key, {
       value,
       expiresAt: Date.now() + effectiveTTL,

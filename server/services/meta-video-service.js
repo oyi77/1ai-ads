@@ -12,7 +12,6 @@ import fs from 'fs';
 import axios from 'axios';
 import { createLogger } from '../lib/logger.js';
 import config from '../config/index.js';
-import { PlatformError } from '../lib/errors.js';
 
 const log = createLogger('meta-video');
 const BASE = `https://graph.facebook.com/${config.metaApiVersion}`;

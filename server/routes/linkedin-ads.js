@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { LinkedInAdsAPI } from '../services/linkedin-ads-api.js';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('linkedin-ads');
 
 export function createLinkedInAdsRouter(settingsRepo) {
   const router = Router();
@@ -11,7 +14,7 @@ export function createLinkedInAdsRouter(settingsRepo) {
       const creds = settingsRepo.getCredentials('linkedin');
       const configured = !!(creds?.access_token);
       res.json({ success: true, data: { configured, platform: 'linkedin' } });
-    } catch (err) {
+    } catch {
       res.json({ success: true, data: { configured: false, platform: 'linkedin' } });
     }
   });
@@ -30,7 +33,7 @@ export function createLinkedInAdsRouter(settingsRepo) {
       }));
       res.json({ success: true, data: { accounts, total: accounts.length } });
     } catch (err) {
-      console.error('LinkedIn accounts fetch failed:', err.message);
+      log.error('LinkedIn accounts fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -46,7 +49,7 @@ export function createLinkedInAdsRouter(settingsRepo) {
       });
       res.json({ success: true, data: { campaigns: data.elements || [], total: data.paging?.total || 0 } });
     } catch (err) {
-      console.error('LinkedIn campaigns fetch failed:', err.message);
+      log.error('LinkedIn campaigns fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -60,7 +63,7 @@ export function createLinkedInAdsRouter(settingsRepo) {
       const data = await linkedinAds.getCampaignAnalytics(accountId, { startDate, endDate, campaignIds: ids });
       res.json({ success: true, data: { analytics: data.elements || [], total: data.paging?.total || 0 } });
     } catch (err) {
-      console.error('LinkedIn analytics fetch failed:', err.message);
+      log.error('LinkedIn analytics fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -76,7 +79,7 @@ export function createLinkedInAdsRouter(settingsRepo) {
       const result = await linkedinAds.createCampaign(accountId, { name, status, type, dailyBudget, runSchedule });
       res.json({ success: true, data: result });
     } catch (err) {
-      console.error('LinkedIn campaign creation failed:', err.message);
+      log.error('LinkedIn campaign creation failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -89,7 +92,7 @@ export function createLinkedInAdsRouter(settingsRepo) {
       const result = await linkedinAds.updateCampaign(campaignId, { name, status, dailyBudget, runSchedule });
       res.json({ success: true, data: result });
     } catch (err) {
-      console.error('LinkedIn campaign update failed:', err.message);
+      log.error('LinkedIn campaign update failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -100,7 +103,7 @@ export function createLinkedInAdsRouter(settingsRepo) {
       const results = await linkedinAds.syncAllAccounts();
       res.json({ success: true, data: { results, total: results.length } });
     } catch (err) {
-      console.error('LinkedIn sync failed:', err.message);
+      log.error('LinkedIn sync failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });

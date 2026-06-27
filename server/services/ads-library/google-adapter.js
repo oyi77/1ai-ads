@@ -150,7 +150,7 @@ export class GoogleAdapter extends BasePlatformAdapter {
 
   // ---- Private ----
 
-  async _searchViaScraper(query, { country, activeStatus, adType, limit }) {
+  async _searchViaScraper(query, { country, activeStatus: _activeStatus, adType, limit }) {
     log.info('Using Google web scraper', { query });
 
     const scrapedAds = await this.scraper.scrapeAdsLibrary(query, {

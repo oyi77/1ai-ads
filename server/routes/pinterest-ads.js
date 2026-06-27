@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { PinterestAdsAPI } from '../services/pinterest-ads-api.js';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('pinterest-ads');
 
 export function createPinterestAdsRouter(settingsRepo) {
   const router = Router();
@@ -11,7 +14,7 @@ export function createPinterestAdsRouter(settingsRepo) {
       const creds = settingsRepo.getCredentials('pinterest');
       const connected = !!creds?.access_token;
       res.json({ success: true, data: { connected, platform: 'pinterest' } });
-    } catch (err) {
+    } catch {
       res.json({ success: true, data: { connected: false, platform: 'pinterest' } });
     }
   });
@@ -22,7 +25,7 @@ export function createPinterestAdsRouter(settingsRepo) {
       const accounts = await pinterest.getAdAccounts();
       res.json({ success: true, data: { accounts, total: accounts.length } });
     } catch (err) {
-      console.error('Pinterest accounts fetch failed:', err.message);
+      log.error('Pinterest accounts fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -38,7 +41,7 @@ export function createPinterestAdsRouter(settingsRepo) {
       });
       res.json({ success: true, data: { campaigns, total: campaigns.length } });
     } catch (err) {
-      console.error('Pinterest campaigns fetch failed:', err.message);
+      log.error('Pinterest campaigns fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -55,7 +58,7 @@ export function createPinterestAdsRouter(settingsRepo) {
       });
       res.json({ success: true, data: { analytics, total: analytics.length } });
     } catch (err) {
-      console.error('Pinterest analytics fetch failed:', err.message);
+      log.error('Pinterest analytics fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -71,7 +74,7 @@ export function createPinterestAdsRouter(settingsRepo) {
       const result = await pinterest.createCampaign(adAccountId, { name, status, dailySpendCap, objectiveType });
       res.json({ success: true, data: result });
     } catch (err) {
-      console.error('Pinterest campaign creation failed:', err.message);
+      log.error('Pinterest campaign creation failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -84,7 +87,7 @@ export function createPinterestAdsRouter(settingsRepo) {
       const result = await pinterest.updateCampaign(campaignId, updates);
       res.json({ success: true, data: result });
     } catch (err) {
-      console.error('Pinterest campaign update failed:', err.message);
+      log.error('Pinterest campaign update failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -95,7 +98,7 @@ export function createPinterestAdsRouter(settingsRepo) {
       const results = await pinterest.syncAllAccounts();
       res.json({ success: true, data: { results, total: results.length } });
     } catch (err) {
-      console.error('Pinterest sync failed:', err.message);
+      log.error('Pinterest sync failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });

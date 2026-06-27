@@ -5,7 +5,7 @@ import { TrendingService } from '../services/trending.js';
 import { ScalevService } from '../services/scalev.js';
 import { PaymentService } from '../services/payments.js';
 import { LearningService } from '../services/learning.js';
-import { getPlatform, getAllPlatforms, MetaAdsAPI } from '../platforms/index.js';
+import { MetaAdsAPI } from '../platforms/index.js';
 import { CreativeStudio } from '../services/creative-studio.js';
 import { MetaVideoService } from '../services/meta-video-service.js';
 import { ContentScheduler } from '../services/content-scheduler.js';
@@ -15,6 +15,7 @@ import { RealtimeService } from '../services/realtime-service.js';
 import { ContentBridge } from '../services/content-bridge.js';
 import { SocialBridge } from '../services/social-bridge.js';
 import { AiAgent } from '../services/ai-agent.js';
+import { NangoAuthService } from '../services/nango-auth.js';
 import { ShopeeAdapter } from '../services/shopee-adapter.js';
 import { AttributionService } from '../services/attribution-service.js';
 import { GoogleAdsAPI } from '../services/google-ads-api.js';
@@ -122,6 +123,7 @@ export function createServices({ db, repos, params }) {
   const capiMonitor = new CapiMonitor(metaApi, db);
   const creativeLibraryRepo = new CreativeLibraryRepository(db);
   const dashboardWidgetsRepo = new DashboardWidgetsRepository(db);
+  const nangoAuth = new NangoAuthService();
 
   return {
     llmClient, adspirerClient, trendingService, scalevService, paymentService,
@@ -134,7 +136,7 @@ export function createServices({ db, repos, params }) {
     draftService, facebookSystemUserService, campaignMonitorService,
     abTestService, fatigueDetector, unifiedReporter, bulkOperations,
     imageGenerator, audienceIntelligence, creativeScorer, whiteLabelService,
-    capiMonitor, creativeLibraryRepo, dashboardWidgetsRepo,
+    capiMonitor, creativeLibraryRepo, dashboardWidgetsRepo, nangoAuth,
     mcpClient: params && params.mcpClient,
   };
 }

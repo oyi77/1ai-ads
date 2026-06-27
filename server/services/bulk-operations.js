@@ -221,8 +221,8 @@ export class BulkOperations {
       });
 
       // Attempt to fetch and recreate adsets
-      let adsetIds = [];
-      let adIds = [];
+      const adsetIds = [];
+      const adIds = [];
 
       try {
         const adsets = await this.meta._get(`/${sourceCampaignId}/adsets`, {

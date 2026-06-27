@@ -25,7 +25,7 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
   // Facebook OAuth
   router.get('/facebook/login', (req, res) => {
     const hostname = req.get('host') || '';
-    const isLocal = hostname.includes('localhost') || hostname.includes('127.0.0.1');
+    const _isLocal = hostname.includes('localhost') || hostname.includes('127.0.0.1');
     const callbackUrl = `${req.protocol}://${hostname}/api/auth/facebook/callback`;
     const fbAppId = config.fbAppId;
     const fbSecret = config.fbAppSecret;

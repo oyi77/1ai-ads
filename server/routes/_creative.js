@@ -6,7 +6,7 @@ import { createABTestsRouter } from './ab-tests.js';
 import { createImagesRouter } from './images.js';
 import { requireAuth } from '../middleware/auth.js';
 
-export function createCreativeGroupRouter({ repos, services }) {
+export function createCreativeGroupRouter({ repos: _repos, services }) {
   const router = Router();
   router.use('/creative/library', requireAuth, createCreativeLibraryRouter(services.creativeLibraryRepo));
   router.use('/creative/scoring', requireAuth, createScoringRouter(services.creativeScorer));

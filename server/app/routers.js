@@ -4,7 +4,6 @@ import config from '../config/index.js';
 import rateLimit from 'express-rate-limit';
 import { createTrackRouter } from '../routes/track.js';
 
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 // ── Group Wrappers ──────────────────────────────────────────────
 import { createPagesGroupRouter } from '../routes/_pages.js';

@@ -77,7 +77,7 @@ export function shouldReviewCreative({ ctr, cpc }) {
   return { review: reasons.length > 0, reasons };
 }
 
-function determineDecision(status, roas) {
+function determineDecision(status, _roas) {
   if (status === 'WINNING') return 'SCALE_UP';
   if (status === 'PROFITABLE') return 'MAINTAIN';
   if (status === 'MARGINAL') return 'REVIEW_CREATIVE';

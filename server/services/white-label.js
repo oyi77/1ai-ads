@@ -110,7 +110,7 @@ export class WhiteLabelService {
     const id = crypto.randomUUID();
 
     // If LLM available, generate summary text
-    let reportData = { ...data };
+    const reportData = { ...data };
     if (this.llm && !data.summary) {
       try {
         const summary = await this.llm.call(

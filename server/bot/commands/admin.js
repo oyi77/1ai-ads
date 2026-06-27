@@ -24,7 +24,7 @@ export function handleAdminStats(deps) {
         `Active campaigns: ${campaigns.filter(c => c.status === 'ACTIVE').length}`,
         { parse_mode: 'Markdown' }
       );
-    } catch (err) {
+    } catch {
       ctx.reply('⚠️ Failed to load admin stats.');
     }
   };
@@ -42,13 +42,13 @@ export function handleAdminUsers(deps) {
       const users = deps.repos?.usersRepo?.findAll?.() || [];
       const list = users.slice(0, 20).map(u => `• ${u.username} (${u.role || 'user'})`).join('\n');
       ctx.reply(`👥 *Users (${users.length}):*\n\n${list || 'No users found.'}`, { parse_mode: 'Markdown' });
-    } catch (err) {
+    } catch {
       ctx.reply('⚠️ Failed to load users.');
     }
   };
 }
 
-export function handleAdminBroadcast(deps) {
+export function handleAdminBroadcast(_deps) {
   return async (ctx) => {
     const userId = ctx.from?.id;
     const adminIds = (process.env.ADMIN_USER_IDS || '').split(',').map(Number).filter(Boolean);

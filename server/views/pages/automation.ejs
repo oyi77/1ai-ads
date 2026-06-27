@@ -17,5 +17,5 @@ fetch('/api/automation').then(function(r){return r.json()}).then(function(data){
         return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)"><div><div style="font-weight:600;font-size:0.85rem">'+r.name+'</div><div style="font-size:0.72rem;color:var(--text-tertiary)">'+(r.trigger_metric||'')+' '+(r.trigger_operator||'')+' '+(r.trigger_value||'')+' → '+(r.action_type||'')+'</div></div><div style="display:flex;gap:8px;align-items:center"><span class="badge '+(r.is_active?'badge-success':'badge-neutral')+'">'+(r.is_active?'Active':'Paused')+'</span></div></div>';
     }).join('');
 });
-function showCreateForm(){window.showToast('Info','Rule creation coming soon','info')}
+function showCreateForm(){window.location.href='/api/automation/rules'}
 </script>

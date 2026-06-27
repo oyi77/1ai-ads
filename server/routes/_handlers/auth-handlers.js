@@ -102,7 +102,7 @@ export function handleRefreshToken(usersRepo, refreshTokensRepo) {
       refreshTokensRepo.upsert(user.id, newRefreshToken, expiresAt.toISOString());
 
       res.json({ success: true, data: { accessToken: newAccessToken, refreshToken: newRefreshToken } });
-    } catch (err) {
+    } catch {
       res.status(401).json({ success: false, error: 'Authentication failed' });
     }
   };

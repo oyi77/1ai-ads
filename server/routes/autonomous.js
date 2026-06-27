@@ -16,7 +16,7 @@ export function createAutonomousRouter(settingsRepo, platformAccountsRepo, campa
     try {
       const enabled = autonomousAgent?.isEnabled?.() ?? false;
       res.json({ success: true, data: { enabled, running: enabled } });
-    } catch (err) {
+    } catch {
       res.json({ success: true, data: { enabled: false, running: false } });
     }
   });

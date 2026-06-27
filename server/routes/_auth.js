@@ -10,7 +10,7 @@ import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('auth-group');
 
-export function createAuthGroupRouter({ repos, services, publicRateLimit }) {
+export function createAuthGroupRouter({ repos, services: _services, publicRateLimit }) {
   const router = Router();
 
   // GDPR export limiter: 1 per hour per user

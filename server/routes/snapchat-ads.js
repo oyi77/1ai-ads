@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { SnapchatAdsAPI } from '../services/snapchat-ads-api.js';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('snapchat-ads');
 
 export function createSnapchatAdsRouter(settingsRepo) {
   const router = Router();
@@ -21,7 +24,7 @@ export function createSnapchatAdsRouter(settingsRepo) {
       const orgs = await snapchatAds.getOrganizations();
       res.json({ success: true, data: { organizations: orgs, total: orgs.length } });
     } catch (err) {
-      console.error('Snapchat organizations fetch failed:', err.message);
+      log.error('Snapchat organizations fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -37,7 +40,7 @@ export function createSnapchatAdsRouter(settingsRepo) {
       }
       res.json({ success: true, data: { accounts: allAccounts, total: allAccounts.length } });
     } catch (err) {
-      console.error('Snapchat accounts fetch failed:', err.message);
+      log.error('Snapchat accounts fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -49,7 +52,7 @@ export function createSnapchatAdsRouter(settingsRepo) {
       const campaigns = await snapchatAds.getCampaigns(adAccountId);
       res.json({ success: true, data: { campaigns, total: campaigns.length } });
     } catch (err) {
-      console.error('Snapchat campaigns fetch failed:', err.message);
+      log.error('Snapchat campaigns fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -64,7 +67,7 @@ export function createSnapchatAdsRouter(settingsRepo) {
       });
       res.json({ success: true, data: stats });
     } catch (err) {
-      console.error('Snapchat campaign stats fetch failed:', err.message);
+      log.error('Snapchat campaign stats fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -82,7 +85,7 @@ export function createSnapchatAdsRouter(settingsRepo) {
       });
       res.json({ success: true, data: campaign });
     } catch (err) {
-      console.error('Snapchat campaign creation failed:', err.message);
+      log.error('Snapchat campaign creation failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -94,7 +97,7 @@ export function createSnapchatAdsRouter(settingsRepo) {
       const result = await snapchatAds.updateCampaign(adAccountId, campaignId, req.body);
       res.json({ success: true, data: result });
     } catch (err) {
-      console.error('Snapchat campaign update failed:', err.message);
+      log.error('Snapchat campaign update failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -105,7 +108,7 @@ export function createSnapchatAdsRouter(settingsRepo) {
       const results = await snapchatAds.syncAllAccounts();
       res.json({ success: true, data: { results, total: results.length } });
     } catch (err) {
-      console.error('Snapchat sync failed:', err.message);
+      log.error('Snapchat sync failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });

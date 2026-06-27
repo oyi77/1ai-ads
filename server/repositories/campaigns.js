@@ -97,14 +97,14 @@ export class CampaignsRepository {
     return this.findById(id);
   }
 
-  findActive(userId) {
+  findActive(_userId) {
     return this.db.prepare('SELECT * FROM campaigns WHERE status = ?').all('ACTIVE').map(row => ({
       ...row,
       stats: { spend: row.spend, revenue: row.revenue, roas: row.roas, impressions: row.impressions, clicks: row.clicks },
     }));
   }
 
-  getByUserId(userId) {
+  getByUserId(_userId) {
     return this.db.prepare('SELECT * FROM campaigns ORDER BY created_at DESC').all().map(row => ({
       ...row,
       stats: { spend: row.spend, revenue: row.revenue, roas: row.roas, impressions: row.impressions, clicks: row.clicks },

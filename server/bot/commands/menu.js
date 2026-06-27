@@ -66,12 +66,12 @@ async function handleStatusAction(ctx, deps) {
       `ROAS: ${roas}x`,
       { parse_mode: 'Markdown' }
     );
-  } catch (err) {
+  } catch {
     ctx.reply('⚠️ Failed to load status. Try again later.');
   }
 }
 
-async function handleReportsAction(ctx, deps) {
+async function handleReportsAction(ctx, _deps) {
   ctx.reply('📈 Reports feature — use the dashboard at /app for detailed analytics.');
 }
 
@@ -85,7 +85,7 @@ async function handleCreateAction(ctx) {
   );
 }
 
-async function handleOptimizeAction(ctx, deps) {
+async function handleOptimizeAction(ctx, _deps) {
   ctx.reply(
     '🤖 *AI Optimization*\n\n' +
     'The AI agent analyzes your campaigns and suggests:\n' +

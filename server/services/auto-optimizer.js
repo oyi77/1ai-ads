@@ -7,7 +7,7 @@ import config from '../config/index.js';
  */
 
 import { createLogger } from '../lib/logger.js';
-import { OPERATORS, compare } from '../lib/operators.js';
+import { compare } from '../lib/operators.js';
 
 const log = createLogger('auto-optimizer');
 

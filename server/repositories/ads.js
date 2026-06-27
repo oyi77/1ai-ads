@@ -6,8 +6,8 @@ export class AdsRepository {
   }
 
   findAll({ page = 1, limit = 20, platform, status } = {}) {
-    let where = [];
-    let params = [];
+    const where = [];
+    const params = [];
 
     if (platform) { where.push('platform = ?'); params.push(platform); }
     if (status) { where.push('status = ?'); params.push(status); }

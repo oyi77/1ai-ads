@@ -7,9 +7,7 @@
  * - Click tracking
  */
 
-import { createLogger } from '../lib/logger.js';
 
-const log = createLogger('domain:attribution');
 
 /**
  * Generate a tagged URL with UTM parameters.

@@ -96,7 +96,7 @@ export class TrendingService {
       'Content-Type': 'application/json',
     };
 
-    if (apiKey && apiKey !== 'placeholder-key') {
+    if (apiKey && apiKey.length > 0) {
       headers['Authorization'] = `Bearer ${apiKey}`;
     }
 

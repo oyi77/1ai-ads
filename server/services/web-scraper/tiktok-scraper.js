@@ -8,7 +8,7 @@
  * Handles: infinite scroll, video content, engagement metrics.
  */
 
-import { BaseScraper, PuppeteerPool, RequestQueue } from './base-scraper.js';
+import { BaseScraper } from './base-scraper.js';
 import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('tiktok-scraper');
@@ -204,7 +204,7 @@ export class TikTokScraper extends BaseScraper {
    * Scrape via Puppeteer with infinite scroll.
    * @private
    */
-  async _scrapeViaPuppeteer(query, { country, adType, limit }) {
+  async _scrapeViaPuppeteer(query, { country, adType: _adType, limit }) {
     const browser = await this.pool.acquire();
     if (!browser) return [];
 
@@ -312,7 +312,7 @@ export class TikTokScraper extends BaseScraper {
    */
   async _extractMetadataFallback(pageUrl) {
     const response = await this._rateLimitedFetch(pageUrl);
-    const html = await response.text();
+    const _html = await response.text();
 
     return {
       id: '',

@@ -6,8 +6,8 @@ export class SchedulesRepository {
   }
 
   findAll({ status, platform } = {}) {
-    let where = [];
-    let params = [];
+    const where = [];
+    const params = [];
 
     if (status) { where.push('status = ?'); params.push(status); }
     if (platform) { where.push('platform = ?'); params.push(platform); }
@@ -55,7 +55,7 @@ export class SchedulesRepository {
     this.db.prepare("UPDATE schedules SET status = 'executed', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
   }
 
-  markFailed(id, error) {
+  markFailed(id, _error) {
     this.db.prepare("UPDATE schedules SET status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
   }
 }

@@ -2,8 +2,11 @@ import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
 import config from '../config/index.js';
 import { PlanCheck } from '../lib/plan-check.js';
+import { createLogger } from '../lib/logger.js';
 
-export function createSettingsRouter(settingsRepo, llmClient, db, metaApi) {
+const log = createLogger('settings');
+
+export function createSettingsRouter(settingsRepo, llmClient, db, metaApi, _dailySpendGuard, nangoAuth) {
   const router = Router();
   const planCheck = new PlanCheck(db);
 
@@ -116,7 +119,7 @@ export function createSettingsRouter(settingsRepo, llmClient, db, metaApi) {
         return { ...acc, credentials: maskedCreds };
       });
       res.json({ success: true, data: safe });
-    } catch (err) {
+    } catch {
       res.json({ success: true, data: [] });
     }
   });
@@ -165,8 +168,8 @@ export function createSettingsRouter(settingsRepo, llmClient, db, metaApi) {
 
     try {
       if (platform === 'meta') {
-        const mockRepo = { getCredentials: () => credentials };
-        const api = new metaApi.constructor(mockRepo);
+        const credentialHolder = { getCredentials: () => credentials };
+        const api = new metaApi.constructor(credentialHolder);
         const me = await api.getMe();
         return res.json({ success: true, message: `Connected as ${me.name}` });
       }
@@ -203,8 +206,8 @@ export function createSettingsRouter(settingsRepo, llmClient, db, metaApi) {
         expiresIn = Math.floor((tokenInfo.data.expires_at * 1000 - Date.now()) / (1000 * 60 * 60 * 24));
       }
 
-      const mockRepo = { getCredentials: () => ({ access_token: longToken }) };
-      const api = new metaApi.constructor(mockRepo);
+      const credentialHolder = { getCredentials: () => ({ access_token: longToken }) };
+      const api = new metaApi.constructor(credentialHolder);
       const me = await api.getMe();
 
       const accountName = `Meta - ${me.name}`;
@@ -267,7 +270,7 @@ export function createSettingsRouter(settingsRepo, llmClient, db, metaApi) {
           }));
         }
       } catch (e) {
-        console.error('Failed to detect ad accounts:', e.message);
+        log.error('Failed to detect ad accounts', { error: e.message });
       }
 
       // Save main account with token
@@ -294,6 +297,12 @@ export function createSettingsRouter(settingsRepo, llmClient, db, metaApi) {
           is_active: existingAccounts.length === 0 ? 1 : 0
         });
         mainId = id;
+      }
+      // Optionally mirror credentials to Nango
+      if (nangoAuth && nangoAuth.enabled) {
+        nangoAuth.storeCredentials(req.user?.id || 'admin', 'meta', { access_token }).catch(err => {
+          log.error('Failed to mirror credentials to Nango', { error: err.message });
+        });
       }
 
       // Also save each ad account

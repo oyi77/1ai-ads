@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { TwitterAdsAPI } from '../services/twitter-ads-api.js';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('twitter-ads');
 
 export function createTwitterAdsRouter(settingsRepo) {
   const router = Router();
@@ -11,7 +14,7 @@ export function createTwitterAdsRouter(settingsRepo) {
       const creds = settingsRepo.getCredentials('twitter');
       const connected = !!creds?.access_token;
       res.json({ success: true, data: { connected, platform: 'twitter' } });
-    } catch (err) {
+    } catch {
       res.json({ success: true, data: { connected: false, platform: 'twitter' } });
     }
   });
@@ -22,7 +25,7 @@ export function createTwitterAdsRouter(settingsRepo) {
       const accounts = await twitterAds.getAccounts();
       res.json({ success: true, data: { accounts, total: accounts.length } });
     } catch (err) {
-      console.error('Twitter accounts fetch failed:', err.message);
+      log.error('Twitter accounts fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -35,7 +38,7 @@ export function createTwitterAdsRouter(settingsRepo) {
       const campaigns = await twitterAds.getCampaigns(accountId, { cursor, count: parseInt(count) || 200 });
       res.json({ success: true, data: { campaigns, total: campaigns.length } });
     } catch (err) {
-      console.error('Twitter campaigns fetch failed:', err.message);
+      log.error('Twitter campaigns fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -54,7 +57,7 @@ export function createTwitterAdsRouter(settingsRepo) {
       });
       res.json({ success: true, data: { stats, total: stats.length } });
     } catch (err) {
-      console.error('Twitter stats fetch failed:', err.message);
+      log.error('Twitter stats fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -72,7 +75,7 @@ export function createTwitterAdsRouter(settingsRepo) {
       });
       res.json({ success: true, data: result });
     } catch (err) {
-      console.error('Twitter campaign creation failed:', err.message);
+      log.error('Twitter campaign creation failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -87,7 +90,7 @@ export function createTwitterAdsRouter(settingsRepo) {
       });
       res.json({ success: true, data: result });
     } catch (err) {
-      console.error('Twitter campaign update failed:', err.message);
+      log.error('Twitter campaign update failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -98,7 +101,7 @@ export function createTwitterAdsRouter(settingsRepo) {
       const results = await twitterAds.syncAllAccounts();
       res.json({ success: true, data: { results, total: results.length } });
     } catch (err) {
-      console.error('Twitter sync failed:', err.message);
+      log.error('Twitter sync failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });

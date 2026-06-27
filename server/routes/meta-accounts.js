@@ -2,6 +2,9 @@ import { Router } from 'express';
 import config from '../config/index.js';
 import { v4 as uuid } from 'uuid';
 import jwt from 'jsonwebtoken';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('meta-accounts');
 
 export function createMetaAccountsRouter(settingsRepo) {
   const router = Router();
@@ -74,7 +77,7 @@ export function createMetaAccountsRouter(settingsRepo) {
         },
       });
     } catch (err) {
-      console.error('Fetch Meta accounts failed', { error: err.message });
+      log.error('Fetch Meta accounts failed', { error: err.message });
       res.status(500).json({ success: false, error: 'Failed to fetch accounts: ' + err.message });
     }
   });
@@ -90,7 +93,7 @@ export function createMetaAccountsRouter(settingsRepo) {
       let decoded;
       try {
         decoded = jwt.verify(token, config.jwtSecret);
-      } catch (e) {
+      } catch {
         return res.status(401).json({ success: false, error: 'Invalid token' });
       }
 
@@ -123,7 +126,7 @@ export function createMetaAccountsRouter(settingsRepo) {
         },
       });
     } catch (err) {
-      console.error('Fetch business managers failed', { error: err.message });
+      log.error('Fetch business managers failed', { error: err.message });
       res.status(500).json({ success: false, error: 'Failed to fetch business managers: ' + err.message });
     }
   });
@@ -141,7 +144,7 @@ export function createMetaAccountsRouter(settingsRepo) {
       let decoded;
       try {
         decoded = jwt.verify(token, config.jwtSecret);
-      } catch (e) {
+      } catch {
         return res.status(401).json({ success: false, error: 'Invalid token' });
       }
 
@@ -178,7 +181,7 @@ export function createMetaAccountsRouter(settingsRepo) {
         },
       });
     } catch (err) {
-      console.error('Fetch business manager ad accounts failed', { error: err.message });
+      log.error('Fetch business manager ad accounts failed', { error: err.message });
       res.status(500).json({ success: false, error: 'Failed to fetch accounts: ' + err.message });
     }
   });
@@ -194,7 +197,7 @@ export function createMetaAccountsRouter(settingsRepo) {
       let decoded;
       try {
         decoded = jwt.verify(token, config.jwtSecret);
-      } catch (e) {
+      } catch {
         return res.status(401).json({ success: false, error: 'Invalid token' });
       }
 
@@ -222,7 +225,7 @@ export function createMetaAccountsRouter(settingsRepo) {
 
       res.json({ success: true, data: { pages, total: pages.length } });
     } catch (err) {
-      console.error('Fetch Meta pages failed', { error: err.message });
+      log.error('Fetch Meta pages failed', { error: err.message });
       res.status(500).json({ success: false, error: 'Failed to fetch pages: ' + err.message });
     }
   });

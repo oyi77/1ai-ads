@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { GoogleAdsAPI } from '../services/google-ads-api.js';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('google-ads');
 
 export function createGoogleAdsRouter(settingsRepo) {
   const router = Router();
@@ -16,7 +19,7 @@ export function createGoogleAdsRouter(settingsRepo) {
       }));
       res.json({ success: true, data: { accounts, total: accounts.length } });
     } catch (err) {
-      console.error('Google Ads accounts fetch failed:', err.message);
+      log.error('Google Ads accounts fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -31,7 +34,7 @@ export function createGoogleAdsRouter(settingsRepo) {
       const campaigns = await googleAds.getCampaigns(customerId);
       res.json({ success: true, data: { campaigns, total: campaigns.length } });
     } catch (err) {
-      console.error('Google Ads campaigns fetch failed:', err.message);
+      log.error('Google Ads campaigns fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -46,7 +49,7 @@ export function createGoogleAdsRouter(settingsRepo) {
       const result = await googleAds.createCampaign(customerId, { name, status, dailyBudgetMicros, advertisingChannelType });
       res.json({ success: true, data: result });
     } catch (err) {
-      console.error('Google Ads campaign creation failed:', err.message);
+      log.error('Google Ads campaign creation failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -62,7 +65,7 @@ export function createGoogleAdsRouter(settingsRepo) {
       const result = await googleAds.updateCampaign(customerId, campaignId, { name, status });
       res.json({ success: true, data: result });
     } catch (err) {
-      console.error('Google Ads campaign update failed:', err.message);
+      log.error('Google Ads campaign update failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -75,7 +78,7 @@ export function createGoogleAdsRouter(settingsRepo) {
       const performance = await googleAds.getCampaignPerformance(customerId, { days: parseInt(days) || 30 });
       res.json({ success: true, data: { performance, total: performance.length } });
     } catch (err) {
-      console.error('Google Ads performance fetch failed:', err.message);
+      log.error('Google Ads performance fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -86,7 +89,7 @@ export function createGoogleAdsRouter(settingsRepo) {
       const results = await googleAds.syncAllAccounts();
       res.json({ success: true, data: { results, total: results.length } });
     } catch (err) {
-      console.error('Google Ads sync failed:', err.message);
+      log.error('Google Ads sync failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });

@@ -18,18 +18,20 @@
     "test:qa": "node qa.mjs",
     "test:all": "vitest run && node qa.mjs",
     "test:e2e": "playwright test",
-    "lint": "eslint server/ --ext .js"
+    "lint": "eslint server/"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
     "@vitest/coverage-v8": "^4.1.9",
+    "eslint": "^10.6.0",
     "supertest": "^7.2.2",
     "vite": "^8.0.3",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.9"
   },
   "dependencies": {
     "@google-cloud/bigquery": "^8.3.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@nangohq/node": "^0.70.9",
     "@tailwindcss/vite": "^4.3.1",
     "axios": "^1.15.0",
     "bcryptjs": "^3.0.3",
@@ -40,8 +42,11 @@
     "ejs": "^6.0.1",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.2",
+    "facebook-nodejs-business-sdk": "^24.0.1",
+    "google-ads-api": "^24.1.0",
     "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.3",
+    "mcp-meta-ads": "^1.0.0",
     "meta-ads-mcp": "^1.1.0",
     "node-cron": "^4.5.0",
     "tailwindcss": "^4.3.1",

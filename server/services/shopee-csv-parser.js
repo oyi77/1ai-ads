@@ -33,7 +33,7 @@ export class ShopeeCSVParser {
     if (!csvString || !csvString.trim()) return [];
 
     // Strip BOM if present
-    let text = csvString.charCodeAt(0) === 0xFEFF ? csvString.slice(1) : csvString;
+    const text = csvString.charCodeAt(0) === 0xFEFF ? csvString.slice(1) : csvString;
 
     const lines = text.split(/\r?\n/).filter(l => l.trim());
     if (lines.length < 2) return [];

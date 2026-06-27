@@ -71,7 +71,7 @@ export class TikTokAdapter extends BasePlatformAdapter {
   async searchAds(query, options = {}) {
     const {
       country = 'US',
-      activeStatus = 'ALL',
+      activeStatus: _activeStatus,
       industry,
       adType,
       limit = 50,

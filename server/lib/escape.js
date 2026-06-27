@@ -9,7 +9,7 @@ const ESCAPE_MAP = {
 const ESCAPE_RE = /[&<>"']/g;
 
 export function escapeHtml(str) {
-  if (str == null) return '';
+  if (str === null || str === undefined) return '';
   const s = String(str);
   return s.replace(ESCAPE_RE, (ch) => ESCAPE_MAP[ch]);
 }

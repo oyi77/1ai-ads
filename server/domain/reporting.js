@@ -7,9 +7,7 @@
  * - Cross-platform analytics
  */
 
-import { createLogger } from '../lib/logger.js';
 
-const log = createLogger('domain:reporting');
 
 /**
  * Calculate campaign statistics from a list of campaigns.

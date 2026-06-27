@@ -47,8 +47,8 @@ export class CapiMonitor {
     log.info('checkHealth', { accountId });
 
     let status = 'unknown';
-    let matchRate = null;
-    let deduplicationRate = null;
+    const matchRate = null;
+    const deduplicationRate = null;
     let eventCount = 0;
     const errors = [];
 

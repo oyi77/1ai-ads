@@ -3,7 +3,7 @@
  * Ported from asisten-jualan/bot/handlers/monitor.py
  */
 
-export function handleMonitor(deps) {
+export function handleMonitor(_deps) {
   return (ctx) => {
     ctx.reply(
       '⚡ *Campaign Monitor*\n\n' +
@@ -28,7 +28,7 @@ export function handleMonitor(deps) {
   };
 }
 
-export function handleMonitorCallback(deps) {
+export function handleMonitorCallback(_deps) {
   return async (ctx) => {
     const action = ctx.match[1];
     await ctx.answerCbQuery();

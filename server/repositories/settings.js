@@ -1,4 +1,3 @@
-import { safeParse } from '../lib/safe-parse.js';
 
 /**
  * Settings repository for key-value application configuration.

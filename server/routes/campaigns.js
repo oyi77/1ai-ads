@@ -212,7 +212,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
                   format: 'single_image', status: ad.status,
                 });
               }
-            } catch (_) { /* skip individual ad errors */ }
+            } catch { /* skip individual ad errors */ }
           }
           totalAds += ads.length;
         } catch (err) {

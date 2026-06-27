@@ -9,7 +9,7 @@ import { MetaAdsAPI } from './meta-api.js';
 import { GoogleAdsAPI } from './google-ads-api.js';
 import { TikTokAdsAPI } from './tiktok-api.js';
 import { createLogger } from '../lib/logger.js';
-import { OPERATORS, compare } from '../lib/operators.js';
+import { compare } from '../lib/operators.js';
 
 const log = createLogger('rule-evaluator');
 

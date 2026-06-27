@@ -9,7 +9,7 @@ import { calculateProfit, evaluateROAS, getCampaignStatus } from './profitabilit
 const log = createLogger('mcp-server');
 
 export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, services = {}) {
-  const { adGenerator, creativeStudio, aiAgent, competitorSpy, autoOptimizer, llmClient } = services;
+  const { adGenerator, creativeStudio, aiAgent, competitorSpy, autoOptimizer, llmClient: _llmClient } = services;
 
   const server = new Server(
     {
@@ -278,12 +278,12 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
       return { content: [{ type: "text", text: JSON.stringify(campaign, null, 2) }] };
     },
 
-    '1ai-ads_list_landing_pages': async (args) => {
+    '1ai-ads_list_landing_pages': async (_args) => {
       const pages = landingRepo.getAll();
       return { content: [{ type: "text", text: JSON.stringify(pages, null, 2) }] };
     },
 
-    '1ai-ads_list_creatives': async (args) => {
+    '1ai-ads_list_creatives': async (_args) => {
       const ads = adsRepo.getAll();
       return { content: [{ type: "text", text: JSON.stringify(ads, null, 2) }] };
     },
@@ -403,13 +403,13 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     },
 
-    '1ai-content_list_videos': async (args) => {
+    '1ai-content_list_videos': async (_args) => {
       if (!services.contentBridge) throw new Error("ContentBridge not available");
       const videos = await services.contentBridge.listVideos();
       return { content: [{ type: "text", text: JSON.stringify(videos, null, 2) }] };
     },
 
-    '1ai-content_health': async (args) => {
+    '1ai-content_health': async (_args) => {
       if (!services.contentBridge) throw new Error("ContentBridge not available");
       const health = await services.contentBridge.healthCheck();
       return { content: [{ type: "text", text: JSON.stringify(health, null, 2) }] };
@@ -426,7 +426,7 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     },
 
-    '1ai-social_health': async (args) => {
+    '1ai-social_health': async (_args) => {
       if (!services.socialBridge) throw new Error("SocialBridge not available");
       const health = await services.socialBridge.healthCheck();
       return { content: [{ type: "text", text: JSON.stringify(health, null, 2) }] };

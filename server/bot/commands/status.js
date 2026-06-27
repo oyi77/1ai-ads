@@ -20,7 +20,7 @@ export function handleStatus(deps) {
         `Use /menu for more options.`,
         { parse_mode: 'Markdown' }
       );
-    } catch (err) {
+    } catch {
       ctx.reply('⚠️ Failed to load status. Is the database connected?');
     }
   };

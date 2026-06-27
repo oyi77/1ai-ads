@@ -235,7 +235,7 @@ export function createShopeeDashboardRouter(shopeeAdapter, settingsRepo, commiss
       const raw = settingsRepo.get(SHOPEE_UPLOADS_KEY);
       const uploads = raw ? JSON.parse(raw) : [];
       // Strip embedded data from list response
-      const list = uploads.map(({ data, ...meta }) => meta);
+      const list = uploads.map(({ data: _data, ...meta }) => meta);
       res.json({ success: true, uploads: list });
     } catch (err) {
       log.error('Failed to list uploads', { error: err.message });

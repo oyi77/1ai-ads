@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { TikTokAdsAPI } from '../services/tiktok-api.js';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('tiktok-ads');
 
 export function createTikTokAdsRouter(settingsRepo) {
   const router = Router();
@@ -19,7 +22,7 @@ export function createTikTokAdsRouter(settingsRepo) {
       }));
       res.json({ success: true, data: { accounts, total: accounts.length } });
     } catch (err) {
-      console.error('TikTok accounts fetch failed:', err.message);
+      log.error('TikTok accounts fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -34,7 +37,7 @@ export function createTikTokAdsRouter(settingsRepo) {
       const data = await tiktokAds.getCampaigns(advertiserId, { page: parseInt(page) || 1, pageSize: parseInt(pageSize) || 50 });
       res.json({ success: true, data: { campaigns: data.list || [], total: data.page_info?.total_number || 0 } });
     } catch (err) {
-      console.error('TikTok campaigns fetch failed:', err.message);
+      log.error('TikTok campaigns fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -49,7 +52,7 @@ export function createTikTokAdsRouter(settingsRepo) {
       const result = await tiktokAds.createCampaign(advertiserId, { name, objectiveType, budget, status });
       res.json({ success: true, data: result });
     } catch (err) {
-      console.error('TikTok campaign creation failed:', err.message);
+      log.error('TikTok campaign creation failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -65,7 +68,7 @@ export function createTikTokAdsRouter(settingsRepo) {
       const result = await tiktokAds.updateCampaign(advertiserId, campaignId, { name, status, budget });
       res.json({ success: true, data: result });
     } catch (err) {
-      console.error('TikTok campaign update failed:', err.message);
+      log.error('TikTok campaign update failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -82,7 +85,7 @@ export function createTikTokAdsRouter(settingsRepo) {
       const insights = await tiktokAds.getCampaignInsights(advertiserId, ids, { startDate, endDate });
       res.json({ success: true, data: { insights: insights.list || [], total: insights.page_info?.total_number || 0 } });
     } catch (err) {
-      console.error('TikTok insights fetch failed:', err.message);
+      log.error('TikTok insights fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -97,7 +100,7 @@ export function createTikTokAdsRouter(settingsRepo) {
       const data = await tiktokAds.getAds(advertiserId, { page: parseInt(page) || 1, pageSize: parseInt(pageSize) || 50 });
       res.json({ success: true, data: { ads: data.list || [], total: data.page_info?.total_number || 0 } });
     } catch (err) {
-      console.error('TikTok ads fetch failed:', err.message);
+      log.error('TikTok ads fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -112,7 +115,7 @@ export function createTikTokAdsRouter(settingsRepo) {
       const results = await tiktokAds.syncAllAccounts(advertiserIds);
       res.json({ success: true, data: { results, total: results.length } });
     } catch (err) {
-      console.error('TikTok sync failed:', err.message);
+      log.error('TikTok sync failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });

@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { MicrosoftAdsAPI } from '../services/microsoft-ads-api.js';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('microsoft-ads');
 
 export function createMicrosoftAdsRouter(settingsRepo) {
   const router = Router();
@@ -11,7 +14,7 @@ export function createMicrosoftAdsRouter(settingsRepo) {
       const creds = settingsRepo?.getCredentials?.('microsoft');
       const connected = !!(creds?.oauth_token && creds?.developer_token);
       res.json({ success: true, data: { connected, platform: 'microsoft' } });
-    } catch (err) {
+    } catch {
       res.json({ success: true, data: { connected: false, platform: 'microsoft' } });
     }
   });
@@ -22,7 +25,7 @@ export function createMicrosoftAdsRouter(settingsRepo) {
       const accounts = await microsoftAds.listAccounts();
       res.json({ success: true, data: { accounts, total: accounts.length } });
     } catch (err) {
-      console.error('Microsoft Ads accounts fetch failed:', err.message);
+      log.error('Microsoft Ads accounts fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -35,7 +38,7 @@ export function createMicrosoftAdsRouter(settingsRepo) {
       const campaigns = await microsoftAds.getCampaigns(accountId, { pageSize: parseInt(pageSize) || 100 });
       res.json({ success: true, data: { campaigns, total: campaigns.length } });
     } catch (err) {
-      console.error('Microsoft Ads campaigns fetch failed:', err.message);
+      log.error('Microsoft Ads campaigns fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -48,7 +51,7 @@ export function createMicrosoftAdsRouter(settingsRepo) {
       const performance = await microsoftAds.getCampaignPerformance(accountId, { days: parseInt(days) || 30 });
       res.json({ success: true, data: { performance, total: performance.length } });
     } catch (err) {
-      console.error('Microsoft Ads performance fetch failed:', err.message);
+      log.error('Microsoft Ads performance fetch failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -64,7 +67,7 @@ export function createMicrosoftAdsRouter(settingsRepo) {
       const result = await microsoftAds.createCampaign(accountId, { name, dailyBudget, campaignType, status });
       res.json({ success: true, data: result });
     } catch (err) {
-      console.error('Microsoft Ads campaign creation failed:', err.message);
+      log.error('Microsoft Ads campaign creation failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -77,7 +80,7 @@ export function createMicrosoftAdsRouter(settingsRepo) {
       const result = await microsoftAds.updateCampaign(accountId, campaignId, updates);
       res.json({ success: true, data: result });
     } catch (err) {
-      console.error('Microsoft Ads campaign update failed:', err.message);
+      log.error('Microsoft Ads campaign update failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });
@@ -88,7 +91,7 @@ export function createMicrosoftAdsRouter(settingsRepo) {
       const results = await microsoftAds.syncAllAccounts();
       res.json({ success: true, data: { results, total: results.length } });
     } catch (err) {
-      console.error('Microsoft Ads sync failed:', err.message);
+      log.error('Microsoft Ads sync failed', { error: err.message });
       res.status(400).json({ success: false, error: err.message });
     }
   });

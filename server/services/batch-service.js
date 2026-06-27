@@ -19,7 +19,7 @@ export class BatchService {
     return resp.json();
   }
 
-  async batchPause(entityIds, entityType = 'campaign') {
+  async batchPause(entityIds, _entityType = 'campaign') {
     const requests = entityIds.map(id => ({
       method: 'POST',
       relative_url: `/${id}`,
@@ -28,7 +28,7 @@ export class BatchService {
     return this.batchRequest(requests);
   }
 
-  async batchActivate(entityIds, entityType = 'campaign') {
+  async batchActivate(entityIds, _entityType = 'campaign') {
     const requests = entityIds.map(id => ({
       method: 'POST',
       relative_url: `/${id}`,

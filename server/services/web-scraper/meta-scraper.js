@@ -9,7 +9,7 @@ import config from '../../config/index.js';
  * Handles: pagination, infinite scroll, dynamic content loading.
  */
 
-import { BaseScraper, PuppeteerPool, RequestQueue } from './base-scraper.js';
+import { BaseScraper } from './base-scraper.js';
 import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('meta-scraper');
@@ -247,8 +247,7 @@ export class MetaScraper extends BaseScraper {
       const ads = await page.evaluate((sels) => {
         const cards = document.querySelectorAll(sels.adCard);
         if (cards.length === 0) {
-          // Try fallback selector
-          const fallbackCards = document.querySelectorAll(sels.adCardFallback);
+          // Fallback selector used below
         }
 
         const results = [];

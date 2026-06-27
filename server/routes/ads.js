@@ -45,7 +45,7 @@ export function createAdsRouter(adsRepo, adGenerator) {
   });
 
   router.post('/wizard/step', async (req, res) => {
-    const { sessionId, step, data } = req.body;
+    const { sessionId, step, data: _data } = req.body;
     if (!sessionId || !step) {
       return res.status(400).json({ success: false, error: 'sessionId and step are required' });
     }

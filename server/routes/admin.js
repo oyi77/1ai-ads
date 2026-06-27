@@ -3,7 +3,7 @@ import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('admin');
 
-export function createAdminRouter(usersRepo, settingsRepo) {
+export function createAdminRouter(usersRepo, _settingsRepo) {
   const router = Router();
 
   // GET /api/admin/stats — dashboard stats

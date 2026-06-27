@@ -74,7 +74,7 @@ export class CreativeScorer {
    * @param {{ hook: string, body: string, cta?: string, imageUrl?: string, platform?: string }} creative
    * @returns {{ score: number, breakdown: Object, suggestions: string[], model: string, probability: number }}
    */
-  async scoreCreative({ hook = '', body = '', cta = '', imageUrl, platform = 'meta' } = {}) {
+  async scoreCreative({ hook = '', body = '', cta = '', imageUrl: _imageUrl, platform = 'meta' } = {}) {
     const features = this._extractFeatures({ hook, body, cta, platform });
     const logit = this._logisticLogit(features, this.weights);
     const probability = this._sigmoid(logit);
@@ -101,7 +101,7 @@ export class CreativeScorer {
    * @param {{ product: string, platform?: string, hookStyle?: string }} opts
    * @returns {{ historicalScore: number, similarCreatives: Array }}
    */
-  async scoreByHistory({ product, platform, hookStyle } = {}) {
+  async scoreByHistory({ product: _product, platform, hookStyle: _hookStyle } = {}) {
     try {
       const rows = this.db.prepare(`
         SELECT * FROM creative_library
@@ -114,7 +114,7 @@ export class CreativeScorer {
         return { historicalScore: 50, similarCreatives: [], note: 'No historical data available.' };
       }
 
-      const scores = rows.filter(r => r.performance_score != null).map(r => r.performance_score);
+      const scores = rows.filter(r => r.performance_score !== null && r.performance_score !== undefined).map(r => r.performance_score);
       const avgScore = scores.length
         ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length)
         : 50;
@@ -302,7 +302,7 @@ export class CreativeScorer {
 
   // ── Suggestions Generator ────────────────────────────────────
 
-  _generateSuggestions({ hook, body, cta, features, score }) {
+  _generateSuggestions({ hook: _hook, body: _body, cta: _cta, features, score }) {
     const suggestions = [];
 
     if (score < 60) {
@@ -321,7 +321,7 @@ export class CreativeScorer {
     if (!features[11]) suggestions.push('Add urgency to your CTA (e.g., "Shop now", "Get started today").');
 
     if (features[0] > 0.9) suggestions.push('Your hook may be too long. Aim for 5-15 words for maximum impact.');
-    if (features[0] < 0.15 && hook) suggestions.push('Your hook is very short. Consider adding more context or a compelling detail.');
+    if (features[0] < 0.15 && _hook) suggestions.push('Your hook is very short. Consider adding more context or a compelling detail.');
 
     if (!suggestions.length && score >= 80) {
       suggestions.push('Great creative! Consider A/B testing slight variations to optimise further.');

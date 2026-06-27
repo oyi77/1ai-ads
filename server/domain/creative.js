@@ -13,7 +13,7 @@ const log = createLogger('domain:creative');
 
 // ── BerkahKarya Ads Framework ────────────────────────────────
 
-const CONTENT_MODELS = {
+const _CONTENT_MODELS = {
   PAS: { name: 'P.A.S (Problem-Agitate-Solution)', structure: ['Problem', 'Agitate', 'Solution', 'Benefits', 'Social Proof', 'CTA'] },
   GRAVITASI: { name: 'Efek Gravitasi', structure: ['Hook Curiosity', 'Reveal Problem', 'Solution Teaser', 'Benefits', 'CTA'] },
   HASIL_X3: { name: 'Hasil x3', structure: ['Bold Result Claim', 'Proof', 'How It Works', 'Benefits', 'CTA'] },
@@ -72,7 +72,7 @@ export async function generateAdCopies(llmClient, product, target, keunggulan) {
   }
 }
 
-function parseJsonResponse(raw) {
+export function parseJsonResponse(raw) {
   try {
     const jsonMatch = raw.match(/```json\n([\s\S]*?)\n```/) || raw.match(/```\n([\s\S]*?)\n```/);
     return jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(raw);
@@ -89,7 +89,7 @@ function parseJsonResponse(raw) {
  * @returns {object} { score: 0-100, breakdown: {...}, suggestions: [...] }
  */
 export function scoreCreative(metrics) {
-  const { impressions = 0, clicks = 0, conversions = 0, spend = 0, ctr = 0, cpc = 0, roas = 0 } = metrics;
+  const { impressions = 0, clicks: _clicks = 0, conversions: _conversions = 0, spend: _spend = 0, ctr = 0, cpc = 0, roas = 0 } = metrics;
 
   const breakdown = {
     engagement: Math.min(100, Math.round(ctr * 20)),        // CTR 5% = 100

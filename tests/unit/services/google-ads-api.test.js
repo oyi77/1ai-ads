@@ -1,7 +1,33 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GoogleAdsAPI } from '../../../server/services/google-ads-api.js';
 
-// Mock the safeFetch function
+// Hoist mock references so vi.mock factories can use them
+const { mockQuery, mockListAccessibleCustomers, mockCampaignsCreate, mockCampaignsUpdate, mockCustomer, MockGoogleAdsApi } = vi.hoisted(() => {
+  const mockQuery = vi.fn();
+  const mockListAccessibleCustomers = vi.fn();
+  const mockCampaignsCreate = vi.fn();
+  const mockCampaignsUpdate = vi.fn();
+  const mockCustomer = vi.fn().mockReturnValue({
+    query: mockQuery,
+    campaigns: {
+      create: mockCampaignsCreate,
+      update: mockCampaignsUpdate,
+    },
+  });
+  class MockGoogleAdsApi {
+    constructor() {
+      this.Customer = mockCustomer;
+      this.listAccessibleCustomers = mockListAccessibleCustomers;
+    }
+  }
+  return { mockQuery, mockListAccessibleCustomers, mockCampaignsCreate, mockCampaignsUpdate, mockCustomer, MockGoogleAdsApi };
+});
+
+vi.mock('google-ads-api', () => ({
+  default: MockGoogleAdsApi,
+}));
+
+// Keep safeFetch mock for backward compatibility (imported but now unused for query/mutate)
 vi.mock('../../../server/lib/platform-client.js', () => ({
   safeFetch: vi.fn(),
 }));
@@ -9,18 +35,17 @@ vi.mock('../../../server/lib/platform-client.js', () => ({
 describe('GoogleAdsAPI', () => {
   let api;
   let mockSettingsRepo;
-  let mockSafeFetch;
 
   beforeEach(async () => {
     vi.clearAllMocks();
-
-    mockSafeFetch = (await import('../../../server/lib/platform-client.js')).safeFetch;
 
     mockSettingsRepo = {
       getCredentials: vi.fn(),
     };
 
     mockSettingsRepo.getCredentials.mockReturnValue({
+      client_id: 'test-client-id',
+      client_secret: 'test-client-secret',
       oauth_token: 'test-oauth-token',
       developer_token: 'test-dev-token',
       login_customer_id: '1234567890',
@@ -62,41 +87,27 @@ describe('GoogleAdsAPI', () => {
   });
 
   describe('_query', () => {
-    it('makes POST request with GAQL query', async () => {
-      mockSafeFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([{ results: [{ campaign: { id: '123', name: 'Test' } }] }]),
-      });
+    it('uses SDK customer.query with GAQL query', async () => {
+      mockQuery.mockResolvedValue([{ campaign: { id: '123', name: 'Test' } }]);
 
       const result = await api._query('1234567890', 'SELECT campaign.id FROM campaign');
 
-      expect(mockSafeFetch).toHaveBeenCalledWith(
-        'google',
-        expect.stringContaining('/customers/1234567890/googleAds:searchStream'),
-        expect.objectContaining({
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer test-oauth-token',
-            'developer-token': 'test-dev-token',
-            'login-customer-id': '1234567890',
-            'Content-Type': 'application/json',
-          },
-          body: expect.stringContaining('SELECT campaign.id FROM campaign'),
-        })
-      );
+      expect(mockCustomer).toHaveBeenCalledWith({
+        refresh_token: 'test-oauth-token',
+        customer_id: '1234567890',
+        login_customer_id: '1234567890',
+      });
+      expect(mockQuery).toHaveBeenCalledWith('SELECT campaign.id FROM campaign');
 
       expect(result).toHaveLength(1);
       expect(result[0].campaign.id).toBe('123');
     });
 
-    it('handles multiple result batches', async () => {
-      mockSafeFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([
-          { results: [{ campaign: { id: '1' } }] },
-          { results: [{ campaign: { id: '2' } }] },
-        ]),
-      });
+    it('handles multiple results', async () => {
+      mockQuery.mockResolvedValue([
+        { campaign: { id: '1' } },
+        { campaign: { id: '2' } },
+      ]);
 
       const result = await api._query('1234567890', 'SELECT campaign.id FROM campaign');
 
@@ -106,10 +117,7 @@ describe('GoogleAdsAPI', () => {
     });
 
     it('handles empty response', async () => {
-      mockSafeFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([]),
-      });
+      mockQuery.mockResolvedValue([]);
 
       const result = await api._query('1234567890', 'SELECT campaign.id FROM campaign');
 
@@ -119,23 +127,18 @@ describe('GoogleAdsAPI', () => {
 
   describe('listAccounts', () => {
     it('returns list of accessible customer IDs', async () => {
-      mockSafeFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({
-          resourceNames: ['customers/1234567890', 'customers/0987654321'],
-        }),
+      mockListAccessibleCustomers.mockResolvedValue({
+        resource_names: ['customers/1234567890', 'customers/0987654321'],
       });
 
       const result = await api.listAccounts();
 
+      expect(mockListAccessibleCustomers).toHaveBeenCalledWith('test-oauth-token');
       expect(result).toEqual(['1234567890', '0987654321']);
     });
 
     it('handles empty resource names', async () => {
-      mockSafeFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ resourceNames: [] }),
-      });
+      mockListAccessibleCustomers.mockResolvedValue({ resource_names: [] });
 
       const result = await api.listAccounts();
 
@@ -145,25 +148,18 @@ describe('GoogleAdsAPI', () => {
 
   describe('getCampaigns', () => {
     it('returns campaigns for a customer', async () => {
-      mockSafeFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([
-          {
-            results: [
-              {
-                campaign: {
-                  id: '123',
-                  name: 'Test Campaign',
-                  status: 'ENABLED',
-                },
-                campaignBudget: {
-                  amountMicros: '50000000',
-                },
-              },
-            ],
+      mockQuery.mockResolvedValue([
+        {
+          campaign: {
+            id: '123',
+            name: 'Test Campaign',
+            status: 'ENABLED',
           },
-        ]),
-      });
+          campaignBudget: {
+            amountMicros: '50000000',
+          },
+        },
+      ]);
 
       const result = await api.getCampaigns('1234567890');
 
@@ -174,43 +170,33 @@ describe('GoogleAdsAPI', () => {
     });
 
     it('uses correct GAQL query with all required fields', async () => {
-      mockSafeFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([{ results: [] }]),
-      });
+      mockQuery.mockResolvedValue([]);
 
       await api.getCampaigns('1234567890');
 
-      const body = JSON.parse(mockSafeFetch.mock.calls[0][2].body);
-      expect(body.query).toContain('SELECT campaign.id, campaign.name, campaign.status');
-      expect(body.query).toContain('campaign_budget.amount_micros');
-      expect(body.query).toContain('campaign.advertising_channel_type');
+      const gaql = mockQuery.mock.calls[0][0];
+      expect(gaql).toContain('SELECT campaign.id, campaign.name, campaign.status');
+      expect(gaql).toContain('campaign_budget.amount_micros');
+      expect(gaql).toContain('campaign.advertising_channel_type');
     });
   });
 
   describe('getCampaignPerformance', () => {
     it('returns campaign performance metrics', async () => {
-      mockSafeFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([
-          {
-            results: [
-              {
-                campaign: { id: '123', name: 'Test', status: 'ENABLED' },
-                metrics: {
-                  impressions: '10000',
-                  clicks: '500',
-                  costMicros: '100000000',
-                  ctr: 5.0,
-                  averageCpc: 200000,
-                  conversions: 10,
-                  costPerConversion: 10000000,
-                },
-              },
-            ],
+      mockQuery.mockResolvedValue([
+        {
+          campaign: { id: '123', name: 'Test', status: 'ENABLED' },
+          metrics: {
+            impressions: '10000',
+            clicks: '500',
+            costMicros: '100000000',
+            ctr: 5.0,
+            averageCpc: 200000,
+            conversions: 10,
+            costPerConversion: 10000000,
           },
-        ]),
-      });
+        },
+      ]);
 
       const result = await api.getCampaignPerformance('1234567890');
 
@@ -222,61 +208,48 @@ describe('GoogleAdsAPI', () => {
     });
 
     it('uses custom days parameter', async () => {
-      mockSafeFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([{ results: [] }]),
-      });
+      mockQuery.mockResolvedValue([]);
 
       await api.getCampaignPerformance('1234567890', { days: 7 });
 
-      const body = JSON.parse(mockSafeFetch.mock.calls[0][2].body);
-      expect(body.query).toContain('DURING LAST_7_DAYS');
+      const gaql = mockQuery.mock.calls[0][0];
+      expect(gaql).toContain('DURING LAST_7_DAYS');
     });
 
     it('defaults to 30 days', async () => {
-      mockSafeFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([{ results: [] }]),
-      });
+      mockQuery.mockResolvedValue([]);
 
       await api.getCampaignPerformance('1234567890');
 
-      const body = JSON.parse(mockSafeFetch.mock.calls[0][2].body);
-      expect(body.query).toContain('DURING LAST_30_DAYS');
+      const gaql = mockQuery.mock.calls[0][0];
+      expect(gaql).toContain('DURING LAST_30_DAYS');
     });
   });
 
   describe('getAdPerformance', () => {
     it('returns ad performance metrics', async () => {
-      mockSafeFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([
-          {
-            results: [
-              {
-                adGroupAd: {
-                  ad: {
-                    id: '456',
-                    name: 'Test Ad',
-                    type: 'RESPONSIVE_SEARCH_AD',
-                    finalUrls: ['https://example.com'],
-                    responsiveSearchAd: {
-                      headlines: [{ text: 'Headline 1' }, { text: 'Headline 2' }],
-                      descriptions: [{ text: 'Description 1' }],
-                    },
-                  },
-                },
-                metrics: {
-                  impressions: '5000',
-                  clicks: '250',
-                  ctr: 5.0,
-                  costMicros: '50000000',
-                },
+      mockQuery.mockResolvedValue([
+        {
+          adGroupAd: {
+            ad: {
+              id: '456',
+              name: 'Test Ad',
+              type: 'RESPONSIVE_SEARCH_AD',
+              finalUrls: ['https://example.com'],
+              responsiveSearchAd: {
+                headlines: [{ text: 'Headline 1' }, { text: 'Headline 2' }],
+                descriptions: [{ text: 'Description 1' }],
               },
-            ],
+            },
           },
-        ]),
-      });
+          metrics: {
+            impressions: '5000',
+            clicks: '250',
+            ctr: 5.0,
+            costMicros: '50000000',
+          },
+        },
+      ]);
 
       const result = await api.getAdPerformance('1234567890');
 
@@ -286,61 +259,41 @@ describe('GoogleAdsAPI', () => {
     });
 
     it('uses correct GAQL query for ads', async () => {
-      mockSafeFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([{ results: [] }]),
-      });
+      mockQuery.mockResolvedValue([]);
 
       await api.getAdPerformance('1234567890');
 
-      const body = JSON.parse(mockSafeFetch.mock.calls[0][2].body);
-      expect(body.query).toContain('SELECT ad_group_ad.ad.id');
-      expect(body.query).toContain('ad_group_ad.ad.name');
-      expect(body.query).toContain('metrics.impressions');
-      expect(body.query).toContain('metrics.clicks');
+      const gaql = mockQuery.mock.calls[0][0];
+      expect(gaql).toContain('SELECT ad_group_ad.ad.id');
+      expect(gaql).toContain('ad_group_ad.ad.name');
+      expect(gaql).toContain('metrics.impressions');
+      expect(gaql).toContain('metrics.clicks');
     });
   });
 
   describe('syncAllAccounts', () => {
     it('syncs all accounts with campaigns and performance', async () => {
-      mockSafeFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({
-            resourceNames: ['customers/1234567890'],
-          }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve([
-            {
-              results: [
-                {
-                  campaign: { id: '123', name: 'Test', status: 'ENABLED' },
-                  campaignBudget: { amountMicros: '50000000' },
-                },
-              ],
+      mockListAccessibleCustomers.mockResolvedValue({
+        resource_names: ['customers/1234567890'],
+      });
+      mockQuery
+        .mockResolvedValueOnce([
+          {
+            campaign: { id: '123', name: 'Test', status: 'ENABLED' },
+            campaignBudget: { amountMicros: '50000000' },
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            campaign: { id: '123' },
+            metrics: {
+              costMicros: '100000000',
+              impressions: '10000',
+              clicks: '500',
+              conversions: '10',
             },
-          ]),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve([
-            {
-              results: [
-                {
-                  campaign: { id: '123' },
-                  metrics: {
-                    costMicros: '100000000',
-                    impressions: '10000',
-                    clicks: '500',
-                    conversions: '10',
-                  },
-                },
-              ],
-            },
-          ]),
-        });
+          },
+        ]);
 
       const result = await api.syncAllAccounts();
 
@@ -356,14 +309,10 @@ describe('GoogleAdsAPI', () => {
     });
 
     it('handles errors for individual accounts', async () => {
-      mockSafeFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({
-            resourceNames: ['customers/1234567890'],
-          }),
-        })
-        .mockRejectedValueOnce(new Error('API Error'));
+      mockListAccessibleCustomers.mockResolvedValue({
+        resource_names: ['customers/1234567890'],
+      });
+      mockQuery.mockRejectedValueOnce(new Error('API Error'));
 
       const result = await api.syncAllAccounts();
 
@@ -373,39 +322,22 @@ describe('GoogleAdsAPI', () => {
     });
 
     it('converts micros to standard units', async () => {
-      mockSafeFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({
-            resourceNames: ['customers/1234567890'],
-          }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve([
-            {
-              results: [
-                {
-                  campaign: { id: '123', name: 'Test', status: 'ENABLED' },
-                  campaignBudget: { amountMicros: '1000000000' },
-                },
-              ],
-            },
-          ]),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve([
-            {
-              results: [
-                {
-                  campaign: { id: '123' },
-                  metrics: { costMicros: '250000000', impressions: '5000', clicks: '100', conversions: '5' },
-                },
-              ],
-            },
-          ]),
-        });
+      mockListAccessibleCustomers.mockResolvedValue({
+        resource_names: ['customers/1234567890'],
+      });
+      mockQuery
+        .mockResolvedValueOnce([
+          {
+            campaign: { id: '123', name: 'Test', status: 'ENABLED' },
+            campaignBudget: { amountMicros: '1000000000' },
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            campaign: { id: '123' },
+            metrics: { costMicros: '250000000', impressions: '5000', clicks: '100', conversions: '5' },
+          },
+        ]);
 
       const result = await api.syncAllAccounts();
 
@@ -415,75 +347,52 @@ describe('GoogleAdsAPI', () => {
   });
 
   describe('API call structure', () => {
-    it('uses correct base URL', async () => {
-      mockSafeFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([]),
-      });
-
-      await api.listAccounts();
-
-      expect(mockSafeFetch).toHaveBeenCalledWith(
-        'google',
-        expect.stringContaining('https://googleads.googleapis.com/v18'),
-        expect.any(Object)
-      );
-    });
-
-    it('includes authorization headers', async () => {
-      mockSafeFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([]),
-      });
-
-      await api.listAccounts();
-
-      expect(mockSafeFetch).toHaveBeenCalledWith(
-        'google',
-        expect.any(String),
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            'Authorization': 'Bearer test-oauth-token',
-            'developer-token': 'test-dev-token',
-          }),
-        })
-      );
-    });
-
-    it('includes login-customer-id header when configured', async () => {
-      mockSafeFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([]),
-      });
+    it('initializes SDK client with correct credentials', async () => {
+      mockQuery.mockResolvedValue([]);
 
       await api._query('1234567890', 'SELECT campaign.id FROM campaign');
 
-      expect(mockSafeFetch).toHaveBeenCalledWith(
-        'google',
-        expect.any(String),
+      // Verify SDK was initialized by checking customer was created with correct auth
+      expect(mockCustomer).toHaveBeenCalledWith(
         expect.objectContaining({
-          headers: expect.objectContaining({
-            'login-customer-id': '1234567890',
-          }),
+          refresh_token: 'test-oauth-token',
+          customer_id: '1234567890',
         })
       );
+    });
+
+    it('creates customer with correct auth parameters', async () => {
+      mockQuery.mockResolvedValue([]);
+
+      await api._query('1234567890', 'SELECT campaign.id FROM campaign');
+
+      expect(mockCustomer).toHaveBeenCalledWith({
+        refresh_token: 'test-oauth-token',
+        customer_id: '1234567890',
+        login_customer_id: '1234567890',
+      });
+    });
+
+    it('passes GAQL query to SDK customer.query', async () => {
+      mockQuery.mockResolvedValue([]);
+
+      await api._query('1234567890', 'SELECT campaign.id FROM campaign');
+
+      expect(mockQuery).toHaveBeenCalledWith('SELECT campaign.id FROM campaign');
     });
   });
 
   describe('error handling', () => {
-    it('propagates errors from safeFetch', async () => {
-      mockSafeFetch.mockRejectedValue(new Error('Network error'));
+    it('propagates errors from SDK query', async () => {
+      mockQuery.mockRejectedValue(new Error('Network error'));
 
-      await expect(api.listAccounts()).rejects.toThrow('Network error');
+      await expect(api._query('1234567890', 'SELECT campaign.id FROM campaign')).rejects.toThrow('Network error');
     });
 
-    it('handles non-OK responses', async () => {
-      mockSafeFetch.mockResolvedValue({
-        ok: false,
-        statusText: 'Unauthorized',
-      });
+    it('handles SDK initialization failures', async () => {
+      mockListAccessibleCustomers.mockRejectedValue(new Error('Unauthorized'));
 
-      await expect(api.listAccounts()).rejects.toThrow();
+      await expect(api.listAccounts()).rejects.toThrow('Unauthorized');
     });
   });
 });

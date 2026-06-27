@@ -447,9 +447,9 @@ export class FatigueDetector {
     const intercept = (sumY - slope * sumX) / n;
 
     // R² (coefficient of determination)
-    const ssRes = points.reduce((s, { x, y }) => s + (y - (slope * x + intercept)) ** 2, 0);
     const meanY = sumY / n;
-    const ssTot = points.reduce((s, { x, y }) => s + (y - meanY) ** 2, 0);
+    const ssTot = points.reduce((s, { y }) => s + (y - meanY) ** 2, 0);
+    const ssRes = points.reduce((s, { x: _x, y }) => s + (y - (slope * _x + intercept)) ** 2, 0);
     const r2 = ssTot === 0 ? 0 : 1 - ssRes / ssTot;
 
     return { slope, intercept, r2 };

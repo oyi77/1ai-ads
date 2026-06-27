@@ -10,6 +10,16 @@ vi.mock('../../../server/lib/platform-client.js', () => ({
 vi.mock('../../../server/config/index.js', () => ({
   default: {
     fbSystemToken: null,
+    metaApiVersion: 'v19.0',
+  },
+}));
+
+// Mock the SDK — always rejects so safeFetch fallback is exercised
+vi.mock('facebook-nodejs-business-sdk', () => ({
+  FacebookAdsApi: {
+    init: vi.fn().mockReturnValue({
+      call: vi.fn().mockRejectedValue(new Error('SDK not available in tests')),
+    }),
   },
 }));
 

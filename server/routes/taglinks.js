@@ -66,7 +66,7 @@ export function createTaglinksRouter({ userDb }) {
       } finally {
         db.close();
       }
-    } catch (err) {
+    } catch {
       res.json({ success: true, report: { total: 0, links: [] } });
     }
   });
@@ -93,7 +93,7 @@ export function createTaglinksRouter({ userDb }) {
       } finally {
         db.close();
       }
-    } catch (err) {
+    } catch {
       res.json([]);
     }
   });

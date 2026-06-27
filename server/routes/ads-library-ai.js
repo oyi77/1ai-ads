@@ -176,7 +176,7 @@ export function createAdsLibraryAiRouter(settingsRepo) {
   });
 
   router.get('/health', async (_req, res) => {
-    const cookies = resolveCookies(settingsRepo);
+    const _cookies = resolveCookies(settingsRepo);
     const persistentCount = settingsRepo
       ? Object.keys(settingsRepo.getAll?.() || {}).filter(k => k.startsWith(PERSISTENT_KEY_PREFIX)).length
       : 0;

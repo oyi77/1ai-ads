@@ -17,7 +17,7 @@ import { handleMenu, handleMenuButton } from './commands/menu.js';
 import { handleStatus } from './commands/status.js';
 import { handleHelp } from './commands/help.js';
 import { handleSettings, handleSettingsCallback } from './commands/settings.js';
-import { handleMonitor, handleMonitorCallback } from './commands/monitor.js';
+import { handleMonitorCallback } from './commands/monitor.js';
 import { handleAdminStats, handleAdminUsers, handleAdminBroadcast } from './commands/admin.js';
 import { initScheduler } from './scheduler.js';
 import { errorHandler } from './middleware/error-handler.js';
@@ -111,7 +111,7 @@ function handlePricing() {
   };
 }
 
-function handleTextMessage(deps) {
+function handleTextMessage(_deps) {
   return (ctx) => {
     const text = ctx.message?.text;
     if (!text || text.startsWith('/')) return;
@@ -128,7 +128,7 @@ function handleTextMessage(deps) {
   };
 }
 
-function handlePhotoMessage(deps) {
+function handlePhotoMessage(_deps) {
   return (ctx) => {
     ctx.reply('📸 Photo received! Use /menu to see what you can do with it.', {
       reply_markup: {

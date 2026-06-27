@@ -1,5 +1,4 @@
 import { createLogger } from '../lib/logger.js';
-import { randomUUID } from 'crypto';
 
 const log = createLogger('attribution-service');
 

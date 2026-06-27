@@ -236,7 +236,7 @@ export class UnifiedReporter {
   /**
    * Time-series data for charts.
    */
-  async getTimeSeries({ metric = 'spend', granularity = 'daily', days = 30 } = {}) {
+  async getTimeSeries({ metric = 'spend', granularity: _granularity = 'daily', days = 30 } = {}) {
     const validMetric = ['spend', 'revenue', 'impressions', 'clicks', 'conversions'].includes(metric)
       ? metric : 'spend';
 
@@ -293,7 +293,7 @@ export class UnifiedReporter {
         const accounts = await api.getAdAccounts();
         if (!accounts?.length) return empty;
 
-        let total = { ...empty };
+        const total = { ...empty };
         for (const acct of accounts) {
           try {
             const data = await api.getAccountInsights(acct.id, { datePreset });
@@ -315,7 +315,7 @@ export class UnifiedReporter {
         const accounts = await api.listAccounts();
         if (!accounts?.length) return empty;
 
-        let total = { ...empty };
+        const total = { ...empty };
         for (const acct of accounts) {
           try {
             const perf = await api.getCampaignPerformance(acct.id || acct, { days });
@@ -340,7 +340,7 @@ export class UnifiedReporter {
         const accounts = await api.syncAllAccounts();
         if (!accounts?.length) return empty;
 
-        let total = { ...empty };
+        const total = { ...empty };
         for (const acct of accounts) {
           try {
             const advId = acct.advertiserId || acct.id;
@@ -366,7 +366,7 @@ export class UnifiedReporter {
         const accounts = await api.getAccounts();
         if (!accounts?.length) return empty;
 
-        let total = { ...empty };
+        const total = { ...empty };
         for (const acct of accounts) {
           try {
             const analytics = await api.getCampaignAnalytics(acct.id || acct);
