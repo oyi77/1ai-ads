@@ -2,7 +2,7 @@ import { safeFetch } from '../../lib/platform-client.js';
 import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
 import { ConfigurationError } from '../../lib/errors.js';
 
-const BASE = 'https://api.direct.yandex.com/json/v5';
+const BASE = 'https://api.direct.yandex.com/json/v5/campaigns';
 
 export class YandexAdsAPI extends BasePlatformApiClient {
   constructor(settingsRepo) {
@@ -21,31 +21,33 @@ export class YandexAdsAPI extends BasePlatformApiClient {
     );
   }
 
-  _headers() {
-    return {
+  _headers(clientLogin) {
+    const h = {
       'Authorization': `Bearer ${this._getToken()}`,
       'Accept-Language': 'en',
     };
+    if (clientLogin) h['Client-Login'] = clientLogin;
+    return h;
   }
 
   // Override: add Yandex-specific headers
-  async _get(path, params = {}) {
-    const url = new URL(`${this._baseUrl}${path}`);
+  async _get(path, params = {}, clientLogin) {
+    const url = new URL(path);
     for (const [k, v] of Object.entries(params)) {
       url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
     }
     const res = await safeFetch('yandex', url.toString(), {
-      headers: this._headers(),
+      headers: this._headers(clientLogin),
     });
     const data = await res.json();
     return data;
   }
 
   // Override: add Yandex-specific headers
-  async _post(path, body = {}) {
-    const res = await safeFetch('yandex', `${this._baseUrl}${path}`, {
+  async _post(path, body = {}, clientLogin) {
+    const res = await safeFetch('yandex', path, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...this._headers() },
+      headers: { 'Content-Type': 'application/json', ...this._headers(clientLogin) },
       body: JSON.stringify(body),
     });
     const data = await res.json();
@@ -58,7 +60,7 @@ export class YandexAdsAPI extends BasePlatformApiClient {
    */
   async getAccounts() {
     this.log.debug('Fetching Yandex Direct accounts');
-    return this._post('/clients', {
+    return this._post(`${BASE.replace('/campaigns', '')}/clients`, {
       method: 'get',
       params: { FieldNames: ['Login', 'ClientId', 'Currency', 'Role'] },
     });
@@ -70,32 +72,32 @@ export class YandexAdsAPI extends BasePlatformApiClient {
    */
   async getCampaigns(accountId) {
     this.log.debug('Fetching Yandex campaigns', { accountId });
-    return this._post('/campaigns', {
+    return this._post(BASE, {
       method: 'get',
       params: {
         SelectionCriteria: {},
-        FieldNames: ['Id', 'Name', 'Status', 'DailyBudget', 'Type'],
+        FieldNames: ['Id', 'Name', 'StatusImpressions', 'DailyBudget', 'Type', 'State'],
       },
-    });
+    }, accountId);
   }
 
   /**
    * Create a new campaign.
    * POST /campaigns with method add
    */
-  async createCampaign(accountId, { name, budget, status = 'OFF' }) {
+  async createCampaign(accountId, { name, budget, status = 'ON' }) {
     this.log.info('Creating Yandex campaign', { accountId, name });
     const campaign = {
       Name: name,
-      Status: status,
+      StatusImpressions: status,
     };
     if (budget) {
-      campaign.DailyBudget = { Amount: budget.toString() };
+      campaign.DailyBudget = { Amount: String(budget), Mode: 'STANDARD' };
     }
-    const data = await this._post('/campaigns', {
+    const data = await this._post(BASE, {
       method: 'add',
       params: { Campaigns: [campaign] },
-    });
+    }, accountId);
     const campaignId = data.result?.AddResults?.[0]?.Id;
     this.log.info('Yandex campaign created', { campaignId });
     return { campaignId };
@@ -109,12 +111,12 @@ export class YandexAdsAPI extends BasePlatformApiClient {
     this.log.info('Updating Yandex campaign', { campaignId });
     const update = { Id: campaignId };
     if (name) update.Name = name;
-    if (status) update.Status = status;
+    if (status) update.StatusImpressions = status;
 
-    await this._post('/campaigns', {
+    await this._post(BASE, {
       method: 'update',
       params: { Campaigns: [update] },
-    });
+    }, accountId);
     this.log.info('Yandex campaign updated', { campaignId });
     return { campaignId };
   }
@@ -159,7 +161,7 @@ export class YandexAdsAPI extends BasePlatformApiClient {
     return {
       id: c.Id,
       name: c.Name,
-      status: c.Status ? c.Status.toLowerCase() : 'unknown',
+      status: c.StatusImpressions ? c.StatusImpressions.toLowerCase() : 'unknown',
       dailyBudget: c.DailyBudget?.Amount,
       type: c.Type,
     };

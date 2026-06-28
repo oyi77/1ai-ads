@@ -2,7 +2,7 @@ import { safeFetch } from '../../lib/platform-client.js';
 import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
 import { ConfigurationError } from '../../lib/errors.js';
 
-const BASE = 'https://api.taboola.com/1.2';
+const BASE = 'https://backstage.taboola.com/backstage/api/1.0';
 
 export class TaboolaAdsAPI extends BasePlatformApiClient {
   constructor(settingsRepo) {
@@ -38,8 +38,17 @@ export class TaboolaAdsAPI extends BasePlatformApiClient {
   }
 
   async _post(path, body = {}) {
-    const res = await safeFetch('taboola', `${this._baseUrl}${path}`, {
+    const res = await safeFetch('taboola', `${BASE}${path}`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...this._headers() },
+      body: JSON.stringify(body),
+    });
+    return await res.json();
+  }
+
+  async _put(path, body = {}) {
+    const res = await safeFetch('taboola', `${BASE}${path}`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...this._headers() },
       body: JSON.stringify(body),
     });
@@ -81,7 +90,7 @@ export class TaboolaAdsAPI extends BasePlatformApiClient {
 
   /**
    * Update a campaign.
-   * PUT /accounts/{accountId}/campaigns/{campaignId}
+   * PUT /{accountId}/campaigns/{campaignId}
    */
   async updateCampaign(accountId, campaignId, { name, status }) {
     this.log.info('Updating Taboola campaign', { campaignId });
@@ -89,7 +98,7 @@ export class TaboolaAdsAPI extends BasePlatformApiClient {
     if (name) body.name = name;
     if (status) body.status = status;
 
-    await this._post(`/accounts/${accountId}/campaigns/${campaignId}`, body);
+    await this._put(`/${accountId}/campaigns/${campaignId}`, body);
     this.log.info('Taboola campaign updated', { campaignId });
     return { campaignId };
   }

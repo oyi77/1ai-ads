@@ -2,6 +2,15 @@ import { safeFetch } from '../../lib/platform-client.js';
 import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
 import { ConfigurationError, PlatformError } from '../../lib/errors.js';
 
+/**
+ * Amazon Advertising API client.
+ *
+ * Uses the v2 REST API for profiles and reading campaigns,
+ * and the v1 unified Campaign Management API for creating/updating campaigns.
+ *
+ * @see https://advertising.amazon.com/API/docs/en-us/
+ * @see https://advertising.amazon.com/API/docs/en-us/amazon-ads/1-0/betas
+ */
 const BASE = 'https://advertising-api.amazon.com';
 
 export class AmazonAdsAPI extends BasePlatformApiClient {
@@ -77,6 +86,19 @@ export class AmazonAdsAPI extends BasePlatformApiClient {
     return data;
   }
 
+  async _patch(path, body = {}, profileId = undefined) {
+    const res = await safeFetch('amazon', `${this._baseUrl}${path}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...this._headers(profileId) },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (data.code && data.details) {
+      throw new PlatformError(`Amazon API error: ${data.details}`, 'amazon', data.code);
+    }
+    return data;
+  }
+
   /**
    * List advertising profiles (Amazon's equivalent of ad accounts).
    * GET /v2/profiles
@@ -93,47 +115,47 @@ export class AmazonAdsAPI extends BasePlatformApiClient {
 
   /**
    * List campaigns for a profile.
-   * GET /v2/sp/campaigns (Sponsored Products)
+   * POST /adsApi/v1/query/campaigns
    */
   async getCampaigns(profileId) {
     this.log.debug('Fetching Amazon campaigns', { profileId });
-    const data = await this._get('/v2/sp/campaigns', {}, profileId);
-    return Array.isArray(data) ? data : data.campaigns || [];
+    const data = await this._post('/adsApi/v1/query/campaigns', {}, profileId);
+    return Array.isArray(data) ? data : data.campaigns || data.results || [];
   }
 
   /**
    * Create a new Sponsored Products campaign.
-   * POST /v2/sp/campaigns
+   * POST /adsApi/v1/create/campaigns
    */
   async createCampaign(profileId, { name, budget, targetingType = 'MANUAL' }) {
     this.log.info('Creating Amazon campaign', { profileId, name });
-    const body = [{
+    const body = {
       name,
       targetingType,
       state: 'PAUSED',
-    }];
+    };
     if (budget !== undefined) {
-      body[0].dailyBudget = budget;
+      body.dailyBudget = budget;
     }
-    const data = await this._post('/v2/sp/campaigns', body, profileId);
-    const campaignId = Array.isArray(data) ? data[0]?.campaignId : data.campaignId;
+    const data = await this._post('/adsApi/v1/create/campaigns', body, profileId);
+    const campaignId = data.campaignId || (Array.isArray(data.results) ? data.results[0]?.campaignId : undefined);
     this.log.info('Amazon campaign created', { campaignId });
     return { campaignId };
   }
 
   /**
    * Update a campaign.
-   * PUT /v2/sp/campaigns
+   * POST /adsApi/v1/update/campaigns
    */
   async updateCampaign(profileId, campaignId, { name, status }) {
     this.log.info('Updating Amazon campaign', { profileId, campaignId });
-    const body = [{
+    const body = {
       campaignId,
-    }];
-    if (name) body[0].name = name;
-    if (status) body[0].state = status.toUpperCase();
+    };
+    if (name) body.name = name;
+    if (status) body.state = status.toUpperCase();
 
-    await this._put('/v2/sp/campaigns', body, profileId);
+    await this._post('/adsApi/v1/update/campaigns', body, profileId);
     this.log.info('Amazon campaign updated', { campaignId });
     return { campaignId };
   }

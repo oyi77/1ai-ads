@@ -2,7 +2,7 @@ import { safeFetch } from '../../lib/platform-client.js';
 import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
 import { ConfigurationError } from '../../lib/errors.js';
 
-const BASE = 'https://ads.line.me/api/v1';
+const BASE = 'https://ads.line.me/api/v3';
 
 export class LineAdsAPI extends BasePlatformApiClient {
   constructor(settingsRepo) {

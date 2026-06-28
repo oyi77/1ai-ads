@@ -22,7 +22,7 @@ export class TheTradeDeskAPI extends BasePlatformApiClient {
 
   _headers() {
     return {
-      'Authorization': `Bearer ${this._getToken()}`,
+      'TTD-Auth': this._getToken(),
     };
   }
 
@@ -60,39 +60,44 @@ export class TheTradeDeskAPI extends BasePlatformApiClient {
 
   /**
    * List campaigns for an advertiser.
-   * GET /campaigns/query
+   * POST /campaigns/query
    */
   async getCampaigns(advertiserId) {
     this.log.debug('Fetching The Trade Desk campaigns', { advertiserId });
-    return this._get('/campaigns/query', { advertiserId });
+    return this._post('/campaigns/query', { AdvertiserId: advertiserId });
   }
 
   /**
    * Create a new campaign.
-   * POST /campaigns
+   * POST /campaign
    */
   async createCampaign(advertiserId, { name, budget, status }) {
     this.log.info('Creating The Trade Desk campaign', { advertiserId, name });
-    const body = { advertiserId, name };
-    if (budget) body.budget = budget;
-    if (status) body.status = status;
+    const body = { AdvertiserId: advertiserId, CampaignName: name };
+    if (budget) body.Budget = budget;
+    if (status) body.CampaignStatus = status;
 
-    const data = await this._post('/campaigns', body);
-    this.log.info('The Trade Desk campaign created', { campaignId: data.id });
-    return { campaignId: data.id };
+    const data = await this._post('/campaign', body);
+    this.log.info('The Trade Desk campaign created', { campaignId: data.CampaignId });
+    return { campaignId: data.CampaignId };
   }
 
   /**
    * Update a campaign.
-   * PUT /campaigns/{campaignId}
+   * PUT /campaign
    */
   async updateCampaign(advertiserId, campaignId, { name, status }) {
     this.log.info('Updating The Trade Desk campaign', { campaignId });
-    const body = { advertiserId };
-    if (name) body.name = name;
-    if (status) body.status = status;
+    const body = { CampaignId: campaignId, AdvertiserId: advertiserId };
+    if (name) body.CampaignName = name;
+    if (status) body.CampaignStatus = status;
 
-    await this._post(`/campaigns/${campaignId}`, body);
+    const res = await safeFetch('thetradedesk', `${BASE}/campaign`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...this._headers() },
+      body: JSON.stringify(body),
+    });
+    await res.json();
     this.log.info('The Trade Desk campaign updated', { campaignId });
     return { campaignId };
   }
@@ -135,10 +140,10 @@ export class TheTradeDeskAPI extends BasePlatformApiClient {
 
   _mapCampaign(c) {
     return {
-      id: c.id,
-      name: c.name,
-      status: c.status ? c.status.toLowerCase() : 'unknown',
-      budget: c.budget,
+      id: c.CampaignId || c.id,
+      name: c.CampaignName || c.name,
+      status: (c.CampaignStatus || c.status || '').toLowerCase() || 'unknown',
+      budget: c.Budget || c.budget,
     };
   }
 }

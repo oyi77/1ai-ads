@@ -2,7 +2,7 @@ import { safeFetch } from '../../lib/platform-client.js';
 import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
 import { ConfigurationError } from '../../lib/errors.js';
 
-const BASE = 'https://searchads.apple.com/api/v5';
+const BASE = 'https://api.searchads.apple.com/api/v5';
 
 export class AppleAdsAPI extends BasePlatformApiClient {
   constructor(settingsRepo) {
@@ -57,11 +57,11 @@ export class AppleAdsAPI extends BasePlatformApiClient {
 
   /**
    * List campaigns for an organization.
-   * GET /campaigns/find
+   * POST /campaigns/find (selector-based query)
    */
   async getCampaigns(orgId) {
     this.log.debug('Fetching Apple campaigns', { orgId });
-    return this._get(`/campaigns/find`, { orgId });
+    return this._post('/campaigns/find', { conditions: [], paging: { offset: 0, limit: 100 } });
   }
 
   /**
@@ -70,13 +70,16 @@ export class AppleAdsAPI extends BasePlatformApiClient {
    */
   async createCampaign(orgId, { name, budget, countries }) {
     this.log.info('Creating Apple campaign', { orgId, name });
-    const body = { orgId, name };
-    if (budget) body.budget = budget;
-    if (countries) body.countries = countries;
+    const body = {
+      orgId,
+      campaign: { name },
+    };
+    if (budget) body.campaign.budget = budget;
+    if (countries) body.campaign.countries = countries;
 
     const data = await this._post('/campaigns', body);
-    this.log.info('Apple campaign created', { campaignId: data.id });
-    return { campaignId: data.id };
+    this.log.info('Apple campaign created', { campaignId: data.data?.id });
+    return { campaignId: data.data?.id };
   }
 
   /**
@@ -85,11 +88,16 @@ export class AppleAdsAPI extends BasePlatformApiClient {
    */
   async updateCampaign(orgId, campaignId, { name, status }) {
     this.log.info('Updating Apple campaign', { campaignId });
-    const body = { orgId };
+    const body = { id: campaignId };
     if (name) body.name = name;
     if (status) body.status = status;
 
-    await this._post(`/campaigns/${campaignId}`, body);
+    const res = await safeFetch('apple', `${BASE}/campaigns/${campaignId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...this._headers() },
+      body: JSON.stringify(body),
+    });
+    await res.json();
     this.log.info('Apple campaign updated', { campaignId });
     return { campaignId };
   }

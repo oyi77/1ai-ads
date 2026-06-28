@@ -2,6 +2,13 @@ import { safeFetch } from '../../lib/platform-client.js';
 import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
 import { ConfigurationError, PlatformError } from '../../lib/errors.js';
 
+/**
+ * Spotify Ads API v3 client.
+ * @see https://developer.spotify.com/ (Ads API documentation)
+ *
+ * Endpoint paths use underscores per official docs: /ad_accounts, not /ad-accounts.
+ * Response fields use snake_case: business_id, country_code, etc.
+ */
 const BASE = 'https://api-partner.spotify.com/ads/v3';
 
 export class SpotifyAdsAPI extends BasePlatformApiClient {
@@ -66,27 +73,27 @@ export class SpotifyAdsAPI extends BasePlatformApiClient {
 
   /**
    * List ad accounts for the authenticated user.
-   * GET /ad-accounts
+   * GET /ad_accounts
    */
   async getAccounts() {
     this.log.debug('Fetching Spotify ad accounts');
-    const data = await this._get('/ad-accounts');
+    const data = await this._get('/ad_accounts');
     return data.ad_accounts || data.data || [];
   }
 
   /**
    * List campaigns for an ad account.
-   * GET /ad-accounts/{accountId}/campaigns
+   * GET /ad_accounts/{accountId}/campaigns
    */
   async getCampaigns(accountId) {
     this.log.debug('Fetching Spotify campaigns', { accountId });
-    const data = await this._get(`/ad-accounts/${accountId}/campaigns`);
+    const data = await this._get(`/ad_accounts/${accountId}/campaigns`);
     return data.campaigns || data.data || [];
   }
 
   /**
    * Create a new campaign.
-   * POST /ad-accounts/{accountId}/campaigns
+   * POST /ad_accounts/{accountId}/campaigns
    */
   async createCampaign(accountId, { name, budget, status = 'PAUSED' }) {
     this.log.info('Creating Spotify campaign', { accountId, name });
@@ -94,14 +101,14 @@ export class SpotifyAdsAPI extends BasePlatformApiClient {
     if (budget !== undefined) {
       body.budget = budget;
     }
-    const data = await this._post(`/ad-accounts/${accountId}/campaigns`, body);
+    const data = await this._post(`/ad_accounts/${accountId}/campaigns`, body);
     this.log.info('Spotify campaign created', { campaignId: data.campaign?.id || data.id });
     return { campaignId: data.campaign?.id || data.id };
   }
 
   /**
    * Update a campaign.
-   * PATCH /ad-accounts/{accountId}/campaigns/{campaignId}
+   * PATCH /ad_accounts/{accountId}/campaigns/{campaignId}
    */
   async updateCampaign(accountId, campaignId, { name, status }) {
     this.log.info('Updating Spotify campaign', { accountId, campaignId });
@@ -109,7 +116,7 @@ export class SpotifyAdsAPI extends BasePlatformApiClient {
     if (name) body.name = name;
     if (status) body.status = status;
 
-    const res = await safeFetch('spotify', `${this._baseUrl}/ad-accounts/${accountId}/campaigns/${campaignId}`, {
+    const res = await safeFetch('spotify', `${this._baseUrl}/ad_accounts/${accountId}/campaigns/${campaignId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...this._headers() },
       body: JSON.stringify(body),
@@ -140,7 +147,13 @@ export class SpotifyAdsAPI extends BasePlatformApiClient {
         const campaigns = await this.getCampaigns(account.id);
 
         results.push({
-          account: { id: account.id, name: account.name, currency: account.currency },
+          account: {
+            id: account.id,
+            name: account.name,
+            currency: account.currency_code,
+            country: account.country_code,
+            business_id: account.business_id,
+          },
           campaigns: campaigns.map(c => this._mapCampaign(c)),
           insights: [],
           syncedAt: new Date().toISOString(),

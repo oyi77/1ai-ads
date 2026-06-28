@@ -47,12 +47,12 @@ export class CriteoAdsAPI extends BasePlatformApiClient {
   }
 
   /**
-   * List advertisers.
-   * GET /advertisers/me
+   * List accounts.
+   * GET /accounts/me
    */
   async getAdvertisers() {
-    this.log.debug('Fetching Criteo advertisers');
-    return this._get('/advertisers/me');
+    this.log.debug('Fetching Criteo accounts');
+    return this._get('/accounts/me');
   }
 
   /** Alias — satisfies the platform interface contract. */
@@ -60,40 +60,45 @@ export class CriteoAdsAPI extends BasePlatformApiClient {
 
 
   /**
-   * List campaigns for an advertiser.
-   * GET /advertisers/{advertiserId}/campaigns
+   * List campaigns for an account.
+   * GET /accounts/{accountId}/campaigns
    */
-  async getCampaigns(advertiserId) {
-    this.log.debug('Fetching Criteo campaigns', { advertiserId });
-    return this._get(`/advertisers/${advertiserId}/campaigns`);
+  async getCampaigns(accountId) {
+    this.log.debug('Fetching Criteo campaigns', { accountId });
+    return this._get(`/accounts/${accountId}/campaigns`);
   }
 
   /**
    * Create a new campaign.
-   * POST /advertisers/{advertiserId}/campaigns
+   * POST /accounts/{accountId}/campaigns
    */
-  async createCampaign(advertiserId, { name, budget, status }) {
-    this.log.info('Creating Criteo campaign', { advertiserId, name });
+  async createCampaign(accountId, { name, budget, status }) {
+    this.log.info('Creating Criteo campaign', { accountId, name });
     const body = { name };
     if (budget) body.budget = budget;
     if (status) body.status = status;
 
-    const data = await this._post(`/advertisers/${advertiserId}/campaigns`, body);
-    this.log.info('Criteo campaign created', { campaignId: data.id });
-    return { campaignId: data.id };
+    const data = await this._post(`/accounts/${accountId}/campaigns`, body);
+    this.log.info('Criteo campaign created', { campaignId: data.data?.id });
+    return { campaignId: data.data?.id };
   }
 
   /**
    * Update a campaign.
-   * PUT /advertisers/{advertiserId}/campaigns/{campaignId}
+   * PATCH /campaigns/{campaignId}
    */
-  async updateCampaign(advertiserId, campaignId, { name, status }) {
+  async updateCampaign(accountId, campaignId, { name, status }) {
     this.log.info('Updating Criteo campaign', { campaignId });
     const body = {};
     if (name) body.name = name;
     if (status) body.status = status;
 
-    await this._post(`/advertisers/${advertiserId}/campaigns/${campaignId}`, body);
+    const res = await safeFetch('criteo', `${BASE}/campaigns/${campaignId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...this._headers() },
+      body: JSON.stringify(body),
+    });
+    await res.json();
     this.log.info('Criteo campaign updated', { campaignId });
     return { campaignId };
   }

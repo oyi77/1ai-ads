@@ -23,7 +23,6 @@ export class BaiduAdsAPI extends BasePlatformApiClient {
 
   _headers() {
     return {
-      'Authorization': `Bearer ${this._getToken()}`,
       'Content-Type': 'application/json;charset=UTF-8',
     };
   }
@@ -59,7 +58,7 @@ export class BaiduAdsAPI extends BasePlatformApiClient {
   async getAccounts() {
     this.log.debug('Fetching Baidu ad accounts');
     return this._post('/AccountService/getAccountInfo', {
-      header: { userName: '', accessToken: this._getToken(), level: 0 },
+      header: { username: '', token: this._getToken(), level: 0 },
     });
   }
 
@@ -70,7 +69,7 @@ export class BaiduAdsAPI extends BasePlatformApiClient {
   async getCampaigns(accountId) {
     this.log.debug('Fetching Baidu campaigns', { accountId });
     return this._post('/CampaignService/getCampaignByPage', {
-      header: { userName: accountId, accessToken: this._getToken(), level: 0 },
+      header: { username: accountId, token: this._getToken(), level: 0 },
       body: {
         getCampaignByPageRequest: {
           paging: { start: 0, num: 100 },
@@ -91,7 +90,7 @@ export class BaiduAdsAPI extends BasePlatformApiClient {
       status,
     };
     const data = await this._post('/CampaignService/addCampaign', {
-      header: { userName: accountId, accessToken: this._getToken(), level: 0 },
+      header: { username: accountId, token: this._getToken(), level: 0 },
       body: { addCampaignRequest: { campaignTypes: [campaign] } },
     });
     const campaignId = data.body?.data?.[0]?.campaignId;
@@ -110,7 +109,7 @@ export class BaiduAdsAPI extends BasePlatformApiClient {
     if (status) update.status = status;
 
     await this._post('/CampaignService/updateCampaign', {
-      header: { userName: accountId, accessToken: this._getToken(), level: 0 },
+      header: { username: accountId, token: this._getToken(), level: 0 },
       body: { updateCampaignRequest: { campaignTypes: [update] } },
     });
     this.log.info('Baidu campaign updated', { campaignId });
