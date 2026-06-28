@@ -38,7 +38,7 @@ describe('MicrosoftAdsAPI', () => {
     });
 
     it('sets base URL', () => {
-      expect(api._baseUrl).toBe('https://ads.microsoft.com/api/v13');
+      expect(api._baseUrl).toBe('https://campaign.api.bingads.microsoft.com');
     });
   });
 
@@ -589,7 +589,7 @@ describe('MicrosoftAdsAPI', () => {
 
       expect(mockSafeFetch).toHaveBeenCalledWith(
         'microsoft',
-        expect.stringContaining('https://ads.microsoft.com/api/v13'),
+        expect.stringContaining('https://campaign.api.bingads.microsoft.com'),
         expect.any(Object)
       );
     });
