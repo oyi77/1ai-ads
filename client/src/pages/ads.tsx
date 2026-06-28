@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Megaphone, Plus, Play, Pause, Trash2, RefreshCw, Loader2, Filter } from 'lucide-react';
+import { Megaphone, Play, Pause, Trash2, RefreshCw, Filter } from 'lucide-react';
 import { api } from '../lib/api';
 import type { CSSProperties } from 'react';
 

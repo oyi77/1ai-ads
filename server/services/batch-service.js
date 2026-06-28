@@ -9,14 +9,7 @@ export class BatchService {
 
   async batchRequest(requests) {
     log.info('batchRequest', { count: requests.length });
-    const accessToken = this.meta._getToken();
-    const url = `${this.meta._base}/?access_token=${accessToken}`;
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ batch: requests })
-    });
-    return resp.json();
+    return this.meta._post('/', { batch: requests });
   }
 
   async batchPause(entityIds, _entityType = 'campaign') {

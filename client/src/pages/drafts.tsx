@@ -24,12 +24,12 @@ export function DraftsPage() {
   });
 
   const publishMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/drafts/${id}/publish`),
+    mutationFn: (id: string) => api.post(`/drafts/${id}/approve`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['drafts'] }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.del(`/drafts/${id}`),
+    mutationFn: (id: string) => api.post(`/drafts/${id}/reject`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['drafts'] }),
   });
 
@@ -38,51 +38,51 @@ export function DraftsPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 4 }}>Drafts</h1>
-      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 24 }}>
-        Manage your draft campaigns, ads, and content before publishing.
-      </p>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 4 }}>Drafts</h1>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Review and manage your ad drafts</p>
+      </div>
 
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        {['all', 'campaign', 'ad', 'content'].map(t => (
+      {/* Filter tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        {['all', 'ad', 'creative', 'campaign'].map(t => (
           <button key={t} onClick={() => setFilter(t)} style={{
             ...tabBtn,
             background: filter === t ? 'var(--accent)' : 'transparent',
             color: filter === t ? 'var(--bg-deep)' : 'var(--text-secondary)',
-          }}>{t.charAt(0).toUpperCase() + t.slice(1)}</button>
+          }}>{t === 'all' ? 'All' : t}</button>
         ))}
       </div>
 
-      {/* Drafts */}
       {isLoading ? (
         <p style={{ color: 'var(--text-tertiary)', padding: 40, textAlign: 'center' }}>Loading drafts...</p>
       ) : filtered.length === 0 ? (
         <div style={cardStyle}>
           <FileText size={32} style={{ color: 'var(--text-tertiary)', marginBottom: 8 }} />
-          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>No drafts found.</p>
+          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>No drafts found</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
           {filtered.map(draft => (
-            <div key={draft.id} style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{draft.name || 'Untitled Draft'}</span>
-                  <span style={{
-                    padding: '1px 6px', borderRadius: 4, fontSize: '0.65rem', fontWeight: 600,
-                    background: 'rgba(245,158,11,0.1)', color: 'var(--amber)',
-                  }}>{draft.type || 'draft'}</span>
-                </div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Clock size={10} /> Updated {draft.updated_at ? new Date(draft.updated_at).toLocaleDateString() : '—'}
-                </div>
+            <div key={draft.id} style={cardStyle}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                <span style={{
+                  padding: '2px 8px', borderRadius: 4, fontSize: '0.65rem', fontWeight: 600,
+                  background: 'rgba(139,146,168,0.1)', color: 'var(--text-tertiary)',
+                }}>{draft.type}</span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Clock size={10} /> {new Date(draft.updated_at || draft.created_at).toLocaleDateString()}
+                </span>
               </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={() => publishMutation.mutate(draft.id)} disabled={publishMutation.isPending} style={actionBtn} title="Publish">
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 8 }}>{draft.name || 'Untitled Draft'}</h3>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.5 }}>
+                Status: {draft.status || 'draft'}
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => publishMutation.mutate(draft.id)} style={actionBtn}>
                   <Send size={12} /> Publish
                 </button>
-                <button onClick={() => { if (confirm('Delete draft?')) deleteMutation.mutate(draft.id); }} style={iconBtn} title="Delete">
+                <button onClick={() => { if (confirm('Remove this draft?')) deleteMutation.mutate(draft.id); }} style={iconBtn}>
                   <Trash2 size={12} />
                 </button>
               </div>
@@ -106,11 +106,11 @@ const cardStyle: CSSProperties = {
 
 const actionBtn: CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 4,
-  padding: '4px 10px', background: 'var(--accent)', color: 'var(--bg-deep)',
-  border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600,
+  padding: '6px 12px', background: 'var(--accent)', color: 'var(--bg-deep)',
+  border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: '0.75rem',
 };
 
 const iconBtn: CSSProperties = {
-  padding: '4px 8px', background: 'transparent', color: 'var(--text-tertiary)',
-  border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer',
+  padding: '6px 8px', background: 'transparent', color: 'var(--text-secondary)',
+  border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer',
 };

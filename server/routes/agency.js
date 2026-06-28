@@ -14,7 +14,7 @@ export function createAgencyRouter(whiteLabelService) {
 
   router.post('/clients', (req, res) => {
     try {
-      const data = whiteLabelService.createClient(req.user?.id, req.body);
+      const data = whiteLabelService.createClient({ agencyId: req.user?.id, ...req.body });
       res.json({ success: true, data });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -41,7 +41,7 @@ export function createAgencyRouter(whiteLabelService) {
 
   router.get('/clients/:id/reports', (req, res) => {
     try {
-      const data = whiteLabelService.getReports(req.params.id);
+      const data = whiteLabelService.getReports({ clientId: req.params.id, agencyId: req.user?.id });
       res.json({ success: true, data });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -50,7 +50,7 @@ export function createAgencyRouter(whiteLabelService) {
 
   router.post('/clients/:id/reports', async (req, res) => {
     try {
-      const data = await whiteLabelService.generateReport(req.params.id, req.body);
+      const data = await whiteLabelService.generateReport({ clientId: req.params.id, agencyId: req.user?.id, ...req.body });
       res.json({ success: true, data });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });

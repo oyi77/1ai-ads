@@ -1,6 +1,6 @@
 import { safeFetch } from '../lib/platform-client.js';
 import { BasePlatformApiClient } from '../lib/base-platform-api.js';
-import { ConfigurationError, PlatformError } from '../lib/errors.js';
+import { ConfigurationError } from '../lib/errors.js';
 
 const BASE = 'https://business-api.tiktok.com/open_api/v1.3';
 
@@ -125,22 +125,6 @@ export class TikTokAdsAPI extends BasePlatformApiClient {
     });
   }
 
-  async _post(path, body = {}) {
-    const token = this._getToken();
-    const res = await safeFetch('tiktok', `${BASE}${path}`, {
-      method: 'POST',
-      headers: {
-        'Access-Token': token,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (data.code !== 0) {
-      throw new PlatformError(`TikTok API error: ${data.message}`, 'tiktok');
-    }
-    return data.data;
-  }
 
   async createCampaign(advertiserId, { name, objectiveType = 'CONVERSIONS', budget, status = 'DISABLE' }) {
     this.log.info('Creating TikTok campaign', { advertiserId, name });

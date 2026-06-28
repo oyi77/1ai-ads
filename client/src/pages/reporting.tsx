@@ -17,6 +17,7 @@ export function ReportingPage() {
   const handleExport = async () => {
     const token = localStorage.getItem('1ai-ads_token');
     const res = await fetch('/api/reports/export/csv', { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error('Export failed');
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'report.csv'; a.click();

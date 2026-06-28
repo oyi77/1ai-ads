@@ -22,7 +22,7 @@ interface LandingPage {
 export function LandingPagesPage() {
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ name: '', headline: '', subheadline: '', body: '', cta_text: '', cta_url: '' });
+  const [form, setForm] = useState({ name: '', product_name: '', headline: '', subheadline: '', body: '', cta_text: '', cta_url: '' });
 
   const { data: pages, isLoading } = useQuery<LandingPage[]>({
     queryKey: ['landing'],
@@ -34,7 +34,7 @@ export function LandingPagesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['landing'] });
       setShowCreate(false);
-      setForm({ name: '', headline: '', subheadline: '', body: '', cta_text: '', cta_url: '' });
+      setForm({ name: '', product_name: '', headline: '', subheadline: '', body: '', cta_text: '', cta_url: '' });
     },
   });
 
@@ -65,6 +65,7 @@ export function LandingPagesPage() {
           <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 12 }}>Create Landing Page</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <input placeholder="Page name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={inputStyle} />
+            <input placeholder="Product name" value={form.product_name} onChange={e => setForm({ ...form, product_name: e.target.value })} style={inputStyle} />
             <input placeholder="CTA URL (https://...)" value={form.cta_url} onChange={e => setForm({ ...form, cta_url: e.target.value })} style={inputStyle} />
             <input placeholder="Headline" value={form.headline} onChange={e => setForm({ ...form, headline: e.target.value })} style={inputStyle} />
             <input placeholder="CTA Button Text" value={form.cta_text} onChange={e => setForm({ ...form, cta_text: e.target.value })} style={inputStyle} />

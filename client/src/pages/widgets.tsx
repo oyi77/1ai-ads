@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LayoutGrid, ToggleLeft, ToggleRight } from 'lucide-react';
 import { api } from '../lib/api';
 
@@ -13,6 +13,11 @@ interface Widget {
 }
 
 export function WidgetsPage() {
+  const queryClient = useQueryClient();
+  const toggleMutation = useMutation({
+    mutationFn: (w: Widget) => api.put(`/reporting/widgets/${w.id}`, { enabled: !w.enabled }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reporting-widgets'] }),
+  });
   const { data, isLoading, error } = useQuery({
     queryKey: ['reporting-widgets'],
     queryFn: () => api.get<Widget[]>('/reporting/widgets'),
@@ -27,11 +32,10 @@ export function WidgetsPage() {
 
   const typeColor = (t: string) => {
     const map: Record<string, string> = {
-      chart: 'var(--accent)',
-      metric: 'var(--green)',
+      metric: 'var(--accent)',
+      chart: 'var(--green)',
       table: 'var(--purple)',
-      alert: 'var(--red)',
-      status: 'var(--amber)',
+      list: 'var(--amber)',
     };
     return map[t] || 'var(--text-tertiary)';
   };
@@ -41,8 +45,8 @@ export function WidgetsPage() {
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 4 }}>Dashboard Widgets</h1>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Configure which widgets appear on your dashboard</p>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 4 }}>Widget Configuration</h1>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Enable, disable, and arrange dashboard widgets</p>
       </div>
 
       {error && (
@@ -53,19 +57,17 @@ export function WidgetsPage() {
 
       {/* Summary */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
-        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'var(--accent)' }} />
-          <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <LayoutGrid size={14} style={{ color: 'var(--accent)' }} /> Available
-          </div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.8rem', fontWeight: 700, marginTop: 8 }}>{isLoading ? '—' : widgets.length}</div>
+        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 16 }}>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Total</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.4rem', fontWeight: 700 }}>{widgets.length}</div>
         </div>
-        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'var(--green)' }} />
-          <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <ToggleRight size={14} style={{ color: 'var(--green)' }} /> Active
-          </div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.8rem', fontWeight: 700, marginTop: 8 }}>{isLoading ? '—' : enabledCount}</div>
+        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 16 }}>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Enabled</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.4rem', fontWeight: 700, color: 'var(--green)' }}>{enabledCount}</div>
+        </div>
+        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 16 }}>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Disabled</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.4rem', fontWeight: 700 }}>{widgets.length - enabledCount}</div>
         </div>
       </div>
 
@@ -74,8 +76,8 @@ export function WidgetsPage() {
         <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-tertiary)' }}>Loading widgets...</div>
       ) : widgets.length === 0 ? (
         <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 48, textAlign: 'center' }}>
-          <LayoutGrid size={32} style={{ color: 'var(--text-tertiary)', marginBottom: 12 }} />
-          <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 600 }}>No widgets configured</div>
+          <LayoutGrid size={32} style={{ color: 'var(--text-tertiary)', marginBottom: 8 }} />
+          <div style={{ color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.9rem' }}>No widgets configured</div>
           <div style={{ color: 'var(--text-tertiary)', fontSize: '0.82rem', marginTop: 4 }}>Widgets will appear here once available</div>
         </div>
       ) : (
@@ -97,9 +99,9 @@ export function WidgetsPage() {
                   <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{w.name}</span>
                 </div>
                 {w.enabled ? (
-                  <ToggleRight size={22} style={{ color: 'var(--green)', cursor: 'pointer', flexShrink: 0 }} />
+                  <ToggleRight size={22} onClick={() => toggleMutation.mutate(w)} style={{ color: 'var(--green)', cursor: 'pointer', flexShrink: 0 }} />
                 ) : (
-                  <ToggleLeft size={22} style={{ color: 'var(--text-tertiary)', cursor: 'pointer', flexShrink: 0 }} />
+                  <ToggleLeft size={22} onClick={() => toggleMutation.mutate(w)} style={{ color: 'var(--text-tertiary)', cursor: 'pointer', flexShrink: 0 }} />
                 )}
               </div>
               <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 12 }}>

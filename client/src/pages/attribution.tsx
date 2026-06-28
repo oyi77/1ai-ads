@@ -26,16 +26,16 @@ interface AttributionMatch {
 export function AttributionPage() {
   const { data: summaryData, isLoading: summaryLoading, error: summaryError } = useQuery({
     queryKey: ['attribution-summary'],
-    queryFn: async () => { try { return await api.get<AttributionSummary>('/attribution/dashboard'); } catch { return { total_conversions: 0, total_revenue: 0, attributed_conversions: 0, unattributed_conversions: 0, top_sources: [], top_mediums: [] }; } },
+    queryFn: async () => { try { return await api.get<AttributionSummary>('/attribution/dashboard?campaign_id=default'); } catch { return { total_conversions: 0, total_revenue: 0, attributed_conversions: 0, unattributed_conversions: 0, top_sources: [], top_mediums: [] }; } },
   });
 
   const { data: matchesData, isLoading: matchesLoading, error: matchesError } = useQuery({
     queryKey: ['attribution-matches'],
-    queryFn: () => api.get<AttributionMatch[]>('/attribution/matches'),
+    queryFn: () => api.get<{ matches: AttributionMatch[] }>('/attribution/matches'),
   });
 
   const summary = summaryData;
-  const matches: AttributionMatch[] = Array.isArray(matchesData) ? matchesData : [];
+  const matches: AttributionMatch[] = Array.isArray(matchesData?.matches) ? matchesData.matches : Array.isArray(matchesData) ? matchesData : [];
   const topSources = Array.isArray(summary?.top_sources) ? summary.top_sources : [];
   const topMediums = Array.isArray(summary?.top_mediums) ? summary.top_mediums : [];
 

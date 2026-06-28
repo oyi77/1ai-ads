@@ -46,8 +46,8 @@ export function ABTestsPage() {
   });
 
   const updateMut = useMutation({
-    mutationFn: ({ id, ...body }: { id: string; status: string }) =>
-      api.put(`/testing/ab-tests/${id}`, body),
+    mutationFn: ({ id, action }: { id: string; action: 'start' | 'stop' }) =>
+      api.post(`/testing/ab-tests/${id}/${action}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ab-tests'] }),
   });
 
@@ -173,10 +173,10 @@ export function ABTestsPage() {
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {test.status === 'running' && (
-                      <button onClick={() => updateMut.mutate({ id: test.id, status: 'paused' })} style={{ padding: '4px 12px', border: '1px solid var(--border)', borderRadius: 4, background: 'transparent', color: 'var(--amber)', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>Pause</button>
+                      <button onClick={() => updateMut.mutate({ id: test.id, action: 'stop' })} style={{ padding: '4px 12px', border: '1px solid var(--border)', borderRadius: 4, background: 'transparent', color: 'var(--amber)', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>Pause</button>
                     )}
                     {test.status === 'paused' && (
-                      <button onClick={() => updateMut.mutate({ id: test.id, status: 'running' })} style={{ padding: '4px 12px', border: '1px solid var(--border)', borderRadius: 4, background: 'transparent', color: 'var(--green)', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>Resume</button>
+                      <button onClick={() => updateMut.mutate({ id: test.id, action: 'start' })} style={{ padding: '4px 12px', border: '1px solid var(--border)', borderRadius: 4, background: 'transparent', color: 'var(--green)', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>Resume</button>
                     )}
                   </div>
                 </div>

@@ -271,18 +271,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     }
   });
 
-  // Get campaign detail with insights
-  router.get('/:id', async (req, res) => {
-    try {
-      const insights = await metaApi.getCampaignInsights(req.params.id);
-      res.json({ success: true, data: { id: req.params.id, insights } });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-
-  // GET /sync/ads — get ads from Meta (live, not stored)
+  // GET /sync/ads — get ads from Meta (live, not stored) — must be before GET /:id to avoid route shadowing
   router.get('/sync/ads', async (_req, res) => {
     try {
       const accounts = await metaApi.getAdAccounts();
@@ -316,6 +305,17 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       res.status(500).json({ success: false, error: err.message });
     }
   });
+
+  // Get campaign detail with insights
+  router.get('/:id', async (req, res) => {
+    try {
+      const insights = await metaApi.getCampaignInsights(req.params.id);
+      res.json({ success: true, data: { id: req.params.id, insights } });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
 
   return router;
 }

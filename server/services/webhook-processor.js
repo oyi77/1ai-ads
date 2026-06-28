@@ -71,14 +71,39 @@ export class WebhookProcessor {
   async handleCampaignStatusChange(_eventType, payload) {
     if (payload.campaign_id && payload.status) {
       log.info('Campaign status change', { campaignId: payload.campaign_id, status: payload.status });
+      try {
+        this.campaignsRepo.update(payload.campaign_id, { status: payload.status });
+      } catch (err) {
+        log.error('Failed to update campaign status', { campaignId: payload.campaign_id, error: err.message });
+      }
     }
   }
 
   async handleLead(_eventType, payload) {
     log.info('Lead received', { leadId: payload.lead_id, formId: payload.form_id });
+    if (payload.campaign_id) {
+      try {
+        const campaign = this.campaignsRepo.findById(payload.campaign_id);
+        if (campaign) {
+          this.campaignsRepo.update(payload.campaign_id, {
+            conversions: (campaign.conversions || 0) + 1,
+          });
+        }
+      } catch (err) {
+        log.error('Failed to record lead conversion', { campaignId: payload.campaign_id, error: err.message });
+      }
+    }
   }
 
   async handleAdReview(eventType, payload) {
     log.info('Ad review event', { adId: payload.ad_id, status: eventType });
+    if (eventType === 'ad_review_rejected' && payload.campaign_id) {
+      try {
+        this.campaignsRepo.update(payload.campaign_id, { status: 'PAUSED' });
+        log.warn('Auto-paused campaign due to ad rejection', { campaignId: payload.campaign_id, adId: payload.ad_id });
+      } catch (err) {
+        log.error('Failed to pause campaign on ad rejection', { campaignId: payload.campaign_id, error: err.message });
+      }
+    }
   }
 }

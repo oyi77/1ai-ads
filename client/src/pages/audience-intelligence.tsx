@@ -11,15 +11,14 @@ interface AudienceSegment {
   size: number;
   platform: string;
   demographics: {
-    age_range: string;
-    gender: string;
-    locations: string[];
-    interests: string[];
+    age_range?: string;
+    gender?: string;
+    interests?: string[];
   };
   performance: {
-    reach: number;
-    engagement_rate: number;
-    conversion_rate: number;
+    reach?: number;
+    engagement_rate?: number;
+    conversion_rate?: number;
   };
   created_at: string;
 }
@@ -29,12 +28,23 @@ export function AudienceIntelligencePage() {
 
   const { data: audiences, isLoading, refetch } = useQuery<AudienceSegment[]>({
     queryKey: ['audience', 'intelligence', query],
-    queryFn: () => api.get<AudienceSegment[]>(`/audience/intelligence${query ? `?q=${encodeURIComponent(query)}` : ''}`),
+    queryFn: async () => {
+      const res = await api.get<{ success?: boolean; data?: AudienceSegment[] } | AudienceSegment[]>(
+        `/audience/intelligence/insights${query ? `?interests=${encodeURIComponent(query)}` : ''}`
+      );
+      if (res && typeof res === 'object' && 'data' in res && Array.isArray((res as any).data)) return (res as any).data;
+      return Array.isArray(res) ? res : [];
+    },
   });
 
   const { data: suggestions } = useQuery<{ suggestions: string[] }>({
     queryKey: ['audience', 'suggestions'],
-    queryFn: () => api.get<{ suggestions: string[] }>('/audiences/suggestions'),
+    queryFn: async () => {
+      const res = await api.get<{ success?: boolean; data?: string[] } | string[] | { suggestions: string[] }>('/audience/intelligence/suggest?product=&target=');
+      if (Array.isArray(res)) return { suggestions: res };
+      if (res && typeof res === 'object' && 'data' in res && Array.isArray((res as any).data)) return { suggestions: (res as any).data };
+      return res as { suggestions: string[] };
+    },
   });
 
   const list = Array.isArray(audiences) ? audiences : [];
@@ -134,12 +144,13 @@ export function AudienceIntelligencePage() {
 const btnStyle: CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 6,
   padding: '8px 16px', background: 'var(--accent)', color: 'var(--bg-deep)',
-  border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem',
+  border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem',
 };
 
 const inputStyle: CSSProperties = {
-  padding: '8px 12px 8px 32px', background: 'var(--bg-deep)', color: 'var(--text-primary)',
-  border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.8rem', width: '100%',
+  width: '100%', padding: '8px 12px 8px 30px', background: 'var(--bg-deep)',
+  border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)',
+  fontSize: '0.85rem', boxSizing: 'border-box',
 };
 
 const cardStyle: CSSProperties = {
@@ -148,11 +159,12 @@ const cardStyle: CSSProperties = {
 };
 
 const chipStyle: CSSProperties = {
-  padding: '4px 10px', background: 'transparent', color: 'var(--text-secondary)',
-  border: '1px solid var(--border)', borderRadius: 12, cursor: 'pointer', fontSize: '0.72rem',
+  padding: '4px 12px', background: 'rgba(99,102,241,0.1)', color: 'var(--accent)',
+  border: '1px solid transparent', borderRadius: 20, cursor: 'pointer',
+  fontSize: '0.78rem', fontWeight: 500,
 };
 
 const tagStyle: CSSProperties = {
-  padding: '2px 6px', borderRadius: 4, fontSize: '0.65rem',
-  background: 'rgba(99,102,241,0.1)', color: 'var(--accent)',
+  padding: '2px 8px', borderRadius: 4, fontSize: '0.68rem', fontWeight: 500,
+  background: 'rgba(139,146,168,0.1)', color: 'var(--text-secondary)',
 };
