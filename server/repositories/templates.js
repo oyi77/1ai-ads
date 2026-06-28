@@ -3,24 +3,29 @@ export class TemplatesRepository {
     this.db = db;
   }
 
-  getAll(filters = {}) {
+  getAll({ category, industry, search, userId } = {}) {
     let query = 'SELECT * FROM templates';
     const params = [];
 
-    if (filters.category) {
+    if (category) {
       query += ' WHERE category = ?';
-      params.push(filters.category);
+      params.push(category);
     }
-    if (filters.industry) {
+    if (industry) {
       query += params.length ? ' AND' : ' WHERE';
       query += ' industry = ?';
-      params.push(filters.industry);
+      params.push(industry);
     }
-    if (filters.search) {
-      const searchTerm = `%${filters.search}%`;
+    if (search) {
+      const searchTerm = `%${search}%`;
       query += params.length ? ' AND' : ' WHERE';
       query += ' (name LIKE ? OR description LIKE ?)';
       params.push(searchTerm, searchTerm);
+    }
+    if (userId) {
+      query += params.length ? ' AND' : ' WHERE';
+      query += ' user_id = ?';
+      params.push(userId);
     }
 
     query += ' ORDER BY created_at DESC';
@@ -35,13 +40,14 @@ export class TemplatesRepository {
     const id = `tpl_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     this.db.prepare(`
       INSERT INTO templates (
-        id, category, name, description,
+        id, user_id, category, name, description,
         hook_template, body_template, cta_template,
         design_config, thumbnail_url, industry,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
       id,
+      data.userId || data.user_id || 'system',
       data.category || 'general',
       data.name || 'Untitled Template',
       data.description || '',

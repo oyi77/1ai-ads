@@ -186,7 +186,7 @@ function generatePerformanceHistory() {
   return history;
 }
 
-export function seedTemplates(db) {
+export function seedTemplates(db, adminUserId) {
   const templates = [
     // E-commerce templates
     {
@@ -357,12 +357,13 @@ export function seedTemplates(db) {
 
   templates.forEach(tpl => {
     db.prepare(`
-      INSERT OR IGNORE INTO templates (id, category, name, description,
+      INSERT OR IGNORE INTO templates (id, user_id, category, name, description,
         hook_template, body_template, cta_template,
         design_config, thumbnail_url, industry, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(
       tpl.id,
+      adminUserId,
       tpl.category,
       tpl.name,
       tpl.description,
@@ -399,49 +400,48 @@ export function seedUsers(db) {
 export function seedDemoData(db) {
   db.exec('BEGIN IMMEDIATE TRANSACTION');
   try {
-    seedTemplates(db);
     seedUsers(db);
+    const adminUser = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
+    const adminUserId = adminUser ? adminUser.id : USERS.admin.id;
+    seedTemplates(db, adminUserId);
 
   // ── Campaigns ─────────────────────────────────────────────────────────
   const insertCampaign = db.prepare(`
-    INSERT OR IGNORE INTO campaigns (id, platform, campaign_id, name, status, budget, spend, revenue, impressions, clicks, conversions, roas, last_synced, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    INSERT OR IGNORE INTO campaigns (id, user_id, platform, campaign_id, name, status, budget, spend, revenue, impressions, clicks, conversions, roas, last_synced, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `);
 
   let seededCampaigns = 0;
   for (const c of CAMPAIGNS) {
-    insertCampaign.run(c.id, c.platform, c.campaign_id, c.name, c.status, c.budget, c.spend, c.revenue, c.impressions, c.clicks, c.conversions, c.roas);
+    insertCampaign.run(c.id, adminUserId, c.platform, c.campaign_id, c.name, c.status, c.budget, c.spend, c.revenue, c.impressions, c.clicks, c.conversions, c.roas);
     seededCampaigns++;
   }
 
   // ── Ads ───────────────────────────────────────────────────────────────
   const insertAd = db.prepare(`
-    INSERT OR IGNORE INTO ads (id, name, product, target, platform, format, content_model, hook, body, cta, tags, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    INSERT OR IGNORE INTO ads (id, user_id, name, product, target, platform, format, content_model, hook, body, cta, tags, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `);
 
   let seededAds = 0;
   for (const a of ADS) {
-    insertAd.run(a.id, a.name, a.product, a.target, a.platform, a.format, a.content_model, a.hook, a.body, a.cta, a.tags, a.status);
+    insertAd.run(a.id, adminUserId, a.name, a.product, a.target, a.platform, a.format, a.content_model, a.hook, a.body, a.cta, a.tags, a.status);
     seededAds++;
   }
 
   // ── Landing Pages ─────────────────────────────────────────────────────
   const insertLP = db.prepare(`
-    INSERT OR IGNORE INTO landing_pages (id, name, template, theme, product_name, price, pain_points, benefits, cta_primary, cta_secondary, wa_link, checkout_link, slug, is_published, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    INSERT OR IGNORE INTO landing_pages (id, user_id, name, template, theme, product_name, price, pain_points, benefits, cta_primary, cta_secondary, wa_link, checkout_link, slug, is_published, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `);
 
   let seededLps = 0;
   for (const lp of LANDING_PAGES) {
-    insertLP.run(lp.id, lp.name, lp.template, lp.theme, lp.product_name, lp.price, lp.pain_points, lp.benefits, lp.cta_primary, lp.cta_secondary, lp.wa_link, lp.checkout_link, lp.slug, lp.is_published, lp.status);
+    insertLP.run(lp.id, adminUserId, lp.name, lp.template, lp.theme, lp.product_name, lp.price, lp.pain_points, lp.benefits, lp.cta_primary, lp.cta_secondary, lp.wa_link, lp.checkout_link, lp.slug, lp.is_published, lp.status);
     seededLps++;
   }
 
   // ── Platform Accounts ─────────────────────────────────────────────────
-  // Look up the actual admin user ID (may differ from USERS.admin.id if DB pre-existed)
-  const adminUser = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
-  const adminUserId = adminUser ? adminUser.id : USERS.admin.id;
   
   const insertPA = db.prepare(`
     INSERT OR IGNORE INTO platform_accounts (id, user_id, platform, account_name, credentials, is_active, health_status, created_at, updated_at)

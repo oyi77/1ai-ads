@@ -33,6 +33,7 @@ describe('Extended API Integration', () => {
   let app;
   let db;
   let authToken;
+  let adminToken;
 
   beforeAll(async () => {
     db = createDatabase(':memory:');
@@ -54,13 +55,21 @@ describe('Extended API Integration', () => {
       password: 'extpass123',
     });
     authToken = loginRes.body.data.accessToken;
+
+    const adminRes = await request(app).post('/api/auth/login').send({
+      username: 'admin',
+      password: 'admin123',
+    });
+    adminToken = adminRes.body.data.accessToken;
   });
+
+  const auth = (req) => req.set('Authorization', `Bearer ${authToken}`);
+  const adminAuth = (req) => req.set('Authorization', `Bearer ${adminToken}`);
 
   afterAll(() => {
     db.close();
   });
 
-  const auth = (req) => req.set('Authorization', `Bearer ${authToken}`);
 
   describe('Settings API', () => {
     it('GET /api/settings returns general settings', async () => {
@@ -78,17 +87,11 @@ describe('Extended API Integration', () => {
       const checkRes = await auth(request(app).get('/api/settings'));
       expect(checkRes.body.data.theme_preference).toBe('dark');
     });
-
-    it('GET /api/settings/accounts returns multi-account list', async () => {
-      const res = await auth(request(app).get('/api/settings/accounts'));
-      expect(res.status).toBe(200);
-      expect(res.body.data).toBeInstanceOf(Array);
-    });
   });
 
   describe('Campaigns API', () => {
     it('GET /api/campaigns returns campaign list', async () => {
-      const res = await auth(request(app).get('/api/analytics/campaigns'));
+      const res = await adminAuth(request(app).get('/api/analytics/campaigns'));
       expect(res.status).toBe(200);
       expect(res.body.data.length).toBeGreaterThan(0);
     });

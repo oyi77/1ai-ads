@@ -5,12 +5,14 @@ export class LandingRepository {
     this.db = db;
   }
 
-  findAll({ page = 1, limit = 20 } = {}) {
-    const total = this.db.prepare('SELECT COUNT(*) as count FROM landing_pages').get().count;
+  findAll({ page = 1, limit = 20, userId } = {}) {
+    const whereClause = userId ? 'WHERE user_id = ?' : '';
+    const countParams = userId ? [userId] : [];
+    const total = this.db.prepare(`SELECT COUNT(*) as count FROM landing_pages ${whereClause}`).get(...countParams).count;
     const offset = (page - 1) * limit;
     const data = this.db.prepare(
-      'SELECT * FROM landing_pages ORDER BY created_at DESC LIMIT ? OFFSET ?'
-    ).all(limit, offset);
+      `SELECT * FROM landing_pages ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    ).all(...countParams, limit, offset);
     return { data, total, page, limit };
   }
 
@@ -25,10 +27,10 @@ export class LandingRepository {
   create(data) {
     const id = data.id || uuid();
     this.db.prepare(`
-      INSERT INTO landing_pages (id, name, template, theme, product_name, price, pain_points, benefits, cta_primary, cta_secondary, wa_link, checkout_link, html_output, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO landing_pages (id, user_id, name, template, theme, product_name, price, pain_points, benefits, cta_primary, cta_secondary, wa_link, checkout_link, html_output, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      id, data.name, data.template || 'dark', data.theme || 'dark',
+      id, data.userId || data.user_id || 'system', data.name, data.template || 'dark', data.theme || 'dark',
       data.product_name || null, data.price || null,
       typeof data.pain_points === 'string' ? data.pain_points : JSON.stringify(data.pain_points || []),
       typeof data.benefits === 'string' ? data.benefits : JSON.stringify(data.benefits || []),

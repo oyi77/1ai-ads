@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS ads (
   id TEXT PRIMARY KEY,
+  user_id TEXT DEFAULT 'system',
   name TEXT NOT NULL,
   product TEXT,
   target TEXT,
@@ -19,6 +20,7 @@ CREATE TABLE IF NOT EXISTS ads (
 
 CREATE TABLE IF NOT EXISTS landing_pages (
   id TEXT PRIMARY KEY,
+  user_id TEXT DEFAULT 'system',
   name TEXT NOT NULL,
   template TEXT NOT NULL,
   theme TEXT DEFAULT 'dark',
@@ -40,6 +42,7 @@ CREATE TABLE IF NOT EXISTS landing_pages (
 
 CREATE TABLE IF NOT EXISTS campaigns (
   id TEXT PRIMARY KEY,
+  user_id TEXT DEFAULT 'system',
   platform TEXT NOT NULL,
   campaign_id TEXT NOT NULL,
   name TEXT,
@@ -218,6 +221,7 @@ CREATE INDEX IF NOT EXISTS idx_content_queue_page ON content_queue(page_id, sche
 
 CREATE TABLE IF NOT EXISTS templates (
   id TEXT PRIMARY KEY,
+  user_id TEXT DEFAULT 'system',
   category TEXT NOT NULL DEFAULT 'general',
   name TEXT NOT NULL,
   description TEXT,

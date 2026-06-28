@@ -5,8 +5,14 @@ export class CampaignsRepository {
     this.db = db;
   }
 
-  findAll({ platform } = {}) {
-    if (platform) {
+  findAll({ platform, userId } = {}) {
+    if (platform && userId) {
+      const data = this.db.prepare('SELECT * FROM campaigns WHERE platform = ? AND user_id = ? ORDER BY created_at DESC').all(platform, userId);
+      return { data, total: data.length };
+    } else if (userId) {
+      const data = this.db.prepare('SELECT * FROM campaigns WHERE user_id = ? ORDER BY created_at DESC').all(userId);
+      return { data, total: data.length };
+    } else if (platform) {
       const data = this.db.prepare('SELECT * FROM campaigns WHERE platform = ? ORDER BY created_at DESC').all(platform);
       return { data, total: data.length };
     }
@@ -17,10 +23,10 @@ export class CampaignsRepository {
   upsert(data) {
     const id = data.id || uuid();
     this.db.prepare(`
-      INSERT OR REPLACE INTO campaigns (id, platform, campaign_id, name, status, budget, spend, revenue, impressions, clicks, conversions, roas, last_synced)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      INSERT OR REPLACE INTO campaigns (id, user_id, platform, campaign_id, name, status, budget, spend, revenue, impressions, clicks, conversions, roas, last_synced)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `).run(
-      id, data.platform, data.campaign_id, data.name || null, data.status || null,
+      id, data.userId || data.user_id || 'system', data.platform, data.campaign_id, data.name || null, data.status || null,
       data.budget || null, data.spend || null, data.revenue || null,
       data.impressions || 0, data.clicks || 0, data.conversions || 0,
       data.roas || null
@@ -97,14 +103,26 @@ export class CampaignsRepository {
     return this.findById(id);
   }
 
-  findActive(_userId) {
+  findActive(userId) {
+    if (userId) {
+      return this.db.prepare('SELECT * FROM campaigns WHERE status = ? AND user_id = ?').all('ACTIVE', userId).map(row => ({
+        ...row,
+        stats: { spend: row.spend, revenue: row.revenue, roas: row.roas, impressions: row.impressions, clicks: row.clicks },
+      }));
+    }
     return this.db.prepare('SELECT * FROM campaigns WHERE status = ?').all('ACTIVE').map(row => ({
       ...row,
       stats: { spend: row.spend, revenue: row.revenue, roas: row.roas, impressions: row.impressions, clicks: row.clicks },
     }));
   }
 
-  getByUserId(_userId) {
+  getByUserId(userId) {
+    if (userId) {
+      return this.db.prepare('SELECT * FROM campaigns WHERE user_id = ? ORDER BY created_at DESC').all(userId).map(row => ({
+        ...row,
+        stats: { spend: row.spend, revenue: row.revenue, roas: row.roas, impressions: row.impressions, clicks: row.clicks },
+      }));
+    }
     return this.db.prepare('SELECT * FROM campaigns ORDER BY created_at DESC').all().map(row => ({
       ...row,
       stats: { spend: row.spend, revenue: row.revenue, roas: row.roas, impressions: row.impressions, clicks: row.clicks },

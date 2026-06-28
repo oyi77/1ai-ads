@@ -5,10 +5,12 @@ export function createTemplatesRouter(templatesRepo) {
 
   // GET /api/templates - List all templates
   router.get('/', (req, res) => {
+    const userId = req.user?.id || 'system';
     const filters = {
       category: req.query.category,
       industry: req.query.industry,
-      search: req.query.search
+      search: req.query.search,
+      userId,
     };
     const templates = templatesRepo.getAll(filters);
     res.json({ success: true, data: templates });

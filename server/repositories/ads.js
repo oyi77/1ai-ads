@@ -5,12 +5,13 @@ export class AdsRepository {
     this.db = db;
   }
 
-  findAll({ page = 1, limit = 20, platform, status } = {}) {
+  findAll({ page = 1, limit = 20, platform, status, userId } = {}) {
     const where = [];
     const params = [];
 
     if (platform) { where.push('platform = ?'); params.push(platform); }
     if (status) { where.push('status = ?'); params.push(status); }
+    if (userId) { where.push('user_id = ?'); params.push(userId); }
 
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const total = this.db.prepare(`SELECT COUNT(*) as count FROM ads ${whereClause}`).get(...params).count;
@@ -30,10 +31,10 @@ export class AdsRepository {
   create(data) {
     const id = data.id || uuid();
     this.db.prepare(`
-      INSERT INTO ads (id, name, product, target, keunggulan, platform, format, content_model, hook, body, cta, design_json, tags, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO ads (id, user_id, name, product, target, keunggulan, platform, format, content_model, hook, body, cta, design_json, tags, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      id, data.name, data.product || null, data.target || null, data.keunggulan || null,
+      id, data.userId || data.user_id || 'system', data.name, data.product || null, data.target || null, data.keunggulan || null,
       data.platform || 'meta', data.format || 'single_image', data.content_model || null,
       data.hook || null, data.body || null, data.cta || null, data.design_json || null,
       typeof data.tags === 'string' ? data.tags : JSON.stringify(data.tags || []),

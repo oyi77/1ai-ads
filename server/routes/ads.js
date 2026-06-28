@@ -88,8 +88,9 @@ export function createAdsRouter(adsRepo, adGenerator) {
 
   router.get('/', (req, res) => {
     try {
+      const userId = req.user?.id || 'system';
       const { page = 1, limit = 20, platform, status } = req.query;
-      const result = adsRepo.findAll({ page: +page, limit: +limit, platform, status });
+      const result = adsRepo.findAll({ page: +page, limit: +limit, platform, status, userId });
       res.json({ success: true, ...result });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
