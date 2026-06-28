@@ -6,8 +6,8 @@ export class LandingRepository {
   }
 
   findAll({ page = 1, limit = 20, userId } = {}) {
-    const whereClause = userId ? 'WHERE user_id = ?' : '';
-    const countParams = userId ? [userId] : [];
+    const whereClause = userId ? 'WHERE (user_id = ? OR user_id = ?)' : '';
+    const countParams = userId ? [userId, 'system'] : [];
     const total = this.db.prepare(`SELECT COUNT(*) as count FROM landing_pages ${whereClause}`).get(...countParams).count;
     const offset = (page - 1) * limit;
     const data = this.db.prepare(

@@ -7,10 +7,10 @@ export class CampaignsRepository {
 
   findAll({ platform, userId } = {}) {
     if (platform && userId) {
-      const data = this.db.prepare('SELECT * FROM campaigns WHERE platform = ? AND user_id = ? ORDER BY created_at DESC').all(platform, userId);
+      const data = this.db.prepare('SELECT * FROM campaigns WHERE platform = ? AND (user_id = ? OR user_id = ?) ORDER BY created_at DESC').all(platform, userId, 'system');
       return { data, total: data.length };
     } else if (userId) {
-      const data = this.db.prepare('SELECT * FROM campaigns WHERE user_id = ? ORDER BY created_at DESC').all(userId);
+      const data = this.db.prepare('SELECT * FROM campaigns WHERE user_id = ? OR user_id = ? ORDER BY created_at DESC').all(userId, 'system');
       return { data, total: data.length };
     } else if (platform) {
       const data = this.db.prepare('SELECT * FROM campaigns WHERE platform = ? ORDER BY created_at DESC').all(platform);

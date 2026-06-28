@@ -24,8 +24,8 @@ export class TemplatesRepository {
     }
     if (userId) {
       query += params.length ? ' AND' : ' WHERE';
-      query += ' user_id = ?';
-      params.push(userId);
+      query += ' (user_id = ? OR user_id = ?)';
+      params.push(userId, 'system');
     }
 
     query += ' ORDER BY created_at DESC';
