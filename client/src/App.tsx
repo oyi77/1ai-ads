@@ -28,7 +28,7 @@ const AttributionPage = lazy(() => import('./pages/attribution').then(m => ({ de
 const WidgetsPage = lazy(() => import('./pages/widgets').then(m => ({ default: m.WidgetsPage })));
 const NotFoundPage = lazy(() => import('./pages/not-found').then(m => ({ default: m.NotFoundPage })));
 const PrivacyPage = lazy(() => import('./pages/privacy').then(m => ({ default: m.PrivacyPage })));
-const TermsPage = lazy(() => import('./pages/terms').then(m => ({ default: m.TermsPage })));
+const OnboardingPage = lazy(() => import('./pages/onboarding').then(m => ({ default: m.OnboardingPage })));
 
 function Loading() {
   return (
@@ -50,6 +50,7 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
+          <Route path="/onboarding" element={<RequireAuth><OnboardingPage /></RequireAuth>} />
           <Route path="/" element={<RequireAuth><Shell /></RequireAuth>}>
             <Route index element={<Navigate to="/app" replace />} />
             <Route path="app" element={<DashboardPage />} />

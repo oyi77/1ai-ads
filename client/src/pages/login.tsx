@@ -13,10 +13,10 @@ export function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-
     try {
       await api.login(username, password);
-      navigate('/app');
+      const onboarded = localStorage.getItem('adforge_onboarded');
+      navigate(onboarded ? '/app' : '/onboarding');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Connection error');
     } finally {
