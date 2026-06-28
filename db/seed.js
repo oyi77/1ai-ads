@@ -397,8 +397,10 @@ export function seedUsers(db) {
 }
 
 export function seedDemoData(db) {
-  seedTemplates(db);
-  seedUsers(db);
+  db.exec('BEGIN IMMEDIATE TRANSACTION');
+  try {
+    seedTemplates(db);
+    seedUsers(db);
 
   // ── Campaigns ─────────────────────────────────────────────────────────
   const insertCampaign = db.prepare(`
@@ -465,5 +467,10 @@ export function seedDemoData(db) {
     seededPh++;
   }
 
-  console.log(`Seeded demo data: ${seededCampaigns} campaigns, ${seededAds} ads, ${seededLps} landing pages, ${seededPas} platform accounts, ${seededPh} performance history rows, 15 templates, 2 users`);
+    console.log(`Seeded demo data: ${seededCampaigns} campaigns, ${seededAds} ads, ${seededLps} landing pages, ${seededPas} platform accounts, ${seededPh} performance history rows, 15 templates, 2 users`);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    console.error('Seed data error (rolled back):', err.message);
+  }
 }
