@@ -28,6 +28,7 @@ const AttributionPage = lazy(() => import('./pages/attribution').then(m => ({ de
 const WidgetsPage = lazy(() => import('./pages/widgets').then(m => ({ default: m.WidgetsPage })));
 const NotFoundPage = lazy(() => import('./pages/not-found').then(m => ({ default: m.NotFoundPage })));
 const PrivacyPage = lazy(() => import('./pages/privacy').then(m => ({ default: m.PrivacyPage })));
+const TermsPage = lazy(() => import('./pages/terms').then(m => ({ default: m.TermsPage })));
 const OnboardingPage = lazy(() => import('./pages/onboarding').then(m => ({ default: m.OnboardingPage })));
 
 function Loading() {
