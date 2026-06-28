@@ -110,6 +110,42 @@ const config = {
   get shopeeSellerIds() { return process.env.SHOPEE_SELLER_IDS || ''; },
   get shopeeApiUrl() { return process.env.SHOPEE_API_URL || ''; },
   get nangoSecretKey() { return process.env.NANGO_SECRET_KEY || ''; },
+  // Platform: Reddit Ads
+  get redditAccessToken() { return process.env.REDDIT_ACCESS_TOKEN || ''; },
+  get redditAccountId() { return process.env.REDDIT_ACCOUNT_ID || ''; },
+  // Platform: Spotify Ads
+  get spotifyAccessToken() { return process.env.SPOTIFY_ACCESS_TOKEN || ''; },
+  get spotifyAccountId() { return process.env.SPOTIFY_ACCOUNT_ID || ''; },
+  // Platform: WhatsApp Business Ads
+  get whatsappAccessToken() { return process.env.WHATSAPP_ACCESS_TOKEN || ''; },
+  get whatsappBusinessAccountId() { return process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || ''; },
+  // Platform: Amazon Ads
+  get amazonAccessToken() { return process.env.AMAZON_ACCESS_TOKEN || ''; },
+  get amazonProfileId() { return process.env.AMAZON_PROFILE_ID || ''; },
+  // Platform: Apple Search Ads
+  get appleAccessToken() { return process.env.APPLE_ACCESS_TOKEN || ''; },
+  get appleOrgId() { return process.env.APPLE_ORG_ID || ''; },
+  // Platform: Criteo Ads
+  get criteoAccessToken() { return process.env.CRITEO_ACCESS_TOKEN || ''; },
+  get criteoAdvertiserId() { return process.env.CRITEO_ADVERTISER_ID || ''; },
+  // Platform: Taboola Ads
+  get taboolaAccessToken() { return process.env.TABOOLA_ACCESS_TOKEN || ''; },
+  get taboolaAccountId() { return process.env.TABOOLA_ACCOUNT_ID || ''; },
+  // Platform: The Trade Desk
+  get thetradedeskAccessToken() { return process.env.THETRADEDESK_ACCESS_TOKEN || ''; },
+  get thetradedeskAdvertiserId() { return process.env.THETRADEDESK_ADVERTISER_ID || ''; },
+  // Platform: Yandex Direct
+  get yandexAccessToken() { return process.env.YANDEX_ACCESS_TOKEN || ''; },
+  get yandexClientId() { return process.env.YANDEX_CLIENT_ID || ''; },
+  // Platform: Baidu Ads
+  get baiduAccessToken() { return process.env.BAIDU_ACCESS_TOKEN || ''; },
+  get baiduAccountId() { return process.env.BAIDU_ACCOUNT_ID || ''; },
+  // Platform: KakaoTalk Ads
+  get kakaoAccessToken() { return process.env.KAKAO_ACCESS_TOKEN || ''; },
+  get kakaoAdAccountId() { return process.env.KAKAO_AD_ACCOUNT_ID || ''; },
+  // Platform: LINE Ads
+  get lineAccessToken() { return process.env.LINE_ACCESS_TOKEN || ''; },
+  get lineAdAccountId() { return process.env.LINE_AD_ACCOUNT_ID || ''; },
 };
 
 export function validateConfig() {

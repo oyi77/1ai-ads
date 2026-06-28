@@ -15,6 +15,18 @@ import { TwitterAdsAPI } from '../services/twitter-ads-api.js';
 import { SnapchatAdsAPI } from '../services/snapchat-ads-api.js';
 import { MicrosoftAdsAPI } from '../services/microsoft-ads-api.js';
 import { PinterestAdsAPI } from '../services/pinterest-ads-api.js';
+import { RedditAdsAPI } from '../services/reddit-ads-api.js';
+import { SpotifyAdsAPI } from '../services/spotify-ads-api.js';
+import { WhatsAppAdsAPI } from '../services/whatsapp-ads-api.js';
+import { AmazonAdsAPI } from '../services/amazon-ads-api.js';
+import { AppleAdsAPI } from '../services/apple-ads-api.js';
+import { CriteoAdsAPI } from '../services/criteo-ads-api.js';
+import { TaboolaAdsAPI } from '../services/taboola-ads-api.js';
+import { TheTradeDeskAPI } from '../services/thetradedesk-api.js';
+import { YandexAdsAPI } from '../services/yandex-ads-api.js';
+import { BaiduAdsAPI } from '../services/baidu-ads-api.js';
+import { KakaoAdsAPI } from '../services/kakao-ads-api.js';
+import { LineAdsAPI } from '../services/line-ads-api.js';
 
 const PLATFORM_MAP = {
   meta: MetaAdsAPI,
@@ -25,6 +37,18 @@ const PLATFORM_MAP = {
   snapchat: SnapchatAdsAPI,
   microsoft: MicrosoftAdsAPI,
   pinterest: PinterestAdsAPI,
+  reddit: RedditAdsAPI,
+  spotify: SpotifyAdsAPI,
+  whatsapp: WhatsAppAdsAPI,
+  amazon: AmazonAdsAPI,
+  apple: AppleAdsAPI,
+  criteo: CriteoAdsAPI,
+  taboola: TaboolaAdsAPI,
+  thetradedesk: TheTradeDeskAPI,
+  yandex: YandexAdsAPI,
+  baidu: BaiduAdsAPI,
+  kakao: KakaoAdsAPI,
+  line: LineAdsAPI,
 };
 
 /**
@@ -71,3 +95,15 @@ export { TwitterAdsAPI } from '../services/twitter-ads-api.js';
 export { SnapchatAdsAPI } from '../services/snapchat-ads-api.js';
 export { MicrosoftAdsAPI } from '../services/microsoft-ads-api.js';
 export { PinterestAdsAPI } from '../services/pinterest-ads-api.js';
+export { RedditAdsAPI } from '../services/reddit-ads-api.js';
+export { SpotifyAdsAPI } from '../services/spotify-ads-api.js';
+export { WhatsAppAdsAPI } from '../services/whatsapp-ads-api.js';
+export { AmazonAdsAPI } from '../services/amazon-ads-api.js';
+export { AppleAdsAPI } from '../services/apple-ads-api.js';
+export { CriteoAdsAPI } from '../services/criteo-ads-api.js';
+export { TaboolaAdsAPI } from '../services/taboola-ads-api.js';
+export { TheTradeDeskAPI } from '../services/thetradedesk-api.js';
+export { YandexAdsAPI } from '../services/yandex-ads-api.js';
+export { BaiduAdsAPI } from '../services/baidu-ads-api.js';
+export { KakaoAdsAPI } from '../services/kakao-ads-api.js';
+export { LineAdsAPI } from '../services/line-ads-api.js';
