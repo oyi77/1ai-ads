@@ -90,6 +90,10 @@ export class TikTokAdsAPI extends BasePlatformApiClient {
     return this._get('/advertiser/info/', { advertiser_ids: [advertiserId], fields: ['name', 'status', 'currency', 'balance'] });
   }
 
+  /** Alias — satisfies the platform interface contract. */
+  async getAccounts() { return this.getAdvertiserInfo(); }
+
+
   async getCampaigns(advertiserId, { page = 1, pageSize = 50 } = {}) {
     this.log.debug('Fetching TikTok campaigns', { advertiserId, page });
     return this._get('/campaign/get/', {

@@ -89,6 +89,9 @@ export class WhatsAppAdsAPI extends BasePlatformApiClient {
     return accounts;
   }
 
+  /** Alias for getBusinessAccounts(). */
+  async getAccounts() { return this.getBusinessAccounts(); }
+
   /**
    * List message templates for a WhatsApp Business Account.
    * GET /{accountId}/message_templates

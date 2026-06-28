@@ -121,6 +121,10 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     }));
   }
 
+  /** Alias for getAdAccounts — satisfies the platform interface contract. */
+  async getAccounts() { return this.getAdAccounts(); }
+
+
   // --- Campaign Management ---
 
   async getCampaigns(accountId, { limit = 50 } = {}) {

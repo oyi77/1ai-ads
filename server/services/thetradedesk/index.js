@@ -55,6 +55,9 @@ export class TheTradeDeskAPI extends BasePlatformApiClient {
     return this._get('/advertisers');
   }
 
+  /** Alias for getAdvertisers — unified plugin interface. */
+  async getAccounts() { return this.getAdvertisers(); }
+
   /**
    * List campaigns for an advertiser.
    * GET /campaigns/query

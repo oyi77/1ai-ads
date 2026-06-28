@@ -16,6 +16,7 @@
 import { readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { validatePlatform } from '../lib/platform-interface.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SERVICES_DIR = join(__dirname, '..', 'services');
@@ -62,7 +63,9 @@ export async function getPlatform(platform, settingsRepo) {
   if (!PlatformClass) {
     throw new Error(`Unknown platform: ${platform}`);
   }
-  return new PlatformClass(settingsRepo);
+  const instance = new PlatformClass(settingsRepo);
+  validatePlatform(instance);
+  return instance;
 }
 
 /**
@@ -77,7 +80,9 @@ export function getPlatformSync(platform, settingsRepo) {
   if (!PlatformClass) {
     throw new Error(`Unknown platform: ${platform}`);
   }
-  return new PlatformClass(settingsRepo);
+  const instance = new PlatformClass(settingsRepo);
+  validatePlatform(instance);
+  return instance;
 }
 
 /**
@@ -126,25 +131,3 @@ export function listPlatformKeys() {
   return Object.keys(PLATFORM_REGISTRY);
 }
 
-// Re-export individual classes for direct import (backward compatibility).
-// These are static re-exports so bundlers and existing import sites keep working.
-export { MetaAdsAPI } from '../services/meta/index.js';
-export { GoogleAdsAPI } from '../services/google/index.js';
-export { TikTokAdsAPI } from '../services/tiktok/index.js';
-export { LinkedInAdsAPI } from '../services/linkedin/index.js';
-export { TwitterAdsAPI } from '../services/twitter/index.js';
-export { SnapchatAdsAPI } from '../services/snapchat/index.js';
-export { MicrosoftAdsAPI } from '../services/microsoft/index.js';
-export { PinterestAdsAPI } from '../services/pinterest/index.js';
-export { RedditAdsAPI } from '../services/reddit/index.js';
-export { SpotifyAdsAPI } from '../services/spotify/index.js';
-export { WhatsAppAdsAPI } from '../services/whatsapp/index.js';
-export { AmazonAdsAPI } from '../services/amazon/index.js';
-export { AppleAdsAPI } from '../services/apple/index.js';
-export { CriteoAdsAPI } from '../services/criteo/index.js';
-export { TaboolaAdsAPI } from '../services/taboola/index.js';
-export { TheTradeDeskAPI } from '../services/thetradedesk/index.js';
-export { YandexAdsAPI } from '../services/yandex/index.js';
-export { BaiduAdsAPI } from '../services/baidu/index.js';
-export { KakaoAdsAPI } from '../services/kakao/index.js';
-export { LineAdsAPI } from '../services/line/index.js';

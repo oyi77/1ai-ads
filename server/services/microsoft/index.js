@@ -87,6 +87,10 @@ export class MicrosoftAdsAPI extends BasePlatformApiClient {
     }));
   }
 
+  /** Alias — satisfies the platform interface contract. */
+  async getAccounts() { return this.listAccounts(); }
+
+
   /**
    * Sync all accounts: campaigns + performance for each.
    */

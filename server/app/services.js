@@ -5,10 +5,14 @@ import { TrendingService } from '../services/trending.js';
 import { ScalevService } from '../services/scalev.js';
 import { PaymentService } from '../services/payments.js';
 import { LearningService } from '../services/learning.js';
-import {
-  MetaAdsAPI, GoogleAdsAPI, TikTokAdsAPI, LinkedInAdsAPI,
-  TwitterAdsAPI, SnapchatAdsAPI, MicrosoftAdsAPI, PinterestAdsAPI,
-} from '../platforms/index.js';
+import { MetaAdsAPI } from '../services/meta/index.js';
+import { GoogleAdsAPI } from '../services/google/index.js';
+import { TikTokAdsAPI } from '../services/tiktok/index.js';
+import { LinkedInAdsAPI } from '../services/linkedin/index.js';
+import { TwitterAdsAPI } from '../services/twitter/index.js';
+import { SnapchatAdsAPI } from '../services/snapchat/index.js';
+import { MicrosoftAdsAPI } from '../services/microsoft/index.js';
+import { PinterestAdsAPI } from '../services/pinterest/index.js';
 import { CreativeStudio } from '../services/creative-studio.js';
 import { MetaVideoService } from '../services/meta-video-service.js';
 import { ContentScheduler } from '../services/content-scheduler.js';

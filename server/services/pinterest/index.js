@@ -50,6 +50,10 @@ export class PinterestAdsAPI extends BasePlatformApiClient {
     }
   }
 
+  /** Alias — satisfies the platform interface contract. */
+  async getAccounts() { return this.getAdAccounts(); }
+
+
   /**
    * GET /ad_accounts/:id/campaigns — list campaigns for an ad account.
    * Filters by entity_status (ACTIVE, PAUSED, ARCHIVED).

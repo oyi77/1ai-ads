@@ -55,6 +55,10 @@ export class CriteoAdsAPI extends BasePlatformApiClient {
     return this._get('/advertisers/me');
   }
 
+  /** Alias — satisfies the platform interface contract. */
+  async getAccounts() { return this.getAdvertisers(); }
+
+
   /**
    * List campaigns for an advertiser.
    * GET /advertisers/{advertiserId}/campaigns

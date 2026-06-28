@@ -87,6 +87,10 @@ export class AmazonAdsAPI extends BasePlatformApiClient {
     return Array.isArray(data) ? data : [];
   }
 
+  /** Alias — satisfies the platform interface contract. */
+  async getAccounts() { return this.getProfiles(); }
+
+
   /**
    * List campaigns for a profile.
    * GET /v2/sp/campaigns (Sponsored Products)

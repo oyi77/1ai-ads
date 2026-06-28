@@ -71,6 +71,10 @@ export class SnapchatAdsAPI extends BasePlatformApiClient {
     }));
   }
 
+  /** Alias — satisfies the platform interface contract. */
+  async getAccounts() { return this.getAdAccounts(); }
+
+
   /**
    * Fetch campaigns for an ad account.
    * @param {string} adAccountId

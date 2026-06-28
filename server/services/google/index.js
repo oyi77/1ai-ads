@@ -52,6 +52,10 @@ export class GoogleAdsAPI extends BasePlatformApiClient {
     return (response.resource_names || []).map(r => r.replace('customers/', ''));
   }
 
+  async getAccounts() {
+    return this.listAccounts();
+  }
+
   async syncAllAccounts() {
     const customerIds = await this.listAccounts();
     const results = [];

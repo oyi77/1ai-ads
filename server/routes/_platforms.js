@@ -39,6 +39,20 @@ async function getRouteFactory(routeModule, routeFactory) {
 export function createPlatformsGroupRouter({ repos, services, publicRateLimit }) {
   const router = Router();
 
+  // ── Platform metadata endpoint (for frontend) ───────────────
+  router.get('/api/platforms', (_req, res) => {
+    const platforms = Object.entries(PLATFORM_REGISTRY).map(([, cfg]) => ({
+      key: cfg.key,
+      label: cfg.label,
+      color: cfg.color,
+      desc: cfg.desc,
+      icon: cfg.icon,
+      routePath: cfg.routePath,
+    }));
+    res.json({ success: true, data: platforms });
+  });
+
+
   // ── Registry-driven platform routes ────────────────────────────
   // We register routes synchronously using the registry. For platforms with
   // custom route modules, we dynamically import them on first request (lazy).
