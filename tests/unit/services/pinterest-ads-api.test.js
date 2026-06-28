@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PinterestAdsAPI } from '../../../server/services/pinterest-ads-api.js';
+import { PinterestAdsAPI } from '../../../server/services/pinterest/index.js';
 
 // Mock the safeFetch function
 vi.mock('../../../server/lib/platform-client.js', () => ({

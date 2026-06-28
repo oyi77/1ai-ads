@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { PinterestAdsAPI } from '../services/pinterest-ads-api.js';
+import { PinterestAdsAPI } from '../services/pinterest/index.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('pinterest-ads');

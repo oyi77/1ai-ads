@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { MicrosoftAdsAPI } from '../services/microsoft-ads-api.js';
+import { MicrosoftAdsAPI } from '../services/microsoft/index.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('microsoft-ads');

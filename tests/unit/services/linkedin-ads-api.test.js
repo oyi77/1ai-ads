@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { LinkedInAdsAPI } from '../../../server/services/linkedin-ads-api.js';
+import { LinkedInAdsAPI } from '../../../server/services/linkedin/index.js';
 
 // Mock the safeFetch function
 vi.mock('../../../server/lib/platform-client.js', () => ({

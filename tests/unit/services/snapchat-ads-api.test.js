@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SnapchatAdsAPI } from '../../../server/services/snapchat-ads-api.js';
+import { SnapchatAdsAPI } from '../../../server/services/snapchat/index.js';
 
 // Mock the safeFetch function
 vi.mock('../../../server/lib/platform-client.js', () => ({

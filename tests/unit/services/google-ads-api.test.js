@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GoogleAdsAPI } from '../../../server/services/google-ads-api.js';
+import { GoogleAdsAPI } from '../../../server/services/google/index.js';
 
 // Hoist mock references so vi.mock factories can use them
 const { mockQuery, mockListAccessibleCustomers, mockCampaignsCreate, mockCampaignsUpdate, mockCustomer, MockGoogleAdsApi } = vi.hoisted(() => {

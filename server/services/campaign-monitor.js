@@ -13,7 +13,7 @@ const DEFAULTS = {
 
 export class CampaignMonitorService {
   /**
-   * @param {import('./meta-api.js').MetaAdsAPI} metaApi
+   * @param {import('./meta/index.js').MetaAdsAPI} metaApi
    * @param {object} campaignsRepo
    * @param {object} settingsRepo
    */

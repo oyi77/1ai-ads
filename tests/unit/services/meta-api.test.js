@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MetaAdsAPI } from '../../../server/services/meta-api.js';
+import { MetaAdsAPI } from '../../../server/services/meta/index.js';
 
 // Mock the safeFetch function
 vi.mock('../../../server/lib/platform-client.js', () => ({

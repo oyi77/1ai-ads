@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { LinkedInAdsAPI } from '../services/linkedin-ads-api.js';
+import { LinkedInAdsAPI } from '../services/linkedin/index.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('linkedin-ads');

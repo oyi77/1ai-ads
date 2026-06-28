@@ -12,7 +12,7 @@ vi.mock('../../../server/config/index.js', () => ({
   },
 }));
 
-vi.mock('../../../server/services/meta-api.js', () => ({
+vi.mock('../../../server/services/meta/index.js', () => ({
   MetaAdsAPI: {
     withToken: vi.fn().mockReturnValue({
       apiGet: vi.fn()
@@ -30,7 +30,7 @@ vi.mock('../../../server/services/meta-api.js', () => ({
 }));
 
 import { FacebookConnectionService } from '../../../server/services/facebook-connection.js';
-import { MetaAdsAPI } from '../../../server/services/meta-api.js';
+import { MetaAdsAPI } from '../../../server/services/meta/index.js';
 
 describe('FacebookConnectionService', () => {
   let service;

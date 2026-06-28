@@ -21,7 +21,7 @@ const log = createLogger('ad-research');
 export class AdResearchService {
   /**
    * @param {object} deps
-   * @param {import('./meta-api.js').MetaAdsAPI} deps.metaApi - Meta API client
+   * @param {import('./meta/index.js').MetaAdsAPI} deps.metaApi - Meta API client
    * @param {object} [deps.settingsRepo] - Settings repository for direct API calls
    * @param {object} [deps.mcpClient] - MCP client for external tool integration
    * @param {object} [deps.db] - Database instance for caching

@@ -1,22 +1,22 @@
-import { safeFetch } from '../lib/platform-client.js';
-import { BasePlatformApiClient } from '../lib/base-platform-api.js';
-import { ConfigurationError } from '../lib/errors.js';
+import { safeFetch } from '../../lib/platform-client.js';
+import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
+import { ConfigurationError } from '../../lib/errors.js';
 
-const BASE = 'https://api.taboola.com/1.2';
+const BASE = 'https://api.criteo.com/2024-01';
 
-export class TaboolaAdsAPI extends BasePlatformApiClient {
+export class CriteoAdsAPI extends BasePlatformApiClient {
   constructor(settingsRepo) {
-    super('taboola', settingsRepo, { baseUrl: BASE });
+    super('criteo', settingsRepo, { baseUrl: BASE });
   }
 
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
     if (this.settingsRepo) {
-      const creds = this.settingsRepo.getCredentials('taboola');
+      const creds = this.settingsRepo.getCredentials('criteo');
       if (creds?.access_token) return creds.access_token;
     }
     throw new ConfigurationError(
-      'Taboola access token not configured. Go to Settings > Taboola to add it.'
+      'Criteo access token not configured. Go to Settings > Criteo to add it.'
     );
   }
 
@@ -31,14 +31,14 @@ export class TaboolaAdsAPI extends BasePlatformApiClient {
     for (const [k, v] of Object.entries(params)) {
       url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
     }
-    const res = await safeFetch('taboola', url.toString(), {
+    const res = await safeFetch('criteo', url.toString(), {
       headers: this._headers(),
     });
     return await res.json();
   }
 
   async _post(path, body = {}) {
-    const res = await safeFetch('taboola', `${this._baseUrl}${path}`, {
+    const res = await safeFetch('criteo', `${this._baseUrl}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...this._headers() },
       body: JSON.stringify(body),
@@ -47,59 +47,59 @@ export class TaboolaAdsAPI extends BasePlatformApiClient {
   }
 
   /**
-   * List accounts.
-   * GET /users/current
+   * List advertisers.
+   * GET /advertisers/me
    */
-  async getAccounts() {
-    this.log.debug('Fetching Taboola accounts');
-    return this._get('/users/current');
+  async getAdvertisers() {
+    this.log.debug('Fetching Criteo advertisers');
+    return this._get('/advertisers/me');
   }
 
   /**
-   * List campaigns for an account.
-   * GET /accounts/{accountId}/campaigns
+   * List campaigns for an advertiser.
+   * GET /advertisers/{advertiserId}/campaigns
    */
-  async getCampaigns(accountId) {
-    this.log.debug('Fetching Taboola campaigns', { accountId });
-    return this._get(`/accounts/${accountId}/campaigns`);
+  async getCampaigns(advertiserId) {
+    this.log.debug('Fetching Criteo campaigns', { advertiserId });
+    return this._get(`/advertisers/${advertiserId}/campaigns`);
   }
 
   /**
    * Create a new campaign.
-   * POST /accounts/{accountId}/campaigns
+   * POST /advertisers/{advertiserId}/campaigns
    */
-  async createCampaign(accountId, { name, budget, status }) {
-    this.log.info('Creating Taboola campaign', { accountId, name });
+  async createCampaign(advertiserId, { name, budget, status }) {
+    this.log.info('Creating Criteo campaign', { advertiserId, name });
     const body = { name };
     if (budget) body.budget = budget;
     if (status) body.status = status;
 
-    const data = await this._post(`/accounts/${accountId}/campaigns`, body);
-    this.log.info('Taboola campaign created', { campaignId: data.id });
+    const data = await this._post(`/advertisers/${advertiserId}/campaigns`, body);
+    this.log.info('Criteo campaign created', { campaignId: data.id });
     return { campaignId: data.id };
   }
 
   /**
    * Update a campaign.
-   * PUT /accounts/{accountId}/campaigns/{campaignId}
+   * PUT /advertisers/{advertiserId}/campaigns/{campaignId}
    */
-  async updateCampaign(accountId, campaignId, { name, status }) {
-    this.log.info('Updating Taboola campaign', { campaignId });
+  async updateCampaign(advertiserId, campaignId, { name, status }) {
+    this.log.info('Updating Criteo campaign', { campaignId });
     const body = {};
     if (name) body.name = name;
     if (status) body.status = status;
 
-    await this._post(`/accounts/${accountId}/campaigns/${campaignId}`, body);
-    this.log.info('Taboola campaign updated', { campaignId });
+    await this._post(`/advertisers/${advertiserId}/campaigns/${campaignId}`, body);
+    this.log.info('Criteo campaign updated', { campaignId });
     return { campaignId };
   }
 
   /**
-   * Sync all accounts: fetch campaigns per account.
+   * Sync all advertisers: fetch campaigns per advertiser.
    * Returns standardized format matching Meta/Google/TikTok pattern.
    */
   async syncAllAccounts() {
-    const accountsResp = await this.getAccounts();
+    const accountsResp = await this.getAdvertisers();
     const accounts = accountsResp.data || [];
     const results = [];
 
@@ -113,7 +113,7 @@ export class TaboolaAdsAPI extends BasePlatformApiClient {
   async _syncSingleAccount(account) {
     try {
       const campaignsResp = await this.getCampaigns(account.id);
-      const campaigns = campaignsResp.results || [];
+      const campaigns = campaignsResp.data || [];
 
       return {
         account: { id: account.id, name: account.name, currency: account.currency },

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { TikTokAdsAPI } from '../services/tiktok-api.js';
+import { TikTokAdsAPI } from '../services/tiktok/index.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('tiktok-ads');

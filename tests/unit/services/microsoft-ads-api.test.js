@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MicrosoftAdsAPI } from '../../../server/services/microsoft-ads-api.js';
+import { MicrosoftAdsAPI } from '../../../server/services/microsoft/index.js';
 
 // Mock the safeFetch function
 vi.mock('../../../server/lib/platform-client.js', () => ({

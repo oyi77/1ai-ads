@@ -18,15 +18,15 @@ vi.mock('../../../server/lib/operators.js', () => ({
   }),
 }));
 
-vi.mock('../../../server/services/meta-api.js', () => ({
+vi.mock('../../../server/services/meta/index.js', () => ({
   MetaAdsAPI: vi.fn(),
 }));
 
-vi.mock('../../../server/services/google-ads-api.js', () => ({
+vi.mock('../../../server/services/google/index.js', () => ({
   GoogleAdsAPI: vi.fn(),
 }));
 
-vi.mock('../../../server/services/tiktok-api.js', () => ({
+vi.mock('../../../server/services/tiktok/index.js', () => ({
   TikTokAdsAPI: vi.fn(),
 }));
 

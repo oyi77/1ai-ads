@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TwitterAdsAPI } from '../../../server/services/twitter-ads-api.js';
+import { TwitterAdsAPI } from '../../../server/services/twitter/index.js';
 
 // Mock the safeFetch function
 vi.mock('../../../server/lib/platform-client.js', () => ({

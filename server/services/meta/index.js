@@ -1,7 +1,7 @@
-import { safeFetch } from '../lib/platform-client.js';
-import config from '../config/index.js';
-import { BasePlatformApiClient } from '../lib/base-platform-api.js';
-import { ConfigurationError } from '../lib/errors.js';
+import { safeFetch } from '../../lib/platform-client.js';
+import config from '../../config/index.js';
+import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
+import { ConfigurationError } from '../../lib/errors.js';
 import { FacebookAdsApi } from 'facebook-nodejs-business-sdk';
 
 const BASE = `https://graph.facebook.com/${config.metaApiVersion}`;

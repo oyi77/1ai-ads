@@ -89,23 +89,23 @@ export { PLATFORM_REGISTRY, getPlatformConfig, listPlatformKeys } from './regist
 
 // Re-export individual classes for direct import (backward compatibility).
 // These are static re-exports so bundlers and existing import sites keep working.
-export { MetaAdsAPI } from '../services/meta-api.js';
-export { GoogleAdsAPI } from '../services/google-ads-api.js';
-export { TikTokAdsAPI } from '../services/tiktok-api.js';
-export { LinkedInAdsAPI } from '../services/linkedin-ads-api.js';
-export { TwitterAdsAPI } from '../services/twitter-ads-api.js';
-export { SnapchatAdsAPI } from '../services/snapchat-ads-api.js';
-export { MicrosoftAdsAPI } from '../services/microsoft-ads-api.js';
-export { PinterestAdsAPI } from '../services/pinterest-ads-api.js';
-export { RedditAdsAPI } from '../services/reddit-ads-api.js';
-export { SpotifyAdsAPI } from '../services/spotify-ads-api.js';
-export { WhatsAppAdsAPI } from '../services/whatsapp-ads-api.js';
-export { AmazonAdsAPI } from '../services/amazon-ads-api.js';
-export { AppleAdsAPI } from '../services/apple-ads-api.js';
-export { CriteoAdsAPI } from '../services/criteo-ads-api.js';
-export { TaboolaAdsAPI } from '../services/taboola-ads-api.js';
-export { TheTradeDeskAPI } from '../services/thetradedesk-api.js';
-export { YandexAdsAPI } from '../services/yandex-ads-api.js';
-export { BaiduAdsAPI } from '../services/baidu-ads-api.js';
-export { KakaoAdsAPI } from '../services/kakao-ads-api.js';
-export { LineAdsAPI } from '../services/line-ads-api.js';
+export { MetaAdsAPI } from '../services/meta/index.js';
+export { GoogleAdsAPI } from '../services/google/index.js';
+export { TikTokAdsAPI } from '../services/tiktok/index.js';
+export { LinkedInAdsAPI } from '../services/linkedin/index.js';
+export { TwitterAdsAPI } from '../services/twitter/index.js';
+export { SnapchatAdsAPI } from '../services/snapchat/index.js';
+export { MicrosoftAdsAPI } from '../services/microsoft/index.js';
+export { PinterestAdsAPI } from '../services/pinterest/index.js';
+export { RedditAdsAPI } from '../services/reddit/index.js';
+export { SpotifyAdsAPI } from '../services/spotify/index.js';
+export { WhatsAppAdsAPI } from '../services/whatsapp/index.js';
+export { AmazonAdsAPI } from '../services/amazon/index.js';
+export { AppleAdsAPI } from '../services/apple/index.js';
+export { CriteoAdsAPI } from '../services/criteo/index.js';
+export { TaboolaAdsAPI } from '../services/taboola/index.js';
+export { TheTradeDeskAPI } from '../services/thetradedesk/index.js';
+export { YandexAdsAPI } from '../services/yandex/index.js';
+export { BaiduAdsAPI } from '../services/baidu/index.js';
+export { KakaoAdsAPI } from '../services/kakao/index.js';
+export { LineAdsAPI } from '../services/line/index.js';

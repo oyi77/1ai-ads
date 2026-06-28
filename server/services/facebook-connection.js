@@ -6,7 +6,7 @@
  */
 
 import config from '../config/index.js';
-import { MetaAdsAPI } from './meta-api.js';
+import { MetaAdsAPI } from './meta/index.js';
 
 const API_VERSION = config.metaApiVersion;
 

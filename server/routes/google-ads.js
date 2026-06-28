@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { GoogleAdsAPI } from '../services/google-ads-api.js';
+import { GoogleAdsAPI } from '../services/google/index.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('google-ads');

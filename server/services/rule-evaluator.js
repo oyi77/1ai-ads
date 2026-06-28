@@ -5,9 +5,9 @@
  * Handles only: rule CRUD, condition evaluation, action execution.
  */
 
-import { MetaAdsAPI } from './meta-api.js';
-import { GoogleAdsAPI } from './google-ads-api.js';
-import { TikTokAdsAPI } from './tiktok-api.js';
+import { MetaAdsAPI } from './meta/index.js';
+import { GoogleAdsAPI } from './google/index.js';
+import { TikTokAdsAPI } from './tiktok/index.js';
 import { createLogger } from '../lib/logger.js';
 import { compare } from '../lib/operators.js';
 

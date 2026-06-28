@@ -1,22 +1,22 @@
-import { safeFetch } from '../lib/platform-client.js';
-import { BasePlatformApiClient } from '../lib/base-platform-api.js';
-import { ConfigurationError, PlatformError } from '../lib/errors.js';
+import { safeFetch } from '../../lib/platform-client.js';
+import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
+import { ConfigurationError, PlatformError } from '../../lib/errors.js';
 
-const BASE = 'https://ads-api.reddit.com/api/v2';
+const BASE = 'https://ads-api.spotify.com/v1';
 
-export class RedditAdsAPI extends BasePlatformApiClient {
+export class SpotifyAdsAPI extends BasePlatformApiClient {
   constructor(settingsRepo) {
-    super('reddit', settingsRepo, { baseUrl: BASE });
+    super('spotify', settingsRepo, { baseUrl: BASE });
   }
 
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
     if (this.settingsRepo) {
-      const creds = this.settingsRepo.getCredentials('reddit');
+      const creds = this.settingsRepo.getCredentials('spotify');
       if (creds?.access_token) return creds.access_token;
     }
     throw new ConfigurationError(
-      'Reddit Ads access token not configured. Go to Settings > Reddit to add it.'
+      'Spotify Ads access token not configured. Go to Settings > Spotify to add it.'
     );
   }
 
@@ -33,84 +33,96 @@ export class RedditAdsAPI extends BasePlatformApiClient {
         url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
       }
     }
-    const res = await safeFetch('reddit', url.toString(), {
+    const res = await safeFetch('spotify', url.toString(), {
       headers: this._headers(),
     });
     const data = await res.json();
     if (data.error) {
-      throw new PlatformError(`Reddit API error: ${data.error}`, 'reddit', data.error_code);
+      throw new PlatformError(
+        `Spotify API error: ${data.error.message || data.error}`,
+        'spotify',
+        data.error.status
+      );
     }
     return data;
   }
 
   async _post(path, body = {}) {
-    const res = await safeFetch('reddit', `${this._baseUrl}${path}`, {
+    const res = await safeFetch('spotify', `${this._baseUrl}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...this._headers() },
       body: JSON.stringify(body),
     });
     const data = await res.json();
     if (data.error) {
-      throw new PlatformError(`Reddit API error: ${data.error}`, 'reddit', data.error_code);
+      throw new PlatformError(
+        `Spotify API error: ${data.error.message || data.error}`,
+        'spotify',
+        data.error.status
+      );
     }
     return data;
   }
 
   /**
    * List ad accounts for the authenticated user.
-   * GET /accounts
+   * GET /ad-accounts
    */
   async getAccounts() {
-    this.log.debug('Fetching Reddit ad accounts');
-    const data = await this._get('/accounts');
-    return data.data || [];
+    this.log.debug('Fetching Spotify ad accounts');
+    const data = await this._get('/ad-accounts');
+    return data.ad_accounts || data.data || [];
   }
 
   /**
    * List campaigns for an ad account.
-   * GET /accounts/{accountId}/campaigns
+   * GET /ad-accounts/{accountId}/campaigns
    */
   async getCampaigns(accountId) {
-    this.log.debug('Fetching Reddit campaigns', { accountId });
-    const data = await this._get(`/accounts/${accountId}/campaigns`);
-    return data.data || [];
+    this.log.debug('Fetching Spotify campaigns', { accountId });
+    const data = await this._get(`/ad-accounts/${accountId}/campaigns`);
+    return data.campaigns || data.data || [];
   }
 
   /**
    * Create a new campaign.
-   * POST /accounts/{accountId}/campaigns
+   * POST /ad-accounts/{accountId}/campaigns
    */
   async createCampaign(accountId, { name, budget, status = 'PAUSED' }) {
-    this.log.info('Creating Reddit campaign', { accountId, name });
+    this.log.info('Creating Spotify campaign', { accountId, name });
     const body = { name, status };
     if (budget !== undefined) {
       body.budget = budget;
     }
-    const data = await this._post(`/accounts/${accountId}/campaigns`, body);
-    this.log.info('Reddit campaign created', { campaignId: data.data?.id });
-    return { campaignId: data.data?.id };
+    const data = await this._post(`/ad-accounts/${accountId}/campaigns`, body);
+    this.log.info('Spotify campaign created', { campaignId: data.campaign?.id || data.id });
+    return { campaignId: data.campaign?.id || data.id };
   }
 
   /**
    * Update a campaign.
-   * PATCH /accounts/{accountId}/campaigns/{campaignId}
+   * PATCH /ad-accounts/{accountId}/campaigns/{campaignId}
    */
   async updateCampaign(accountId, campaignId, { name, status }) {
-    this.log.info('Updating Reddit campaign', { accountId, campaignId });
+    this.log.info('Updating Spotify campaign', { accountId, campaignId });
     const body = {};
     if (name) body.name = name;
     if (status) body.status = status;
 
-    const res = await safeFetch('reddit', `${this._baseUrl}/accounts/${accountId}/campaigns/${campaignId}`, {
+    const res = await safeFetch('spotify', `${this._baseUrl}/ad-accounts/${accountId}/campaigns/${campaignId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...this._headers() },
       body: JSON.stringify(body),
     });
     const data = await res.json();
     if (data.error) {
-      throw new PlatformError(`Reddit API error: ${data.error}`, 'reddit', data.error_code);
+      throw new PlatformError(
+        `Spotify API error: ${data.error.message || data.error}`,
+        'spotify',
+        data.error.status
+      );
     }
-    this.log.info('Reddit campaign updated', { campaignId });
+    this.log.info('Spotify campaign updated', { campaignId });
     return { campaignId };
   }
 
@@ -119,7 +131,7 @@ export class RedditAdsAPI extends BasePlatformApiClient {
    * Returns standardized format matching other platforms.
    */
   async syncAllAccounts() {
-    this.log.info('Starting Reddit ads sync');
+    this.log.info('Starting Spotify ads sync');
     const accounts = await this.getAccounts();
     const results = [];
 
@@ -142,7 +154,7 @@ export class RedditAdsAPI extends BasePlatformApiClient {
       }
     }
 
-    this.log.info('Reddit ads sync complete', { accounts: results.length });
+    this.log.info('Spotify ads sync complete', { accounts: results.length });
     return results;
   }
 

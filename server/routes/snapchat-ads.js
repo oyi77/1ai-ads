@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { SnapchatAdsAPI } from '../services/snapchat-ads-api.js';
+import { SnapchatAdsAPI } from '../services/snapchat/index.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('snapchat-ads');

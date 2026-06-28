@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { TwitterAdsAPI } from '../services/twitter-ads-api.js';
+import { TwitterAdsAPI } from '../services/twitter/index.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('twitter-ads');

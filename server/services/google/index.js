@@ -1,6 +1,6 @@
 import GoogleAdsApi from 'google-ads-api';
-import { BasePlatformApiClient } from '../lib/base-platform-api.js';
-import { ConfigurationError } from '../lib/errors.js';
+import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
+import { ConfigurationError } from '../../lib/errors.js';
 
 const BASE = 'https://googleads.googleapis.com/v18';
 

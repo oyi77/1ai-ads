@@ -18,7 +18,7 @@ const BASE = `https://graph.facebook.com/${config.metaApiVersion}`;
 
 export class MetaVideoService {
   /**
-   * @param {import('./meta-api.js').MetaAdsAPI} metaApi - Existing Meta API client for token management
+   * @param {import('./meta/index.js').MetaAdsAPI} metaApi - Existing Meta API client for token management
    */
   constructor(metaApi) {
     this.metaApi = metaApi;

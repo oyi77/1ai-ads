@@ -1,23 +1,23 @@
-import { safeFetch } from '../lib/platform-client.js';
-import { BasePlatformApiClient } from '../lib/base-platform-api.js';
-import { ConfigurationError } from '../lib/errors.js';
+import { safeFetch } from '../../lib/platform-client.js';
+import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
+import { ConfigurationError } from '../../lib/errors.js';
 
-const BASE = 'https://bizapi.kakao.com';
+const BASE = 'https://ads.line.me/api/v1';
 
-export class KakaoAdsAPI extends BasePlatformApiClient {
+export class LineAdsAPI extends BasePlatformApiClient {
   constructor(settingsRepo) {
-    super('kakao', settingsRepo, { baseUrl: BASE });
+    super('line', settingsRepo, { baseUrl: BASE });
   }
 
-  // Override: Kakao uses OAuth 2.0 Bearer token
+  // Override: LINE uses OAuth 2.0 Bearer token
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
     if (this.settingsRepo) {
-      const creds = this.settingsRepo.getCredentials('kakao');
+      const creds = this.settingsRepo.getCredentials('line');
       if (creds?.access_token) return creds.access_token;
     }
     throw new ConfigurationError(
-      'Kakao Ads access token not configured. Go to Settings > Kakao to add it.'
+      'LINE Ads access token not configured. Go to Settings > LINE to add it.'
     );
   }
 
@@ -28,22 +28,22 @@ export class KakaoAdsAPI extends BasePlatformApiClient {
     };
   }
 
-  // Override: add Kakao-specific headers
+  // Override: add LINE-specific headers
   async _get(path, params = {}) {
     const url = new URL(`${this._baseUrl}${path}`);
     for (const [k, v] of Object.entries(params)) {
       url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
     }
-    const res = await safeFetch('kakao', url.toString(), {
+    const res = await safeFetch('line', url.toString(), {
       headers: this._headers(),
     });
     const data = await res.json();
     return data;
   }
 
-  // Override: add Kakao-specific headers
+  // Override: add LINE-specific headers
   async _post(path, body = {}) {
-    const res = await safeFetch('kakao', `${this._baseUrl}${path}`, {
+    const res = await safeFetch('line', `${this._baseUrl}${path}`, {
       method: 'POST',
       headers: this._headers(),
       body: JSON.stringify(body),
@@ -54,28 +54,28 @@ export class KakaoAdsAPI extends BasePlatformApiClient {
 
   /**
    * List ad accounts.
-   * GET /v1/ad_accounts
+   * GET /adaccounts
    */
   async getAccounts() {
-    this.log.debug('Fetching Kakao ad accounts');
-    return this._get('/v1/ad_accounts');
+    this.log.debug('Fetching LINE ad accounts');
+    return this._get('/adaccounts');
   }
 
   /**
    * List campaigns for an account.
-   * GET /v1/ad_accounts/{accountId}/campaigns
+   * GET /adaccounts/{accountId}/campaigns
    */
   async getCampaigns(accountId) {
-    this.log.debug('Fetching Kakao campaigns', { accountId });
-    return this._get(`/v1/ad_accounts/${accountId}/campaigns`);
+    this.log.debug('Fetching LINE campaigns', { accountId });
+    return this._get(`/adaccounts/${accountId}/campaigns`);
   }
 
   /**
    * Create a new campaign.
-   * POST /v1/ad_accounts/{accountId}/campaigns
+   * POST /adaccounts/{accountId}/campaigns
    */
   async createCampaign(accountId, { name, budget, status = 'PAUSED' }) {
-    this.log.info('Creating Kakao campaign', { accountId, name });
+    this.log.info('Creating LINE campaign', { accountId, name });
     const body = {
       name,
       status,
@@ -83,29 +83,29 @@ export class KakaoAdsAPI extends BasePlatformApiClient {
     if (budget) {
       body.budget = { amount: budget };
     }
-    const data = await this._post(`/v1/ad_accounts/${accountId}/campaigns`, body);
-    const campaignId = data.id;
-    this.log.info('Kakao campaign created', { campaignId });
+    const data = await this._post(`/adaccounts/${accountId}/campaigns`, body);
+    const campaignId = data.campaign?.id;
+    this.log.info('LINE campaign created', { campaignId });
     return { campaignId };
   }
 
   /**
    * Update a campaign.
-   * PUT /v1/ad_accounts/{accountId}/campaigns/{campaignId}
+   * PUT /adaccounts/{accountId}/campaigns/{campaignId}
    */
   async updateCampaign(accountId, campaignId, { name, status }) {
-    this.log.info('Updating Kakao campaign', { campaignId });
+    this.log.info('Updating LINE campaign', { campaignId });
     const body = {};
     if (name) body.name = name;
     if (status) body.status = status;
 
-    const res = await safeFetch('kakao', `${this._baseUrl}/v1/ad_accounts/${accountId}/campaigns/${campaignId}`, {
+    const res = await safeFetch('line', `${this._baseUrl}/adaccounts/${accountId}/campaigns/${campaignId}`, {
       method: 'PUT',
       headers: this._headers(),
       body: JSON.stringify(body),
     });
     const data = await res.json();
-    this.log.info('Kakao campaign updated', { campaignId });
+    this.log.info('LINE campaign updated', { campaignId });
     return { campaignId, ...data };
   }
 
@@ -115,7 +115,7 @@ export class KakaoAdsAPI extends BasePlatformApiClient {
    */
   async syncAllAccounts() {
     const accountsResp = await this.getAccounts();
-    const accounts = accountsResp.ad_accounts || [];
+    const accounts = accountsResp.adAccounts || [];
     const results = [];
 
     for (const acct of accounts) {
@@ -127,18 +127,18 @@ export class KakaoAdsAPI extends BasePlatformApiClient {
 
   async _syncSingleAccount(account) {
     try {
-      const campaignsResp = await this.getCampaigns(account.id);
+      const campaignsResp = await this.getCampaigns(account.adAccountId);
       const campaigns = campaignsResp.campaigns || [];
 
       return {
-        account: { id: account.id, name: account.name, currency: account.currency },
+        account: { id: account.adAccountId, name: account.name, currency: account.currency },
         campaigns: campaigns.map(c => this._mapCampaign(c)),
         insights: [],
         syncedAt: new Date().toISOString(),
       };
     } catch (err) {
       return {
-        account: { id: account.id, name: account.name },
+        account: { id: account.adAccountId, name: account.name },
         error: err.message,
         syncedAt: new Date().toISOString(),
       };

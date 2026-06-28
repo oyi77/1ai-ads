@@ -1,6 +1,6 @@
-import { safeFetch } from '../lib/platform-client.js';
-import { BasePlatformApiClient } from '../lib/base-platform-api.js';
-import { ConfigurationError } from '../lib/errors.js';
+import { safeFetch } from '../../lib/platform-client.js';
+import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
+import { ConfigurationError } from '../../lib/errors.js';
 
 const BASE = 'https://ads.microsoft.com/api/v13';
 
