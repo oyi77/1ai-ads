@@ -5,7 +5,10 @@ import { TrendingService } from '../services/trending.js';
 import { ScalevService } from '../services/scalev.js';
 import { PaymentService } from '../services/payments.js';
 import { LearningService } from '../services/learning.js';
-import { MetaAdsAPI } from '../platforms/index.js';
+import {
+  MetaAdsAPI, GoogleAdsAPI, TikTokAdsAPI, LinkedInAdsAPI,
+  TwitterAdsAPI, SnapchatAdsAPI, MicrosoftAdsAPI, PinterestAdsAPI,
+} from '../platforms/index.js';
 import { CreativeStudio } from '../services/creative-studio.js';
 import { MetaVideoService } from '../services/meta-video-service.js';
 import { ContentScheduler } from '../services/content-scheduler.js';
@@ -18,13 +21,6 @@ import { AiAgent } from '../services/ai-agent.js';
 import { NangoAuthService } from '../services/nango-auth.js';
 import { ShopeeAdapter } from '../services/shopee-adapter.js';
 import { AttributionService } from '../services/attribution-service.js';
-import { GoogleAdsAPI } from '../services/google-ads-api.js';
-import { TikTokAdsAPI } from '../services/tiktok-api.js';
-import { LinkedInAdsAPI } from '../services/linkedin-ads-api.js';
-import { TwitterAdsAPI } from '../services/twitter-ads-api.js';
-import { SnapchatAdsAPI } from '../services/snapchat-ads-api.js';
-import { MicrosoftAdsAPI } from '../services/microsoft-ads-api.js';
-import { PinterestAdsAPI } from '../services/pinterest-ads-api.js';
 import { AutonomousAgent } from '../services/autonomous-agent.js';
 import { AutoOptimizer } from '../services/auto-optimizer.js';
 import { WebhookProcessor } from '../services/webhook-processor.js';
