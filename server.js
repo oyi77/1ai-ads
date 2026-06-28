@@ -40,7 +40,7 @@ startServices(app);
 
 // ── Real-time Meta Sync (every 15 minutes) ─────────────
 {
-  const { MetaAdsAPI } = await import('./server/services/meta-api.js');
+  const { MetaAdsAPI } = await import('./server/services/meta/index.js');
   const syncInterval = 15 * 60 * 1000;
 
   async function syncFromMeta() {
