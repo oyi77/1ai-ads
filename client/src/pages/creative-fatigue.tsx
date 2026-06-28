@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, RefreshCw, Zap } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface FatiguedCreative {
@@ -94,6 +94,13 @@ export function CreativeFatiguePage() {
             <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Total Flagged</div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.8rem', fontWeight: 700, marginTop: 8 }}>{fatigued.length}</div>
           </div>
+        </div>
+      )}
+
+      {searched && !isLoading && !error && fatigued.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-tertiary)' }}>
+          <AlertTriangle size={32} style={{ marginBottom: 8 }} />
+          <p style={{ fontSize: '0.85rem' }}>No fatigue detected. Your creatives are performing well.</p>
         </div>
       )}
 

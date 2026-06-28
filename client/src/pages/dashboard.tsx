@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type { CSSProperties } from 'react';
-import { DollarSign, TrendingUp, Activity, Megaphone, Wifi, WifiOff } from 'lucide-react';
+import { DollarSign, TrendingUp, Activity, Megaphone } from 'lucide-react';
 import { api } from '../lib/api';
 import { useRealtime } from '../hooks/useRealtime';
 
@@ -16,7 +16,7 @@ interface Campaign {
 }
 
 export function DashboardPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['campaigns'],
     queryFn: () => api.get<unknown>('/campaigns'),
   });
@@ -55,6 +55,12 @@ export function DashboardPage() {
           {lastUpdate && <span style={{ color: 'var(--text-tertiary)' }}>· {new Date(lastUpdate).toLocaleTimeString()}</span>}
         </div>
       </div>
+
+      {error && (
+        <div style={{ padding: 12, background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', borderRadius: 8, color: '#f85149', fontSize: '0.85rem', marginBottom: 16 }}>
+          Failed to load data. Please try again.
+        </div>
+      )}
 
       {/* Metric Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>

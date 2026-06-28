@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link2, Loader2, Key, User } from 'lucide-react';
+import { Link2, Loader2, Key, User, Bot } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface PlatformAccount {
@@ -45,6 +45,17 @@ export function SettingsPage() {
     mutationFn: (id: string) => api.del(`/settings/accounts/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings', 'accounts'] }),
   });
+
+  const { data: aiConfig } = useQuery<{ success: boolean; data: { url: string; model: string; apiKey: string } }>({
+    queryKey: ['settings', 'ai'],
+    queryFn: () => api.get('/settings/ai'),
+  });
+
+  const testConnectionMutation = useMutation({
+    mutationFn: () => api.post('/settings/ai/test-connection', {}),
+  });
+
+  const ai = aiConfig?.data;
 
   const connectedList = Array.isArray(accounts) ? accounts : [];
 
@@ -206,6 +217,54 @@ export function SettingsPage() {
             No accounts connected. Add your access tokens above to get started.
           </p>
         )}
+      </div>
+
+      {/* AI Configuration */}
+      <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 24, marginTop: 16 }}>
+        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Bot size={14} style={{ color: 'var(--accent)' }} />
+          AI Configuration
+        </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Endpoint URL</span>
+            <span style={{ fontSize: '0.85rem', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{ai?.url || '—'}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Model</span>
+            <span style={{ fontSize: '0.85rem', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{ai?.model || '—'}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>API Key</span>
+            <span style={{ fontSize: '0.85rem', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{ai?.apiKey ? '••••••••' : 'Not configured'}</span>
+          </div>
+          <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              onClick={() => testConnectionMutation.mutate()}
+              disabled={testConnectionMutation.isPending}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px',
+                background: 'var(--accent)',
+                color: 'var(--bg-deep)',
+                border: 'none',
+                borderRadius: 6,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+              }}
+            >
+              {testConnectionMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Bot size={14} />}
+              Test Connection
+            </button>
+            {testConnectionMutation.isSuccess && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--green)' }}>✓ Connection successful</span>
+            )}
+            {testConnectionMutation.isError && (
+              <span style={{ fontSize: '0.8rem', color: '#f85149' }}>✗ {(testConnectionMutation.error as Error).message}</span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Account Info */}

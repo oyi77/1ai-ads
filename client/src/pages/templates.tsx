@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Plus, Edit3, Trash2, Copy, Search, Loader2 } from 'lucide-react';
+import { FileText, Plus, Trash2, Search, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
 import type { CSSProperties } from 'react';
 

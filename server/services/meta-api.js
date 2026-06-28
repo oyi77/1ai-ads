@@ -4,7 +4,6 @@ import { BasePlatformApiClient } from '../lib/base-platform-api.js';
 import { ConfigurationError } from '../lib/errors.js';
 import { FacebookAdsApi } from 'facebook-nodejs-business-sdk';
 
-const log = config.log?.metaApi ? undefined : undefined; // will use base class logger
 const BASE = `https://graph.facebook.com/${config.metaApiVersion}`;
 
 export class MetaAdsAPI extends BasePlatformApiClient {
@@ -203,7 +202,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
   // --- Campaign WRITE Operations ---
 
   async createCampaign(accountId, { name, objective, status = 'PAUSED', dailyBudget, specialAdCategories = [] }) {
-    log.info('Creating Meta campaign', { accountId, name, objective });
+    this.log.info('Creating Meta campaign', { accountId, name, objective });
     const body = {
       name,
       objective,
@@ -213,7 +212,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     };
     if (dailyBudget) body.daily_budget = Math.round(dailyBudget * 100); // Meta expects cents
     const data = await this._post(`/${accountId}/campaigns`, body);
-    log.info('Campaign created successfully', { campaignId: data.id });
+    this.log.info('Campaign created successfully', { campaignId: data.id });
     return { id: data.id };
   }
 
@@ -334,7 +333,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       });
       return { source: 'ads_archive', ads: data.data || [] };
     } catch (err) {
-      log.debug('Ads archive unavailable, falling back to page info', { pageId, error: err.message });
+      this.log.debug('Ads archive unavailable, falling back to page info', { pageId, error: err.message });
       const page = await this._get(`/${pageId}`, {
         fields: 'id,name,category,fan_count,about,website',
       });

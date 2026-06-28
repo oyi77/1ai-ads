@@ -30,7 +30,7 @@ export function CompetitorsPage() {
   const [platform, setPlatform] = useState('meta');
   const [country, setCountry] = useState('');
 
-  const { data, isLoading, refetch } = useQuery<SearchResult>({
+  const { data, isLoading, error, refetch } = useQuery<SearchResult>({
     queryKey: ['competitor-spy', query, platform, country],
     queryFn: () => {
       const params = new URLSearchParams();
@@ -85,6 +85,12 @@ export function CompetitorsPage() {
           Search
         </button>
       </div>
+
+      {error && (
+        <div style={{ padding: 12, background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', borderRadius: 8, color: '#f85149', fontSize: '0.85rem', marginBottom: 16 }}>
+          Failed to load data. Please try again.
+        </div>
+      )}
 
       {/* Results */}
       {ads.length === 0 && !isLoading ? (

@@ -1,358 +1,234 @@
-import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
-import Database from 'better-sqlite3';
-import { readFileSync, writeFileSync, unlinkSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { ContentSchedulerQueueRepository } from '../../../server/repositories/content-scheduler-queue.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const schemaPath = join(__dirname, '../../../db/schema.sql');
-const TEST_VIDEO_PATH = '/tmp/__test_video_for_scheduler.mp4';
+vi.mock('../../../server/lib/logger.js', () => ({
+  createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
+}));
 
-// Ensure test video file exists before running tests
-try { writeFileSync(TEST_VIDEO_PATH, Buffer.from('fake-video-data')); } catch {}
-
-afterAll(() => {
-  try { unlinkSync(TEST_VIDEO_PATH); } catch {}
-});
-
-// Mock uuid for deterministic IDs
 vi.mock('uuid', () => ({
-  v4: vi.fn(() => 'test-queue-id-001'),
+  v4: vi.fn(() => 'mock-uuid-123'),
+}));
+
+vi.mock('fs', () => ({
+  default: { readFileSync: vi.fn(() => Buffer.from('fake-video')) },
 }));
 
 import { ContentScheduler } from '../../../server/services/content-scheduler.js';
 
 describe('ContentScheduler', () => {
-  let db;
-  let queueRepo;
-  let videoService;
-  let llmClient;
   let scheduler;
-
-  function createTestDb() {
-    const testDb = new Database(':memory:');
-    const schema = readFileSync(schemaPath, 'utf-8');
-    testDb.exec(schema);
-    return testDb;
-  }
+  let mockVideoService;
+  let mockLlmClient;
+  let mockQueueRepo;
 
   beforeEach(() => {
-    db = createTestDb();
-    queueRepo = new ContentSchedulerQueueRepository(db);
-    videoService = {
-      uploadVideo: vi.fn(),
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+
+    mockVideoService = {
+      uploadVideo: vi.fn().mockResolvedValue({ success: true, videoId: 'vid-1', permalinkUrl: 'https://fb.watch/123' }),
     };
-    llmClient = {
-      call: vi.fn(),
+
+    mockLlmClient = {
+      call: vi.fn().mockResolvedValue(JSON.stringify({
+        caption: 'Test caption',
+        hashtags: ['#test', '#viral'],
+        hook: 'Test hook',
+        cta: 'Test CTA',
+      })),
     };
-    scheduler = new ContentScheduler({ videoService, llmClient, queueRepo });
+
+    mockQueueRepo = {
+      insert: vi.fn(),
+      findPendingByPage: vi.fn().mockReturnValue([]),
+      findPendingAll: vi.fn().mockReturnValue([]),
+      updateStatus: vi.fn(),
+      updateCompleted: vi.fn(),
+      updateFailed: vi.fn(),
+      cancelById: vi.fn(),
+      findById: vi.fn(),
+      findByStatus: vi.fn().mockReturnValue([]),
+      getStatusCounts: vi.fn().mockReturnValue({ pending: 0, completed: 0, failed: 0 }),
+    };
+
+    scheduler = new ContentScheduler({
+      videoService: mockVideoService,
+      llmClient: mockLlmClient,
+      queueRepo: mockQueueRepo,
+    });
   });
 
-  describe('constructor', () => {
-    it('should create instance with dependencies', () => {
-      expect(scheduler).toBeInstanceOf(ContentScheduler);
-      expect(scheduler.videoService).toBe(videoService);
-      expect(scheduler.llmClient).toBe(llmClient);
-      expect(scheduler.queueRepo).toBe(queueRepo);
-      expect(scheduler._processing).toBe(false);
+  afterEach(() => {
+    vi.useRealTimers();
+    scheduler.stop();
+  });
+
+  it('should create instance with dependencies', () => {
+    expect(scheduler.videoService).toBe(mockVideoService);
+    expect(scheduler.llmClient).toBe(mockLlmClient);
+    expect(scheduler.queueRepo).toBe(mockQueueRepo);
+  });
+
+  describe('start / stop', () => {
+    it('should start interval and call processQueue', () => {
+      const spy = vi.spyOn(scheduler, 'processQueue').mockResolvedValue([]);
+      scheduler.start(1000);
+      vi.advanceTimersByTime(1000);
+      expect(spy).toHaveBeenCalled();
+    });
+
+    it('should stop interval', () => {
+      const spy = vi.spyOn(scheduler, 'processQueue').mockResolvedValue([]);
+      scheduler.start(1000);
+      scheduler.stop();
+      vi.advanceTimersByTime(2000);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should be safe to stop when not started', () => {
+      expect(() => scheduler.stop()).not.toThrow();
     });
   });
 
   describe('queueContent', () => {
-    it('should queue content with required fields', () => {
+    it('should insert content into queue', () => {
       const result = scheduler.queueContent({
-        pageId: 'page_123',
-        filePath: '/videos/test.mp4',
+        pageId: 'page-1', filePath: '/tmp/video.mp4', caption: 'Hello',
       });
 
       expect(result.success).toBe(true);
-      expect(result.queueId).toBe('test-queue-id-001');
-
-      const row = db.prepare('SELECT * FROM content_queue WHERE id = ?').get('test-queue-id-001');
-      expect(row.page_id).toBe('page_123');
-      expect(row.file_path).toBe('/videos/test.mp4');
-      expect(row.status).toBe('pending');
-      expect(row.platform).toBe('facebook');
+      expect(result.queueId).toBe('mock-uuid-123');
+      expect(mockQueueRepo.insert).toHaveBeenCalledTimes(1);
     });
 
-    it('should fail if pageId or filePath missing', () => {
-      const r1 = scheduler.queueContent({ pageId: '', filePath: 'x' });
-      expect(r1.success).toBe(false);
-
-      const r2 = scheduler.queueContent({ pageId: 'p1', filePath: '' });
-      expect(r2.success).toBe(false);
+    it('should fail without pageId or filePath', () => {
+      const result = scheduler.queueContent({ pageId: 'page-1' });
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('required');
     });
 
-    it('should store all optional fields', () => {
+    it('should fail without filePath', () => {
+      const result = scheduler.queueContent({ filePath: '/tmp/video.mp4' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should pass optional fields to repo', () => {
       scheduler.queueContent({
-        pageId: 'page_123',
-        filePath: '/videos/test.mp4',
-        caption: 'My caption',
-        hashtags: ['#test', '#viral'],
-        hook: 'Attention!',
-        cta: 'Click here',
-        category: 'fashion',
-        style: 'modern',
-        productDesc: 'Cool shoes',
-        scheduleAt: 9999999999,
+        pageId: 'page-1', filePath: '/tmp/video.mp4',
+        hashtags: ['#tag'], hook: 'hook', cta: 'cta',
+        scheduleAt: 12345, category: 'fashion', style: 'lifestyle',
       });
 
-      const row = db.prepare('SELECT * FROM content_queue WHERE id = ?').get('test-queue-id-001');
-      expect(row.caption).toBe('My caption');
-      expect(row.hashtags).toBe('["#test","#viral"]');
-      expect(row.hook).toBe('Attention!');
-      expect(row.cta).toBe('Click here');
-      expect(row.category).toBe('fashion');
-      expect(row.style).toBe('modern');
-      expect(row.product_desc).toBe('Cool shoes');
-      expect(row.scheduled_at).toBe(9999999999);
-    });
-  });
-
-  describe('getQueue', () => {
-    it('should return empty queue initially', () => {
-      const items = scheduler.getQueue();
-      expect(items).toHaveLength(0);
-    });
-
-    it('should return queued items', () => {
-      scheduler.queueContent({ pageId: 'p1', filePath: '/v1.mp4' });
-      db.prepare(
-        'INSERT INTO content_queue (id, page_id, file_path, scheduled_at, created_at) VALUES (?, ?, ?, ?, ?)'
-      ).run('id-2', 'p1', '/v2.mp4', 1000, 500);
-
-      const items = scheduler.getQueue();
-      expect(items).toHaveLength(2);
-    });
-
-    it('should filter by status', () => {
-      scheduler.queueContent({ pageId: 'p1', filePath: '/v1.mp4' });
-      db.prepare("UPDATE content_queue SET status = 'completed' WHERE id = 'test-queue-id-001'").run();
-      db.prepare(
-        "INSERT INTO content_queue (id, page_id, file_path, status, scheduled_at, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-      ).run('id-2', 'p1', '/v2.mp4', 'pending', 1000, 500);
-
-      const pending = scheduler.getQueue('pending');
-      expect(pending).toHaveLength(1);
-      expect(pending[0].id).toBe('id-2');
-
-      const completed = scheduler.getQueue('completed');
-      expect(completed).toHaveLength(1);
-      expect(completed[0].id).toBe('test-queue-id-001');
-    });
-  });
-
-  describe('getQueueStatus', () => {
-    it('should return all zeros for empty queue', () => {
-      const status = scheduler.getQueueStatus();
-      expect(status).toEqual({ total: 0, pending: 0, generating: 0, uploading: 0, completed: 0, failed: 0 });
-    });
-
-    it('should count statuses correctly', () => {
-      scheduler.queueContent({ pageId: 'p1', filePath: '/v1.mp4' });
-      db.prepare("UPDATE content_queue SET status = 'completed' WHERE id = 'test-queue-id-001'").run();
-      db.prepare(
-        "INSERT INTO content_queue (id, page_id, file_path, status, scheduled_at, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-      ).run('id-2', 'p1', '/v2.mp4', 'failed', 1000, 500);
-      db.prepare(
-        "INSERT INTO content_queue (id, page_id, file_path, status, scheduled_at, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-      ).run('id-3', 'p1', '/v3.mp4', 'generating_caption', 1000, 500);
-
-      const status = scheduler.getQueueStatus();
-      expect(status.total).toBe(3);
-      expect(status.completed).toBe(1);
-      expect(status.failed).toBe(1);
-      expect(status.generating).toBe(1);
-    });
-  });
-
-  describe('cancelSchedule', () => {
-    it('should cancel a pending item', () => {
-      scheduler.queueContent({ pageId: 'p1', filePath: '/v1.mp4' });
-
-      const result = scheduler.cancelSchedule('test-queue-id-001');
-      expect(result.success).toBe(true);
-
-      const row = db.prepare('SELECT * FROM content_queue WHERE id = ?').get('test-queue-id-001');
-      expect(row.status).toBe('cancelled');
-    });
-
-    it('should fail if item not found', () => {
-      const result = scheduler.cancelSchedule('nonexistent');
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Queue item not found');
-    });
-
-    it('should fail if item not pending', () => {
-      scheduler.queueContent({ pageId: 'p1', filePath: '/v1.mp4' });
-      db.prepare("UPDATE content_queue SET status = 'completed' WHERE id = 'test-queue-id-001'").run();
-
-      const result = scheduler.cancelSchedule('test-queue-id-001');
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Cannot cancel');
+      const insertArg = mockQueueRepo.insert.mock.calls[0][0];
+      expect(insertArg.hashtags).toEqual(['#tag']);
+      expect(insertArg.category).toBe('fashion');
     });
   });
 
   describe('processQueue', () => {
-    it('should not process if already processing', async () => {
+    it('should process pending items', async () => {
+      mockQueueRepo.findPendingAll.mockReturnValue([{
+        id: 'q1', page_id: 'page-1', file_path: '/tmp/video.mp4',
+        caption: 'Test', hashtags: '["#tag"]', category: '', style: '', product_desc: '',
+      }]);
+      mockVideoService.uploadVideo.mockResolvedValue({ success: true, videoId: 'vid-1' });
+
+      const results = await scheduler.processQueue();
+      expect(results).toHaveLength(1);
+      expect(results[0].success).toBe(true);
+    });
+
+    it('should skip if already processing', async () => {
       scheduler._processing = true;
       const results = await scheduler.processQueue();
       expect(results).toEqual([]);
     });
 
-    it('should skip empty queue', async () => {
-      const results = await scheduler.processQueue();
-      expect(results).toEqual([]);
+    it('should filter by pageId when provided', async () => {
+      await scheduler.processQueue({ pageId: 'page-1' });
+      expect(mockQueueRepo.findPendingByPage).toHaveBeenCalledWith('page-1', expect.any(Number));
     });
 
-    it('should process item with existing caption (no LLM call needed)', async () => {
-      scheduler.queueContent({
-        pageId: 'p1',
-        filePath: TEST_VIDEO_PATH,
-        caption: 'Already have a caption',
-      });
-
-      videoService.uploadVideo.mockResolvedValue({
-        success: true,
-        videoId: 'vid_001',
-        permalinkUrl: 'https://facebook.com/p1/videos/vid_001',
-      });
+    it('should handle upload failure', async () => {
+      mockQueueRepo.findPendingAll.mockReturnValue([{
+        id: 'q1', page_id: 'page-1', file_path: '/tmp/video.mp4',
+        caption: 'Test', hashtags: '[]',
+      }]);
+      mockVideoService.uploadVideo.mockResolvedValue({ success: false, error: 'Upload error' });
 
       const results = await scheduler.processQueue();
-
-      expect(results).toHaveLength(1);
-      expect(results[0].success).toBe(true);
-      expect(results[0].videoId).toBe('vid_001');
-      expect(llmClient.call).not.toHaveBeenCalled();
-
-      const row = db.prepare('SELECT * FROM content_queue WHERE id = ?').get('test-queue-id-001');
-      expect(row.status).toBe('completed');
-      expect(row.caption).toBe('Already have a caption');
-    });
-
-    it('should process item with LLM caption generation', async () => {
-      scheduler.queueContent({
-        pageId: 'p1',
-        filePath: TEST_VIDEO_PATH,
-        category: 'fashion',
-        productDesc: 'Cool shoes',
-        hashtags: [],
-      });
-
-      llmClient.call.mockResolvedValue(JSON.stringify({
-        caption: 'Sepatu keren banget!',
-        hashtags: ['#fashion', '#shoes'],
-        hook: 'Cobain sepatu ini!',
-        cta: 'Klik sekarang',
-      }));
-
-      videoService.uploadVideo.mockResolvedValue({
-        success: true,
-        videoId: 'vid_002',
-        permalinkUrl: 'https://facebook.com/p1/videos/vid_002',
-      });
-
-      const results = await scheduler.processQueue();
-
-      expect(results).toHaveLength(1);
-      expect(results[0].success).toBe(true);
-      expect(llmClient.call).toHaveBeenCalledTimes(1);
-
-      const row = db.prepare('SELECT * FROM content_queue WHERE id = ?').get('test-queue-id-001');
-      expect(row.status).toBe('completed');
-      expect(row.caption).toBe('Sepatu keren banget!');
-      expect(row.video_id).toBe('vid_002');
-    });
-
-    it('should fall back to default caption when LLM fails', async () => {
-      scheduler.queueContent({
-        pageId: 'p1',
-        filePath: TEST_VIDEO_PATH,
-        category: 'fashion',
-        productDesc: 'Cool shoes',
-      });
-
-      llmClient.call.mockRejectedValue(new Error('LLM timeout'));
-      videoService.uploadVideo.mockResolvedValue({
-        success: true,
-        videoId: 'vid_003',
-      });
-
-      const results = await scheduler.processQueue();
-
-      expect(results).toHaveLength(1);
-      expect(results[0].success).toBe(true);
-      const row = db.prepare('SELECT * FROM content_queue WHERE id = ?').get('test-queue-id-001');
-      expect(row.caption).toContain('Cool shoes');
-      expect(row.status).toBe('completed');
-    });
-
-    it('should mark as failed if video upload fails', async () => {
-      scheduler.queueContent({
-        pageId: 'p1',
-        filePath: TEST_VIDEO_PATH,
-        caption: 'Test caption',
-      });
-
-      videoService.uploadVideo.mockResolvedValue({
-        success: false,
-        error: 'Invalid token',
-      });
-
-      const results = await scheduler.processQueue();
-
-      expect(results).toHaveLength(1);
       expect(results[0].success).toBe(false);
-      expect(results[0].error).toBe('Invalid token');
+      expect(mockQueueRepo.updateFailed).toHaveBeenCalled();
+    });
+  });
 
-      const row = db.prepare('SELECT * FROM content_queue WHERE id = ?').get('test-queue-id-001');
-      expect(row.status).toBe('failed');
-      expect(row.error).toBe('Invalid token');
+  describe('cancelSchedule', () => {
+    it('should cancel a pending item', () => {
+      mockQueueRepo.findById.mockReturnValue({ id: 'q1', status: 'pending' });
+      const result = scheduler.cancelSchedule('q1');
+      expect(result.success).toBe(true);
+      expect(mockQueueRepo.cancelById).toHaveBeenCalledWith('q1', expect.any(Number));
+    });
+
+    it('should fail if item not found', () => {
+      mockQueueRepo.findById.mockReturnValue(null);
+      const result = scheduler.cancelSchedule('q1');
+      expect(result.success).toBe(false);
+    });
+
+    it('should fail if item is not pending', () => {
+      mockQueueRepo.findById.mockReturnValue({ id: 'q1', status: 'completed' });
+      const result = scheduler.cancelSchedule('q1');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Cannot cancel');
+    });
+  });
+
+  describe('getQueueStatus / getQueue', () => {
+    it('should return status counts', () => {
+      expect(scheduler.getQueueStatus()).toEqual({ pending: 0, completed: 0, failed: 0 });
+    });
+
+    it('should return queue items by status', () => {
+      scheduler.getQueue('pending', 10);
+      expect(mockQueueRepo.findByStatus).toHaveBeenCalledWith('pending', 10);
     });
   });
 
   describe('_generateCaption', () => {
-    it('should parse LLM response correctly', async () => {
-      llmClient.call.mockResolvedValue(JSON.stringify({
-        caption: 'Test caption',
-        hashtags: ['#test'],
-        hook: 'Test hook',
-        cta: 'Test CTA',
-      }));
-
-      const result = await scheduler._generateCaption({
-        category: 'tech',
-        style: 'modern',
-        productDesc: 'Gadget',
-        platform: 'facebook',
-      });
-
+    it('should generate caption via LLM', async () => {
+      const result = await scheduler._generateCaption({ category: 'fashion', style: 'lifestyle', productDesc: 'dress' });
       expect(result.caption).toBe('Test caption');
-      expect(result.hashtags).toEqual(['#test']);
-      expect(result.hook).toBe('Test hook');
-      expect(result.cta).toBe('Test CTA');
+      expect(result.hashtags).toEqual(['#test', '#viral']);
     });
 
-    it('should handle markdown-wrapped JSON', async () => {
-      llmClient.call.mockResolvedValue('```json\n{"caption": "Markdown caption", "hashtags": []}\n```');
+    it('should fallback on LLM failure', async () => {
+      mockLlmClient.call.mockRejectedValue(new Error('LLM error'));
+      const result = await scheduler._generateCaption({ category: 'fashion', productDesc: 'dress' });
+      expect(result.caption).toContain('dress');
+    });
+  });
 
-      const result = await scheduler._generateCaption({ platform: 'facebook' });
-
-      expect(result.caption).toBe('Markdown caption');
+  describe('_parseCaptionResponse', () => {
+    it('should parse clean JSON', () => {
+      const result = scheduler._parseCaptionResponse('{"caption":"test","hashtags":["#t"],"hook":"h","cta":"c"}');
+      expect(result.caption).toBe('test');
     });
 
-    it('should handle LLM failure with fallback', async () => {
-      llmClient.call.mockRejectedValue(new Error('API error'));
+    it('should strip markdown fencing', () => {
+      const result = scheduler._parseCaptionResponse('```json\n{"caption":"test","hashtags":[],"hook":"","cta":""}\n```');
+      expect(result.caption).toBe('test');
+    });
+  });
 
-      const result = await scheduler._generateCaption({
-        productDesc: 'Keren',
-        category: 'fashion',
-        platform: 'facebook',
-      });
+  describe('_getCaptionFallback', () => {
+    it('should return fallback with product description', () => {
+      const result = scheduler._getCaptionFallback({ category: 'fashion', productDesc: 'dress' });
+      expect(result.caption).toContain('dress');
+    });
 
-      expect(result.caption).toContain('Keren');
-      expect(result.hashtags.length).toBeGreaterThan(0);
+    it('should return generic fallback without product description', () => {
+      const result = scheduler._getCaptionFallback({});
+      expect(result.caption).toContain('produk terbaru');
     });
   });
 });

@@ -82,14 +82,14 @@ export function TrendingPage() {
       </div>
 
       {/* Content */}
+      {error && (
+        <div style={{ padding: 12, background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', borderRadius: 8, color: '#f85149', fontSize: '0.85rem', marginBottom: 16 }}>
+          Failed to load data. Please try again.
+        </div>
+      )}
+
       {isLoading ? (
         <p style={{ color: 'var(--text-tertiary)', padding: 40, textAlign: 'center' }}>Loading trends...</p>
-      ) : error ? (
-        <div style={cardStyle}>
-          <p style={{ color: 'var(--error, #ef4444)', fontSize: '0.85rem' }}>
-            Failed to load trends: {(error as Error).message}
-          </p>
-        </div>
       ) : items.length === 0 ? (
         <div style={cardStyle}>
           <TrendingUp size={32} style={{ color: 'var(--text-tertiary)', marginBottom: 8 }} />

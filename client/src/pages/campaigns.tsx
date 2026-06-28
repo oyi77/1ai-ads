@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CSSProperties } from 'react';
-import { RefreshCw, Loader2, Download } from 'lucide-react';
+import { Loader2, Download } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface Campaign {
@@ -36,7 +36,7 @@ export function CampaignsPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
 
-  const { data, isLoading } = useQuery<CampaignsResponse>({
+  const { data, isLoading, error } = useQuery<CampaignsResponse>({
     queryKey: ['campaigns'],
     queryFn: () => api.get<CampaignsResponse>('/campaigns'),
   });
@@ -92,6 +92,12 @@ export function CampaignsPage() {
           <p style={{ fontSize: '0.85rem', color: 'var(--error, #ef4444)' }}>
             ❌ Sync failed: {(syncMutation.error as Error).message}
           </p>
+        </div>
+      )}
+
+      {error && (
+        <div style={{ padding: 12, background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', borderRadius: 8, color: '#f85149', fontSize: '0.85rem', marginBottom: 16 }}>
+          Failed to load data. Please try again.
         </div>
       )}
 

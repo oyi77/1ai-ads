@@ -30,7 +30,7 @@ export function AdsPage() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const { data, isLoading, refetch } = useQuery<{ ads?: Ad[]; data?: Ad[] } | Ad[]>({
+  const { data, isLoading, error, refetch } = useQuery<{ ads?: Ad[]; data?: Ad[] } | Ad[]>({
     queryKey: ['ads'],
     queryFn: () => api.get<{ ads?: Ad[]; data?: Ad[] } | Ad[]>('/ads'),
   });
@@ -66,6 +66,12 @@ export function AdsPage() {
           <button onClick={() => refetch()} style={outlineBtn}><RefreshCw size={14} /></button>
         </div>
       </div>
+
+      {error && (
+        <div style={{ padding: 12, background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', borderRadius: 8, color: '#f85149', fontSize: '0.85rem', marginBottom: 16 }}>
+          Failed to load data. Please try again.
+        </div>
+      )}
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
