@@ -1,4 +1,4 @@
-import Nango from '@nangohq/node';
+import { Nango } from '@nangohq/node';
 import config from '../config/index.js';
 import { createLogger } from '../lib/logger.js';
 

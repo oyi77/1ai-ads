@@ -148,6 +148,7 @@ export function createApp(params) {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+
   const auditRepo = new AuditLogRepository(db);
   repos.auditRepo = auditRepo;
   app.use(auditLog(auditRepo));

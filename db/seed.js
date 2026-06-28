@@ -437,6 +437,10 @@ export function seedDemoData(db) {
   }
 
   // ── Platform Accounts ─────────────────────────────────────────────────
+  // Look up the actual admin user ID (may differ from USERS.admin.id if DB pre-existed)
+  const adminUser = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
+  const adminUserId = adminUser ? adminUser.id : USERS.admin.id;
+  
   const insertPA = db.prepare(`
     INSERT OR IGNORE INTO platform_accounts (id, user_id, platform, account_name, credentials, is_active, health_status, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -444,7 +448,7 @@ export function seedDemoData(db) {
 
   let seededPas = 0;
   for (const pa of PLATFORM_ACCOUNTS) {
-    insertPA.run(pa.id, USERS.admin.id, pa.platform, pa.account_name, pa.credentials, pa.is_active, pa.health_status);
+    insertPA.run(pa.id, adminUserId, pa.platform, pa.account_name, pa.credentials, pa.is_active, pa.health_status);
     seededPas++;
   }
 
