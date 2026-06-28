@@ -2,7 +2,7 @@ import { safeFetch } from '../../lib/platform-client.js';
 import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
 import { ConfigurationError } from '../../lib/errors.js';
 
-const BASE = 'https://apple-searchads.apple.com/api/v5';
+const BASE = 'https://searchads.apple.com/api/v5';
 
 export class AppleAdsAPI extends BasePlatformApiClient {
   constructor(settingsRepo) {

@@ -2,7 +2,7 @@ import { safeFetch } from '../../lib/platform-client.js';
 import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
 import { ConfigurationError, PlatformError } from '../../lib/errors.js';
 
-const BASE = 'https://ads-api.spotify.com/v1';
+const BASE = 'https://api-partner.spotify.com/ads/v3';
 
 export class SpotifyAdsAPI extends BasePlatformApiClient {
   constructor(settingsRepo) {

@@ -2,7 +2,7 @@ import { safeFetch } from '../../lib/platform-client.js';
 import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
 import { ConfigurationError } from '../../lib/errors.js';
 
-const BASE = 'https://api.thedesk.com/v3';
+const BASE = 'https://api.thetradedesk.com/v3';
 
 export class TheTradeDeskAPI extends BasePlatformApiClient {
   constructor(settingsRepo) {
