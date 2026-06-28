@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type { CSSProperties } from 'react';
-import { DollarSign, TrendingUp, Activity, Megaphone } from 'lucide-react';
+import { DollarSign, TrendingUp, Activity, Megaphone, Wifi, WifiOff } from 'lucide-react';
 import { api } from '../lib/api';
 import { useRealtime } from '../hooks/useRealtime';
 
