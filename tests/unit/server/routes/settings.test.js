@@ -477,7 +477,7 @@ describe('Settings Router', () => {
       global.fetch = vi.fn(async () => ({
         json: async () => ({ error: { message: 'Invalid OAuth access token' } }),
       }));
-      const res = await request(app).post('/api/settings/accounts/connect-token').send({ access_token: 'bad-token' });
+      const res = await request(app).post('/api/settings/accounts/connect-token').send({ platform: 'meta', access_token: 'bad-token' });
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/Invalid token/);
     });
@@ -491,7 +491,7 @@ describe('Settings Router', () => {
       });
       settingsRepo.getAccounts.mockReturnValue([]);
 
-      const res = await request(app).post('/api/settings/accounts/connect-token').send({ access_token: 'valid-token' });
+      const res = await request(app).post('/api/settings/accounts/connect-token').send({ platform: 'meta', access_token: 'valid-token' });
       expect(res.status).toBe(200);
       expect(res.body.data.user_name).toBe('FB User');
       expect(settingsRepo.addAccount).toHaveBeenCalled();
@@ -499,7 +499,7 @@ describe('Settings Router', () => {
 
     it('returns 500 on fetch failure', async () => {
       global.fetch = vi.fn(async () => { throw new Error('Network error'); });
-      const res = await request(app).post('/api/settings/accounts/connect-token').send({ access_token: 'tok' });
+      const res = await request(app).post('/api/settings/accounts/connect-token').send({ platform: 'meta', access_token: 'tok' });
       expect(res.status).toBe(500);
       expect(res.body.error).toBe('Network error');
     });

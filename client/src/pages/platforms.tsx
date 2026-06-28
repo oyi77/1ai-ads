@@ -44,6 +44,14 @@ export function PlatformsPage() {
     },
   });
 
+  const disconnectMutation = useMutation({
+    mutationFn: (id: string) => api.del(`/settings/accounts/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['platforms'] });
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+    },
+  });
+
   const connectedList = Array.isArray(accounts) ? accounts : [];
 
   return (
@@ -85,12 +93,31 @@ export function PlatformsPage() {
                   <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 4 }}>{p.label}</h3>
                   <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{p.desc}</p>
                 </div>
-                <div style={{
-                  padding: '4px 10px', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600,
-                  background: existing ? 'rgba(52,211,153,0.1)' : 'rgba(139,146,168,0.1)',
-                  color: existing ? 'var(--green)' : 'var(--text-tertiary)',
-                }}>
-                  {existing ? `✅ ${existing.account_name || existing.platform}` : 'Not Connected'}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    padding: '4px 10px', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600,
+                    background: existing ? 'rgba(52,211,153,0.1)' : 'rgba(139,146,168,0.1)',
+                    color: existing ? 'var(--green)' : 'var(--text-tertiary)',
+                  }}>
+                    {existing ? `✅ ${existing.account_name || existing.platform}` : 'Not Connected'}
+                  </div>
+                  {existing && (
+                    <button
+                      onClick={() => disconnectMutation.mutate(existing.id)}
+                      disabled={disconnectMutation.isPending}
+                      style={{
+                        padding: '4px 8px',
+                        background: 'transparent',
+                        color: 'var(--error, #ef4444)',
+                        border: '1px solid var(--error, #ef4444)',
+                        borderRadius: 4,
+                        fontSize: '0.68rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Disconnect
+                    </button>
+                  )}
                 </div>
               </div>
 

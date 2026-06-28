@@ -1,5 +1,190 @@
 import { hashPassword } from '../server/lib/auth.js';
-import { v4 as uuid } from 'uuid';
+
+/**
+ * Stable demo IDs — deterministic so INSERT OR IGNORE deduplicates on re-seed.
+ * Using a human-readable format rather than random v4 UUIDs.
+ */
+
+// ── Users ──────────────────────────────────────────────────────────────────
+const USERS = {
+  admin: { id: 'demo-user-admin-00000000-0001', username: 'admin', email: 'admin@1ai-ads.test', role: 'admin', plan: 'pro' },
+  demo:  { id: 'demo-user-demo-00000000-0002', username: 'demo',  email: 'demo@1ai-ads.test',  role: 'user',  plan: 'free' },
+};
+
+// ── Campaigns ──────────────────────────────────────────────────────────────
+const CAMPAIGNS = [
+  {
+    id: 'demo-cmp-meta-summer-c01',
+    platform: 'meta', campaign_id: '238000000000001', name: 'Summer Collection Launch', status: 'ACTIVE',
+    budget: 5_000_000, spend: 2_500_000, revenue: 5_750_000,
+    impressions: 85_000, clicks: 2_550, conversions: 145, roas: 2.3,
+  },
+  {
+    id: 'demo-cmp-meta-flash-c02',
+    platform: 'meta', campaign_id: '238000000000002', name: 'Flash Sale Weekend', status: 'ACTIVE',
+    budget: 3_000_000, spend: 1_800_000, revenue: 4_500_000,
+    impressions: 62_000, clicks: 2_170, conversions: 98, roas: 2.5,
+  },
+  {
+    id: 'demo-cmp-meta-retarget-c03',
+    platform: 'meta', campaign_id: '238000000000003', name: 'Retargeting - Abandoned Cart', status: 'ACTIVE',
+    budget: 2_000_000, spend: 1_000_000, revenue: 3_000_000,
+    impressions: 18_000, clicks: 720, conversions: 52, roas: 3.0,
+  },
+  {
+    id: 'demo-cmp-google-brand-c04',
+    platform: 'google', campaign_id: '678000000000001', name: 'Brand Search - Running Shoes', status: 'ACTIVE',
+    budget: 4_000_000, spend: 2_000_000, revenue: 6_000_000,
+    impressions: 40_000, clicks: 2_400, conversions: 200, roas: 3.0,
+  },
+  {
+    id: 'demo-cmp-google-shopping-c05',
+    platform: 'google', campaign_id: '678000000000002', name: 'Shopping - Sportswear', status: 'PAUSED',
+    budget: 2_500_000, spend: 1_200_000, revenue: 1_800_000,
+    impressions: 30_000, clicks: 1_200, conversions: 60, roas: 1.5,
+  },
+  {
+    id: 'demo-cmp-google-display-c06',
+    platform: 'google', campaign_id: '678000000000003', name: 'Display Network - Prospecting', status: 'ACTIVE',
+    budget: 1_500_000, spend: 800_000, revenue: 1_600_000,
+    impressions: 120_000, clicks: 960, conversions: 38, roas: 2.0,
+  },
+  {
+    id: 'demo-cmp-tiktok-viral-c07',
+    platform: 'tiktok', campaign_id: '998000000000001', name: 'TikTok Viral Challenge', status: 'ACTIVE',
+    budget: 3_500_000, spend: 2_200_000, revenue: 3_300_000,
+    impressions: 250_000, clicks: 3_750, conversions: 88, roas: 1.5,
+  },
+  {
+    id: 'demo-cmp-tiktok-showcase-c08',
+    platform: 'tiktok', campaign_id: '998000000000002', name: 'Product Showcase', status: 'PAUSED',
+    budget: 2_000_000, spend: 1_500_000, revenue: 2_250_000,
+    impressions: 180_000, clicks: 2_700, conversions: 65, roas: 1.5,
+  },
+];
+
+// ── Ads — linked to campaigns via platform+campaign_id ─────────────────────
+const ADS = [
+  // Meta — Summer Collection
+  { id: 'demo-ad-meta-summer-a01', name: 'Summer Vibes - Image Ad',      product: 'Running Shoes',       target: 'Active Users, 18-35',  platform: 'meta', campaignId: 'demo-cmp-meta-summer-c01', status: 'active',    format: 'single_image',   content_model: 'hook_body_cta', hook: '☀️ Ready for summer run? Get 20% OFF on all running shoes!', body: 'Limited time offer on our best-selling summer collection. Lightweight, breathable, and ready for any terrain.', cta: 'Shop Now', tags: '["summer","running","shoes"]' },
+  { id: 'demo-ad-meta-summer-a02', name: 'Summer Vibes - Video Ad',      product: 'Running Shoes',       target: 'Runners, Marathon Prep', platform: 'meta', campaignId: 'demo-cmp-meta-summer-c01', status: 'active',    format: 'video',          content_model: 'hook_body_cta', hook: '🏃‍♂️ 30 seconds that will change your run forever!', body: 'See how our new cushioning technology absorbs impact and returns energy with every stride.', cta: 'Learn More', tags: '["video","running","summer"]' },
+  { id: 'demo-ad-meta-summer-a03', name: 'Summer Vibes - Carousel',      product: 'Active Wear',         target: 'Fitness Enthusiasts',  platform: 'meta', campaignId: 'demo-cmp-meta-summer-c01', status: 'active',    format: 'carousel',       content_model: 'hook_body_cta', hook: '🔥 3 looks, one summer — which one is yours?', body: 'Swipe through our curated summer activewear collection. Mix, match, and save up to 25%.', cta: 'Browse Collection', tags: '["carousel","activewear","summer"]' },
+  // Meta — Flash Sale
+  { id: 'demo-ad-meta-flash-a04',  name: 'Flash Sale - Urgency',          product: 'Sport Sandals',       target: 'Beach Goers, Travelers', platform: 'meta', campaignId: 'demo-cmp-meta-flash-c02', status: 'active',    format: 'single_image',   content_model: 'hook_body_cta', hook: '⏰ 12 HOURS LEFT! Up to 50% OFF sport sandals!', body: 'Flash sale ends tonight. Grab your favorite styles before they are gone. Free shipping on all orders.', cta: 'Shop Flash Sale', tags: '["flash-sale","sandals","urgent"]' },
+  { id: 'demo-ad-meta-flash-a05',  name: 'Flash Sale - Social Proof',     product: 'Water Bottles',       target: 'Gym Goers, 25-45',     platform: 'meta', campaignId: 'demo-cmp-meta-flash-c02', status: 'active',    format: 'single_image',   content_model: 'hook_body_cta', hook: '💧 10K+ sold this week! Why wait?', body: 'Join thousands of happy customers. Our insulated water bottle keeps drinks cold for 24 hours.', cta: 'Get Yours Now', tags: '["bestseller","water-bottle","flash-sale"]' },
+  // Meta — Retargeting
+  { id: 'demo-ad-meta-retarget-a06', name: 'Retarget - Still Thinking?',  product: 'Running Shoes',       target: 'Website Visitors, 30d',  platform: 'meta', campaignId: 'demo-cmp-meta-retarget-c03', status: 'active',    format: 'single_image',   content_model: 'hook_body_cta', hook: '👀 Still thinking about those running shoes?', body: 'Your cart is waiting! Complete your purchase now and enjoy free shipping + 10% off your first order.', cta: 'Complete Order', tags: '["retarget","cart","abandoned"]' },
+  // Google — Brand Search
+  { id: 'demo-ad-google-brand-a07', name: 'Brand Search - Headline',      product: 'Premium Sneakers',    target: 'Brand Keywords',       platform: 'google', campaignId: 'demo-cmp-google-brand-c04', status: 'active',    format: 'text',           content_model: 'hook_body_cta', hook: 'Official Store - Premium Sneakers', body: 'Shop the latest collection, direct from the manufacturer. 30-day return guarantee.', cta: 'Shop Now', tags: '["search","brand","sneakers"]' },
+  { id: 'demo-ad-google-brand-a08', name: 'Brand Search - Promotion',     product: 'Running Shoes',       target: 'Brand + Discount Keywords', platform: 'google', campaignId: 'demo-cmp-google-brand-c04', status: 'active',    format: 'text',           content_model: 'hook_body_cta', hook: 'Up to 40% OFF Running Shoes', body: 'Limited time promotion on our entire running collection. Free delivery above Rp 300K.', cta: 'Get Discount', tags: '["search","discount","running"]' },
+  // Google — Shopping
+  { id: 'demo-ad-google-shop-a09',  name: 'Shopping - Sport Shoes',       product: 'Sport Shoes - All',    target: 'Shopping Intent',      platform: 'google', campaignId: 'demo-cmp-google-shopping-c05', status: 'paused',    format: 'shopping',       content_model: 'hook_body_cta', hook: 'Sport Shoes - Compare Prices', body: 'Find your perfect fit with our wide selection of sport shoes from top brands.', cta: 'View Products', tags: '["shopping","shoes","sports"]' },
+  { id: 'demo-ad-google-shop-a10',  name: 'Shopping - Apparel',           product: 'Active Apparel',      target: 'Shopping Intent',      platform: 'google', campaignId: 'demo-cmp-google-shopping-c05', status: 'paused',    format: 'shopping',       content_model: 'hook_body_cta', hook: 'Active Apparel Collection', body: 'Premium activewear for men and women. Breathable fabrics, ergonomic design.', cta: 'Browse', tags: '["shopping","apparel","activewear"]' },
+  // Google — Display
+  { id: 'demo-ad-google-display-a11', name: 'Display - Prospecting',      product: 'Fitness Tracker',     target: 'Health & Fitness',     platform: 'google', campaignId: 'demo-cmp-google-display-c06', status: 'active',    format: 'image',          content_model: 'hook_body_cta', hook: '🏃 Track every step, sleep, and calorie.', body: 'Discover our smart fitness tracker. Water resistant, 14-day battery, heart rate monitoring.', cta: 'Learn More', tags: '["display","fitness","tracker"]' },
+  // TikTok — Viral
+  { id: 'demo-ad-tiktok-viral-a12', name: 'TikTok - Dance Challenge',     product: 'Running Shoes',       target: 'Gen Z, 16-24',         platform: 'tiktok', campaignId: 'demo-cmp-tiktok-viral-c07', status: 'active',    format: 'video',          content_model: 'hook_body_cta', hook: '🎵 Can you keep up? New dance challenge with our comfiest shoes!', body: 'Show us your moves wearing our spring collection. Best entries win Rp 1.000.000!', cta: 'Join Challenge', tags: '["tiktok","viral","challenge"]' },
+  { id: 'demo-ad-tiktok-viral-a13', name: 'TikTok - Unboxing',            product: 'Sneakers',            target: 'Sneakerheads, 18-30',  platform: 'tiktok', campaignId: 'demo-cmp-tiktok-viral-c07', status: 'active',    format: 'video',          content_model: 'hook_body_cta', hook: '📦 UNBOXING: These limited edition sneakers are FIRE! 🔥', body: 'First look at our newest collaboration. Only 500 pairs available — get yours before they sell out.', cta: 'Shop Limited Edition', tags: '["tiktok","unboxing","limited"]' },
+  // TikTok — Showcase
+  { id: 'demo-ad-tiktok-showcase-a14', name: 'TikTok - Product Demo',     product: 'Backpack',            target: 'College Students',     platform: 'tiktok', campaignId: 'demo-cmp-tiktok-showcase-c08', status: 'paused',    format: 'video',          content_model: 'hook_body_cta', hook: '🎒 Fit everything in this ONE backpack!', body: 'Ergonomic design with 32L capacity, USB charging port, and anti-theft pocket — perfect for campus.', cta: 'Buy Now', tags: '["tiktok","backpack","college"]' },
+  { id: 'demo-ad-tiktok-showcase-a15', name: 'TikTok - Testimonial',      product: 'Fitness Tracker',     target: 'Health Conscious',     platform: 'tiktok', campaignId: 'demo-cmp-tiktok-showcase-c08', status: 'paused',    format: 'video',          content_model: 'hook_body_cta', hook: '⭐ "Lost 5kg in a month using this!" - Real review', body: 'Real results from real customers. Our fitness tracker helped thousands reach their goals.', cta: 'Start Your Journey', tags: '["tiktok","testimonial","fitness"]' },
+];
+
+// ── Landing Pages ─────────────────────────────────────────────────────────
+const LANDING_PAGES = [
+  {
+    id: 'demo-lp-summer-campaign-01', name: 'Summer Collection Launch',
+    template: 'tpl_new_arrival', theme: 'light',
+    product_name: 'Running Shoes', price: 'Rp 299.000',
+    pain_points: '["Sweaty feet during runs","Shoes wear out too fast","Lack of arch support"]',
+    benefits: '["Breathable mesh fabric","Non-slip rubber outsole","Memory foam insole"]',
+    cta_primary: 'Shop Now', cta_secondary: 'Learn More',
+    wa_link: 'https://wa.me/628123456789?text=Summer%20Shoes', checkout_link: 'https://checkout.example.com/summer',
+    slug: 'summer-collection', is_published: 1, status: 'published',
+  },
+  {
+    id: 'demo-lp-flash-sale-02', name: 'Flash Sale Weekend',
+    template: 'tpl_flash_sale', theme: 'dark',
+    product_name: 'Sport Sandals', price: 'Rp 149.000',
+    pain_points: '["Boring footwear options","Uncomfortable for long walks","Poor quality materials"]',
+    benefits: '["Waterproof and durable","Ergonomic footbed","Lightweight design"]',
+    cta_primary: 'Get 50% OFF', cta_secondary: 'View Catalog',
+    wa_link: 'https://wa.me/628123456789?text=Flash%20Sale', checkout_link: 'https://checkout.example.com/flash',
+    slug: 'flash-sale-weekend', is_published: 1, status: 'published',
+  },
+  {
+    id: 'demo-lp-fitness-03', name: 'Free Fitness Consultation',
+    template: 'tpl_consultation_offer', theme: 'light',
+    product_name: 'Fitness Tracker', price: 'Rp 499.000',
+    pain_points: '["Cant track progress","Uncertain about workout plans","Lack of motivation"]',
+    benefits: '["24/7 heart rate monitoring","AI-powered workout suggestions","Weekly progress reports"]',
+    cta_primary: 'Book Free Session', cta_secondary: 'Learn More',
+    wa_link: 'https://wa.me/628123456789?text=Fitness%20Tracker', checkout_link: 'https://checkout.example.com/fitness',
+    slug: 'free-consultation', is_published: 1, status: 'published',
+  },
+  {
+    id: 'demo-lp-webinar-04', name: 'Digital Marketing Webinar',
+    template: 'tpl_webinar_signup', theme: 'dark',
+    product_name: 'Online Course Bundle', price: 'Rp 99.000',
+    pain_points: '["No sales coming in","Confused about ads","Wasting ad budget"]',
+    benefits: '["Step-by-step ad setup guide","Real case studies","Live Q&A session"]',
+    cta_primary: 'Reserve My Spot', cta_secondary: 'See Topics',
+    wa_link: 'https://wa.me/628123456789?text=Webinar', checkout_link: 'https://checkout.example.com/webinar',
+    slug: 'marketing-webinar', is_published: 0, status: 'draft',
+  },
+  {
+    id: 'demo-lp-brand-launch-05', name: 'Brand Launch - Sportswear Pro',
+    template: 'tpl_brand_launch', theme: 'dark',
+    product_name: 'Premium Sportswear', price: 'Rp 599.000',
+    pain_points: '["Low quality gear","Uncomfortable during workouts","Dull designs"]',
+    benefits: '["Premium moisture-wicking fabric","Sleek modern designs","Full satisfaction guarantee"]',
+    cta_primary: 'Be an Early Adopter', cta_secondary: 'See Collection',
+    wa_link: 'https://wa.me/628123456789?text=Brand%20Launch', checkout_link: 'https://checkout.example.com/brand',
+    slug: 'sportswear-launch', is_published: 1, status: 'published',
+  },
+];
+
+// ── Platform Accounts ──────────────────────────────────────────────────────
+const PLATFORM_ACCOUNTS = [
+  { id: 'demo-pa-meta-01',   platform: 'meta',   account_name: 'Meta Business - Demo Store',   credentials: '{"access_token":"demo-meta-token-abcdef123456","ad_account_id":"238000000000001"}', is_active: 1, health_status: 'ok' },
+  { id: 'demo-pa-google-01', platform: 'google', account_name: 'Google Ads - Demo Store',      credentials: '{"client_id":"demo-google-client-123","customer_id":"6780000000"}',              is_active: 1, health_status: 'ok' },
+];
+
+// ── Performance History (daily snapshots for last 7 days) ─────────────────
+function generatePerformanceHistory() {
+  const history = [];
+  const now = new Date();
+  for (let dayOffset = 7; dayOffset >= 1; dayOffset--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - dayOffset);
+    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+    const dayLabel = date.toISOString().slice(0, 10);
+
+    for (const cmp of CAMPAIGNS) {
+      const dailyFactor = 1 / 30;
+      const dailyImpressions = Math.round(cmp.impressions * dailyFactor * (0.8 + Math.random() * 0.4));
+      const dailyClicks = Math.round(dailyImpressions * (cmp.clicks / cmp.impressions) * (0.85 + Math.random() * 0.3));
+      const dailySpend = +(cmp.spend * dailyFactor * (0.85 + Math.random() * 0.3)).toFixed(0);
+      const dailyConversions = Math.round(cmp.conversions * dailyFactor * (0.8 + Math.random() * 0.4));
+      const ctr = dailyImpressions > 0 ? +((dailyClicks / dailyImpressions) * 100).toFixed(2) : 0;
+      const cpc = dailyClicks > 0 ? +(dailySpend / dailyClicks).toFixed(0) : 0;
+
+      history.push({
+        id: `demo-ph-${cmp.platform}-${dateStr}-${cmp.id.slice(-4)}`,
+        campaign_id: cmp.id,
+        snapshot_date: dayLabel,
+        platform: cmp.platform,
+        impressions: dailyImpressions,
+        clicks: dailyClicks,
+        spend: dailySpend,
+        conversions: dailyConversions,
+        ctr,
+        cpc,
+      });
+    }
+  }
+  return history;
+}
 
 export function seedTemplates(db) {
   const templates = [
@@ -196,19 +381,17 @@ export function seedTemplates(db) {
 export function seedUsers(db) {
   const passwordHash = hashPassword(process.env.ADMIN_PASSWORD || 'admin123');
 
-  // Create admin user if not exists
-  const adminId = uuid();
+  // Create admin user if not exists — stable ID for dedup
   db.prepare(`
     INSERT OR IGNORE INTO users (id, username, email, password_hash, role, plan, confirmed, created_at)
-    VALUES (?, ?, ?, ?, 'admin', 'pro', 1, CURRENT_TIMESTAMP)
-  `).run(adminId, 'admin', 'admin@1ai-ads.test', passwordHash);
+    VALUES (?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+  `).run(USERS.admin.id, USERS.admin.username, USERS.admin.email, passwordHash, USERS.admin.role, USERS.admin.plan);
 
   // Create demo user
-  const demoId = uuid();
   db.prepare(`
     INSERT OR IGNORE INTO users (id, username, email, password_hash, role, plan, confirmed, created_at)
-    VALUES (?, ?, ?, ?, 'user', 'free', 1, CURRENT_TIMESTAMP)
-  `).run(demoId, 'demo', 'demo@1ai-ads.test', passwordHash);
+    VALUES (?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+  `).run(USERS.demo.id, USERS.demo.username, USERS.demo.email, passwordHash, USERS.demo.role, USERS.demo.plan);
 
   console.log('Seeded demo users');
 }
@@ -217,31 +400,66 @@ export function seedDemoData(db) {
   seedTemplates(db);
   seedUsers(db);
 
-  // Seed demo ads — stable IDs so INSERT OR IGNORE deduplicates on re-seed
-  const DEMO_AD_ID = 'demo-ad-0000-0000-0000-summer-sale1';
-  db.prepare(`
-    INSERT OR IGNORE INTO ads (id, name, product, target, platform, format, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-  `).run(DEMO_AD_ID, 'Summer Sale', 'Running Shoes', 'Active Users', 'meta', 'single_image', 'active');
-
-  // Seed demo landing page — stable IDs so INSERT OR IGNORE deduplicates on re-seed
-  const DEMO_LANDING_ID = 'demo-lp-0000-0000-0000-summer-camp';
-  db.prepare(`
-    INSERT OR IGNORE INTO landing_pages (id, name, template, theme, product_name, price, pain_points, benefits, cta_primary, cta_secondary, wa_link, checkout_link, slug, is_published, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-  `).run(
-    DEMO_LANDING_ID, 'Summer Campaign', 'tpl_flash_sale', 'dark', 'Running Shoes', 'Rp 500.000',
-    '["Slow delivery", "High cost"]', '["Fast shipping", "Low price"]',
-    'Buy Now', 'Chat Us', 'https://wa.me/628123456789', 'https://checkout.example.com',
-    'summer-campaign', 1, 'published'
-  );
-
-  // Seed demo campaigns for analytics — stable IDs so INSERT OR IGNORE deduplicates on re-seed
-  const DEMO_CAMPAIGN_ID = 'demo-cmp-0000-0000-0000-summer-c01';
-  db.prepare(`
+  // ── Campaigns ─────────────────────────────────────────────────────────
+  const insertCampaign = db.prepare(`
     INSERT OR IGNORE INTO campaigns (id, platform, campaign_id, name, status, budget, spend, revenue, impressions, clicks, conversions, roas, last_synced, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-  `).run(DEMO_CAMPAIGN_ID, 'meta', '238000000000000', 'Summer Campaign', 'active', 1000000, 500000, 1500000, 50000, 2500, 100, 3.0);
+  `);
 
-  console.log('Seeded demo data: templates, users, ads, landing pages, campaigns');
+  let seededCampaigns = 0;
+  for (const c of CAMPAIGNS) {
+    insertCampaign.run(c.id, c.platform, c.campaign_id, c.name, c.status, c.budget, c.spend, c.revenue, c.impressions, c.clicks, c.conversions, c.roas);
+    seededCampaigns++;
+  }
+
+  // ── Ads ───────────────────────────────────────────────────────────────
+  const insertAd = db.prepare(`
+    INSERT OR IGNORE INTO ads (id, name, product, target, platform, format, content_model, hook, body, cta, tags, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `);
+
+  let seededAds = 0;
+  for (const a of ADS) {
+    insertAd.run(a.id, a.name, a.product, a.target, a.platform, a.format, a.content_model, a.hook, a.body, a.cta, a.tags, a.status);
+    seededAds++;
+  }
+
+  // ── Landing Pages ─────────────────────────────────────────────────────
+  const insertLP = db.prepare(`
+    INSERT OR IGNORE INTO landing_pages (id, name, template, theme, product_name, price, pain_points, benefits, cta_primary, cta_secondary, wa_link, checkout_link, slug, is_published, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `);
+
+  let seededLps = 0;
+  for (const lp of LANDING_PAGES) {
+    insertLP.run(lp.id, lp.name, lp.template, lp.theme, lp.product_name, lp.price, lp.pain_points, lp.benefits, lp.cta_primary, lp.cta_secondary, lp.wa_link, lp.checkout_link, lp.slug, lp.is_published, lp.status);
+    seededLps++;
+  }
+
+  // ── Platform Accounts ─────────────────────────────────────────────────
+  const insertPA = db.prepare(`
+    INSERT OR IGNORE INTO platform_accounts (id, user_id, platform, account_name, credentials, is_active, health_status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `);
+
+  let seededPas = 0;
+  for (const pa of PLATFORM_ACCOUNTS) {
+    insertPA.run(pa.id, USERS.admin.id, pa.platform, pa.account_name, pa.credentials, pa.is_active, pa.health_status);
+    seededPas++;
+  }
+
+  // ── Performance History ───────────────────────────────────────────────
+  const insertPH = db.prepare(`
+    INSERT OR IGNORE INTO performance_history (id, campaign_id, snapshot_date, platform, impressions, clicks, spend, conversions, ctr, cpc)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const history = generatePerformanceHistory();
+  let seededPh = 0;
+  for (const h of history) {
+    insertPH.run(h.id, h.campaign_id, h.snapshot_date, h.platform, h.impressions, h.clicks, h.spend, h.conversions, h.ctr, h.cpc);
+    seededPh++;
+  }
+
+  console.log(`Seeded demo data: ${seededCampaigns} campaigns, ${seededAds} ads, ${seededLps} landing pages, ${seededPas} platform accounts, ${seededPh} performance history rows, 15 templates, 2 users`);
 }

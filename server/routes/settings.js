@@ -240,100 +240,131 @@ export function createSettingsRouter(settingsRepo, llmClient, db, metaApi, _dail
 
   // --- SIMPLE TOKEN CONNECT (no OAuth needed) ---
   router.post('/accounts/connect-token', async (req, res) => {
-    const { access_token, account_name } = req.body;
-    if (!access_token) {
-      return res.status(400).json({ success: false, error: 'access_token is required' });
+    const { platform, access_token, account_name } = req.body;
+    if (!platform || !access_token) {
+      return res.status(400).json({ success: false, error: 'platform and access_token are required' });
     }
 
     try {
-      // Verify token works
-      const meRes = await fetch(`https://graph.facebook.com/${config.metaApiVersion}/me?access_token=${encodeURIComponent(access_token)}&fields=id,name`);
-      const meData = await meRes.json();
-      if (meData.error) {
-        return res.status(400).json({ success: false, error: `Invalid token: ${meData.error.message}` });
-      }
-
-      const userName = account_name || meData.name || 'Meta Account';
-      
-      // Auto-detect ad accounts
-      let adAccounts = [];
-      try {
-        const accRes = await fetch(`https://graph.facebook.com/${config.metaApiVersion}/me/adaccounts?access_token=${encodeURIComponent(access_token)}&fields=name,account_id,account_status,currency&limit=50`);
-        const accData = await accRes.json();
-        if (accData.data) {
-          adAccounts = accData.data.filter(a => a.account_status === 1).map(a => ({
-            id: `act_${a.account_id}`,
-            name: a.name,
-            account_id: a.account_id,
-            currency: a.currency,
-            status: 'active'
-          }));
+      if (platform === 'meta') {
+        // Meta: verify token via Facebook Graph API + discover ad accounts
+        const meRes = await fetch(`https://graph.facebook.com/${config.metaApiVersion}/me?access_token=${encodeURIComponent(access_token)}&fields=id,name`);
+        const meData = await meRes.json();
+        if (meData.error) {
+          return res.status(400).json({ success: false, error: `Invalid token: ${meData.error.message}` });
         }
-      } catch (e) {
-        log.error('Failed to detect ad accounts', { error: e.message });
-      }
 
-      // Save main account with token
-      const existingAccounts = settingsRepo.getAccounts('meta');
-      const existing = existingAccounts.find(a => 
-        a.account_name === userName || 
-        (a.credentials?.access_token === access_token)
-      );
+        const userName = account_name || meData.name || 'Meta Account';
 
-      let mainId;
-      if (existing) {
-        settingsRepo.updateAccount(existing.id, { 
-          credentials: { access_token, user_name: meData.name, user_id: meData.id } 
-        });
-        mainId = existing.id;
-      } else {
-        const id = uuid();
-        settingsRepo.addAccount({
-          id,
-          user_id: req.user?.id || 'admin',
-          platform: 'meta',
-          account_name: userName,
-          credentials: { access_token, user_name: meData.name, user_id: meData.id },
-          is_active: existingAccounts.length === 0 ? 1 : 0
-        });
-        mainId = id;
-      }
-      // Optionally mirror credentials to Nango
-      if (nangoAuth && nangoAuth.enabled) {
-        nangoAuth.storeCredentials(req.user?.id || 'admin', 'meta', { access_token }).catch(err => {
-          log.error('Failed to mirror credentials to Nango', { error: err.message });
-        });
-      }
+        // Auto-detect ad accounts
+        let adAccounts = [];
+        try {
+          const accRes = await fetch(`https://graph.facebook.com/${config.metaApiVersion}/me/adaccounts?access_token=${encodeURIComponent(access_token)}&fields=name,account_id,account_status,currency&limit=50`);
+          const accData = await accRes.json();
+          if (accData.data) {
+            adAccounts = accData.data.filter(a => a.account_status === 1).map(a => ({
+              id: `act_${a.account_id}`,
+              name: a.name,
+              account_id: a.account_id,
+              currency: a.currency,
+              status: 'active'
+            }));
+          }
+        } catch (e) {
+          log.error('Failed to detect ad accounts', { error: e.message });
+        }
 
-      // Also save each ad account
-      let connectedCount = 0;
-      for (const adAcc of adAccounts) {
-        const adExisting = existingAccounts.find(a => a.account_name === adAcc.id || a.account_name === adAcc.name);
-        if (!adExisting) {
+        // Save main account with token
+        const existingAccounts = settingsRepo.getAccounts('meta');
+        const existing = existingAccounts.find(a =>
+          a.account_name === userName ||
+          (a.credentials?.access_token === access_token)
+        );
+
+        let mainId;
+        if (existing) {
+          settingsRepo.updateAccount(existing.id, {
+            credentials: { access_token, user_name: meData.name, user_id: meData.id }
+          });
+          mainId = existing.id;
+        } else {
+          const id = uuid();
           settingsRepo.addAccount({
-            id: uuid(),
+            id,
             user_id: req.user?.id || 'admin',
             platform: 'meta',
-            account_name: adAcc.id,
-            credentials: { access_token, ad_account_id: adAcc.account_id, ad_account_name: adAcc.name },
-            is_active: 0
+            account_name: userName,
+            credentials: { access_token, user_name: meData.name, user_id: meData.id },
+            is_active: existingAccounts.length === 0 ? 1 : 0
           });
-          connectedCount++;
+          mainId = id;
         }
-      }
+        // Optionally mirror credentials to Nango
+        if (nangoAuth && nangoAuth.enabled) {
+          nangoAuth.storeCredentials(req.user?.id || 'admin', 'meta', { access_token }).catch(err => {
+            log.error('Failed to mirror credentials to Nango', { error: err.message });
+          });
+        }
 
-      res.json({
-        success: true,
-        message: `Connected as ${meData.name}! Found ${adAccounts.length} ad accounts, ${connectedCount} new connected.`,
-        data: {
-          id: mainId,
-          user_name: meData.name,
-          user_id: meData.id,
-          ad_accounts_count: adAccounts.length,
-          new_connected: connectedCount,
-          ad_accounts: adAccounts
+        // Also save each ad account
+        let connectedCount = 0;
+        for (const adAcc of adAccounts) {
+          const adExisting = existingAccounts.find(a => a.account_name === adAcc.id || a.account_name === adAcc.name);
+          if (!adExisting) {
+            settingsRepo.addAccount({
+              id: uuid(),
+              user_id: req.user?.id || 'admin',
+              platform: 'meta',
+              account_name: adAcc.id,
+              credentials: { access_token, ad_account_id: adAcc.account_id, ad_account_name: adAcc.name },
+              is_active: 0
+            });
+            connectedCount++;
+          }
         }
-      });
+
+        res.json({
+          success: true,
+          message: `Connected as ${meData.name}! Found ${adAccounts.length} ad accounts, ${connectedCount} new connected.`,
+          data: {
+            id: mainId,
+            platform: 'meta',
+            user_name: meData.name,
+            user_id: meData.id,
+            ad_accounts_count: adAccounts.length,
+            new_connected: connectedCount,
+            ad_accounts: adAccounts
+          }
+        });
+      } else {
+        // Non-Meta platforms: save token directly (no generic platform validation)
+        const existingAccounts = settingsRepo.getAccounts(platform);
+        const displayName = account_name || `${platform.charAt(0).toUpperCase() + platform.slice(1)} Account`;
+        const existing = existingAccounts.find(a =>
+          a.account_name === displayName ||
+          (a.credentials?.access_token === access_token)
+        );
+
+        if (existing) {
+          settingsRepo.updateAccount(existing.id, { credentials: { access_token } });
+        } else {
+          const id = uuid();
+          settingsRepo.addAccount({
+            id,
+            user_id: req.user?.id || 'admin',
+            platform,
+            account_name: displayName,
+            credentials: { access_token },
+            is_active: existingAccounts.length === 0 ? 1 : 0
+          });
+        }
+
+        res.json({
+          success: true,
+          message: `Connected ${platform} account successfully!`,
+          data: { platform }
+        });
+      }
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }

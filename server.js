@@ -22,9 +22,9 @@ validateConfig();
 backupDatabase(config.dbPath, __dirname);
 
 const db = createDatabase(config.dbPath);
-if (process.env.NODE_ENV !== 'production' && process.env.SEED_DEMO_DATA === 'true') {
-  seedDemoData(db);
-}
+// Seed demo data on first run (INSERT OR IGNORE deduplicates on re-seed)
+// Uses OR IGNORE so it's safe in all environments
+seedDemoData(db);
 
 const llmClient = new LLMClient();
 const mcpClient = new MCPClientManager();

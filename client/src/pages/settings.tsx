@@ -12,10 +12,20 @@ interface PlatformAccount {
   created_at: string;
 }
 
+const PLATFORMS = [
+  { key: 'meta', label: 'Meta (Facebook/Instagram)', color: '#1877F2', desc: 'Facebook & Instagram ads, audiences, and insights.' },
+  { key: 'google', label: 'Google Ads', color: '#4285F4', desc: 'Search, Display, YouTube, and Shopping campaigns.' },
+  { key: 'tiktok', label: 'TikTok Ads', color: '#000000', desc: 'TikTok For Business ad management.' },
+  { key: 'linkedin', label: 'LinkedIn Ads', color: '#0A66C2', desc: 'B2B advertising on LinkedIn.' },
+  { key: 'twitter', label: 'Twitter/X Ads', color: '#1DA1F2', desc: 'Promoted tweets and campaigns on X.' },
+  { key: 'snapchat', label: 'Snapchat Ads', color: '#FFFC00', desc: 'Snap Ads and Story Ads.' },
+  { key: 'pinterest', label: 'Pinterest Ads', color: '#E60023', desc: 'Promoted Pins and shopping ads.' },
+  { key: 'microsoft', label: 'Microsoft Ads', color: '#00A4EF', desc: 'Bing search and audience ads.' },
+];
+
 export function SettingsPage() {
   const queryClient = useQueryClient();
-  const [metaToken, setMetaToken] = useState('');
-  const [showTokenInput, setShowTokenInput] = useState(false);
+  const [tokenInputs, setTokenInputs] = useState<Record<string, string>>({});
 
   const { data: accounts, isLoading } = useQuery<PlatformAccount[]>({
     queryKey: ['settings', 'accounts'],
@@ -23,12 +33,11 @@ export function SettingsPage() {
   });
 
   const connectMutation = useMutation({
-    mutationFn: (token: string) =>
-      api.post('/settings/accounts/connect-token', { platform: 'meta', access_token: token }),
+    mutationFn: ({ platform, token }: { platform: string; token: string }) =>
+      api.post('/settings/accounts/connect-token', { platform, access_token: token }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings', 'accounts'] });
-      setMetaToken('');
-      setShowTokenInput(false);
+      setTokenInputs({});
     },
   });
 
@@ -37,6 +46,8 @@ export function SettingsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings', 'accounts'] }),
   });
 
+  const connectedList = Array.isArray(accounts) ? accounts : [];
+
   return (
     <div>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 8 }}>Settings</h1>
@@ -44,93 +55,124 @@ export function SettingsPage() {
         Manage your account and integrations
       </p>
 
-      {/* Meta Access Token Section */}
+      {/* Platform Connections */}
       <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 24, marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div>
-            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Key size={14} style={{ color: 'var(--accent)' }} />
-              Meta Access Token
-            </h3>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 4 }}>
-              Paste your Facebook/Meta long-lived access token to connect your ad accounts.
-            </p>
-          </div>
-          <button
-            onClick={() => setShowTokenInput(!showTokenInput)}
-            style={{
-              padding: '8px 16px',
-              background: showTokenInput ? 'transparent' : 'var(--accent)',
-              color: showTokenInput ? 'var(--text-secondary)' : 'var(--bg-deep)',
-              border: showTokenInput ? '1px solid var(--border)' : 'none',
-              borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem',
-            }}
-          >
-            {showTokenInput ? 'Cancel' : 'Add Token'}
-          </button>
-        </div>
+        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Key size={14} style={{ color: 'var(--accent)' }} />
+          Platform Connections
+        </h3>
 
-        {showTokenInput && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div>
-              <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
-                Access Token
-              </label>
-              <input
-                type="password"
-                placeholder="Paste your EAA... token here"
-                value={metaToken}
-                onChange={e => setMetaToken(e.target.value)}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {PLATFORMS.map(p => {
+            const existing = connectedList.find(a => a.platform === p.key);
+            const token = tokenInputs[p.key] || '';
+
+            return (
+              <div
+                key={p.key}
                 style={{
-                  width: '100%', padding: '10px 14px',
-                  background: 'var(--bg-deep)', color: 'var(--text-primary)',
-                  border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.85rem',
-                  fontFamily: 'var(--font-mono)',
-                }}
-              />
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => connectMutation.mutate(metaToken)}
-                disabled={!metaToken.trim() || connectMutation.isPending}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '8px 16px', background: 'var(--accent)', color: 'var(--bg-deep)',
-                  border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem',
-                  opacity: !metaToken.trim() ? 0.5 : 1,
+                  background: 'var(--bg-surface, #1a1a2e)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  padding: '14px 16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
                 }}
               >
-                {connectMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
-                Connect Meta Account
-              </button>
-            </div>
-            {connectMutation.isError && (
-              <p style={{ color: 'var(--error, #ef4444)', fontSize: '0.8rem', marginTop: 4 }}>
-                Failed to connect: {(connectMutation.error as Error).message}
-              </p>
-            )}
-            {connectMutation.isSuccess && (
-              <p style={{ color: 'var(--green)', fontSize: '0.8rem', marginTop: 4 }}>
-                ✅ Meta account connected successfully!
-              </p>
-            )}
-            <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
-              Get your token from <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>Facebook Graph API Explorer</a>.
-              Select your app, generate a long-lived token with <code>ads_management</code>, <code>ads_read</code>, and <code>business_management</code> permissions.
-            </p>
-          </div>
-        )}
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <div style={{
+                      width: 10, height: 10, borderRadius: '50%',
+                      background: existing ? 'var(--green, #34d399)' : 'var(--text-tertiary)',
+                    }} />
+                    <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{p.label}</span>
+                    {existing && (
+                      <span style={{ fontSize: '0.72rem', color: 'var(--green, #34d399)' }}>
+                        {existing.account_name || 'Connected'}
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', margin: 0 }}>
+                    {p.desc}
+                  </p>
+
+                  {!existing && (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+                      <input
+                        type="password"
+                        placeholder={`Paste ${p.label.split(' ')[0]} access token`}
+                        value={token}
+                        onChange={e => setTokenInputs(prev => ({ ...prev, [p.key]: e.target.value }))}
+                        style={{
+                          flex: 1, maxWidth: 400,
+                          padding: '8px 12px',
+                          background: 'var(--bg-deep)',
+                          color: 'var(--text-primary)',
+                          border: '1px solid var(--border)',
+                          borderRadius: 6,
+                          fontSize: '0.8rem',
+                          fontFamily: 'var(--font-mono)',
+                        }}
+                      />
+                      <button
+                        onClick={() => connectMutation.mutate({ platform: p.key, token })}
+                        disabled={!token || connectMutation.isPending}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          padding: '8px 14px',
+                          background: 'var(--accent)',
+                          color: 'var(--bg-deep)',
+                          border: 'none',
+                          borderRadius: 6,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          fontSize: '0.8rem',
+                          opacity: !token ? 0.5 : 1,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {connectMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
+                        Connect
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {existing && (
+                  <button
+                    onClick={() => disconnectMutation.mutate(existing.id)}
+                    disabled={disconnectMutation.isPending}
+                    style={{
+                      padding: '4px 12px',
+                      background: 'transparent',
+                      color: 'var(--error, #ef4444)',
+                      border: '1px solid var(--error, #ef4444)',
+                      borderRadius: 6,
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      marginLeft: 12,
+                    }}
+                  >
+                    Disconnect
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Connected Accounts */}
+      {/* Connected Accounts Summary */}
       <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 24 }}>
         <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 16 }}>Connected Accounts</h3>
 
         {isLoading ? (
           <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Loading accounts...</p>
-        ) : accounts && accounts.length > 0 ? (
+        ) : connectedList.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {accounts.map((account) => (
+            {connectedList.map((account) => (
               <div
                 key={account.id}
                 style={{
@@ -142,7 +184,7 @@ export function SettingsPage() {
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{account.account_name || account.platform}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-                    {account.platform} · {account.health_status === 'ok' ? '✅ Healthy' : `⚠️ ${account.health_status}`}
+                    {account.platform} · {account.health_status === 'ok' ? 'Healthy' : `⚠️ ${account.health_status}`}
                   </div>
                 </div>
                 <button
@@ -161,7 +203,7 @@ export function SettingsPage() {
           </div>
         ) : (
           <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>
-            No accounts connected. Add your Meta access token above to get started.
+            No accounts connected. Add your access tokens above to get started.
           </p>
         )}
       </div>
