@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CSSProperties } from 'react';
 import { Loader2, Download } from 'lucide-react';
 import { api } from '../lib/api';
+import { ScrollableTable, StickyTh, HoverTr } from '../components/ScrollableTable';
 
 interface Campaign {
   id: string;
@@ -102,12 +103,12 @@ export function CampaignsPage() {
       )}
 
       {/* Campaigns Table */}
-      <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem' }}>
+      <ScrollableTable>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem', minWidth: 800 }}>
           <thead>
             <tr>
               {['Name', 'Platform', 'Status', 'Budget', 'Spend', 'Impressions', 'Clicks', 'ROAS'].map(h => (
-                <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border)' }}>{h}</th>
+                <StickyTh key={h}>{h}</StickyTh>
               ))}
             </tr>
           </thead>
@@ -127,8 +128,8 @@ export function CampaignsPage() {
                 </td>
               </tr>
             ) : (
-              campaigns.map(c => (
-                <tr key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
+              campaigns.map((c, i) => (
+                <HoverTr key={c.id} even={i % 2 === 0}>
                   <td style={{ padding: '10px 16px', fontWeight: 600 }}>{c.name || c.id}</td>
                   <td style={{ padding: '10px 16px', color: 'var(--text-secondary)' }}>{c.platform || '—'}</td>
                   <td style={{ padding: '10px 16px' }}>
@@ -143,12 +144,12 @@ export function CampaignsPage() {
                   <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{(c.impressions || 0).toLocaleString()}</td>
                   <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{(c.clicks || 0).toLocaleString()}</td>
                   <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)', color: (c.roas || 0) >= 1 ? 'var(--green)' : 'var(--red)' }}>{(c.roas || 0).toFixed(2)}x</td>
-                </tr>
+                </HoverTr>
               ))
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollableTable>
     </div>
   );
 }

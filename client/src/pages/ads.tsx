@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Megaphone, Play, Pause, Trash2, RefreshCw, Filter } from 'lucide-react';
 import { api } from '../lib/api';
 import type { CSSProperties } from 'react';
+import { ScrollableTable, StickyTh, HoverTr } from '../components/ScrollableTable';
 
 interface Ad {
   id: string;
@@ -96,18 +97,18 @@ export function AdsPage() {
           </p>
         </div>
       ) : (
-        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem' }}>
+        <ScrollableTable>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem', minWidth: 800 }}>
             <thead>
               <tr>
                 {['Name', 'Status', 'Impressions', 'Clicks', 'Spend', 'CTR', 'CPC', 'Actions'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border)' }}>{h}</th>
+                  <StickyTh key={h}>{h}</StickyTh>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.map(ad => (
-                <tr key={ad.id} style={{ borderBottom: '1px solid var(--border)' }}>
+              {filtered.map((ad, i) => (
+                <HoverTr key={ad.id} even={i % 2 === 0}>
                   <td style={{ padding: '10px 16px', fontWeight: 600 }}>{ad.name || ad.id}</td>
                   <td style={{ padding: '10px 16px' }}>
                     <span style={{
@@ -129,11 +130,11 @@ export function AdsPage() {
                       <Trash2 size={12} />
                     </button>
                   </td>
-                </tr>
+                </HoverTr>
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollableTable>
       )}
     </div>
   );

@@ -125,7 +125,7 @@ export function Shell() {
       </aside>
 
       {/* Main */}
-      <main style={{ flex: 1, overflow: 'auto' }}>
+      <main style={{ flex: 1, overflow: 'auto', height: '100vh' }}>
         {/* Mobile header */}
         {isMobile && (
           <div style={{
@@ -141,7 +141,7 @@ export function Shell() {
             <span style={{ fontWeight: 700, fontSize: '0.9rem', marginLeft: 12, color: 'var(--accent)' }}>AdForge</span>
           </div>
         )}
-        <div style={{ padding: '24px 32px', maxWidth: 1400 }}>
+        <div style={{ padding: isMobile ? '16px' : '20px 24px', maxWidth: 1400 }}>
           <Outlet />
         </div>
       </main>

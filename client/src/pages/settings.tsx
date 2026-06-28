@@ -30,6 +30,85 @@ const inputStyle = {
   fontFamily: 'var(--font-mono)',
 };
 
+function PlatformCard({ p, existing, token, onTokenChange, onConnect, isPending }: {
+  p: { key: string; label: string; desc: string };
+  existing: PlatformAccount | undefined;
+  token: string;
+  onTokenChange: (v: string) => void;
+  onConnect: () => void;
+  isPending: boolean;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: 'var(--bg-surface, #1a1a2e)',
+        border: '1px solid',
+        borderColor: hovered ? 'var(--accent)' : 'var(--border)',
+        borderRadius: 8,
+        padding: '14px 16px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        transition: 'border-color 0.15s, box-shadow 0.15s',
+        boxShadow: hovered ? '0 2px 8px rgba(99,102,241,0.1)' : 'none',
+      }}
+    >
+      <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <div style={{
+            width: 10, height: 10, borderRadius: '50%',
+            background: existing ? 'var(--green, #34d399)' : 'var(--text-tertiary)',
+          }} />
+          <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{p.label}</span>
+          {existing && (
+            <span style={{ fontSize: '0.72rem', color: 'var(--green, #34d399)' }}>
+              {existing.account_name || 'Connected'}
+            </span>
+          )}
+        </div>
+        <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', margin: 0 }}>
+          {p.desc}
+        </p>
+
+        {!existing && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+            <input
+              type="password"
+              placeholder={`Paste ${p.label.split(' ')[0]} access token`}
+              value={token}
+              onChange={e => onTokenChange(e.target.value)}
+              style={inputStyle}
+            />
+            <button
+              onClick={onConnect}
+              disabled={!token || isPending}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px',
+                background: 'var(--accent)',
+                color: 'var(--bg-deep)',
+                border: 'none',
+                borderRadius: 6,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                opacity: !token ? 0.5 : 1,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {isPending ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
+              Connect
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function SettingsPage() {
   const queryClient = useQueryClient();
   const [tokenInputs, setTokenInputs] = useState<Record<string, string>>({});
@@ -94,88 +173,32 @@ export function SettingsPage() {
           Platform Connections
         </h3>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
           {PLATFORMS.map(p => {
             const existing = connectedList.find(a => a.platform === p.key);
-            const token = tokenInputs[p.key] || '';
-
             return (
-              <div
-                key={p.key}
-                style={{
-                  background: 'var(--bg-surface, #1a1a2e)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 8,
-                  padding: '14px 16px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <div style={{
-                      width: 10, height: 10, borderRadius: '50%',
-                      background: existing ? 'var(--green, #34d399)' : 'var(--text-tertiary)',
-                    }} />
-                    <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{p.label}</span>
-                    {existing && (
-                      <span style={{ fontSize: '0.72rem', color: 'var(--green, #34d399)' }}>
-                        {existing.account_name || 'Connected'}
-                      </span>
-                    )}
-                  </div>
-                  <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', margin: 0 }}>
-                    {p.desc}
-                  </p>
-
-                  {!existing && (
-                    <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
-                      <input
-                        type="password"
-                        placeholder={`Paste ${p.label.split(' ')[0]} access token`}
-                        value={token}
-                        onChange={e => setTokenInputs(prev => ({ ...prev, [p.key]: e.target.value }))}
-                        style={inputStyle}
-                      />
-                      <button
-                        onClick={() => connectMutation.mutate({ platform: p.key, token })}
-                        disabled={!token || connectMutation.isPending}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 6,
-                          padding: '8px 14px',
-                          background: 'var(--accent)',
-                          color: 'var(--bg-deep)',
-                          border: 'none',
-                          borderRadius: 6,
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          fontSize: '0.8rem',
-                          opacity: !token ? 0.5 : 1,
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {connectMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
-                        Connect
-                      </button>
-                    </div>
-                  )}
-                </div>
-
+              <div key={p.key}>
+                <PlatformCard
+                  p={p}
+                  existing={existing}
+                  token={tokenInputs[p.key] || ''}
+                  onTokenChange={(v) => setTokenInputs(prev => ({ ...prev, [p.key]: v }))}
+                  onConnect={() => connectMutation.mutate({ platform: p.key, token: tokenInputs[p.key] || '' })}
+                  isPending={connectMutation.isPending}
+                />
                 {existing && (
                   <button
                     onClick={() => disconnectMutation.mutate(existing.id)}
                     disabled={disconnectMutation.isPending}
                     style={{
-                      padding: '4px 12px',
+                      marginTop: 6, padding: '4px 12px',
                       background: 'transparent',
                       color: 'var(--error, #ef4444)',
                       border: '1px solid var(--error, #ef4444)',
                       borderRadius: 6,
-                      fontSize: '0.75rem',
+                      fontSize: '0.72rem',
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
-                      marginLeft: 12,
                     }}
                   >
                     Disconnect
@@ -194,7 +217,7 @@ export function SettingsPage() {
         {isLoading ? (
           <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Loading accounts...</p>
         ) : connectedList.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
             {connectedList.map((account) => (
               <div
                 key={account.id}

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { CSSProperties } from 'react';
 import { Download, DollarSign, TrendingUp, Activity, BarChart3 } from 'lucide-react';
 import { api } from '../lib/api';
+import { ScrollableTable, StickyTh, HoverTr } from '../components/ScrollableTable';
 
 interface ReportingData {
   totals: { spend: number; revenue: number; impressions: number; clicks: number; conversions: number; overallROAS: number };
@@ -45,7 +46,7 @@ export function ReportingPage() {
 
       {error && <p style={{ color: 'var(--error, #ef4444)', fontSize: '0.85rem', marginBottom: 16 }}>Failed to load: {(error as Error).message}</p>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
         {metrics.map(m => (
           <div key={m.label} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: m.color }} />
@@ -57,27 +58,27 @@ export function ReportingPage() {
         ))}
       </div>
 
-      <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+      <ScrollableTable>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: '0.85rem' }}>By Platform</div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem', minWidth: 800 }}>
           <thead><tr>{['Platform', 'Spend', 'Revenue', 'ROAS', 'Impressions', 'Clicks'].map(h => (
-            <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>{h}</th>
+            <StickyTh key={h}>{h}</StickyTh>
           ))}</tr></thead>
           <tbody>
-            {platforms.map(p => (
-              <tr key={p.platform} style={{ borderBottom: '1px solid var(--border)' }}>
+            {platforms.map((p, i) => (
+              <HoverTr key={p.platform} even={i % 2 === 0}>
                 <td style={{ padding: '10px 16px', fontWeight: 600, textTransform: 'capitalize' }}>{p.platform}</td>
                 <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>Rp {(p.spend || 0).toLocaleString('id-ID')}</td>
                 <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>Rp {(p.revenue || 0).toLocaleString('id-ID')}</td>
                 <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{(p.roas || 0).toFixed(2)}x</td>
                 <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{(p.impressions || 0).toLocaleString()}</td>
                 <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{(p.clicks || 0).toLocaleString()}</td>
-              </tr>
+              </HoverTr>
             ))}
             {platforms.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', padding: 24, color: 'var(--text-tertiary)' }}>No platform data</td></tr>}
           </tbody>
         </table>
-      </div>
+      </ScrollableTable>
     </div>
   );
 }

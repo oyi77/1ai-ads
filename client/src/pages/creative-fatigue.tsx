@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Zap } from 'lucide-react';
 import { api } from '../lib/api';
+import { ScrollableTable, StickyTh, HoverTr } from '../components/ScrollableTable';
 
 interface FatiguedCreative {
   creative_id: string;
@@ -105,16 +106,16 @@ export function CreativeFatiguePage() {
       )}
 
       {/* Table */}
-      <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10 }}>
+      <ScrollableTable>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
           <AlertTriangle size={14} style={{ color: 'var(--amber)' }} />
           Fatigued Creatives
         </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem', minWidth: 800 }}>
           <thead>
             <tr>
               {['Campaign', 'Platform', 'Severity', 'CTR Drop', 'Frequency', 'Days', 'Signals', 'Action'].map(h => (
-                <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border)' }}>{h}</th>
+                <StickyTh key={h}>{h}</StickyTh>
               ))}
             </tr>
           </thead>
@@ -126,8 +127,8 @@ export function CreativeFatiguePage() {
             ) : fatigued.length === 0 ? (
               <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--green)' }}>No fatigued creatives detected</td></tr>
             ) : (
-              fatigued.map(c => (
-                <tr key={c.creative_id} style={{ borderBottom: '1px solid var(--border)' }}>
+              fatigued.map((c, i) => (
+                <HoverTr key={c.creative_id} even={i % 2 === 0}>
                   <td style={{ padding: '10px 16px', fontWeight: 600 }}>{c.campaign_name || c.creative_id}</td>
                   <td style={{ padding: '10px 16px', color: 'var(--text-secondary)' }}>{c.platform || '—'}</td>
                   <td style={{ padding: '10px 16px' }}>
@@ -137,17 +138,17 @@ export function CreativeFatiguePage() {
                   <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{c.frequency?.toFixed(1) ?? '—'}</td>
                   <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{c.days_running ?? '—'}</td>
                   <td style={{ padding: '10px 16px', maxWidth: 200 }}>
-                    {(c.signals || []).slice(0, 2).map((s, i) => (
-                      <span key={i} style={{ display: 'inline-block', padding: '1px 6px', borderRadius: 3, background: 'rgba(139,146,168,0.1)', color: 'var(--text-secondary)', fontSize: '0.68rem', marginRight: 4, marginBottom: 2 }}>{s}</span>
+                    {(c.signals || []).slice(0, 2).map((s, j) => (
+                      <span key={j} style={{ display: 'inline-block', padding: '1px 6px', borderRadius: 3, background: 'rgba(139,146,168,0.1)', color: 'var(--text-secondary)', fontSize: '0.68rem', marginRight: 4, marginBottom: 2 }}>{s}</span>
                     ))}
                   </td>
                   <td style={{ padding: '10px 16px', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{c.recommended_action || '—'}</td>
-                </tr>
+                </HoverTr>
               ))
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollableTable>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trophy, FlaskConical } from 'lucide-react';
 import { api } from '../lib/api';
+import { StickyTh, HoverTr } from '../components/ScrollableTable';
 
 interface Variant {
   id: string;
@@ -180,32 +181,38 @@ export function ABTestsPage() {
                     )}
                   </div>
                 </div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem' }}>
-                  <thead>
-                    <tr>
-                      {['Variant', 'Impressions', 'Clicks', 'Conversions', 'CTR', 'Spend'].map(h => (
-                        <th key={h} style={{ textAlign: 'left', padding: '10px 20px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border)' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(test.variants || []).map(v => (
-                      <tr key={v.id} style={{ borderBottom: '1px solid var(--border)', background: test.winner_id === v.id ? 'rgba(52,211,153,0.04)' : undefined }}>
-                        <td style={{ padding: '10px 20px', fontWeight: 600 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            {test.winner_id === v.id && <Trophy size={12} style={{ color: 'var(--green)' }} />}
-                            {v.name || v.id}
-                          </div>
-                        </td>
-                        <td style={{ padding: '10px 20px', fontFamily: 'var(--font-mono)' }}>{(v.impressions || 0).toLocaleString()}</td>
-                        <td style={{ padding: '10px 20px', fontFamily: 'var(--font-mono)' }}>{(v.clicks || 0).toLocaleString()}</td>
-                        <td style={{ padding: '10px 20px', fontFamily: 'var(--font-mono)' }}>{(v.conversions || 0).toLocaleString()}</td>
-                        <td style={{ padding: '10px 20px', fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{(v.ctr || 0).toFixed(2)}%</td>
-                        <td style={{ padding: '10px 20px', fontFamily: 'var(--font-mono)' }}>Rp {(v.spend || 0).toLocaleString('id-ID')}</td>
+                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem', minWidth: 600 }}>
+                    <thead>
+                      <tr>
+                        {['Variant', 'Impressions', 'Clicks', 'Conversions', 'CTR', 'Spend'].map(h => (
+                          <StickyTh key={h} style={{ padding: '10px 20px' }}>{h}</StickyTh>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {(test.variants || []).map((v, vi) => (
+                        <HoverTr
+                          key={v.id}
+                          even={vi % 2 === 0}
+                          style={{ background: test.winner_id === v.id ? 'rgba(52,211,153,0.04)' : undefined }}
+                        >
+                          <td style={{ padding: '10px 20px', fontWeight: 600 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              {test.winner_id === v.id && <Trophy size={12} style={{ color: 'var(--green)' }} />}
+                              {v.name || v.id}
+                            </div>
+                          </td>
+                          <td style={{ padding: '10px 20px', fontFamily: 'var(--font-mono)' }}>{(v.impressions || 0).toLocaleString()}</td>
+                          <td style={{ padding: '10px 20px', fontFamily: 'var(--font-mono)' }}>{(v.clicks || 0).toLocaleString()}</td>
+                          <td style={{ padding: '10px 20px', fontFamily: 'var(--font-mono)' }}>{(v.conversions || 0).toLocaleString()}</td>
+                          <td style={{ padding: '10px 20px', fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{(v.ctr || 0).toFixed(2)}%</td>
+                          <td style={{ padding: '10px 20px', fontFamily: 'var(--font-mono)' }}>Rp {(v.spend || 0).toLocaleString('id-ID')}</td>
+                        </HoverTr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
                 {test.confidence != null && (
                   <div style={{ padding: '8px 20px', fontSize: '0.72rem', color: 'var(--text-tertiary)', borderTop: '1px solid var(--border)' }}>
                     Statistical confidence: <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{test.confidence.toFixed(1)}%</span> &middot; Metric: {test.metric}

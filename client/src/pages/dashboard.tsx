@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
+import { useState, useCallback } from 'react';
 import type { CSSProperties } from 'react';
 import { DollarSign, TrendingUp, Activity, Megaphone, Wifi, WifiOff } from 'lucide-react';
 import { api } from '../lib/api';
 import { useRealtime } from '../hooks/useRealtime';
+import { ScrollableTable, StickyTh, HoverTr } from '../components/ScrollableTable';
 
 interface Campaign {
   id: string;
@@ -13,6 +15,38 @@ interface Campaign {
   roas: number;
   impressions: number;
   clicks: number;
+}
+
+function MetricCard({ m, isLoading }: { m: { label: string; value: string; icon: React.ElementType; color: string }; isLoading: boolean }) {
+  const [hovered, setHovered] = useState(false);
+  const Icon = m.icon;
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border)',
+        borderRadius: 10,
+        padding: 20,
+        position: 'relative',
+        overflow: 'hidden',
+        transition: 'transform 0.2s, box-shadow 0.2s',
+        transform: hovered ? 'translateY(-2px)' : 'none',
+        boxShadow: hovered ? '0 4px 12px rgba(0,0,0,0.15)' : 'none',
+        cursor: 'default',
+      }}
+    >
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: m.color }} />
+      <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <Icon size={14} style={{ color: m.color }} />
+        {m.label}
+      </div>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.8rem', fontWeight: 700, marginTop: 8, letterSpacing: '-0.02em' }}>
+        {isLoading ? '—' : m.value}
+      </div>
+    </div>
+  );
 }
 
 export function DashboardPage() {
@@ -63,32 +97,23 @@ export function DashboardPage() {
       )}
 
       {/* Metric Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
         {metrics.map(m => (
-          <div key={m.label} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: m.color }} />
-            <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <m.icon size={14} style={{ color: m.color }} />
-              {m.label}
-            </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.8rem', fontWeight: 700, marginTop: 8, letterSpacing: '-0.02em' }}>
-              {isLoading ? '—' : m.value}
-            </div>
-          </div>
+          <MetricCard key={m.label} m={m} isLoading={isLoading} />
         ))}
       </div>
 
       {/* Campaigns Table */}
-      <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10 }}>
+      <ScrollableTable>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between' }}>
           <span>Top Campaigns by Spend</span>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', fontWeight: 400 }}>{campaigns.length} total</span>
         </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem', minWidth: 800 }}>
           <thead>
             <tr>
               {['Name', 'Status', 'Spend', 'Revenue', 'Impressions', 'Clicks', 'ROAS'].map(h => (
-                <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border)' }}>{h}</th>
+                <StickyTh key={h}>{h}</StickyTh>
               ))}
             </tr>
           </thead>
@@ -98,8 +123,8 @@ export function DashboardPage() {
             ) : campaigns.length === 0 ? (
               <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--text-tertiary)' }}>No campaigns yet</td></tr>
             ) : (
-              campaigns.slice(0, 15).map(c => (
-                <tr key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
+              campaigns.slice(0, 15).map((c, i) => (
+                <HoverTr key={c.id} even={i % 2 === 0}>
                   <td style={{ padding: '10px 16px', fontWeight: 600 }}>{c.name || c.id}</td>
                   <td style={{ padding: '10px 16px' }}>
                     <span style={{
@@ -113,12 +138,12 @@ export function DashboardPage() {
                   <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{(c.impressions || 0).toLocaleString()}</td>
                   <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{(c.clicks || 0).toLocaleString()}</td>
                   <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)', color: (Number(c.roas) || 0) >= 1 ? 'var(--green)' : 'var(--red)' }}>{(Number(c.roas) || 0).toFixed(2)}x</td>
-                </tr>
+                </HoverTr>
               ))
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollableTable>
     </div>
   );
 }

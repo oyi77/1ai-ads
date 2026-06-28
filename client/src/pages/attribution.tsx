@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { BarChart3, Link2, TrendingUp } from 'lucide-react';
 import { api } from '../lib/api';
+import { ScrollableTable, StickyTh, HoverTr } from '../components/ScrollableTable';
 
 interface AttributionSummary {
   total_conversions: number;
@@ -117,15 +118,15 @@ export function AttributionPage() {
       </div>
 
       {/* Attribution matches table */}
-      <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10 }}>
+      <ScrollableTable>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Link2 size={14} style={{ color: 'var(--green)' }} /> Conversion Matches
         </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem', minWidth: 800 }}>
           <thead>
             <tr>
               {['Campaign', 'Source', 'Medium', 'UTM Campaign', 'Type', 'Value', 'Touchpoints', 'Date'].map(h => (
-                <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border)' }}>{h}</th>
+                <StickyTh key={h}>{h}</StickyTh>
               ))}
             </tr>
           </thead>
@@ -135,8 +136,8 @@ export function AttributionPage() {
             ) : matches.length === 0 ? (
               <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--text-tertiary)' }}>No attribution matches</td></tr>
             ) : (
-              matches.map(m => (
-                <tr key={m.id} style={{ borderBottom: '1px solid var(--border)' }}>
+              matches.map((m, i) => (
+                <HoverTr key={m.id} even={i % 2 === 0}>
                   <td style={{ padding: '10px 16px', fontWeight: 600 }}>{m.campaign_name || '—'}</td>
                   <td style={{ padding: '10px 16px', color: 'var(--accent)' }}>{m.utm_source || '—'}</td>
                   <td style={{ padding: '10px 16px', color: 'var(--text-secondary)' }}>{m.utm_medium || '—'}</td>
@@ -147,12 +148,12 @@ export function AttributionPage() {
                   <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>Rp {(m.conversion_value || 0).toLocaleString('id-ID')}</td>
                   <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>{m.touchpoints ?? '—'}</td>
                   <td style={{ padding: '10px 16px', color: 'var(--text-tertiary)', fontSize: '0.72rem' }}>{m.attributed_at ? new Date(m.attributed_at).toLocaleDateString() : '—'}</td>
-                </tr>
+                </HoverTr>
               ))
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollableTable>
     </div>
   );
 }
