@@ -10,7 +10,7 @@
  */
 
 import { Router } from 'express';
-import { PLATFORM_REGISTRY } from '../platforms/registry.js';
+import { PLATFORM_REGISTRY } from '../platforms/index.js';
 import { createGenericPlatformRouter } from './platform-generic.js';
 import { requireAuth } from '../middleware/auth.js';
 
