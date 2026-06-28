@@ -1,3 +1,47 @@
+## [1.3.0] - 2026-06-28
+
+### Added
+- **Open source SDK adoption**: `facebook-nodejs-business-sdk` (Meta), `google-ads-api` (Google), `@nangohq/node` (Nango OAuth)
+- **Nango OAuth layer**: centralized token management (optional, env-gated via `NANGO_SECRET_KEY`)
+- **ESLint flat config**: migrated from `.eslintrc.json` to `eslint.config.js` for ESLint v10
+- **308 new unit tests** across 20 new test files (coverage 53% → 70%+)
+- **Error states** added to 7 frontend pages (dashboard, campaigns, ads, competitors, audience-intelligence, creative-fatigue, trending)
+- **AI Configuration section** in Settings page (endpoint, model, test connection)
+- **Comprehensive demo data seeding**: 8 campaigns, 15 ads, 5 landing pages, 2 platform accounts, 56 performance history rows
+- **Multi-platform account connection**: Settings page now supports Meta, Google, TikTok, LinkedIn, Twitter, Snapchat, Pinterest, Microsoft
+
+### Fixed
+- **CRITICAL**: `routes/capi.js` called non-existent `monitorQuality()` → fixed to `checkHealth()`
+- **CRITICAL**: `routes/agency.js` — 3 wrong-signature service calls fixed
+- **CRITICAL**: 7 frontend broken API paths fixed (ab-tests, drafts, audience-intelligence, attribution, reporting)
+- **HIGH**: `routes/campaigns.js` — `GET /sync/ads` route shadowed by `GET /:id`
+- **HIGH**: `services/batch-service.js` — access token removed from URL query string (security)
+- **HIGH**: `services/tiktok-api.js` — duplicate `_post` method removed
+- **HIGH**: `services/webhook-processor.js` — stub event handlers now implement actual DB updates
+- **HIGH**: `services/fatigue-detector.js` — R² calculation bug (ssTot undefined)
+- **HIGH**: `services/creative-scorer.js` — variable shadowing (hook vs _hook)
+- **HIGH**: `services/base-scraper.js` — proxy support implemented via undici.ProxyAgent
+- **HIGH**: Frontend missing error states on 8 pages
+- **HIGH**: Frontend landing-pages missing product_name field
+- **HIGH**: Frontend widgets toggle had no onClick handler
+- `server.js` — seed data now runs in all environments (was gated behind NODE_ENV !== 'production')
+- `nango-auth.js` — fixed import to use named export
+- `meta-api.js` — removed dead logger line
+- Systemd service config fixed (removed EnvironmentFile that caused exit-code 127)
+- Removed all dead imports across frontend pages
+
+### Changed
+- **169 ESLint diagnostics → 0**: eqeqeq (7), prefer-const (14), no-console (49), no-unused-vars (98), no-undef (1)
+- Seed data wrapped in `BEGIN IMMEDIATE TRANSACTION` for WAL atomicity
+- Systemd service uses NVM Node.js binary instead of system `/usr/bin/node`
+- `.eslintrc.json` removed (replaced by `eslint.config.js`)
+
+### Infrastructure
+- Production seed data now runs on startup (INSERT OR IGNORE is safe)
+- Systemd `EnvironmentFile` removed (caused parsing issues with .env format)
+- SPA rebuilt with all frontend fixes
+
+
 # Changelog
 
 ## [1.2.0] - 2026-06-27
