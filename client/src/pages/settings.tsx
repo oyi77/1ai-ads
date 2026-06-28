@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link2, Loader2, Key, User, Bot } from 'lucide-react';
+import { Link2, Loader2, Key, User, Bot, Save } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface PlatformAccount {
@@ -10,6 +10,12 @@ interface PlatformAccount {
   is_active: boolean;
   health_status: string;
   created_at: string;
+}
+
+interface AiConfigData {
+  url: string;
+  model: string;
+  apiKey: string;
 }
 
 const PLATFORMS = [
@@ -23,9 +29,22 @@ const PLATFORMS = [
   { key: 'microsoft', label: 'Microsoft Ads', color: '#00A4EF', desc: 'Bing search and audience ads.' },
 ];
 
+const inputStyle = {
+  flex: 1, maxWidth: 400,
+  padding: '8px 12px',
+  background: 'var(--bg-deep)',
+  color: 'var(--text-primary)',
+  border: '1px solid var(--border)',
+  borderRadius: 6,
+  fontSize: '0.8rem',
+  fontFamily: 'var(--font-mono)',
+};
+
 export function SettingsPage() {
   const queryClient = useQueryClient();
   const [tokenInputs, setTokenInputs] = useState<Record<string, string>>({});
+  const [aiForm, setAiForm] = useState<AiConfigData>({ url: '', model: '', apiKey: '' });
+  const [aiInitialized, setAiInitialized] = useState(false);
 
   const { data: accounts, isLoading } = useQuery<PlatformAccount[]>({
     queryKey: ['settings', 'accounts'],
@@ -46,17 +65,29 @@ export function SettingsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings', 'accounts'] }),
   });
 
-  const { data: aiConfig } = useQuery<{ success: boolean; data: { url: string; model: string; apiKey: string } }>({
+  const { data: aiConfig } = useQuery<{ success: boolean; data: AiConfigData }>({
     queryKey: ['settings', 'ai'],
-    queryFn: () => api.get('/settings/ai'),
+    queryFn: () => api.get<{ success: boolean; data: AiConfigData }>('/settings/ai'),
+  });
+
+  // Initialize form from fetched config (once)
+  if (aiConfig?.data && !aiInitialized) {
+    setAiForm({ url: aiConfig.data.url || '', model: aiConfig.data.model || '', apiKey: '' });
+    setAiInitialized(true);
+  }
+
+  const saveAiMutation = useMutation({
+    mutationFn: () => api.put('/settings/ai', aiForm),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings', 'ai'] });
+    },
   });
 
   const testConnectionMutation = useMutation({
-    mutationFn: () => api.post('/settings/ai/test-connection', {}),
+    mutationFn: () => api.post('/settings/ai/test-connection', aiForm),
   });
 
   const ai = aiConfig?.data;
-
   const connectedList = Array.isArray(accounts) ? accounts : [];
 
   return (
@@ -115,16 +146,7 @@ export function SettingsPage() {
                         placeholder={`Paste ${p.label.split(' ')[0]} access token`}
                         value={token}
                         onChange={e => setTokenInputs(prev => ({ ...prev, [p.key]: e.target.value }))}
-                        style={{
-                          flex: 1, maxWidth: 400,
-                          padding: '8px 12px',
-                          background: 'var(--bg-deep)',
-                          color: 'var(--text-primary)',
-                          border: '1px solid var(--border)',
-                          borderRadius: 6,
-                          fontSize: '0.8rem',
-                          fontFamily: 'var(--font-mono)',
-                        }}
+                        style={inputStyle}
                       />
                       <button
                         onClick={() => connectMutation.mutate({ platform: p.key, token })}
@@ -219,29 +241,57 @@ export function SettingsPage() {
         )}
       </div>
 
-      {/* AI Configuration */}
+      {/* AI Configuration — Editable */}
       <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 24, marginTop: 16 }}>
         <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Bot size={14} style={{ color: 'var(--accent)' }} />
           AI Configuration
         </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Endpoint URL</span>
-            <span style={{ fontSize: '0.85rem', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{ai?.url || '—'}</span>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Endpoint URL */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Endpoint URL</label>
+            <input
+              type="text"
+              placeholder={ai?.url || 'https://api.example.com/v1'}
+              value={aiForm.url}
+              onChange={e => setAiForm(prev => ({ ...prev, url: e.target.value }))}
+              style={inputStyle}
+            />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Model</span>
-            <span style={{ fontSize: '0.85rem', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{ai?.model || '—'}</span>
+
+          {/* Model */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Model</label>
+            <input
+              type="text"
+              placeholder={ai?.model || 'gpt-4o-mini'}
+              value={aiForm.model}
+              onChange={e => setAiForm(prev => ({ ...prev, model: e.target.value }))}
+              style={inputStyle}
+            />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>API Key</span>
-            <span style={{ fontSize: '0.85rem', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{ai?.apiKey ? '••••••••' : 'Not configured'}</span>
+
+          {/* API Key */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
+              API Key {ai?.apiKey && ai.apiKey !== '••••••••' ? '(configured)' : '(not set)'}
+            </label>
+            <input
+              type="password"
+              placeholder="Enter new API key to update"
+              value={aiForm.apiKey}
+              onChange={e => setAiForm(prev => ({ ...prev, apiKey: e.target.value }))}
+              style={inputStyle}
+            />
           </div>
-          <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+
+          {/* Action Buttons */}
+          <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <button
-              onClick={() => testConnectionMutation.mutate()}
-              disabled={testConnectionMutation.isPending}
+              onClick={() => saveAiMutation.mutate()}
+              disabled={saveAiMutation.isPending}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '8px 14px',
@@ -254,15 +304,49 @@ export function SettingsPage() {
                 fontSize: '0.8rem',
               }}
             >
+              {saveAiMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              Save Configuration
+            </button>
+
+            <button
+              onClick={() => testConnectionMutation.mutate()}
+              disabled={testConnectionMutation.isPending}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px',
+                background: 'transparent',
+                color: 'var(--text-secondary)',
+                border: '1px solid var(--border)',
+                borderRadius: 6,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+              }}
+            >
               {testConnectionMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Bot size={14} />}
               Test Connection
             </button>
+
+            {saveAiMutation.isSuccess && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--green)' }}>✓ Saved</span>
+            )}
+            {saveAiMutation.isError && (
+              <span style={{ fontSize: '0.8rem', color: '#f85149' }}>✗ Save failed</span>
+            )}
             {testConnectionMutation.isSuccess && (
-              <span style={{ fontSize: '0.8rem', color: 'var(--green)' }}>✓ Connection successful</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--green)' }}>✓ Connection OK</span>
             )}
             {testConnectionMutation.isError && (
-              <span style={{ fontSize: '0.8rem', color: '#f85149' }}>✗ {(testConnectionMutation.error as Error).message}</span>
+              <span style={{ fontSize: '0.8rem', color: '#f85149' }}>✗ Connection failed</span>
             )}
+          </div>
+
+          {/* Current Config Summary */}
+          <div style={{ marginTop: 8, padding: '10px 14px', background: 'var(--bg-surface, #1a1a2e)', borderRadius: 8, border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: 4 }}>Currently active:</div>
+            <div style={{ fontSize: '0.8rem', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+              {ai?.url || '(default)'} · {ai?.model || '(default)'} · Key: {ai?.apiKey && ai.apiKey !== '••••••••' ? '••••••••' : 'not set'}
+            </div>
           </div>
         </div>
       </div>
