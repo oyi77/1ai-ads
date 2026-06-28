@@ -149,6 +149,7 @@ export function createApp(params) {
   });
 
 
+
   const auditRepo = new AuditLogRepository(db);
   repos.auditRepo = auditRepo;
   app.use(auditLog(auditRepo));
