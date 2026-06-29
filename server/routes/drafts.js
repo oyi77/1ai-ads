@@ -6,9 +6,18 @@ export function createDraftRouter(draftService) {
   // List drafts
   router.get('/', async (req, res) => {
     try {
-      const status = req.query.status || 'pending';
-      const drafts = await draftService.listDrafts(status);
-      res.json({ success: true, data: drafts });
+      const { status: filterStatus } = req.query;
+      const drafts = await draftService.listDrafts(filterStatus || null);
+      const data = drafts.map(d => ({
+        id: d.id,
+        name: d.summary,
+        type: d.type,
+        content: d.details_json ? JSON.parse(d.details_json) : {},
+        status: d.status,
+        created_at: d.created_at,
+        updated_at: d.updated_at,
+      }));
+      res.json({ success: true, data });
     } catch (err) {
       res.status(err.status || 500).json({ success: false, error: err.message });
     }

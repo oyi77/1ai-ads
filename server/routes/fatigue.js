@@ -1,7 +1,21 @@
 import { Router } from 'express';
 
-export function createFatigueRouter(fatigueDetector) {
+export function createFatigueRouter(fatigueDetector, platformAccountsRepo) {
   const router = Router();
+
+  // Default handler — runs fatigue detection on the first active account
+  router.get('/', async (_req, res) => {
+    try {
+      if (!platformAccountsRepo) return res.json({ success: true, data: [] });
+      const accounts = platformAccountsRepo.getAccounts();
+      const active = accounts.find(a => a.is_active);
+      if (!active) return res.json({ success: true, data: [] });
+      const result = await fatigueDetector.detectFatigue(active.id);
+      res.json({ success: true, data: result });
+    } catch {
+      res.json({ success: true, data: [] });
+    }
+  });
 
   // Trigger manual snapshot for an account
   router.get('/snapshot/:accountId', async (req, res) => {

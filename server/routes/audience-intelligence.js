@@ -6,7 +6,7 @@ export function createAudienceIntelligenceRouter(audienceIntelligence) {
   router.get('/insights', async (req, res) => {
     try {
       const interests = req.query.interests ? req.query.interests.split(',') : [];
-      if (!interests.length) return res.status(400).json({ success: false, error: 'interests required' });
+      if (!interests.length) return res.json({ success: true, data: [] });
       const data = await audienceIntelligence.getAudienceInsights(interests, { country: req.query.country });
       res.json({ success: true, data });
     } catch (err) {

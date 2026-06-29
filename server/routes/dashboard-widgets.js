@@ -1,5 +1,19 @@
 import { Router } from 'express';
 
+/** Transform a raw DB widget row into the flat shape the frontend expects. */
+function toFrontend(w) {
+  const cfg = typeof w.config === 'string' ? JSON.parse(w.config) : (w.config || {});
+  return {
+    id: w.id,
+    name: cfg.name || w.widget_type,
+    description: cfg.description || '',
+    type: cfg.type || w.widget_type,
+    enabled: cfg.enabled !== false,
+    position: w.position,
+    size: w.size,
+  };
+}
+
 export function createDashboardWidgetsRouter(widgetsRepo) {
   const router = Router();
 
@@ -7,8 +21,8 @@ export function createDashboardWidgetsRouter(widgetsRepo) {
   router.get('/', async (req, res) => {
     try {
       const userId = req.user?.id || req.userId;
-      const result = widgetsRepo.getByUser(userId);
-      res.json({ success: true, data: result });
+      const rows = widgetsRepo.getByUser(userId);
+      res.json({ success: true, data: rows.map(toFrontend) });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -23,20 +37,37 @@ export function createDashboardWidgetsRouter(widgetsRepo) {
         return res.status(400).json({ success: false, error: 'widgetType is required' });
       }
       const result = widgetsRepo.create({ userId, widgetType, config, position, size });
-      res.status(201).json({ success: true, data: result });
+      res.status(201).json({ success: true, data: toFrontend(result) });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
   });
 
-  // Update a widget
+  // Update a widget — merges name/description/type/enabled into config JSON
   router.put('/:id', async (req, res) => {
     try {
-      const result = widgetsRepo.update(req.params.id, req.body);
+      const { name, description, type, enabled, ...rest } = req.body;
+      const updateData = { ...rest };
+
+      // If frontend-sent fields are present, merge them into config
+      if (name !== undefined || description !== undefined || type !== undefined || enabled !== undefined) {
+        const userId = req.user?.id || req.userId;
+        const existing = widgetsRepo.getByUser(userId).find(w => w.id === req.params.id);
+        if (existing) {
+          const cfg = typeof existing.config === 'string' ? JSON.parse(existing.config) : (existing.config || {});
+          if (name !== undefined) cfg.name = name;
+          if (description !== undefined) cfg.description = description;
+          if (type !== undefined) cfg.type = type;
+          if (enabled !== undefined) cfg.enabled = enabled;
+          updateData.config = cfg;
+        }
+      }
+
+      const result = widgetsRepo.update(req.params.id, updateData);
       if (!result) {
         return res.status(404).json({ success: false, error: 'Widget not found' });
       }
-      res.json({ success: true, data: result });
+      res.json({ success: true, data: toFrontend(result) });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -56,8 +87,8 @@ export function createDashboardWidgetsRouter(widgetsRepo) {
         }
       }
       const userId = req.user?.id || req.userId;
-      const result = widgetsRepo.getByUser(userId);
-      res.json({ success: true, data: result });
+      const rows = widgetsRepo.getByUser(userId);
+      res.json({ success: true, data: rows.map(toFrontend) });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }

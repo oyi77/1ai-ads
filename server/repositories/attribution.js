@@ -43,6 +43,8 @@ export class AttributionRepository {
   }
 
   getDashboard(campaign_id) {
+    const whereClause = campaign_id ? 'WHERE campaign_id = ?' : '';
+    const params = campaign_id ? [campaign_id] : [];
     const row = this.db.prepare(`
       SELECT
         COALESCE(SUM(ad_spend), 0) AS total_ad_spend,
@@ -50,11 +52,11 @@ export class AttributionRepository {
         COUNT(*) AS total_attributions,
         CASE WHEN SUM(ad_spend) > 0 THEN ROUND(SUM(shopee_revenue) / SUM(ad_spend), 2) ELSE 0 END AS roas
       FROM attributions
-      WHERE campaign_id = ?
-    `).get(campaign_id);
+      ${whereClause}
+    `).get(...params);
 
     return {
-      campaign_id,
+      campaign_id: campaign_id || 'all',
       total_ad_spend: row.total_ad_spend,
       total_revenue: row.total_revenue,
       total_attributions: row.total_attributions,

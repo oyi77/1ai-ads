@@ -9,8 +9,7 @@ export function createAttributionRouter(attributionService, attributionRepo) {
 
   router.get('/dashboard', async (req, res) => {
     const { campaign_id } = req.query;
-    if (!campaign_id) return res.status(400).json({ error: 'campaign_id required' });
-    res.json(await attributionService.getAttributionDashboard(campaign_id));
+    res.json(await attributionService.getAttributionDashboard(campaign_id || null));
   });
 
   router.get('/matches', (req, res) => {

@@ -6,9 +6,13 @@ export function createAudienceRouter(metaApi) {
   const svc = new AudienceService(metaApi);
 
   router.get('/', async (req, res) => {
-    const actId = req.query.account_id;
-    if (!actId) return res.status(400).json({ error: 'account_id required' });
-    res.json(await svc.getAudiences(actId));
+    try {
+      const actId = req.query.account_id;
+      if (!actId) return res.json([]);
+      res.json(await svc.getAudiences(actId));
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   router.post('/', async (req, res) => {

@@ -467,7 +467,111 @@ export function seedDemoData(db) {
     seededPh++;
   }
 
-    console.log(`Seeded demo data: ${seededCampaigns} campaigns, ${seededAds} ads, ${seededLps} landing pages, ${seededPas} platform accounts, ${seededPh} performance history rows, 15 templates, 2 users`);
+  // ── Approval Drafts ────────────────────────────────────────────────────
+  let seededDrafts = 0;
+  const insertDraft = db.prepare(`
+    INSERT OR IGNORE INTO approval_drafts (id, type, summary, details_json, proposed_by, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `);
+  insertDraft.run('demo-draft-flash-sale-0001', 'campaign', 'Flash Sale Campaign Draft',
+    JSON.stringify({ campaign_name: 'Flash Sale Weekend', budget: 5000000, platforms: ['meta'], duration: '3 days' }),
+    'ai', 'pending');
+  seededDrafts++;
+  insertDraft.run('demo-draft-new-product-002', 'ad', 'New Product Launch Ad',
+    JSON.stringify({ product_name: 'Sport Watch Pro', hook: 'Time meets performance', target_audience: 'Athletes, 25-45' }),
+    'ai', 'pending');
+  seededDrafts++;
+  insertDraft.run('demo-draft-retarget-00003', 'campaign', 'Retargeting Strategy Update',
+    JSON.stringify({ strategy: 'Abandoned cart retargeting', lookback_window: '14 days', budget_increase: '20%' }),
+    'ai', 'approved');
+  seededDrafts++;
+
+  // ── A/B Tests ───────────────────────────────────────────────────────────
+  let seededAbTests = 0;
+  const insertAbTest = db.prepare(`
+    INSERT OR IGNORE INTO ab_tests (id, name, campaign_id, status, metric, confidence, winner_id, config, started_at, stopped_at, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `);
+  const insertAbVariant = db.prepare(`
+    INSERT OR IGNORE INTO ab_test_variants (id, test_id, ad_id, creative_id, name, hook, body, variant_index, impressions, clicks, spend, conversions, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+  `);
+  insertAbTest.run('demo-abt-hook-headline-01', 'Hook Headline Test', 'demo-cmp-meta-summer-c01',
+    'running', 'ctr', 0.95, null, '{}', new Date(Date.now() - 5 * 86400000).toISOString(), null);
+  insertAbVariant.run('demo-abv-hook-benefit-01', 'demo-abt-hook-headline-01', null, null,
+    'Benefit-focused hook', 'Get 20% better performance with our shoes', 'Engineered for speed and comfort.', 0, 12500, 450, 180000, 22);
+  insertAbVariant.run('demo-abv-hook-curious-02', 'demo-abt-hook-headline-01', null, null,
+    'Curiosity hook', 'Why are elite runners switching to these shoes?', 'The secret is in the sole technology.', 1, 12800, 520, 185000, 28);
+  seededAbTests++;
+  insertAbTest.run('demo-abt-cta-button-002', 'CTA Button Test', 'demo-cmp-meta-flash-c02',
+    'completed', 'conversion_rate', 0.98, 'demo-abv-cta-variant-a1', '{}', new Date(Date.now() - 14 * 86400000).toISOString(), new Date(Date.now() - 2 * 86400000).toISOString());
+  insertAbVariant.run('demo-abv-cta-variant-a1', 'demo-abt-cta-button-002', null, null,
+    'Variant A', 'Shop Now — Limited Time', 'Dont miss out on our biggest sale.', 0, 25000, 1100, 350000, 65);
+  insertAbVariant.run('demo-abv-cta-variant-b2', 'demo-abt-cta-button-002', null, null,
+    'Variant B', 'Grab Yours Before Theyre Gone', 'Only 24 hours left at this price.', 1, 24500, 980, 340000, 52);
+  seededAbTests++;
+
+  // ── Dashboard Widgets ───────────────────────────────────────────────────
+  let seededWidgets = 0;
+  const insertWidget = db.prepare(`
+    INSERT OR IGNORE INTO dashboard_widgets (id, user_id, widget_type, config, position, size)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+  insertWidget.run('demo-widget-000001', adminUserId, 'metric',
+    JSON.stringify({ name: 'Total Spend', description: 'Total ad spend across all platforms', type: 'metric', enabled: true }),
+    0, 'medium');
+  insertWidget.run('demo-widget-000002', adminUserId, 'chart',
+    JSON.stringify({ name: 'Revenue Trend', description: 'Revenue over time', type: 'chart', enabled: true }),
+    1, 'large');
+  insertWidget.run('demo-widget-000003', adminUserId, 'metric',
+    JSON.stringify({ name: 'ROAS Gauge', description: 'Return on ad spend indicator', type: 'metric', enabled: true }),
+    2, 'small');
+  insertWidget.run('demo-widget-000004', adminUserId, 'chart',
+    JSON.stringify({ name: 'Platform Split', description: 'Spend distribution by platform', type: 'chart', enabled: true }),
+    3, 'medium');
+  seededWidgets = 4;
+
+  // ── Competitor Snapshots ────────────────────────────────────────────────
+  let seededCompetitors = 0;
+  const insertComp = db.prepare(`
+    INSERT OR IGNORE INTO competitor_snapshots (id, url, platform, ad_data, snapshot_type, captured_at)
+    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+  `);
+  insertComp.run('demo-comp-0000001', 'competitor-a.com', 'meta', JSON.stringify({
+    ads_count: 5, total: 5,
+    ads: [
+      { id: 'ca-1', ad_text: 'Summer Sale — Up to 40% OFF', media_type: 'image', platform: 'meta', page_name: 'Competitor A' },
+      { id: 'ca-2', ad_text: 'New Collection Just Dropped', media_type: 'video', platform: 'meta', page_name: 'Competitor A' },
+      { id: 'ca-3', ad_text: 'Free Shipping on All Orders', media_type: 'image', platform: 'meta', page_name: 'Competitor A' },
+      { id: 'ca-4', ad_text: 'Limited Edition — Shop Now', media_type: 'carousel', platform: 'meta', page_name: 'Competitor A' },
+      { id: 'ca-5', ad_text: 'Customer Favorites Under $50', media_type: 'image', platform: 'meta', page_name: 'Competitor A' },
+    ],
+  }), 'auto');
+  seededCompetitors++;
+  insertComp.run('demo-comp-0000002', 'competitor-b.com', 'google', JSON.stringify({
+    ads_count: 3, total: 3,
+    ads: [
+      { id: 'cb-1', ad_text: 'Premium Quality at Best Price', media_type: 'text', platform: 'google', page_name: 'Competitor B' },
+      { id: 'cb-2', ad_text: 'Shop the Latest Trends', media_type: 'shopping', platform: 'google', page_name: 'Competitor B' },
+      { id: 'cb-3', ad_text: 'Exclusive Online Deals', media_type: 'text', platform: 'google', page_name: 'Competitor B' },
+    ],
+  }), 'auto');
+  seededCompetitors++;
+  insertComp.run('demo-comp-0000003', 'competitor-c.com', 'tiktok', JSON.stringify({
+    ads_count: 8, total: 8,
+    ads: [
+      { id: 'cc-1', ad_text: 'Viral Product Everyone Wants', media_type: 'video', platform: 'tiktok', page_name: 'Competitor C' },
+      { id: 'cc-2', ad_text: 'Before and After Transformation', media_type: 'video', platform: 'tiktok', page_name: 'Competitor C' },
+      { id: 'cc-3', ad_text: 'Unboxing This Amazing Product', media_type: 'video', platform: 'tiktok', page_name: 'Competitor C' },
+      { id: 'cc-4', ad_text: '5 Reasons to Switch Today', media_type: 'video', platform: 'tiktok', page_name: 'Competitor C' },
+      { id: 'cc-5', ad_text: 'Flash Sale — 60% OFF', media_type: 'video', platform: 'tiktok', page_name: 'Competitor C' },
+      { id: 'cc-6', ad_text: 'Real Customer Review', media_type: 'video', platform: 'tiktok', page_name: 'Competitor C' },
+      { id: 'cc-7', ad_text: 'How It Works in 30 Seconds', media_type: 'video', platform: 'tiktok', page_name: 'Competitor C' },
+      { id: 'cc-8', ad_text: 'Dont Miss This Deal', media_type: 'video', platform: 'tiktok', page_name: 'Competitor C' },
+    ],
+  }), 'auto');
+  seededCompetitors++;
+    console.log(`Seeded demo data: ${seededCampaigns} campaigns, ${seededAds} ads, ${seededLps} landing pages, ${seededPas} platform accounts, ${seededPh} performance history rows, 15 templates, 2 users, ${seededDrafts} drafts, ${seededAbTests} ab tests, ${seededWidgets} widgets, ${seededCompetitors} competitors`);
     db.exec('COMMIT');
   } catch (err) {
     db.exec('ROLLBACK');
