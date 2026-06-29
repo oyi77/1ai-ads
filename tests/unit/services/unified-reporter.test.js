@@ -83,7 +83,7 @@ describe('UnifiedReporter', () => {
       expect(metaPlatform.roas).toBeCloseTo(3);
     });
 
-    it('should merge DB-only platforms', async () => {
+    it('should return DB metrics for all platforms', async () => {
       mockDb.prepare.mockReturnValue({
         all: vi.fn().mockReturnValue([
           { platform: 'snapchat', spend: 50, revenue: 100, impressions: 1000, clicks: 50, conversions: 3 },
@@ -93,7 +93,8 @@ describe('UnifiedReporter', () => {
       const result = await reporter.getUnifiedDashboard('user-1');
       const snap = result.byPlatform.find(p => p.platform === 'snapchat');
       expect(snap).toBeDefined();
-      expect(snap.connected).toBe(false);
+      expect(snap.spend).toBe(50);
+      expect(snap.revenue).toBe(100);
     });
 
     it('should handle platform API failures gracefully', async () => {
