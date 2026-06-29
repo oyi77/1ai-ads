@@ -27,53 +27,30 @@ export class UnifiedReporter {
   async getUnifiedDashboard(userId, { dateRange = 'last_7d' } = {}) {
     const days = DATE_RANGE_MAP[dateRange] || 7;
 
-    const platformResults = await this._fetchAllPlatformInsights(days);
+    // Use DB metrics directly — live API calls are too slow for dashboard
     const dbMetrics = this._getDBMetrics(days);
 
     const totals = { spend: 0, revenue: 0, impressions: 0, clicks: 0, conversions: 0 };
     const byPlatform = [];
 
-    for (const r of platformResults) {
-      totals.spend += r.spend;
-      totals.revenue += r.revenue;
-      totals.impressions += r.impressions;
-      totals.clicks += r.clicks;
-      totals.conversions += r.conversions;
+    for (const dm of dbMetrics) {
+      totals.spend += dm.spend || 0;
+      totals.revenue += dm.revenue || 0;
+      totals.impressions += dm.impressions || 0;
+      totals.clicks += dm.clicks || 0;
+      totals.conversions += dm.conversions || 0;
       byPlatform.push({
-        platform: r.platform,
-        spend: r.spend,
-        revenue: r.revenue,
-        roas: r.spend > 0 ? r.revenue / r.spend : 0,
-        impressions: r.impressions,
-        clicks: r.clicks,
-        conversions: r.conversions,
-        ctr: r.impressions > 0 ? r.clicks / r.impressions : 0,
-        cpc: r.clicks > 0 ? r.spend / r.clicks : 0,
+        platform: dm.platform,
+        spend: dm.spend || 0,
+        revenue: dm.revenue || 0,
+        roas: (dm.spend || 0) > 0 ? (dm.revenue || 0) / (dm.spend || 0) : 0,
+        impressions: dm.impressions || 0,
+        clicks: dm.clicks || 0,
+        conversions: dm.conversions || 0,
+        ctr: (dm.impressions || 0) > 0 ? (dm.clicks || 0) / (dm.impressions || 0) : 0,
+        cpc: (dm.clicks || 0) > 0 ? (dm.spend || 0) / (dm.clicks || 0) : 0,
         connected: true,
       });
-    }
-
-    // Merge any DB-only platforms not returned by APIs
-    for (const dm of dbMetrics) {
-      if (!byPlatform.find(p => p.platform === dm.platform)) {
-        totals.spend += dm.spend || 0;
-        totals.revenue += dm.revenue || 0;
-        totals.impressions += dm.impressions || 0;
-        totals.clicks += dm.clicks || 0;
-        totals.conversions += dm.conversions || 0;
-        byPlatform.push({
-          platform: dm.platform,
-          spend: dm.spend || 0,
-          revenue: dm.revenue || 0,
-          roas: (dm.spend || 0) > 0 ? (dm.revenue || 0) / (dm.spend || 0) : 0,
-          impressions: dm.impressions || 0,
-          clicks: dm.clicks || 0,
-          conversions: dm.conversions || 0,
-          ctr: (dm.impressions || 0) > 0 ? (dm.clicks || 0) / (dm.impressions || 0) : 0,
-          cpc: (dm.clicks || 0) > 0 ? (dm.spend || 0) / (dm.clicks || 0) : 0,
-          connected: false,
-        });
-      }
     }
 
     const overallROAS = totals.spend > 0 ? totals.revenue / totals.spend : 0;
