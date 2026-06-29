@@ -1,18 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link2, Loader2, Key, User, Bot, Save } from 'lucide-react';
+import { Loader2, Key, User, Bot, Save, Link2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
-import { PLATFORMS } from '../lib/platforms';
-
-interface PlatformAccount {
-  id: string;
-  platform: string;
-  account_name: string;
-  is_active: boolean;
-  health_status: string;
-  created_at: string;
-}
-
 interface AiConfigData {
   url: string;
   model: string;
@@ -30,109 +20,10 @@ const inputStyle = {
   fontFamily: 'var(--font-mono)',
 };
 
-function PlatformCard({ p, existing, token, onTokenChange, onConnect, isPending }: {
-  p: { key: string; label: string; desc: string };
-  existing: PlatformAccount | undefined;
-  token: string;
-  onTokenChange: (v: string) => void;
-  onConnect: () => void;
-  isPending: boolean;
-}) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        background: 'var(--bg-surface, #1a1a2e)',
-        border: '1px solid',
-        borderColor: hovered ? 'var(--accent)' : 'var(--border)',
-        borderRadius: 8,
-        padding: '14px 16px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        transition: 'border-color 0.15s, box-shadow 0.15s',
-        boxShadow: hovered ? '0 2px 8px rgba(99,102,241,0.1)' : 'none',
-      }}
-    >
-      <div style={{ flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-          <div style={{
-            width: 10, height: 10, borderRadius: '50%',
-            background: existing ? 'var(--green, #34d399)' : 'var(--text-tertiary)',
-          }} />
-          <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{p.label}</span>
-          {existing && (
-            <span style={{ fontSize: '0.72rem', color: 'var(--green, #34d399)' }}>
-              {existing.account_name || 'Connected'}
-            </span>
-          )}
-        </div>
-        <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', margin: 0 }}>
-          {p.desc}
-        </p>
-
-        {!existing && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
-            <input
-              type="password"
-              placeholder={`Paste ${p.label.split(' ')[0]} access token`}
-              value={token}
-              onChange={e => onTokenChange(e.target.value)}
-              style={inputStyle}
-            />
-            <button
-              onClick={onConnect}
-              disabled={!token || isPending}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '8px 14px',
-                background: 'var(--accent)',
-                color: 'var(--bg-deep)',
-                border: 'none',
-                borderRadius: 6,
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-                opacity: !token ? 0.5 : 1,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {isPending ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
-              Connect
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export function SettingsPage() {
   const queryClient = useQueryClient();
-  const [tokenInputs, setTokenInputs] = useState<Record<string, string>>({});
   const [aiForm, setAiForm] = useState<AiConfigData>({ url: '', model: '', apiKey: '' });
   const [aiInitialized, setAiInitialized] = useState(false);
-
-  const { data: accounts, isLoading } = useQuery<PlatformAccount[]>({
-    queryKey: ['settings', 'accounts'],
-    queryFn: () => api.get<PlatformAccount[]>('/settings/accounts'),
-  });
-
-  const connectMutation = useMutation({
-    mutationFn: ({ platform, token }: { platform: string; token: string }) =>
-      api.post('/settings/accounts/connect-token', { platform, access_token: token }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['settings', 'accounts'] });
-      setTokenInputs({});
-    },
-  });
-
-  const disconnectMutation = useMutation({
-    mutationFn: (id: string) => api.del(`/settings/accounts/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings', 'accounts'] }),
-  });
 
   const { data: aiConfig } = useQuery<{ success: boolean; data: AiConfigData }>({
     queryKey: ['settings', 'ai'],
@@ -157,105 +48,40 @@ export function SettingsPage() {
   });
 
   const ai = aiConfig?.data;
-  const connectedList = Array.isArray(accounts) ? accounts : [];
 
   return (
     <div>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 8 }}>Settings</h1>
       <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 24 }}>
-        Manage your account and integrations
+        Manage your account and AI configuration
       </p>
 
-      {/* Platform Connections */}
+      {/* Platform Connections — Link to dedicated page */}
       <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 24, marginBottom: 16 }}>
-        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Key size={14} style={{ color: 'var(--accent)' }} />
           Platform Connections
         </h3>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
-          {PLATFORMS.map(p => {
-            const existing = connectedList.find(a => a.platform === p.key);
-            return (
-              <div key={p.key}>
-                <PlatformCard
-                  p={p}
-                  existing={existing}
-                  token={tokenInputs[p.key] || ''}
-                  onTokenChange={(v) => setTokenInputs(prev => ({ ...prev, [p.key]: v }))}
-                  onConnect={() => connectMutation.mutate({ platform: p.key, token: tokenInputs[p.key] || '' })}
-                  isPending={connectMutation.isPending}
-                />
-                {existing && (
-                  <button
-                    onClick={() => disconnectMutation.mutate(existing.id)}
-                    disabled={disconnectMutation.isPending}
-                    style={{
-                      marginTop: 6, padding: '4px 12px',
-                      background: 'transparent',
-                      color: 'var(--error, #ef4444)',
-                      border: '1px solid var(--error, #ef4444)',
-                      borderRadius: 6,
-                      fontSize: '0.72rem',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    Disconnect
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Connected Accounts Summary */}
-      <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 24 }}>
-        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 16 }}>Connected Accounts</h3>
-
-        {isLoading ? (
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Loading accounts...</p>
-        ) : connectedList.length > 0 ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
-            {connectedList.map((account) => (
-              <div
-                key={account.id}
-                style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '12px 16px', background: 'var(--bg-surface, #1a1a2e)',
-                  borderRadius: 8, border: '1px solid var(--border)',
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{account.account_name || account.platform}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-                    {account.platform} · {account.health_status === 'ok' ? 'Healthy' : `⚠️ ${account.health_status}`}
-                  </div>
-                </div>
-                <button
-                  onClick={() => disconnectMutation.mutate(account.id)}
-                  disabled={disconnectMutation.isPending}
-                  style={{
-                    padding: '4px 12px', background: 'transparent',
-                    color: 'var(--error, #ef4444)', border: '1px solid var(--error, #ef4444)',
-                    borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer',
-                  }}
-                >
-                  Disconnect
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>
-            No accounts connected. Add your access tokens above to get started.
-          </p>
-        )}
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
+          Connect and manage your advertising platform accounts.
+        </p>
+        <Link
+          to="/platforms"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 16px',
+            background: 'var(--accent)', color: 'var(--bg-deep)',
+            border: 'none', borderRadius: 6,
+            fontWeight: 600, fontSize: '0.8rem',
+            textDecoration: 'none',
+          }}
+        >
+          <Link2 size={14} /> Manage Platforms
+        </Link>
       </div>
 
       {/* AI Configuration — Editable */}
-      <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 24, marginTop: 16 }}>
+      <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 24, marginBottom: 16 }}>
         <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Bot size={14} style={{ color: 'var(--accent)' }} />
           AI Configuration
@@ -365,7 +191,7 @@ export function SettingsPage() {
       </div>
 
       {/* Account Info */}
-      <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 24, marginTop: 16 }}>
+      <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 24 }}>
         <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           <User size={14} /> Account
         </h3>

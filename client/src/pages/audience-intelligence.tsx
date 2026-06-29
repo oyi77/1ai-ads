@@ -4,7 +4,23 @@ import { Users, Search, Target } from 'lucide-react';
 import { api } from '../lib/api';
 import type { CSSProperties } from 'react';
 
-interface AudienceSegment {
+interface AudienceInterest {
+  interest: string;
+  id?: string;
+  audienceSize: number;
+  path?: string[];
+  topic?: string;
+  country?: string;
+  relevanceScore?: number;
+  reason?: string;
+  metaId?: string;
+  valid?: boolean;
+  notFound?: boolean;
+  error?: string;
+}
+
+/** Normalized shape for the card grid */
+interface AudienceCard {
   id: string;
   name: string;
   description: string;
@@ -26,24 +42,53 @@ interface AudienceSegment {
 export function AudienceIntelligencePage() {
   const [query, setQuery] = useState('');
 
-  const { data: audiences, isLoading, error, refetch } = useQuery<AudienceSegment[]>({
+  const { data: audiences, isLoading, error, refetch } = useQuery<AudienceCard[]>({
     queryKey: ['audience', 'intelligence', query],
     queryFn: async () => {
-      const res = await api.get<{ success?: boolean; data?: AudienceSegment[] } | AudienceSegment[]>(
-        `/audience/intelligence/insights${query ? `?interests=${encodeURIComponent(query)}` : ''}`
+      if (!query.trim()) return [];
+      const res = await api.get<any>(
+        `/audience/intelligence/insights?interests=${encodeURIComponent(query)}`
       );
-      if (res && typeof res === 'object' && 'data' in res && Array.isArray((res as any).data)) return (res as any).data;
-      return Array.isArray(res) ? res : [];
+      // Backend returns { interests: [...], totalReach, country, demographics }
+      // api.get unwraps { success, data } → data, so res = { interests: [...] }
+      const interests: AudienceInterest[] = Array.isArray(res?.interests)
+        ? res.interests
+        : Array.isArray(res) ? res : [];
+      // Map backend AudienceInterest → AudienceCard for the card grid
+      return interests.map((item, i) => ({
+        id: item.id || item.metaId || `interest-${i}`,
+        name: item.interest || 'Unknown',
+        description: item.reason || item.topic || (item.path?.join(' › ') ?? ''),
+        size: item.audienceSize || 0,
+        platform: 'meta',
+        demographics: {},
+        performance: {
+          reach: item.audienceSize || 0,
+          engagement_rate: item.relevanceScore ? item.relevanceScore * 100 : 0,
+          conversion_rate: 0,
+        },
+        created_at: new Date().toISOString(),
+      }));
     },
   });
 
+  // Only call /suggest when we have something to go on
   const { data: suggestions } = useQuery<{ suggestions: string[] }>({
-    queryKey: ['audience', 'suggestions'],
+    queryKey: ['audience', 'suggestions', query],
     queryFn: async () => {
-      const res = await api.get<{ success?: boolean; data?: string[] } | string[] | { suggestions: string[] }>('/audience/intelligence/suggest?product=&target=');
-      if (Array.isArray(res)) return { suggestions: res };
-      if (res && typeof res === 'object' && 'data' in res && Array.isArray((res as any).data)) return { suggestions: (res as any).data };
-      return res as { suggestions: string[] };
+      const product = query.trim();
+      if (!product) return { suggestions: [] };
+      try {
+        const res = await api.get<any>(
+          `/audience/intelligence/suggest?product=${encodeURIComponent(product)}&target=`
+        );
+        if (Array.isArray(res)) return { suggestions: res.map((s: any) => s.interest || s) };
+        if (Array.isArray(res?.data)) return { suggestions: res.data.map((s: any) => s.interest || s) };
+        if (Array.isArray(res?.suggestions)) return { suggestions: res.suggestions };
+        return { suggestions: [] };
+      } catch {
+        return { suggestions: [] };
+      }
     },
   });
 
