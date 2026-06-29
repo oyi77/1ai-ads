@@ -13,8 +13,16 @@ export class AuditLogRepository {
     `).run(id, user_id || null, action, resource_type || null, resource_id || null, details || null, ip_address || null);
   }
 
-  findAll({ limit = 100, offset = 0 } = {}) {
-    return this.db.prepare('SELECT * FROM audit_log ORDER BY created_at DESC LIMIT ? OFFSET ?').all(limit, offset);
+  findAll({ page = 1, limit = 50, userId, action } = {}) {
+    const where = [];
+    const params = [];
+    if (userId) { where.push('user_id = ?'); params.push(userId); }
+    if (action) { where.push('action = ?'); params.push(action); }
+    const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const total = this.db.prepare(`SELECT COUNT(*) as count FROM audit_log ${whereClause}`).get(...params).count;
+    const offset = (page - 1) * limit;
+    const data = this.db.prepare(`SELECT * FROM audit_log ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`).all(...params, limit, offset);
+    return { data, total, page, limit };
   }
 
   findByUser(userId, { limit = 50 } = {}) {

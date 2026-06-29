@@ -111,7 +111,7 @@ export const api = {
     const data = await request<{
       accessToken: string;
       refreshToken: string;
-      user: { id: string; username: string; email: string; role: string };
+      user: { id: string; username: string; email: string; role: string; plan: string };
     }>('POST', '/auth/login', { username, password });
 
     setTokens(data.accessToken, data.refreshToken);
@@ -123,7 +123,7 @@ export const api = {
     const data = await request<{
       accessToken: string;
       refreshToken: string;
-      user: { id: string; username: string; email: string; role: string };
+      user: { id: string; username: string; email: string; role: string; plan: string };
     }>('POST', '/auth/register', { username, password, email });
 
     setTokens(data.accessToken, data.refreshToken);
@@ -138,7 +138,7 @@ export const api = {
 
   isAuthenticated: (): boolean => !!localStorage.getItem(TOKEN_KEY),
 
-  getUser: (): { id: string; username: string; email: string; role: string } | null => {
+  getUser: (): { id: string; username: string; email: string; role: string; plan: string } | null => {
     const raw = localStorage.getItem(USER_KEY);
     if (!raw) return null;
     try {

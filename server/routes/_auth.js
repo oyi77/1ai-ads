@@ -2,6 +2,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { createAuthRouter } from './auth.js';
 import { createAdminRouter } from './admin.js';
+import { createAuditRouter } from './audit.js';
 import { createTokenRouter } from './tokens.js';
 import { createEventsRouter } from './events.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
@@ -99,5 +100,6 @@ export function createAuthGroupRouter({ repos, services: _services, publicRateLi
   router.use('/admin', requireAuth, requireAdmin, createAdminRouter(repos.usersRepo, repos.settingsRepo));
   router.use('/tokens', requireAuth, createTokenRouter());
   router.use('/events', requireAuth, createEventsRouter());
+  router.use('/audit', requireAuth, requireAdmin, createAuditRouter(repos.auditRepo));
   return router;
 }

@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Shell } from './components/layout/shell';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequireAuth } from './components/RequireAuth';
+import { RequirePro } from './components/RequirePro';
 import { CookieConsent } from './components/CookieConsent';
 
 // Lazy-loaded pages
@@ -30,6 +31,7 @@ const NotFoundPage = lazy(() => import('./pages/not-found').then(m => ({ default
 const PrivacyPage = lazy(() => import('./pages/privacy').then(m => ({ default: m.PrivacyPage })));
 const TermsPage = lazy(() => import('./pages/terms').then(m => ({ default: m.TermsPage })));
 const OnboardingPage = lazy(() => import('./pages/onboarding').then(m => ({ default: m.OnboardingPage })));
+const AuditTrailPage = lazy(() => import('./pages/audit-trail').then(m => ({ default: m.AuditTrailPage })));
 
 function Loading() {
   return (
@@ -60,19 +62,20 @@ export function App() {
             <Route path="settings" element={<SettingsPage />} />
             <Route path="creative-library" element={<CreativeLibraryPage />} />
             <Route path="creative-fatigue" element={<CreativeFatiguePage />} />
-            <Route path="ab-tests" element={<ABTestsPage />} />
+            <Route path="ab-tests" element={<RequirePro><ABTestsPage /></RequirePro>} />
             <Route path="reporting" element={<ReportingPage />} />
-            <Route path="automation" element={<AutomationPage />} />
+            <Route path="automation" element={<RequirePro><AutomationPage /></RequirePro>} />
             <Route path="competitors" element={<CompetitorsPage />} />
             <Route path="trending" element={<TrendingPage />} />
             <Route path="meta-ai" element={<MetaAiPage />} />
             <Route path="templates" element={<TemplatesPage />} />
             <Route path="landing-pages" element={<LandingPagesPage />} />
-            <Route path="audiences" element={<AudienceIntelligencePage />} />
+            <Route path="audiences" element={<RequirePro><AudienceIntelligencePage /></RequirePro>} />
             <Route path="drafts" element={<DraftsPage />} />
             <Route path="platforms" element={<PlatformsPage />} />
-            <Route path="attribution" element={<AttributionPage />} />
+            <Route path="attribution" element={<RequirePro><AttributionPage /></RequirePro>} />
             <Route path="widgets" element={<WidgetsPage />} />
+            <Route path="audit" element={<AuditTrailPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

@@ -44,7 +44,7 @@ describe('AI Agent API Integration', () => {
     db.prepare('INSERT INTO users (id, username, email, password_hash, confirmed) VALUES (?, ?, ?, ?, 1)')
       .run(userId, 'aiagentuser', 'aiagent@test.com', passwordHash);
 
-    authToken = generateToken({ id: userId, username: 'aiagentuser' });
+    authToken = generateToken({ id: userId, username: 'aiagentuser', role: 'user', plan: 'pro' });
     app = createApp({ db });
   });
 

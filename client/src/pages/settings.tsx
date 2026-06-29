@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Key, User, Bot, Save, Link2 } from 'lucide-react';
+import { Loader2, Key, User, Bot, Save, Link2, Crown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
+import { PlanBadge } from '../components/RequirePro';
 interface AiConfigData {
   url: string;
   model: string;
@@ -79,6 +80,44 @@ export function SettingsPage() {
           <Link2 size={14} /> Manage Platforms
         </Link>
       </div>
+
+      {/* Current Plan */}
+      {(() => {
+        const user = api.getUser();
+        const isPro = user?.role === 'admin' || user?.plan === 'pro';
+        return (
+          <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 24, marginBottom: 16 }}>
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Crown size={14} style={{ color: isPro ? '#818cf8' : '#94a3b8' }} />
+              Current Plan
+            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: isPro ? 0 : 12 }}>
+              <PlanBadge />
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                {isPro ? 'Full access to all features' : 'Basic features included'}
+              </span>
+            </div>
+            {!isPro && (
+              <div style={{ marginTop: 8 }}>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginBottom: 12 }}>
+                  Upgrade to Pro to unlock: AI Agent, Automation Rules, A/B Testing, Attribution, and Audience Intelligence.
+                </p>
+                <button
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '8px 16px',
+                    background: 'var(--accent)', color: 'var(--bg-deep)',
+                    border: 'none', borderRadius: 6,
+                    fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer',
+                  }}
+                >
+                  <Crown size={14} /> Upgrade to Pro
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* AI Configuration — Editable */}
       <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 24, marginBottom: 16 }}>

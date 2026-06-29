@@ -2,10 +2,12 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Megaphone, Settings, LogOut, Menu,
   Library, Activity, FlaskConical, BarChart3, Zap, Eye, GitBranch, LayoutGrid,
-  TrendingUp, Bot, FileText, Globe, Users, Link2, FileEdit, Layers,
+  TrendingUp, Bot, FileText, Globe, Users, Link2, FileEdit, Layers, Shield,
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import type { CSSProperties } from 'react';
+import { PlanBadge } from '../RequirePro';
+import { api } from '../../lib/api';
 
 const navItems = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard },
@@ -26,6 +28,7 @@ const navItems = [
   { to: '/attribution', label: 'Attribution', icon: GitBranch },
   { to: '/widgets', label: 'Widgets', icon: LayoutGrid },
   { to: '/platforms', label: 'Platforms', icon: Link2 },
+  { to: '/audit', label: 'Audit Trail', icon: Shield },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -109,8 +112,14 @@ export function Shell() {
           ))}
         </nav>
 
-        {/* Logout */}
-        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)' }}>
+        {/* User Info & Plan */}
+        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+              {api.getUser()?.username || 'User'}
+            </span>
+            <PlanBadge />
+          </div>
           <button
             onClick={() => { localStorage.clear(); navigate('/login'); }}
             style={{

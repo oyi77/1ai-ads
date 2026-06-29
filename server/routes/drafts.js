@@ -38,7 +38,7 @@ export function createDraftRouter(draftService) {
   // Approve draft
   router.post('/:id/approve', async (req, res) => {
     try {
-      const { executionResult } = req.body;
+      const { executionResult } = req.body || {};
       const draft = await draftService.approveDraft(req.params.id, req.user?.id, executionResult);
       res.json({ success: true, data: draft });
     } catch (err) {

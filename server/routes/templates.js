@@ -1,4 +1,5 @@
 import express from 'express';
+import { requireRole } from '../middleware/rbac.js';
 
 export function createTemplatesRouter(templatesRepo) {
   const router = express.Router();
@@ -30,19 +31,13 @@ export function createTemplatesRouter(templatesRepo) {
   });
 
   // POST /api/templates - Create template (admin only)
-  router.post('/', (req, res) => {
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Admin access required' });
-    }
+  router.post('/', requireRole('admin'), (req, res) => {
     const template = templatesRepo.create(req.body);
     res.status(201).json({ success: true, data: template });
   });
 
   // PUT /api/templates/:id - Update template (admin only)
-  router.put('/:id', (req, res) => {
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Admin access required' });
-    }
+  router.put('/:id', requireRole('admin'), (req, res) => {
     const template = templatesRepo.update(req.params.id, req.body);
     if (!template) {
       return res.status(404).json({ success: false, error: 'Template not found' });
@@ -51,10 +46,7 @@ export function createTemplatesRouter(templatesRepo) {
   });
 
   // DELETE /api/templates/:id - Delete template (admin only)
-  router.delete('/:id', (req, res) => {
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Admin access required' });
-    }
+  router.delete('/:id', requireRole('admin'), (req, res) => {
     templatesRepo.delete(req.params.id);
     res.json({ success: true });
   });

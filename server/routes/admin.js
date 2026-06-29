@@ -1,10 +1,12 @@
 import { Router } from 'express';
+import { requireRole } from '../middleware/rbac.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('admin');
 
 export function createAdminRouter(usersRepo, _settingsRepo) {
   const router = Router();
+  router.use(requireRole('admin'));
 
   // GET /api/admin/stats — dashboard stats
   router.get('/stats', (req, res) => {
