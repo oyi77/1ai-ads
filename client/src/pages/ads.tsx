@@ -1,44 +1,69 @@
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Megaphone, Play, Pause, Trash2, RefreshCw, Filter } from 'lucide-react';
+import { Megaphone, Play, Pause, Trash2 } from 'lucide-react';
 import { api } from '../lib/api';
 import type { CSSProperties } from 'react';
-import { ScrollableTable, StickyTh, HoverTr } from '../components/ScrollableTable';
+import { DataTable } from '../components/DataTable';
+import type { Column } from '../components/DataTable';
 
 interface Ad {
   id: string;
   name: string;
-  campaign_id: string;
-  adset_id: string;
+  platform: string;
   status: string;
-  creative: {
-    title: string;
-    body: string;
-    image_url: string;
-    link_url: string;
-  };
-  insights: {
-    impressions: number;
-    clicks: number;
-    spend: number;
-    ctr: number;
-    cpc: number;
-  };
+  hook: string;
+  body: string;
+  cta: string;
   created_at: string;
 }
 
+interface Creative {
+  id: string;
+  hook: string;
+  body: string;
+  cta: string;
+  tags: string[];
+}
+
+interface CreativeResponse {
+  success: boolean;
+  data: Creative[];
+}
+
+const columns: Column<Ad>[] = [
+  { key: 'name', label: 'Name', sortable: true, width: 200 },
+  { key: 'platform', label: 'Platform', sortable: true, width: 100 },
+  { key: 'status', label: 'Status', sortable: true, width: 90, render: (ad) => (
+    <span style={{
+      padding: '2px 8px', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600,
+      background: ad.status === 'active' ? 'rgba(52,211,153,0.1)' : 'rgba(139,146,168,0.1)',
+      color: ad.status === 'active' ? 'var(--green)' : 'var(--text-secondary)',
+    }}>{ad.status}</span>
+  )},
+  { key: 'hook', label: 'Hook', sortable: false, width: 250, render: (ad) => (
+    <span style={{ color: 'var(--text-secondary)' }}>{ad.hook || '—'}</span>
+  )},
+  { key: 'cta', label: 'CTA', sortable: true, width: 120, render: (ad) => (
+    <span style={{ padding: '2px 6px', background: 'rgba(88,166,255,0.1)', borderRadius: 4, fontSize: '0.72rem' }}>
+      {ad.cta || '—'}
+    </span>
+  )},
+  { key: 'created_at', label: 'Created', sortable: true, width: 120, render: (ad) => (
+    <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
+      {ad.created_at ? new Date(ad.created_at).toLocaleDateString() : '—'}
+    </span>
+  )},
+];
+
 export function AdsPage() {
   const queryClient = useQueryClient();
-  const [statusFilter, setStatusFilter] = useState('all');
 
-  const { data, isLoading, error, refetch } = useQuery<{ ads?: Ad[]; data?: Ad[] } | Ad[]>({
+  const { data, isLoading, error } = useQuery<{ ads?: Ad[]; data?: Ad[] } | Ad[]>({
     queryKey: ['ads'],
-    queryFn: () => api.get<{ ads?: Ad[]; data?: Ad[] } | Ad[]>('/ads'),
+    queryFn: () => api.get('/ads'),
   });
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      api.put(`/ads/${id}`, { status }),
+    mutationFn: ({ id, status }: { id: string; status: string }) => api.put(`/ads/${id}`, { status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ads'] }),
   });
 
@@ -52,111 +77,37 @@ export function AdsPage() {
   else if (data && 'ads' in data && Array.isArray(data.ads)) ads = data.ads;
   else if (data && 'data' in data && Array.isArray(data.data)) ads = data.data;
 
-  const filtered = statusFilter === 'all' ? ads : ads.filter(a => a.status === statusFilter);
-
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 4 }}>Ads Manager</h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Create, manage, and monitor all your ads across platforms.
+            Manage your ad creatives across all platforms
           </p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => refetch()} style={outlineBtn}><RefreshCw size={14} /></button>
         </div>
       </div>
 
       {error && (
-        <div style={{ padding: 12, background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', borderRadius: 8, color: '#f85149', fontSize: '0.85rem', marginBottom: 16 }}>
-          Failed to load data. Please try again.
+        <div style={{ padding: 12, background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', borderRadius: 8, color: '#f85149', fontSize: '0.85rem', marginBottom: 12 }}>
+          Failed to load ads. Please try again.
         </div>
       )}
 
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        <Filter size={14} style={{ color: 'var(--text-tertiary)', alignSelf: 'center' }} />
-        {['all', 'ACTIVE', 'PAUSED', 'ARCHIVED'].map(s => (
-          <button key={s} onClick={() => setStatusFilter(s)} style={{
-            ...tabBtn,
-            background: statusFilter === s ? 'var(--accent)' : 'transparent',
-            color: statusFilter === s ? 'var(--bg-deep)' : 'var(--text-secondary)',
-          }}>{s === 'all' ? 'All' : s}</button>
-        ))}
-      </div>
-
-      {/* Ads Table */}
-      {isLoading ? (
-        <p style={{ color: 'var(--text-tertiary)', padding: 40, textAlign: 'center' }}>Loading ads...</p>
-      ) : filtered.length === 0 ? (
-        <div style={cardStyle}>
-          <Megaphone size={32} style={{ color: 'var(--text-tertiary)', marginBottom: 8 }} />
-          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
-            No ads found. Create ads through the Campaigns page.
-          </p>
-        </div>
-      ) : (
-        <ScrollableTable>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem', minWidth: 800 }}>
-            <thead>
-              <tr>
-                {['Name', 'Status', 'Impressions', 'Clicks', 'Spend', 'CTR', 'CPC', 'Actions'].map(h => (
-                  <StickyTh key={h}>{h}</StickyTh>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((ad, i) => (
-                <HoverTr key={ad.id} even={i % 2 === 0}>
-                  <td style={{ padding: '10px 16px', fontWeight: 600 }}>{ad.name || ad.id}</td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <span style={{
-                      padding: '2px 8px', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600,
-                      background: ad.status === 'ACTIVE' ? 'rgba(52,211,153,0.1)' : ad.status === 'PAUSED' ? 'rgba(245,158,11,0.1)' : 'rgba(139,146,168,0.1)',
-                      color: ad.status === 'ACTIVE' ? 'var(--green)' : ad.status === 'PAUSED' ? 'var(--amber)' : 'var(--text-secondary)',
-                    }}>{ad.status}</span>
-                  </td>
-                  <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{(ad.insights?.impressions ?? 0).toLocaleString()}</td>
-                  <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{(ad.insights?.clicks ?? 0).toLocaleString()}</td>
-                  <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>Rp {(ad.insights?.spend ?? 0).toLocaleString('id-ID')}</td>
-                  <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{(ad.insights?.ctr ?? 0).toFixed(2)}%</td>
-                  <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>Rp {(ad.insights?.cpc ?? 0).toLocaleString('id-ID')}</td>
-                  <td style={{ padding: '10px 16px', display: 'flex', gap: 4 }}>
-                    <button onClick={() => statusMutation.mutate({ id: ad.id, status: ad.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' })} style={iconBtn} title={ad.status === 'ACTIVE' ? 'Pause' : 'Activate'}>
-                      {ad.status === 'ACTIVE' ? <Pause size={12} /> : <Play size={12} />}
-                    </button>
-                    <button onClick={() => { if (confirm('Delete this ad?')) deleteMutation.mutate(ad.id); }} style={iconBtn} title="Delete">
-                      <Trash2 size={12} />
-                    </button>
-                  </td>
-                </HoverTr>
-              ))}
-            </tbody>
-          </table>
-        </ScrollableTable>
-      )}
+      <DataTable
+        columns={columns}
+        data={ads}
+        rowKey={a => a.id}
+        searchKey="name"
+        searchPlaceholder="Search ads..."
+        filterOptions={[
+          { key: 'platform', label: 'All Platforms', options: ['meta', 'google', 'tiktok'] },
+          { key: 'status', label: 'All Status', options: ['active', 'paused'] },
+        ]}
+        isLoading={isLoading}
+        emptyMessage="No ads found. Create your first ad from the Creative Library."
+        emptyIcon={<Megaphone size={32} style={{ color: 'var(--text-tertiary)' }} />}
+      />
     </div>
   );
 }
-
-const outlineBtn: CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 6,
-  padding: '8px 12px', background: 'transparent', color: 'var(--text-secondary)',
-  border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', fontSize: '0.8rem',
-};
-
-const tabBtn: CSSProperties = {
-  padding: '6px 14px', border: '1px solid var(--border)', borderRadius: 6,
-  fontWeight: 600, cursor: 'pointer', fontSize: '0.78rem',
-};
-
-const cardStyle: CSSProperties = {
-  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-  borderRadius: 10, padding: 40, textAlign: 'center',
-};
-
-const iconBtn: CSSProperties = {
-  padding: '4px 8px', background: 'transparent', color: 'var(--text-secondary)',
-  border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer',
-};

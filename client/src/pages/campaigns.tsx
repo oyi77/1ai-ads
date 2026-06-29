@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CSSProperties } from 'react';
-import { Loader2, Download } from 'lucide-react';
+import { Loader2, Download, Megaphone } from 'lucide-react';
 import { api } from '../lib/api';
-import { ScrollableTable, StickyTh, HoverTr } from '../components/ScrollableTable';
+import { DataTable } from '../components/DataTable';
+import type { Column } from '../components/DataTable';
 
 interface Campaign {
   id: string;
@@ -32,6 +33,27 @@ interface SyncResult {
   accounts: { id: string; name: string }[];
 }
 
+const columns: Column<Campaign>[] = [
+  { key: 'name', label: 'Name', sortable: true, width: 220 },
+  { key: 'platform', label: 'Platform', sortable: true, width: 100 },
+  { key: 'status', label: 'Status', sortable: true, width: 90, render: (c) => (
+    <span style={{
+      padding: '2px 8px', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600,
+      background: c.status?.toUpperCase() === 'ACTIVE' ? 'rgba(52,211,153,0.1)' : 'rgba(139,146,168,0.1)',
+      color: c.status?.toUpperCase() === 'ACTIVE' ? 'var(--green)' : 'var(--text-secondary)',
+    }}>{c.status}</span>
+  )},
+  { key: 'budget', label: 'Budget', sortable: true, align: 'right', render: (c) => `Rp ${(c.budget || 0).toLocaleString('id-ID')}` },
+  { key: 'spend', label: 'Spend', sortable: true, align: 'right', render: (c) => `Rp ${(c.spend || 0).toLocaleString('id-ID')}` },
+  { key: 'impressions', label: 'Impressions', sortable: true, align: 'right', render: (c) => (c.impressions || 0).toLocaleString() },
+  { key: 'clicks', label: 'Clicks', sortable: true, align: 'right', render: (c) => (c.clicks || 0).toLocaleString() },
+  { key: 'roas', label: 'ROAS', sortable: true, align: 'right', render: (c) => (
+    <span style={{ color: (c.roas || 0) >= 1 ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>
+      {(c.roas || 0).toFixed(2)}x
+    </span>
+  )},
+];
+
 export function CampaignsPage() {
   const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
@@ -43,7 +65,6 @@ export function CampaignsPage() {
   });
 
   const rawCampaigns: Campaign[] = Array.isArray(data) ? data as Campaign[] : (data && typeof data === 'object' && 'data' in data) ? (data as CampaignsResponse).data || [] : [];
-  const campaigns = [...rawCampaigns].sort((a, b) => (Number(b.spend) || 0) - (Number(a.spend) || 0));
 
   const syncMutation = useMutation({
     mutationFn: () => api.post<{ data: SyncResult }>('/campaigns/sync'),
@@ -51,105 +72,53 @@ export function CampaignsPage() {
     onSuccess: (result) => {
       setSyncResult(result.data);
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      setSyncing(false);
     },
-    onError: () => setSyncing(false),
+    onSettled: () => setSyncing(false),
   });
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 4 }}>Campaigns</h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Manage your ad campaigns — synced from Meta Ads Manager
+            Manage your ad campaigns across all platforms
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={() => syncMutation.mutate()}
-            disabled={syncing}
-            style={btnStyle}
-          >
-            {syncing ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-            {syncing ? 'Syncing from Meta...' : 'Sync from Meta'}
-          </button>
-        </div>
+        <button onClick={() => syncMutation.mutate()} disabled={syncing} style={btnStyle}>
+          {syncing ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+          {syncing ? 'Syncing...' : 'Sync Now'}
+        </button>
       </div>
 
-      {/* Sync Result */}
       {syncResult && (
-        <div style={{ ...cardStyle, marginBottom: 16, background: 'rgba(52,211,153,0.05)', borderColor: 'var(--green)' }}>
-          <p style={{ fontSize: '0.85rem', color: 'var(--green)', fontWeight: 600 }}>
-            ✅ Synced: {syncResult.campaigns} campaigns, {syncResult.adsets} ad sets, {syncResult.ads} ads
-            {syncResult.accounts?.length > 0 && ` from ${syncResult.accounts.map(a => a.name).join(', ')}`}
-          </p>
-        </div>
-      )}
-
-      {syncMutation.isError && (
-        <div style={{ ...cardStyle, marginBottom: 16, background: 'rgba(239,68,68,0.05)', borderColor: 'var(--error, #ef4444)' }}>
-          <p style={{ fontSize: '0.85rem', color: 'var(--error, #ef4444)' }}>
-            ❌ Sync failed: {(syncMutation.error as Error).message}
+        <div style={{ ...cardStyle, marginBottom: 12, background: 'rgba(52,211,153,0.05)', borderColor: 'var(--green)' }}>
+          <p style={{ fontSize: '0.8rem', color: 'var(--green)' }}>
+            ✅ Synced: {syncResult.campaigns} campaigns, {syncResult.ads} ads
           </p>
         </div>
       )}
 
       {error && (
-        <div style={{ padding: 12, background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', borderRadius: 8, color: '#f85149', fontSize: '0.85rem', marginBottom: 16 }}>
-          Failed to load data. Please try again.
+        <div style={{ padding: 12, background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', borderRadius: 8, color: '#f85149', fontSize: '0.85rem', marginBottom: 12 }}>
+          Failed to load campaigns. Please try again.
         </div>
       )}
 
-      {/* Campaigns Table */}
-      <ScrollableTable>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem', minWidth: 800 }}>
-          <thead>
-            <tr>
-              {['Name', 'Platform', 'Status', 'Budget', 'Spend', 'Impressions', 'Clicks', 'ROAS'].map(h => (
-                <StickyTh key={h}>{h}</StickyTh>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--text-tertiary)' }}>Loading...</td></tr>
-            ) : campaigns.length === 0 ? (
-              <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: 40 }}>
-                  <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem', marginBottom: 12 }}>
-                    No campaigns found. Click &quot;Sync from Meta&quot; to load your campaigns.
-                  </p>
-                  <button onClick={() => syncMutation.mutate()} disabled={syncing} style={btnStyle}>
-                    {syncing ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-                    {syncing ? 'Syncing...' : 'Sync from Meta'}
-                  </button>
-                </td>
-              </tr>
-            ) : (
-              campaigns.map((c, i) => (
-                <HoverTr key={c.id} even={i % 2 === 0}>
-                  <td style={{ padding: '10px 16px', fontWeight: 600 }}>{c.name || c.id}</td>
-                  <td style={{ padding: '10px 16px', color: 'var(--text-secondary)' }}>{c.platform || '—'}</td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <span style={{
-                      padding: '2px 8px', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600,
-                      background: c.status?.toUpperCase() === 'ACTIVE' ? 'rgba(52,211,153,0.1)' : 'rgba(139,146,168,0.1)',
-                      color: c.status?.toUpperCase() === 'ACTIVE' ? 'var(--green)' : 'var(--text-secondary)',
-                    }}>{c.status}</span>
-                  </td>
-                  <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>Rp {(c.budget || 0).toLocaleString('id-ID')}</td>
-                  <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>Rp {(c.spend || 0).toLocaleString('id-ID')}</td>
-                  <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{(c.impressions || 0).toLocaleString()}</td>
-                  <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{(c.clicks || 0).toLocaleString()}</td>
-                  <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)', color: (c.roas || 0) >= 1 ? 'var(--green)' : 'var(--red)' }}>{(c.roas || 0).toFixed(2)}x</td>
-                </HoverTr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </ScrollableTable>
+      <DataTable
+        columns={columns}
+        data={rawCampaigns}
+        rowKey={c => c.id}
+        searchKey="name"
+        searchPlaceholder="Search campaigns..."
+        filterOptions={[
+          { key: 'platform', label: 'All Platforms', options: ['meta', 'google', 'tiktok', 'linkedin', 'twitter', 'snapchat', 'pinterest', 'microsoft'] },
+          { key: 'status', label: 'All Status', options: ['ACTIVE', 'PAUSED', 'ARCHIVED'] },
+        ]}
+        isLoading={isLoading}
+        emptyMessage="No campaigns found. Click Sync Now to load your campaigns."
+        emptyIcon={<Megaphone size={32} style={{ color: 'var(--text-tertiary)' }} />}
+      />
     </div>
   );
 }
