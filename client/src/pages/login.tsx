@@ -15,8 +15,32 @@ export function LoginPage() {
     setError('');
     try {
       await api.login(username, password);
+      // Skip onboarding if user already has data or previously completed it
       const onboarded = localStorage.getItem('adforge_onboarded');
-      navigate(onboarded ? '/app' : '/onboarding');
+      if (onboarded) {
+        navigate('/app');
+      } else {
+        // Check if user already has connected accounts or campaigns
+        try {
+          const [accounts, campaigns] = await Promise.all([
+            api.get('/settings/accounts'),
+            api.get('/campaigns'),
+          ]);
+          const hasAccounts = Array.isArray(accounts) && accounts.length > 0;
+          const hasCampaigns = campaigns && typeof campaigns === 'object' && 'data' in campaigns
+            ? (campaigns as { data: unknown[] }).data.length > 0
+            : Array.isArray(campaigns) && campaigns.length > 0;
+          if (hasAccounts || hasCampaigns) {
+            localStorage.setItem('adforge_onboarded', 'true');
+            navigate('/app');
+          } else {
+            navigate('/onboarding');
+          }
+        } catch {
+          // If check fails, go to onboarding
+          navigate('/onboarding');
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Connection error');
     } finally {
