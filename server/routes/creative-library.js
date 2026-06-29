@@ -6,20 +6,23 @@ export function createCreativeLibraryRouter(creativeLibRepo) {
   // List creatives with optional filters
   router.get('/', async (req, res) => {
     try {
-      const { type, tags, platform, sort, limit, offset } = req.query;
+      const userId = req.user?.id || req.userId;
+      const { type, tags, platform, sort, page = 1, limit = 50 } = req.query;
       const result = creativeLibRepo.list({
+        userId,
         type,
         tags: tags ? tags.split(',').map(t => t.trim()) : undefined,
         platform,
-        sort: sort || 'created_at',
-        limit: limit ? parseInt(limit, 10) : 50,
-        offset: offset ? parseInt(offset, 10) : 0,
+        sortBy: sort || 'created_at',
+        page: +page,
+        limit: +limit,
       });
-      res.json({ success: true, data: result });
+      res.json({ success: true, data: result.data, total: result.total, page: result.page, limit: result.limit });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
   });
+
 
   // Get top performing creatives
   router.get('/top', async (req, res) => {

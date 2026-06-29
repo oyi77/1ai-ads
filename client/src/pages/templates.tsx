@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Plus, Trash2, Search, Loader2 } from 'lucide-react';
+import { FileText, Plus, Loader2, Trash2 } from 'lucide-react';
 import { api } from '../lib/api';
-import type { CSSProperties } from 'react';
+import { DataTable } from '../components/DataTable';
+import type { Column } from '../components/DataTable';
 
 interface Template {
   id: string;
@@ -13,9 +14,14 @@ interface Template {
   updated_at: string;
 }
 
+const TYPE_STYLE: Record<string, { bg: string; color: string }> = {
+  campaign: { bg: 'rgba(99,102,241,0.1)', color: 'var(--accent)' },
+  adset: { bg: 'rgba(245,158,11,0.1)', color: 'var(--amber)' },
+  audience: { bg: 'rgba(52,211,153,0.1)', color: 'var(--green)' },
+};
+
 export function TemplatesPage() {
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<'all' | 'campaign' | 'adset' | 'audience'>('all');
   const [showCreate, setShowCreate] = useState(false);
   const [newTemplate, setNewTemplate] = useState<{ name: string; type: 'campaign' | 'adset' | 'audience'; data: string }>({ name: '', type: 'campaign', data: '{}' });
 
@@ -40,7 +46,30 @@ export function TemplatesPage() {
   });
 
   const list = Array.isArray(templates) ? templates : [];
-  const filtered = filter === 'all' ? list : list.filter(t => t.type === filter);
+
+  const columns: Column<Template>[] = [
+    { key: 'name', label: 'Name', sortable: true, width: 200, render: (t) => (
+      <span style={{ fontWeight: 600 }}>{t.name}</span>
+    )},
+    { key: 'type', label: 'Type', sortable: true, width: 110, render: (t) => {
+      const ts = TYPE_STYLE[t.type] || { bg: 'rgba(139,146,168,0.1)', color: 'var(--text-tertiary)' };
+      return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: '0.65rem', fontWeight: 600, background: ts.bg, color: ts.color }}>{t.type}</span>;
+    }},
+    { key: 'category', label: 'Category', width: 120, render: (t) => (
+      <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>{t.type}</span>
+    )},
+    { key: 'industry', label: 'Industry', width: 100, render: () => (
+      <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>—</span>
+    )},
+    { key: 'created_at', label: 'Created', sortable: true, width: 110, render: (t) => (
+      <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>{t.updated_at ? new Date(t.updated_at).toLocaleDateString() : '—'}</span>
+    )},
+    { key: '_actions', label: '', width: 50, render: (t) => (
+      <button onClick={() => deleteMutation.mutate(t.id)} style={{ padding: '4px 6px', background: 'transparent', color: 'var(--text-tertiary)', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
+        <Trash2 size={12} />
+      </button>
+    )},
+  ];
 
   return (
     <div>
@@ -56,22 +85,9 @@ export function TemplatesPage() {
         </button>
       </div>
 
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        {(['all', 'campaign', 'adset', 'audience'] as const).map(t => (
-          <button key={t} onClick={() => setFilter(t)} style={{
-            ...tabBtn,
-            background: filter === t ? 'var(--accent)' : 'transparent',
-            color: filter === t ? 'var(--bg-deep)' : 'var(--text-secondary)',
-          }}>
-            {t.charAt(0).toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </div>
-
       {/* Create Form */}
       {showCreate && (
-        <div style={{ ...cardStyle, marginBottom: 20 }}>
+        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 20 }}>
           <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 12 }}>Create Template</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <input
@@ -119,81 +135,33 @@ export function TemplatesPage() {
       )}
 
       {/* Templates List */}
-      {isLoading ? (
-        <p style={{ color: 'var(--text-tertiary)', padding: 40, textAlign: 'center' }}>Loading templates...</p>
-      ) : filtered.length === 0 ? (
-        <div style={cardStyle}>
-          <FileText size={32} style={{ color: 'var(--text-tertiary)', marginBottom: 8 }} />
-          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
-            No templates yet. Create one to reuse campaign configurations.
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
-          {filtered.map(tpl => (
-            <div key={tpl.id} style={cardStyle}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                <div>
-                  <span style={{
-                    padding: '2px 8px', borderRadius: 4, fontSize: '0.65rem', fontWeight: 600,
-                    background: tpl.type === 'campaign' ? 'rgba(99,102,241,0.1)' :
-                      tpl.type === 'adset' ? 'rgba(245,158,11,0.1)' : 'rgba(52,211,153,0.1)',
-                    color: tpl.type === 'campaign' ? 'var(--accent)' :
-                      tpl.type === 'adset' ? 'var(--amber)' : 'var(--green)',
-                  }}>{tpl.type}</span>
-                </div>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  <button onClick={() => deleteMutation.mutate(tpl.id)} style={iconBtn}>
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-              </div>
-              <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 4 }}>{tpl.name}</h3>
-              <pre style={{
-                fontSize: '0.72rem', color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)',
-                background: 'var(--bg-deep)', padding: 8, borderRadius: 4, overflow: 'auto', maxHeight: 100,
-                margin: 0,
-              }}>
-                {JSON.stringify(tpl.data, null, 2)}
-              </pre>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', marginTop: 8 }}>
-                Updated: {tpl.updated_at ? new Date(tpl.updated_at).toLocaleDateString() : '—'}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={list}
+        rowKey={t => t.id}
+        searchKey="name"
+        searchPlaceholder="Search templates..."
+        filterOptions={[{ key: 'type', label: 'All Types', options: ['campaign', 'adset', 'audience'] }]}
+        isLoading={isLoading}
+        emptyMessage="No templates yet. Create one to reuse campaign configurations."
+        emptyIcon={<FileText size={32} style={{ color: 'var(--text-tertiary)' }} />}
+      />
     </div>
   );
 }
 
-const btnStyle: CSSProperties = {
+const btnStyle = {
   display: 'flex', alignItems: 'center', gap: 6,
   padding: '8px 16px', background: 'var(--accent)', color: 'var(--bg-deep)',
   border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem',
 };
 
-const tabBtn: CSSProperties = {
-  padding: '6px 14px', border: '1px solid var(--border)', borderRadius: 6,
-  fontWeight: 600, cursor: 'pointer', fontSize: '0.78rem',
-};
-
-const inputStyle: CSSProperties = {
+const inputStyle = {
   padding: '8px 12px', background: 'var(--bg-deep)', color: 'var(--text-primary)',
   border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.8rem', width: '100%',
 };
 
-const selectStyle: CSSProperties = {
+const selectStyle = {
   padding: '8px 12px', background: 'var(--bg-deep)', color: 'var(--text-primary)',
   border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.8rem',
-};
-
-const cardStyle: CSSProperties = {
-  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-  borderRadius: 10, padding: 20,
-};
-
-const iconBtn: CSSProperties = {
-  padding: '4px 6px', background: 'transparent', color: 'var(--text-tertiary)',
-  border: 'none', borderRadius: 4, cursor: 'pointer',
 };

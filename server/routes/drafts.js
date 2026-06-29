@@ -6,9 +6,9 @@ export function createDraftRouter(draftService) {
   // List drafts
   router.get('/', async (req, res) => {
     try {
-      const { status: filterStatus } = req.query;
-      const drafts = await draftService.listDrafts(filterStatus || null);
-      const data = drafts.map(d => ({
+      const { status: filterStatus, page = 1, limit = 50 } = req.query;
+      const result = await draftService.listDrafts(filterStatus || 'pending', { page: +page, limit: +limit });
+      const data = result.data.map(d => ({
         id: d.id,
         name: d.summary,
         type: d.type,
@@ -17,11 +17,12 @@ export function createDraftRouter(draftService) {
         created_at: d.created_at,
         updated_at: d.updated_at,
       }));
-      res.json({ success: true, data });
+      res.json({ success: true, data, total: result.total, page: result.page, limit: result.limit });
     } catch (err) {
       res.status(err.status || 500).json({ success: false, error: err.message });
     }
   });
+
 
   // Create draft
   router.post('/', async (req, res) => {

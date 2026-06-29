@@ -21,9 +21,18 @@ export class DashboardWidgetsRepository {
     return this.db.prepare('SELECT * FROM dashboard_widgets WHERE id = ?').get(id);
   }
 
-  getByUser(userId) {
-    return this.db.prepare('SELECT * FROM dashboard_widgets WHERE user_id = ? ORDER BY position').all(userId);
+  getByUser(userId, { page = 1, limit = 50 } = {}) {
+    const total = this.db.prepare('SELECT COUNT(*) as count FROM dashboard_widgets WHERE user_id = ?').get(userId).count;
+    const offset = (page - 1) * limit;
+    const data = this.db.prepare(
+      'SELECT * FROM dashboard_widgets WHERE user_id = ? ORDER BY position LIMIT ? OFFSET ?'
+    ).all(userId, limit, offset);
+    return { data, total, page, limit };
   }
+  findById(id) {
+    return this.db.prepare('SELECT * FROM dashboard_widgets WHERE id = ?').get(id) || null;
+  }
+
 
   update(id, data) {
     const existing = this.db.prepare('SELECT * FROM dashboard_widgets WHERE id = ?').get(id);

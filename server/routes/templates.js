@@ -6,15 +6,19 @@ export function createTemplatesRouter(templatesRepo) {
   // GET /api/templates - List all templates
   router.get('/', (req, res) => {
     const userId = req.user?.id || 'system';
+    const { page = 1, limit = 50 } = req.query;
     const filters = {
       category: req.query.category,
       industry: req.query.industry,
       search: req.query.search,
       userId,
+      page: +page,
+      limit: +limit,
     };
-    const templates = templatesRepo.getAll(filters);
-    res.json({ success: true, data: templates });
+    const result = templatesRepo.getAll(filters);
+    res.json({ success: true, data: result.data, total: result.total, page: result.page, limit: result.limit });
   });
+
 
   // GET /api/templates/:id - Get single template
   router.get('/:id', (req, res) => {

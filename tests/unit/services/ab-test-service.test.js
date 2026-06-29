@@ -46,7 +46,8 @@ describe('ABTestService', () => {
       createTest: vi.fn(),
       createVariant: vi.fn(),
       getTest: vi.fn().mockReturnValue(makeTest()),
-      getTests: vi.fn().mockReturnValue([makeTest()]),
+      getTests: vi.fn().mockReturnValue({ data: [makeTest()], total: 1, page: 1, limit: 50 }),
+
       getVariants: vi.fn().mockReturnValue([makeVariant(), makeVariant({ id: 'var-2', name: 'Variant 2', variant_index: 1 })]),
       updateTest: vi.fn(),
       updateVariant: vi.fn(),
@@ -201,15 +202,16 @@ describe('ABTestService', () => {
   describe('getTests', () => {
     it('should return all tests enriched', () => {
       const results = service.getTests();
-      expect(results).toHaveLength(1);
-      expect(results[0].variants).toBeDefined();
+      expect(results.data).toHaveLength(1);
+      expect(results.data[0].variants).toBeDefined();
     });
 
     it('should filter by status', () => {
       service.getTests({ status: 'running' });
-      expect(mockRepo.getTests).toHaveBeenCalledWith({ status: 'running' });
+      expect(mockRepo.getTests).toHaveBeenCalledWith({ status: 'running', page: 1, limit: 50 });
     });
   });
+
 
   describe('updateWinner', () => {
     it('should update winner and fire event', () => {

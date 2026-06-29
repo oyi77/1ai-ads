@@ -1,8 +1,8 @@
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileText, Trash2, Send, Clock } from 'lucide-react';
 import { api } from '../lib/api';
-import type { CSSProperties } from 'react';
+import { DataTable } from '../components/DataTable';
+import type { Column } from '../components/DataTable';
 
 interface Draft {
   id: string;
@@ -10,13 +10,13 @@ interface Draft {
   type: string;
   content: Record<string, unknown>;
   status: string;
+  proposed_by?: string;
   created_at: string;
   updated_at: string;
 }
 
 export function DraftsPage() {
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState('all');
 
   const { data: drafts, isLoading } = useQuery<Draft[]>({
     queryKey: ['drafts'],
@@ -34,7 +34,36 @@ export function DraftsPage() {
   });
 
   const list = Array.isArray(drafts) ? drafts : [];
-  const filtered = filter === 'all' ? list : list.filter(d => d.type === filter);
+
+  const columns: Column<Draft>[] = [
+    { key: 'name', label: 'Name', sortable: true, width: 200, render: (d) => (
+      <span style={{ fontWeight: 600 }}>{d.name || 'Untitled Draft'}</span>
+    )},
+    { key: 'type', label: 'Type', sortable: true, width: 100, render: (d) => (
+      <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: '0.65rem', fontWeight: 600, background: 'rgba(139,146,168,0.1)', color: 'var(--text-tertiary)' }}>{d.type}</span>
+    )},
+    { key: 'status', label: 'Status', sortable: true, width: 100, render: (d) => (
+      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{d.status || 'draft'}</span>
+    )},
+    { key: 'proposed_by', label: 'Proposed By', width: 120, render: (d) => (
+      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{d.proposed_by || '—'}</span>
+    )},
+    { key: 'created_at', label: 'Created', sortable: true, width: 110, render: (d) => (
+      <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <Clock size={10} /> {new Date(d.updated_at || d.created_at).toLocaleDateString()}
+      </span>
+    )},
+    { key: '_actions', label: 'Actions', width: 100, render: (d) => (
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button onClick={() => publishMutation.mutate(d.id)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', background: 'var(--accent)', color: 'var(--bg-deep)', border: 'none', borderRadius: 4, fontWeight: 600, cursor: 'pointer', fontSize: '0.68rem' }}>
+          <Send size={10} /> Publish
+        </button>
+        <button onClick={() => { if (confirm('Remove this draft?')) deleteMutation.mutate(d.id); }} style={{ padding: '3px 6px', background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer' }}>
+          <Trash2 size={10} />
+        </button>
+      </div>
+    )},
+  ];
 
   return (
     <div>
@@ -43,74 +72,17 @@ export function DraftsPage() {
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Review and manage your ad drafts</p>
       </div>
 
-      {/* Filter tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-        {['all', 'ad', 'creative', 'campaign'].map(t => (
-          <button key={t} onClick={() => setFilter(t)} style={{
-            ...tabBtn,
-            background: filter === t ? 'var(--accent)' : 'transparent',
-            color: filter === t ? 'var(--bg-deep)' : 'var(--text-secondary)',
-          }}>{t === 'all' ? 'All' : t}</button>
-        ))}
-      </div>
-
-      {isLoading ? (
-        <p style={{ color: 'var(--text-tertiary)', padding: 40, textAlign: 'center' }}>Loading drafts...</p>
-      ) : filtered.length === 0 ? (
-        <div style={cardStyle}>
-          <FileText size={32} style={{ color: 'var(--text-tertiary)', marginBottom: 8 }} />
-          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>No drafts found</p>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
-          {filtered.map(draft => (
-            <div key={draft.id} style={cardStyle}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                <span style={{
-                  padding: '2px 8px', borderRadius: 4, fontSize: '0.65rem', fontWeight: 600,
-                  background: 'rgba(139,146,168,0.1)', color: 'var(--text-tertiary)',
-                }}>{draft.type}</span>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Clock size={10} /> {new Date(draft.updated_at || draft.created_at).toLocaleDateString()}
-                </span>
-              </div>
-              <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 8 }}>{draft.name || 'Untitled Draft'}</h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.5 }}>
-                Status: {draft.status || 'draft'}
-              </p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => publishMutation.mutate(draft.id)} style={actionBtn}>
-                  <Send size={12} /> Publish
-                </button>
-                <button onClick={() => { if (confirm('Remove this draft?')) deleteMutation.mutate(draft.id); }} style={iconBtn}>
-                  <Trash2 size={12} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={list}
+        rowKey={d => d.id}
+        searchKey="name"
+        searchPlaceholder="Search drafts..."
+        filterOptions={[{ key: 'type', label: 'All Types', options: ['ad', 'creative', 'campaign'] }, { key: 'status', label: 'All Status', options: ['draft', 'pending', 'approved', 'rejected'] }]}
+        isLoading={isLoading}
+        emptyMessage="No drafts found"
+        emptyIcon={<FileText size={32} style={{ color: 'var(--text-tertiary)' }} />}
+      />
     </div>
   );
 }
-
-const tabBtn: CSSProperties = {
-  padding: '6px 14px', border: '1px solid var(--border)', borderRadius: 6,
-  fontWeight: 600, cursor: 'pointer', fontSize: '0.78rem',
-};
-
-const cardStyle: CSSProperties = {
-  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-  borderRadius: 10, padding: 20,
-};
-
-const actionBtn: CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 4,
-  padding: '6px 12px', background: 'var(--accent)', color: 'var(--bg-deep)',
-  border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: '0.75rem',
-};
-
-const iconBtn: CSSProperties = {
-  padding: '6px 8px', background: 'transparent', color: 'var(--text-secondary)',
-  border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer',
-};

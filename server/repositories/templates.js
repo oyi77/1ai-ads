@@ -3,33 +3,38 @@ export class TemplatesRepository {
     this.db = db;
   }
 
-  getAll({ category, industry, search, userId } = {}) {
-    let query = 'SELECT * FROM templates';
+  getAll({ category, industry, search, userId, page = 1, limit = 50 } = {}) {
+    let whereClause = '';
     const params = [];
 
+    const conditions = [];
     if (category) {
-      query += ' WHERE category = ?';
+      conditions.push('category = ?');
       params.push(category);
     }
     if (industry) {
-      query += params.length ? ' AND' : ' WHERE';
-      query += ' industry = ?';
+      conditions.push('industry = ?');
       params.push(industry);
     }
     if (search) {
       const searchTerm = `%${search}%`;
-      query += params.length ? ' AND' : ' WHERE';
-      query += ' (name LIKE ? OR description LIKE ?)';
+      conditions.push('(name LIKE ? OR description LIKE ?)');
       params.push(searchTerm, searchTerm);
     }
     if (userId) {
-      query += params.length ? ' AND' : ' WHERE';
-      query += ' (user_id = ? OR user_id = ?)';
+      conditions.push('(user_id = ? OR user_id = ?)');
       params.push(userId, 'system');
     }
+    if (conditions.length) {
+      whereClause = `WHERE ${conditions.join(' AND ')}`;
+    }
 
-    query += ' ORDER BY created_at DESC';
-    return this.db.prepare(query).all(...params);
+    const total = this.db.prepare(`SELECT COUNT(*) as count FROM templates ${whereClause}`).get(...params).count;
+    const offset = (page - 1) * limit;
+    const data = this.db.prepare(
+      `SELECT * FROM templates ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    ).all(...params, limit, offset);
+    return { data, total, page, limit };
   }
 
   getById(id) {

@@ -9,9 +9,10 @@ export class DraftService {
     this.telegramService = telegramService;
   }
 
-  async listDrafts(status = 'pending') {
-    return this.draftsRepo.findAll(status);
+  async listDrafts(status = 'pending', { page = 1, limit = 50 } = {}) {
+    return this.draftsRepo.findAll({ status, page, limit });
   }
+
 
   async createDraft({ type, summary, details, proposedBy = 'ai' }) {
     if (!type) throw new ValidationError('type is required');

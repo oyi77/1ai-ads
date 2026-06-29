@@ -34,7 +34,7 @@ export class CreativeLibraryRepository {
     return this.db.prepare('SELECT * FROM creative_library WHERE id = ?').get(id) || null;
   }
 
-  list({ userId, type, tags, platform, sortBy = 'created_at', limit = 20, offset = 0 } = {}) {
+  list({ userId, type, tags, platform, sortBy = 'created_at', page = 1, limit = 50 } = {}) {
     const where = [];
     const params = [];
 
@@ -55,11 +55,12 @@ export class CreativeLibraryRepository {
     const sortColumn = allowedSorts.includes(sortBy) ? sortBy : 'created_at';
 
     const total = this.db.prepare(`SELECT COUNT(*) as count FROM creative_library ${whereClause}`).get(...params).count;
+    const offset = (page - 1) * limit;
     const data = this.db.prepare(
       `SELECT * FROM creative_library ${whereClause} ORDER BY ${sortColumn} DESC LIMIT ? OFFSET ?`
     ).all(...params, limit, offset);
 
-    return { data, total, limit, offset };
+    return { data, total, page, limit };
   }
 
   update(id, data) {

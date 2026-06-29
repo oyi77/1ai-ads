@@ -21,7 +21,8 @@ describe('DraftService', () => {
     vi.clearAllMocks();
 
     mockDraftsRepo = {
-      findAll: vi.fn().mockResolvedValue([sampleDraft]),
+      findAll: vi.fn().mockResolvedValue({ data: [sampleDraft], total: 1, page: 1, limit: 50 }),
+
       findById: vi.fn().mockReturnValue(sampleDraft),
       create: vi.fn().mockReturnValue(sampleDraft),
       approve: vi.fn().mockReturnValue({ ...sampleDraft, status: 'approved' }),
@@ -48,15 +49,16 @@ describe('DraftService', () => {
   describe('listDrafts', () => {
     it('should list drafts with default status', async () => {
       const result = await service.listDrafts();
-      expect(mockDraftsRepo.findAll).toHaveBeenCalledWith('pending');
-      expect(result).toHaveLength(1);
+      expect(mockDraftsRepo.findAll).toHaveBeenCalledWith({ status: 'pending', page: 1, limit: 50 });
+      expect(result.data).toHaveLength(1);
     });
 
     it('should list drafts with custom status', async () => {
       await service.listDrafts('approved');
-      expect(mockDraftsRepo.findAll).toHaveBeenCalledWith('approved');
+      expect(mockDraftsRepo.findAll).toHaveBeenCalledWith({ status: 'approved', page: 1, limit: 50 });
     });
   });
+
 
   describe('createDraft', () => {
     it('should create a draft and notify', async () => {

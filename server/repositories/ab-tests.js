@@ -52,15 +52,17 @@ export class ABTestsRepository {
     return { ...row, variants };
   }
 
-  getTests({ status } = {}) {
-    let query = 'SELECT * FROM ab_tests';
+  getTests({ status, page = 1, limit = 50 } = {}) {
+    const where = [];
     const params = [];
-    if (status) {
-      query += ' WHERE status = ?';
-      params.push(status);
-    }
-    query += ' ORDER BY created_at DESC';
-    return this.db.prepare(query).all(...params);
+    if (status) { where.push('status = ?'); params.push(status); }
+    const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const total = this.db.prepare(`SELECT COUNT(*) as count FROM ab_tests ${whereClause}`).get(...params).count;
+    const offset = (page - 1) * limit;
+    const data = this.db.prepare(
+      `SELECT * FROM ab_tests ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    ).all(...params, limit, offset);
+    return { data, total, page, limit };
   }
 
   getVariants(testId) {

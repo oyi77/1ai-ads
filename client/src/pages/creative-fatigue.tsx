@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Zap } from 'lucide-react';
 import { api } from '../lib/api';
-import { ScrollableTable, StickyTh, HoverTr } from '../components/ScrollableTable';
+import { DataTable } from '../components/DataTable';
+import type { Column } from '../components/DataTable';
 
 interface FatiguedCreative {
   creative_id: string;
@@ -18,6 +19,37 @@ interface FatiguedCreative {
 
 const severityColor = (s: string) => s === 'critical' ? 'var(--red)' : 'var(--amber)';
 const severityBg = (s: string) => s === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)';
+
+const columns: Column<FatiguedCreative>[] = [
+  { key: 'campaign_name', label: 'Campaign', sortable: true, width: 180, render: (c) => (
+    <span style={{ fontWeight: 600 }}>{c.campaign_name || c.creative_id}</span>
+  )},
+  { key: 'platform', label: 'Platform', sortable: true, width: 100, render: (c) => (
+    <span style={{ color: 'var(--text-secondary)' }}>{c.platform || '—'}</span>
+  )},
+  { key: 'severity', label: 'Severity', sortable: true, width: 100, render: (c) => (
+    <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600, background: severityBg(c.severity), color: severityColor(c.severity) }}>{c.severity}</span>
+  )},
+  { key: 'ctr_drop', label: 'CTR Drop', sortable: true, align: 'right', render: (c) => (
+    <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--red)' }}>{c.ctr_drop != null ? `${c.ctr_drop.toFixed(1)}%` : '—'}</span>
+  )},
+  { key: 'frequency', label: 'Frequency', sortable: true, align: 'right', render: (c) => (
+    <span style={{ fontFamily: 'var(--font-mono)' }}>{c.frequency?.toFixed(1) ?? '—'}</span>
+  )},
+  { key: 'days_running', label: 'Days', sortable: true, align: 'right', render: (c) => (
+    <span style={{ fontFamily: 'var(--font-mono)' }}>{c.days_running ?? '—'}</span>
+  )},
+  { key: 'signals', label: 'Signals', width: 200, render: (c) => (
+    <span>
+      {(c.signals || []).slice(0, 2).map((s, j) => (
+        <span key={j} style={{ display: 'inline-block', padding: '1px 6px', borderRadius: 3, background: 'rgba(139,146,168,0.1)', color: 'var(--text-secondary)', fontSize: '0.68rem', marginRight: 4, marginBottom: 2 }}>{s}</span>
+      ))}
+    </span>
+  )},
+  { key: 'recommended_action', label: 'Action', width: 150, render: (c) => (
+    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{c.recommended_action || '—'}</span>
+  )},
+];
 
 export function CreativeFatiguePage() {
   const [accountId, setAccountId] = useState('');
@@ -106,49 +138,19 @@ export function CreativeFatiguePage() {
       )}
 
       {/* Table */}
-      <ScrollableTable>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <AlertTriangle size={14} style={{ color: 'var(--amber)' }} />
-          Fatigued Creatives
-        </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem', minWidth: 800 }}>
-          <thead>
-            <tr>
-              {['Campaign', 'Platform', 'Severity', 'CTR Drop', 'Frequency', 'Days', 'Signals', 'Action'].map(h => (
-                <StickyTh key={h}>{h}</StickyTh>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading || isFetching ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--text-tertiary)' }}>Scanning creatives...</td></tr>
-            ) : !searched ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--text-tertiary)' }}>Enter an account ID and run a snapshot</td></tr>
-            ) : fatigued.length === 0 ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--green)' }}>No fatigued creatives detected</td></tr>
-            ) : (
-              fatigued.map((c, i) => (
-                <HoverTr key={c.creative_id} even={i % 2 === 0}>
-                  <td style={{ padding: '10px 16px', fontWeight: 600 }}>{c.campaign_name || c.creative_id}</td>
-                  <td style={{ padding: '10px 16px', color: 'var(--text-secondary)' }}>{c.platform || '—'}</td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600, background: severityBg(c.severity), color: severityColor(c.severity) }}>{c.severity}</span>
-                  </td>
-                  <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)', color: 'var(--red)' }}>{c.ctr_drop != null ? `${c.ctr_drop.toFixed(1)}%` : '—'}</td>
-                  <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{c.frequency?.toFixed(1) ?? '—'}</td>
-                  <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{c.days_running ?? '—'}</td>
-                  <td style={{ padding: '10px 16px', maxWidth: 200 }}>
-                    {(c.signals || []).slice(0, 2).map((s, j) => (
-                      <span key={j} style={{ display: 'inline-block', padding: '1px 6px', borderRadius: 3, background: 'rgba(139,146,168,0.1)', color: 'var(--text-secondary)', fontSize: '0.68rem', marginRight: 4, marginBottom: 2 }}>{s}</span>
-                    ))}
-                  </td>
-                  <td style={{ padding: '10px 16px', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{c.recommended_action || '—'}</td>
-                </HoverTr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </ScrollableTable>
+      {searched && (
+        <DataTable
+          columns={columns}
+          data={fatigued}
+          rowKey={c => c.creative_id}
+          searchKey="campaign_name"
+          searchPlaceholder="Search campaigns..."
+          filterOptions={[{ key: 'severity', label: 'All Severity', options: ['critical', 'warning'] }, { key: 'platform', label: 'All Platforms', options: [...new Set(fatigued.map(c => c.platform).filter(Boolean))] }]}
+          isLoading={isLoading || isFetching}
+          emptyMessage="No fatigued creatives detected"
+          emptyIcon={<AlertTriangle size={32} style={{ color: 'var(--text-tertiary)' }} />}
+        />
+      )}
     </div>
   );
 }

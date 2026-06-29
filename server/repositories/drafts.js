@@ -31,15 +31,17 @@ export class DraftsRepository {
     log.debug('approval_drafts table ready');
   }
 
-  findAll(status = null, limit = 50) {
-    if (status) {
-      return this.db.prepare(
-        'SELECT * FROM approval_drafts WHERE status = ? ORDER BY created_at DESC LIMIT ?'
-      ).all(status, limit);
-    }
-    return this.db.prepare(
-      'SELECT * FROM approval_drafts ORDER BY created_at DESC LIMIT ?'
-    ).all(limit);
+  findAll({ status, page = 1, limit = 50 } = {}) {
+    const where = [];
+    const params = [];
+    if (status) { where.push('status = ?'); params.push(status); }
+    const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const total = this.db.prepare(`SELECT COUNT(*) as count FROM approval_drafts ${whereClause}`).get(...params).count;
+    const offset = (page - 1) * limit;
+    const data = this.db.prepare(
+      `SELECT * FROM approval_drafts ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    ).all(...params, limit, offset);
+    return { data, total, page, limit };
   }
 
   findById(id) {

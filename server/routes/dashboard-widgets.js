@@ -21,12 +21,14 @@ export function createDashboardWidgetsRouter(widgetsRepo) {
   router.get('/', async (req, res) => {
     try {
       const userId = req.user?.id || req.userId;
-      const rows = widgetsRepo.getByUser(userId);
-      res.json({ success: true, data: rows.map(toFrontend) });
+      const { page = 1, limit = 50 } = req.query;
+      const result = widgetsRepo.getByUser(userId, { page: +page, limit: +limit });
+      res.json({ success: true, data: result.data.map(toFrontend), total: result.total, page: result.page, limit: result.limit });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
   });
+
 
   // Create a new widget
   router.post('/', async (req, res) => {
@@ -51,8 +53,9 @@ export function createDashboardWidgetsRouter(widgetsRepo) {
 
       // If frontend-sent fields are present, merge them into config
       if (name !== undefined || description !== undefined || type !== undefined || enabled !== undefined) {
-        const userId = req.user?.id || req.userId;
-        const existing = widgetsRepo.getByUser(userId).find(w => w.id === req.params.id);
+        const _userId = req.user?.id || req.userId;
+        const existing = widgetsRepo.findById(req.params.id);
+
         if (existing) {
           const cfg = typeof existing.config === 'string' ? JSON.parse(existing.config) : (existing.config || {});
           if (name !== undefined) cfg.name = name;
@@ -87,8 +90,8 @@ export function createDashboardWidgetsRouter(widgetsRepo) {
         }
       }
       const userId = req.user?.id || req.userId;
-      const rows = widgetsRepo.getByUser(userId);
-      res.json({ success: true, data: rows.map(toFrontend) });
+      const result = widgetsRepo.getByUser(userId, { limit: 1000 });
+      res.json({ success: true, data: result.data.map(toFrontend) });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }

@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, Link2, TrendingUp, DollarSign } from 'lucide-react';
+import { Link2, TrendingUp, DollarSign, BarChart3 } from 'lucide-react';
 import { api } from '../lib/api';
-import { ScrollableTable, StickyTh, HoverTr } from '../components/ScrollableTable';
+import { DataTable } from '../components/DataTable';
+import type { Column } from '../components/DataTable';
 
 /** Matches the backend attributionRepo.getDashboard() response */
 interface AttributionDashboard {
@@ -23,6 +24,28 @@ interface AttributionMatch {
   match_method?: string;
   matched_at?: string;
 }
+
+const matchColumns: Column<AttributionMatch>[] = [
+  { key: 'campaign_id', label: 'Campaign', sortable: true, width: 150, render: (m) => (
+    <span style={{ fontWeight: 600 }}>{m.campaign_id || '—'}</span>
+  )},
+  { key: 'shopee_order_id', label: 'Shopee Order', width: 150, render: (m) => (
+    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem' }}>{m.shopee_order_id || '—'}</span>
+  )},
+  { key: 'ad_spend', label: 'Ad Spend', sortable: true, align: 'right', render: (m) => `Rp ${(m.ad_spend || 0).toLocaleString('id-ID')}` },
+  { key: 'shopee_revenue', label: 'Revenue', sortable: true, align: 'right', render: (m) => `Rp ${(m.shopee_revenue || 0).toLocaleString('id-ID')}` },
+  { key: 'roas', label: 'ROAS', align: 'right', render: (m) => {
+    const spend = m.ad_spend || 0;
+    const rev = m.shopee_revenue || 0;
+    return `${spend > 0 ? (rev / spend).toFixed(2) : '0.00'}x`;
+  }},
+  { key: 'match_method', label: 'Method', width: 100, render: (m) => (
+    <span style={{ padding: '2px 6px', borderRadius: 3, fontSize: '0.68rem', fontWeight: 600, background: 'rgba(99,102,241,0.1)', color: 'var(--accent)' }}>{m.match_method || '—'}</span>
+  )},
+  { key: 'matched_at', label: 'Matched', sortable: true, width: 110, render: (m) => (
+    <span style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem' }}>{m.matched_at ? new Date(m.matched_at).toLocaleDateString() : '—'}</span>
+  )},
+];
 
 export function AttributionPage() {
   const { data: summary, isLoading: summaryLoading, error: summaryError } = useQuery<AttributionDashboard>({
@@ -79,46 +102,16 @@ export function AttributionPage() {
       </div>
 
       {/* Attribution matches table */}
-      <ScrollableTable>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Link2 size={14} style={{ color: 'var(--green)' }} /> Attribution Matches
-        </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem', minWidth: 800 }}>
-          <thead>
-            <tr>
-              {['Campaign', 'Shopee Order', 'Ad Spend', 'Revenue', 'ROAS', 'Method', 'Matched'].map(h => (
-                <StickyTh key={h}>{h}</StickyTh>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {matchesLoading ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--text-tertiary)' }}>Loading...</td></tr>
-            ) : matches.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--text-tertiary)' }}>No attribution matches yet. Orders matched to ads will appear here.</td></tr>
-            ) : (
-              matches.map((m, i) => {
-                const spend = m.ad_spend || 0;
-                const rev = m.shopee_revenue || 0;
-                const rowRoas = spend > 0 ? (rev / spend).toFixed(2) : '0.00';
-                return (
-                  <HoverTr key={m.id} even={i % 2 === 0}>
-                    <td style={{ padding: '10px 16px', fontWeight: 600 }}>{m.campaign_id || '—'}</td>
-                    <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)', fontSize: '0.72rem' }}>{m.shopee_order_id || '—'}</td>
-                    <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>Rp {spend.toLocaleString('id-ID')}</td>
-                    <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>Rp {rev.toLocaleString('id-ID')}</td>
-                    <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{rowRoas}x</td>
-                    <td style={{ padding: '10px 16px' }}>
-                      <span style={{ padding: '2px 6px', borderRadius: 3, fontSize: '0.68rem', fontWeight: 600, background: 'rgba(99,102,241,0.1)', color: 'var(--accent)' }}>{m.match_method || '—'}</span>
-                    </td>
-                    <td style={{ padding: '10px 16px', color: 'var(--text-tertiary)', fontSize: '0.72rem' }}>{m.matched_at ? new Date(m.matched_at).toLocaleDateString() : '—'}</td>
-                  </HoverTr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </ScrollableTable>
+      <DataTable
+        columns={matchColumns}
+        data={matches}
+        rowKey={m => m.id}
+        searchKey="campaign_id"
+        searchPlaceholder="Search by campaign..."
+        isLoading={matchesLoading}
+        emptyMessage="No attribution matches yet. Orders matched to ads will appear here."
+        emptyIcon={<Link2 size={32} style={{ color: 'var(--text-tertiary)' }} />}
+      />
     </div>
   );
 }

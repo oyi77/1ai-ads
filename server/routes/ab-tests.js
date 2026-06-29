@@ -12,14 +12,16 @@ export function createABTestsRouter(abTestService) {
     }
   });
 
-  router.get('/', async (_req, res) => {
+  router.get('/', async (req, res) => {
     try {
-      const tests = await abTestService.getTests();
-      res.json({ success: true, data: tests });
+      const { page = 1, limit = 50 } = req.query;
+      const result = await abTestService.getTests({ page: +page, limit: +limit });
+      res.json({ success: true, data: result.data, total: result.total, page: result.page, limit: result.limit });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
   });
+
 
   router.get('/:id', async (req, res) => {
     try {

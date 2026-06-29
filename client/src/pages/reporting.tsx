@@ -2,12 +2,26 @@ import { useQuery } from '@tanstack/react-query';
 import type { CSSProperties } from 'react';
 import { Download, DollarSign, TrendingUp, Activity, BarChart3 } from 'lucide-react';
 import { api } from '../lib/api';
-import { ScrollableTable, StickyTh, HoverTr } from '../components/ScrollableTable';
+import { DataTable } from '../components/DataTable';
+import type { Column } from '../components/DataTable';
 
 interface ReportingData {
   totals: { spend: number; revenue: number; impressions: number; clicks: number; conversions: number; overallROAS: number };
   byPlatform: { platform: string; spend: number; revenue: number; roas: number; impressions: number; clicks: number; conversions: number; connected: boolean }[];
 }
+
+type PlatformRow = ReportingData['byPlatform'][number];
+
+const platformColumns: Column<PlatformRow>[] = [
+  { key: 'platform', label: 'Platform', sortable: true, width: 120, render: (p) => (
+    <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{p.platform}</span>
+  )},
+  { key: 'spend', label: 'Spend', sortable: true, align: 'right', render: (p) => `Rp ${(p.spend || 0).toLocaleString('id-ID')}` },
+  { key: 'revenue', label: 'Revenue', sortable: true, align: 'right', render: (p) => `Rp ${(p.revenue || 0).toLocaleString('id-ID')}` },
+  { key: 'roas', label: 'ROAS', sortable: true, align: 'right', render: (p) => `${(p.roas || 0).toFixed(2)}x` },
+  { key: 'impressions', label: 'Impressions', sortable: true, align: 'right', render: (p) => (p.impressions || 0).toLocaleString() },
+  { key: 'clicks', label: 'Clicks', sortable: true, align: 'right', render: (p) => (p.clicks || 0).toLocaleString() },
+];
 
 export function ReportingPage() {
   const { data, isLoading, error } = useQuery({
@@ -58,27 +72,16 @@ export function ReportingPage() {
         ))}
       </div>
 
-      <ScrollableTable>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: '0.85rem' }}>By Platform</div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.77rem', minWidth: 800 }}>
-          <thead><tr>{['Platform', 'Spend', 'Revenue', 'ROAS', 'Impressions', 'Clicks'].map(h => (
-            <StickyTh key={h}>{h}</StickyTh>
-          ))}</tr></thead>
-          <tbody>
-            {platforms.map((p, i) => (
-              <HoverTr key={p.platform} even={i % 2 === 0}>
-                <td style={{ padding: '10px 16px', fontWeight: 600, textTransform: 'capitalize' }}>{p.platform}</td>
-                <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>Rp {(p.spend || 0).toLocaleString('id-ID')}</td>
-                <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>Rp {(p.revenue || 0).toLocaleString('id-ID')}</td>
-                <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{(p.roas || 0).toFixed(2)}x</td>
-                <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{(p.impressions || 0).toLocaleString()}</td>
-                <td style={{ padding: '10px 16px', fontFamily: 'var(--font-mono)' }}>{(p.clicks || 0).toLocaleString()}</td>
-              </HoverTr>
-            ))}
-            {platforms.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', padding: 24, color: 'var(--text-tertiary)' }}>No platform data</td></tr>}
-          </tbody>
-        </table>
-      </ScrollableTable>
+      <DataTable
+        columns={platformColumns}
+        data={platforms}
+        rowKey={p => p.platform}
+        searchKey="platform"
+        searchPlaceholder="Search platforms..."
+        filterOptions={[{ key: 'platform', label: 'All Platforms', options: platforms.map(p => p.platform) }]}
+        isLoading={isLoading}
+        emptyMessage="No platform data"
+      />
     </div>
   );
 }

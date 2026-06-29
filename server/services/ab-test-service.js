@@ -38,11 +38,17 @@ class ABTestsRepository {
     return this.db.prepare('SELECT * FROM ab_tests WHERE id = ?').get(testId);
   }
 
-  getTests({ status } = {}) {
-    if (status) {
-      return this.db.prepare('SELECT * FROM ab_tests WHERE status = ? ORDER BY created_at DESC').all(status);
-    }
-    return this.db.prepare('SELECT * FROM ab_tests ORDER BY created_at DESC').all();
+  getTests({ status, page = 1, limit = 50 } = {}) {
+    const where = [];
+    const params = [];
+    if (status) { where.push('status = ?'); params.push(status); }
+    const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const total = this.db.prepare(`SELECT COUNT(*) as count FROM ab_tests ${whereClause}`).get(...params).count;
+    const offset = (page - 1) * limit;
+    const data = this.db.prepare(
+      `SELECT * FROM ab_tests ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    ).all(...params, limit, offset);
+    return { data, total, page, limit };
   }
 
   getVariants(testId) {
@@ -364,12 +370,13 @@ export class ABTestService {
     }));
   }
 
-  getTests({ status } = {}) {
-    const tests = this.repo.getTests({ status });
-    return tests.map(t => {
+  getTests({ status, page = 1, limit = 50 } = {}) {
+    const { data, total, page: p, limit: l } = this.repo.getTests({ status, page, limit });
+    const enriched = data.map(t => {
       const variants = this.repo.getVariants(t.id);
       return this._enrichTest(t, variants);
     });
+    return { data: enriched, total, page: p, limit: l };
   }
 
   getTest(testId) {

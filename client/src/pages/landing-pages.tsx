@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Globe, Plus, Trash2, ExternalLink, Eye, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
-import type { CSSProperties } from 'react';
+import { DataTable } from '../components/DataTable';
+import type { Column } from '../components/DataTable';
 
 interface LandingPage {
   id: string;
@@ -45,6 +46,38 @@ export function LandingPagesPage() {
 
   const list = Array.isArray(pages) ? pages : [];
 
+  const columns: Column<LandingPage>[] = [
+    { key: 'name', label: 'Name', sortable: true, width: 200, render: (p) => (
+      <span style={{ fontWeight: 600 }}>{p.name}</span>
+    )},
+    { key: 'status', label: 'Status', sortable: true, width: 100, render: (p) => (
+      <span style={{
+        padding: '2px 8px', borderRadius: 4, fontSize: '0.65rem', fontWeight: 600,
+        background: p.status === 'published' ? 'rgba(52,211,153,0.1)' : 'rgba(139,146,168,0.1)',
+        color: p.status === 'published' ? 'var(--green)' : 'var(--text-tertiary)',
+      }}>{p.status || 'draft'}</span>
+    )},
+    { key: 'headline', label: 'Template', width: 200, render: (p) => (
+      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{p.headline || 'No headline'}</span>
+    )},
+    { key: 'created_at', label: 'Created', sortable: true, width: 120, render: (p) => (
+      <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>{p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</span>
+    )},
+    { key: '_actions', label: 'Actions', width: 140, render: (p) => (
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
+        <span><Eye size={10} /> {p.views ?? 0}</span>
+        {p.slug && (
+          <a href={`/t/${p.slug}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 2 }}>
+            <ExternalLink size={10} /> View
+          </a>
+        )}
+        <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(p.id); }} style={{ padding: '2px 4px', background: 'transparent', color: 'var(--text-tertiary)', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
+          <Trash2 size={10} />
+        </button>
+      </div>
+    )},
+  ];
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
@@ -61,7 +94,7 @@ export function LandingPagesPage() {
 
       {/* Create Form */}
       {showCreate && (
-        <div style={{ ...cardStyle, marginBottom: 20 }}>
+        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 20 }}>
           <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 12 }}>Create Landing Page</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <input placeholder="Page name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={inputStyle} />
@@ -82,64 +115,28 @@ export function LandingPagesPage() {
         </div>
       )}
 
-      {/* Pages List */}
-      {isLoading ? (
-        <p style={{ color: 'var(--text-tertiary)', padding: 40, textAlign: 'center' }}>Loading...</p>
-      ) : list.length === 0 ? (
-        <div style={cardStyle}>
-          <Globe size={32} style={{ color: 'var(--text-tertiary)', marginBottom: 8 }} />
-          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>No landing pages yet.</p>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
-          {list.map(page => (
-            <div key={page.id} style={cardStyle}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                <span style={{
-                  padding: '2px 8px', borderRadius: 4, fontSize: '0.65rem', fontWeight: 600,
-                  background: page.status === 'published' ? 'rgba(52,211,153,0.1)' : 'rgba(139,146,168,0.1)',
-                  color: page.status === 'published' ? 'var(--green)' : 'var(--text-tertiary)',
-                }}>{page.status || 'draft'}</span>
-                <button onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(page.id); }} style={iconBtn}>
-                  <Trash2 size={12} />
-                </button>
-              </div>
-              <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 4 }}>{page.name}</h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 4 }}>{page.headline || 'No headline'}</p>
-              <div style={{ display: 'flex', gap: 16, fontSize: '0.72rem', color: 'var(--text-tertiary)', marginBottom: 8 }}>
-                <span><Eye size={10} /> {page.views ?? 0} views</span>
-                <span>{page.conversions ?? 0} conversions</span>
-              </div>
-              {page.slug && (
-                <a href={`/t/${page.slug}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <ExternalLink size={10} /> View Page
-                </a>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Pages Table */}
+      <DataTable
+        columns={columns}
+        data={list}
+        rowKey={p => p.id}
+        searchKey="name"
+        searchPlaceholder="Search landing pages..."
+        isLoading={isLoading}
+        emptyMessage="No landing pages yet."
+        emptyIcon={<Globe size={32} style={{ color: 'var(--text-tertiary)' }} />}
+      />
     </div>
   );
 }
 
-const btnStyle: CSSProperties = {
+const btnStyle = {
   display: 'flex', alignItems: 'center', gap: 6,
   padding: '8px 16px', background: 'var(--accent)', color: 'var(--bg-deep)',
   border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem',
 };
 
-const inputStyle: CSSProperties = {
+const inputStyle = {
   padding: '8px 12px', background: 'var(--bg-deep)', color: 'var(--text-primary)',
   border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.8rem', width: '100%',
-};
-
-const cardStyle: CSSProperties = {
-  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-  borderRadius: 10, padding: 20,
-};
-
-const iconBtn: CSSProperties = {
-  padding: '4px 6px', background: 'transparent', color: 'var(--text-tertiary)',
-  border: 'none', borderRadius: 4, cursor: 'pointer',
 };
