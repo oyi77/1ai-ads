@@ -31,10 +31,15 @@ export class DraftsRepository {
     log.debug('approval_drafts table ready');
   }
 
-  findAll(status = 'pending', limit = 50) {
+  findAll(status = null, limit = 50) {
+    if (status) {
+      return this.db.prepare(
+        'SELECT * FROM approval_drafts WHERE status = ? ORDER BY created_at DESC LIMIT ?'
+      ).all(status, limit);
+    }
     return this.db.prepare(
-      'SELECT * FROM approval_drafts WHERE status = ? ORDER BY created_at DESC LIMIT ?'
-    ).all(status, limit);
+      'SELECT * FROM approval_drafts ORDER BY created_at DESC LIMIT ?'
+    ).all(limit);
   }
 
   findById(id) {
