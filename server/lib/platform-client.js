@@ -4,9 +4,14 @@ import { createLogger } from './logger.js';
 const log = createLogger('platform-client');
 
 const platformLimiters = {
-  meta: new RateLimiter(30, 1000),
-  google: new RateLimiter(50, 1000),
-  tiktok: new RateLimiter(20, 1000),
+  meta: new RateLimiter(5, 1000),       // Meta Marketing API: ~200 calls/user/hour → 5 req/sec safe
+  google: new RateLimiter(8, 1000),     // Google Ads API: 10 req/sec developer token → 8 safe margin
+  tiktok: new RateLimiter(10, 1000),    // TikTok Business API: 10 req/sec per app
+  linkedin: new RateLimiter(5, 1000),   // LinkedIn Marketing API: ~100 calls/day/partner → 5/sec conservative
+  twitter: new RateLimiter(5, 1000),    // X Ads API: varies by endpoint, 5/sec safe
+  snapchat: new RateLimiter(10, 1000),  // Snapchat Marketing API: 10 req/sec per org
+  pinterest: new RateLimiter(10, 1000), // Pinterest Ads API: 1000 req/day → 10/sec burst-safe
+  microsoft: new RateLimiter(5, 1000),  // Microsoft Ads API: 10 req/sec → 5 safe margin
 };
 
 function buildHeaders(fetchOptions) {
