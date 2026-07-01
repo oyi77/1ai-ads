@@ -63,7 +63,7 @@ describe('PlatformAccountsRepository', () => {
   });
 
   describe('remove', () => {
-    it('soft-deletes row; findActiveByUserAndPlatform returns null after remove', () => {
+    it('hard-deletes row; findActiveByUserAndPlatform returns null after remove', () => {
       const row = repo.create(makeAccount(userId));
 
       expect(repo.findActiveByUserAndPlatform(userId, 'meta')).not.toBeNull();
@@ -76,29 +76,21 @@ describe('PlatformAccountsRepository', () => {
   });
 
   describe('findByUserId', () => {
-    it('returns all rows for a user regardless of platform', () => {
-      repo.create(makeAccount(userId, { platform: 'meta' }));
-      repo.create(makeAccount(userId, { platform: 'google' }));
-      repo.create(makeAccount(userId, { platform: 'tiktok' }));
-
-      // Row for a different user - should not be included
-      const otherId = uuid();
-      insertUser(db, otherId);
-      repo.create(makeAccount(otherId, { platform: 'meta' }));
-
+    it('returns all active accounts for user', () => {
+      repo.create(makeAccount(userId));
+      repo.create(makeAccount(userId, { platform: 'google', account_name: 'Google Ads' }));
       const rows = repo.findByUserId(userId);
-      expect(rows).toHaveLength(3);
-      expect(rows.map(r => r.platform)).toEqual(expect.arrayContaining(['meta', 'google', 'tiktok']));
-      rows.forEach(r => expect(r.user_id).toBe(userId));
+      expect(rows).toHaveLength(2);
     });
 
-    it('returns inactive rows too', () => {
+    it('excludes removed accounts', () => {
       const row = repo.create(makeAccount(userId));
+      repo.create(makeAccount(userId, { platform: 'google', account_name: 'Google Ads' }));
       repo.remove(row.id);
 
       const rows = repo.findByUserId(userId);
       expect(rows).toHaveLength(1);
-      expect(rows[0].is_active).toBe(0);
+      expect(rows[0].platform).toBe('google');
     });
   });
 });

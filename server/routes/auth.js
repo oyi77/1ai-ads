@@ -90,5 +90,26 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
     res.json({ url: `${base}/data-deletion-status`, confirmation_code: `del_${Date.now()}` });
   });
 
+  // Google compliance — data deletion endpoint
+  // Required by Google API Services User Data Policy (Limited Use)
+  router.get('/google/deauthorize', (_req, res) => {
+    res.json({ success: true, message: 'AdForge is ready to process Google data deletion requests via POST.' });
+  });
+  router.post('/google/deauthorize', async (req, res) => {
+    const hostname = req.get('host');
+    const isLocal = hostname && (hostname.includes('127.0.0.1') || hostname.includes('localhost'));
+    const base = isLocal || !hostname ? 'https://adforge.aitradepulse.com' : `${req.protocol}://${hostname}`;
+    // Google sends signed_request (JWT) identifying the user; extract user_id
+    const userId = req.body?.user_id || req.user?.id;
+    if (settingsRepo && userId) {
+      const googleAccounts = settingsRepo.getAccounts('google');
+      const userAccounts = googleAccounts.filter(a => a.user_id === userId);
+      for (const account of userAccounts) {
+        settingsRepo.deleteAccount(account.id);
+      }
+    }
+    res.json({ url: `${base}/data-deletion-status`, confirmation_code: `gdel_${Date.now()}` });
+  });
+
   return router;
 }
