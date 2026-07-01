@@ -10,7 +10,7 @@ const platformLimiters = {
   linkedin: new RateLimiter(5, 1000),   // LinkedIn Marketing API: ~100 calls/day/partner → 5/sec conservative
   twitter: new RateLimiter(5, 1000),    // X Ads API: varies by endpoint, 5/sec safe
   snapchat: new RateLimiter(10, 1000),  // Snapchat Marketing API: 10 req/sec per org
-  pinterest: new RateLimiter(10, 1000), // Pinterest Ads API: 1000 req/day → 10/sec burst-safe
+  pinterest: new RateLimiter(2, 1000),   // Pinterest Ads API: 1000 req/day → ~0.012/sec avg; 2/sec burst with natural pauses
   microsoft: new RateLimiter(5, 1000),  // Microsoft Ads API: 10 req/sec → 5 safe margin
 };
 
