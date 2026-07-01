@@ -99,10 +99,12 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
     const hostname = req.get('host');
     const isLocal = hostname && (hostname.includes('127.0.0.1') || hostname.includes('localhost'));
     const base = isLocal || !hostname ? 'https://adforge.aitradepulse.com' : `${req.protocol}://${hostname}`;
-    // In production, this should delete all Google Ads credentials for the requesting user
-    if (settingsRepo) {
+    // Google sends signed_request (JWT) identifying the user; extract user_id
+    const userId = req.body?.user_id || req.user?.id;
+    if (settingsRepo && userId) {
       const googleAccounts = settingsRepo.getAccounts('google');
-      for (const account of googleAccounts) {
+      const userAccounts = googleAccounts.filter(a => a.user_id === userId);
+      for (const account of userAccounts) {
         settingsRepo.deleteAccount(account.id);
       }
     }
