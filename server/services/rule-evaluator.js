@@ -83,9 +83,24 @@ export class RuleEvaluator {
     if (this.runningRules.has(campaign.id)) return null;
     this.runningRules.add(campaign.id);
 
+    // Compliance: log the intended action BEFORE execution for audit trail
+    log.info('Automation action executing', {
+      campaign_id: campaign.id,
+      campaign_name: campaign.name,
+      platform: campaign.platform,
+      action_type: action.type,
+      action_value: action.amount || action.value,
+      campaign_status: campaign.status,
+      campaign_budget: campaign.budget,
+    });
+
     try {
       const result = await this._applyAction(action, campaign);
+      log.info('Automation action completed', { campaign_id: campaign.id, action_type: action.type, result });
       return { campaign_id: campaign.id, action, result };
+    } catch (err) {
+      log.error('Automation action failed', { campaign_id: campaign.id, action_type: action.type, error: err.message });
+      throw err;
     } finally {
       this.runningRules.delete(campaign.id);
     }
@@ -216,7 +231,8 @@ export class RuleEvaluator {
       const parsed = JSON.parse(cleanJson);
       if (parsed.action === 'increase' && typeof parsed.newBudget === 'number') newBudget = parsed.newBudget;
       else if (parsed.action === 'decrease' && typeof parsed.newBudget === 'number') newBudget = parsed.newBudget;
-    } catch {
+    } catch (parseErr) {
+      log.warn('LLM budget suggestion parse failed', { campaignId, error: parseErr.message });
       if (suggestion.includes('increase')) newBudget = currentBudget * 1.5;
       else if (suggestion.includes('decrease')) newBudget = currentBudget * 0.8;
     }
@@ -225,13 +241,14 @@ export class RuleEvaluator {
 
     return { campaign_id: campaignId, action: 'optimize_budget', from: currentBudget, to: newBudget, suggestion };
   }
-
   async checkCampaigns(userId) {
     const campaigns = await this.campaignsRepo.getByUserId(userId);
     if (!campaigns?.length) return [];
 
     const rules = await this.rulesRepo.getAllEnabled(userId);
     if (!rules.length) return [];
+
+    log.info('Automation checkCampaigns starting', { userId, campaignCount: campaigns.length, ruleCount: rules.length });
 
     const results = [];
     for (const campaign of campaigns) {
