@@ -157,7 +157,7 @@ export class PlatformAccountsRepository {
   }
 
   remove(id) {
-    this.db.prepare('UPDATE platform_accounts SET is_active = 0 WHERE id = ?').run(id);
+    this.db.prepare('DELETE FROM platform_accounts WHERE id = ?').run(id);
     return true;
   }
 

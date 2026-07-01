@@ -26,4 +26,11 @@ export class CleanupRepository {
       "DELETE FROM refresh_tokens WHERE expires_at < datetime('now')"
     ).run().changes;
   }
+
+  deleteOldPerformanceHistory(olderThanDays = 90) {
+    const cutoff = `-${olderThanDays} days`;
+    return this.db.prepare(
+      "DELETE FROM performance_history WHERE snapshot_date < date('now', ?)"
+    ).run(cutoff).changes;
+  }
 }

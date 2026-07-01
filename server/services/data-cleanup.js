@@ -29,6 +29,7 @@ export class DataCleanup {
         webhookEvents: this.cleanupRepo.deleteProcessedWebhookEvents(30),
         schedules: this.cleanupRepo.deleteExecutedSchedules(90),
         refreshTokens: this.cleanupRepo.deleteExpiredRefreshTokens(),
+        performanceHistory: this.cleanupRepo.deleteOldPerformanceHistory(90),
       };
 
       const total = Object.values(results).reduce((sum, n) => sum + n, 0);

@@ -90,5 +90,24 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
     res.json({ url: `${base}/data-deletion-status`, confirmation_code: `del_${Date.now()}` });
   });
 
+  // Google compliance — data deletion endpoint
+  // Required by Google API Services User Data Policy (Limited Use)
+  router.get('/google/deauthorize', (_req, res) => {
+    res.json({ success: true, message: 'AdForge is ready to process Google data deletion requests via POST.' });
+  });
+  router.post('/google/deauthorize', async (req, res) => {
+    const hostname = req.get('host');
+    const isLocal = hostname && (hostname.includes('127.0.0.1') || hostname.includes('localhost'));
+    const base = isLocal || !hostname ? 'https://adforge.aitradepulse.com' : `${req.protocol}://${hostname}`;
+    // In production, this should delete all Google Ads credentials for the requesting user
+    if (settingsRepo) {
+      const googleAccounts = settingsRepo.getAccounts('google');
+      for (const account of googleAccounts) {
+        settingsRepo.deleteAccount(account.id);
+      }
+    }
+    res.json({ url: `${base}/data-deletion-status`, confirmation_code: `gdel_${Date.now()}` });
+  });
+
   return router;
 }
