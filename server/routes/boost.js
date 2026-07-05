@@ -7,6 +7,7 @@ import { Router } from 'express';
 export function createBoostRouter({ services }) {
   const router = Router();
   const svc = services.boostApproval;
+  const targeting = services.targeting;
 
   // ── POST /api/boost/recommend ─────────────────────────────────
   // Body: { post_id, page_id, metrics?, target_audience_json? }
@@ -62,6 +63,53 @@ export function createBoostRouter({ services }) {
       return res.json({ ok: true, ...result });
     } catch (err) {
       return res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
+  // ── POST /api/boost/targeting/suggest ─────────────────────────
+  // Body: { post_id, page_id, category? }
+  router.post('/targeting/suggest', (req, res) => {
+    const { post_id, page_id, category } = req.body ?? {};
+    if (!post_id || !page_id) {
+      return res.status(400).json({ success: false, error: 'post_id and page_id are required' });
+    }
+    try {
+      const suggestion = targeting.suggest({ post_id, page_id, category });
+      return res.json({ success: true, data: suggestion });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ── GET /api/boost/targeting/:post_id/:page_id ────────────────
+  router.get('/targeting/:post_id/:page_id', (req, res) => {
+    try {
+      const suggestion = targeting.getOrSuggest(req.params.post_id, req.params.page_id);
+      return res.json({ success: true, data: suggestion });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ── GET /api/boost/targeting/patterns?page_id=&days= ─────────
+  router.get('/targeting/patterns', (req, res) => {
+    const { page_id, days = 30 } = req.query;
+    try {
+      const result = targeting.analyzeEngagementPatterns({ page_id: page_id || null, days: Number(days) });
+      return res.json({ success: true, data: result });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ── GET /api/boost/targeting?limit=&offset= ───────────────────
+  router.get('/targeting', (req, res) => {
+    const { limit = 50, offset = 0 } = req.query;
+    try {
+      const suggestions = targeting.listAll({ limit: Number(limit), offset: Number(offset) });
+      return res.json({ success: true, data: suggestions, count: suggestions.length });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
