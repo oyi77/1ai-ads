@@ -16,6 +16,7 @@ import { createAiGroupRouter } from '../routes/_ai.js';
 import { createReportingGroupRouter } from '../routes/_reporting.js';
 import { createAutomationGroupRouter } from '../routes/_automation.js';
 import { createMcpGroupRouter } from '../routes/_mcp.js';
+import { createBoostRouter } from '../routes/boost.js';
 
 export function createRouters({ app, repos, services }) {
   const publicRateLimit = rateLimit({
@@ -75,6 +76,9 @@ export function createRouters({ app, repos, services }) {
 
   // ── Infrastructure ───────────────────────────────────────────
   app.use('/api', createMcpGroupRouter(deps));
+
+  // ── Boost Recommendations ────────────────────────────────────
+  app.use('/api/boost', createBoostRouter(deps));
 
   // ── Tracking (public) ────────────────────────────────────────
   app.use('/t', createTrackRouter(repos.adUtmMapRepo, services.utmTagger));

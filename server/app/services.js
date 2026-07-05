@@ -46,6 +46,7 @@ import { WhiteLabelService } from '../services/white-label.js';
 import { CapiMonitor } from '../services/capi-monitor.js';
 import { CreativeLibraryRepository } from '../repositories/creative-library.js';
 import { DashboardWidgetsRepository } from '../repositories/dashboard-widgets.js';
+import { BoostApprovalService } from '../services/boost-approval.js';
 
 export function createServices({ db, repos, params }) {
   const llmClient = (params && params.llmClient) || new LLMClient({
@@ -124,6 +125,7 @@ export function createServices({ db, repos, params }) {
   const creativeLibraryRepo = new CreativeLibraryRepository(db);
   const dashboardWidgetsRepo = new DashboardWidgetsRepository(db);
   const nangoAuth = new NangoAuthService();
+  const boostApproval = new BoostApprovalService(repos.boostRecommendationsRepo, repos.settingsRepo);
 
   return {
     llmClient, adspirerClient, trendingService, scalevService, paymentService,
@@ -138,5 +140,6 @@ export function createServices({ db, repos, params }) {
     imageGenerator, audienceIntelligence, creativeScorer, whiteLabelService,
     capiMonitor, creativeLibraryRepo, dashboardWidgetsRepo, nangoAuth,
     mcpClient: params && params.mcpClient,
+    boostApproval,
   };
 }

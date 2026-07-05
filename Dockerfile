@@ -10,7 +10,6 @@ RUN npm ci --omit=dev
 COPY server.js mcp.js ./
 COPY server/ ./server/
 COPY db/ ./db/
-COPY .env.example ./
 
 # Copy built frontend
 COPY dist/ ./dist/

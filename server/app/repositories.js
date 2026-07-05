@@ -18,6 +18,7 @@ import { ContentSchedulerQueueRepository } from '../repositories/content-schedul
 import { DraftsRepository } from '../repositories/drafts.js';
 import { ShopeeCommissionsRepository } from '../repositories/shopee-commissions.js';
 import { AuditLogRepository } from '../repositories/audit-log.js';
+import { BoostRecommendationsRepository } from '../repositories/boost-recommendations.js';
 
 export function createRepositories(db) {
   const scheduleRepo = new ScheduleRepository(db);
@@ -49,5 +50,6 @@ export function createRepositories(db) {
     draftsRepo: new DraftsRepository(db),
     shopeeCommissionsRepo: new ShopeeCommissionsRepository(db),
     auditRepo: new AuditLogRepository(db),
+    boostRecommendationsRepo: new BoostRecommendationsRepository(db),
   };
 }
