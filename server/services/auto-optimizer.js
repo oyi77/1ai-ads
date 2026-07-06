@@ -1,4 +1,3 @@
-import config from '../config/index.js';
 /**
  * Auto-Optimizer (Pareto Engine)
  * Evaluates automation rules against campaign performance.
@@ -6,8 +5,10 @@ import config from '../config/index.js';
  * Actions: pause, scale_up, scale_down budget.
  */
 
+import config from '../config/index.js';
 import { createLogger } from '../lib/logger.js';
 import { compare } from '../lib/operators.js';
+import { recordToTreasury } from './treasuryClient.js';
 
 const log = createLogger('auto-optimizer');
 
@@ -103,6 +104,15 @@ export class AutoOptimizer {
 
   async _pauseAction(campaignId) {
     await this.meta.updateCampaign(campaignId, { status: 'PAUSED' });
+    // Fire-and-forget: campaign paused = ad spend without return = loss event
+    recordToTreasury({
+      source: '1ai-ads',
+      direction: 'out',
+      amount_usd: 0,          // spend already sunk; hub records the event, amount filled by caller if known
+      note: `Campaign paused (ROAS stop-loss): ${campaignId}`,
+      workflow: 'wf5_ad_loss',
+      metadata: { campaign_id: campaignId },
+    }).catch((err) => log.warn({ err }, '[auto-optimizer] Treasury record failed (pause)'));
     return { action: 'paused', campaignId };
   }
 
@@ -113,13 +123,34 @@ export class AutoOptimizer {
       log.info(`Scale blocked: ${campaign.name} is not LC_`);
       return { action: 'blocked', reason: 'Only LC_ campaigns benefit from budget scaling' };
     }
-    
+
     const currentBudget = insights.spend / 7;
     const factor = direction === 'up' ? (1 + percent / 100) : (1 - percent / 100);
     const newBudget = direction === 'down'
       ? Math.max(10000, Math.round(currentBudget * factor))
       : Math.round(currentBudget * factor);
     await this.meta.updateCampaign(campaignId, { dailyBudget: newBudget });
+
+    // Fire-and-forget: scale_up on a profitable campaign = revenue signal into pool
+    if (direction === 'up') {
+      const profitEstimate = insights.revenue != null
+        ? insights.revenue - insights.spend
+        : insights.spend * (percent / 100); // conservative proxy: budget delta as floor
+      recordToTreasury({
+        source: '1ai-ads',
+        direction: 'in',
+        amount_usd: Math.max(0, profitEstimate),
+        note: `Campaign scaled up ${percent}%: ${campaignId}`,
+        workflow: 'wf5_ad_profit',
+        metadata: {
+          campaign_id: campaignId,
+          budget_from: currentBudget,
+          budget_to: newBudget,
+          spend_7d: insights.spend,
+        },
+      }).catch((err) => log.warn({ err }, '[auto-optimizer] Treasury record failed (scale_up)'));
+    }
+
     return { action: `scale_${direction}`, from: currentBudget, to: newBudget };
   }
 
