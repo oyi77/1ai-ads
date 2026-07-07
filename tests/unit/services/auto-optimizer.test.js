@@ -1,5 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { AutoOptimizer } from '../../../server/services/auto-optimizer.js';
+
+// Module-level mock so ESM named exports are writable
+vi.mock('../../../server/services/treasuryClient.js', () => ({
+  recordToTreasury: vi.fn().mockResolvedValue(true),
+  checkWf5Enabled: vi.fn().mockResolvedValue(true),
+}));
+
+import { recordToTreasury, checkWf5Enabled } from '../../../server/services/treasuryClient.js';
 
 describe('AutoOptimizer', () => {
   let mockMetaApi;
@@ -229,5 +237,21 @@ describe('AutoOptimizer', () => {
 
     testOptimizer.stop();
     expect(testOptimizer._interval).toBeNull();
+  });
+
+  it('should skip evaluation when wf5_enabled=false in hub treasury', async () => {
+    checkWf5Enabled.mockResolvedValueOnce(false);
+
+    mockRulesRepo.findActive.mockReturnValue([{
+      id: 'ruleX', name: 'Should Not Fire', campaign_id: 'camp_111',
+      condition_metric: 'cpc', condition_operator: '>', condition_value: 1,
+      action: 'pause', action_value: null,
+    }]);
+
+    const result = await optimizer.evaluate();
+
+    expect(result.skipped).toBe(true);
+    expect(result.checked).toBe(0);
+    expect(mockMetaApi.getCampaignInsights).not.toHaveBeenCalled();
   });
 });

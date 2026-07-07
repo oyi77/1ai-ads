@@ -8,7 +8,7 @@
 import config from '../config/index.js';
 import { createLogger } from '../lib/logger.js';
 import { compare } from '../lib/operators.js';
-import { recordToTreasury } from './treasuryClient.js';
+import { recordToTreasury, checkWf5Enabled } from './treasuryClient.js';
 
 const log = createLogger('auto-optimizer');
 
@@ -32,6 +32,13 @@ export class AutoOptimizer {
   }
 
   async evaluate() {
+    // Gate: if hub treasury says wf5_enabled=false, skip the entire cycle.
+    const wf5On = await checkWf5Enabled();
+    if (!wf5On) {
+      log.info('AutoOptimizer skipped — wf5_enabled=false in hub treasury');
+      return { checked: 0, triggered: 0, skipped: true };
+    }
+
     const activeRules = this.rules.findActive();
     if (activeRules.length === 0) return { checked: 0, triggered: 0 };
     const results = [];

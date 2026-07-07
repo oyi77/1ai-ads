@@ -67,3 +67,44 @@ export async function recordToTreasury(entry) {
     clearTimeout(timer);
   }
 }
+
+/**
+ * Check if WF5 (ad optimization) is enabled in the hub treasury.
+ * Returns true when hub is unreachable (fail-open: don't block ads on hub downtime).
+ * Returns false only when hub explicitly says wf5_enabled=false.
+ * @returns {Promise<boolean>}
+ */
+export async function checkWf5Enabled() {
+  const hubUrl = HUB_URL();
+  if (!hubUrl) return true; // no hub configured → run normally
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5_000);
+
+  const headers = {};
+  const token = HUB_TOKEN();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  try {
+    const res = await fetch(`${hubUrl}/treasury/status`, {
+      headers,
+      signal: controller.signal,
+    });
+    if (!res.ok) return true; // hub error → fail-open
+    const data = await res.json();
+    // Hub returns { rules: { wf5_enabled: "true"|"false" } } inside /treasury/status
+    const flag = data?.rules?.wf5_enabled;
+    if (flag === 'false' || flag === false) {
+      log.warn('[treasuryClient] wf5_enabled=false — optimizer will be skipped');
+      return false;
+    }
+    return true;
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      log.debug({ err }, '[treasuryClient] wf5 health check unreachable — failing open');
+    }
+    return true; // unreachable → fail-open
+  } finally {
+    clearTimeout(timer);
+  }
+}
