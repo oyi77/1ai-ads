@@ -68,7 +68,7 @@ export function createPaymentsRouter(paymentService) {
 
       let payment;
       if (checkStatus === 'true') {
-        // Check with Scalev for latest status
+        // Check with payment provider for latest status
         payment = await paymentService.checkPaymentStatusWithProvider(orderId);
       } else {
         // Just get from database

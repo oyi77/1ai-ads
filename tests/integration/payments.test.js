@@ -4,17 +4,9 @@ import { createApp } from '../../server/app.js';
 import { generateToken } from '../../server/lib/auth.js';
 import request from 'supertest';
 
-// Mock ScalevService to avoid external dependencies
-vi.mock('../../server/services/scalev.js', () => ({
-  ScalevService: class {
-    createOrder() {
-      return Promise.resolve({
-        checkout_url: 'https://checkout.scalev.test/mock-checkout-url',
-        order_id: 'scalev_order_123'
-      });
-    }
-  }
-}));
+// Mock fetch for payment API calls
+const mockFetch = vi.fn();
+globalThis.fetch = mockFetch;
 
 describe('Payments API Integration', () => {
   let app;
@@ -37,24 +29,28 @@ describe('Payments API Integration', () => {
 
     // Plans are already seeded by schema.sql, no need to insert again
 
-    // Seed settings for Scalev plan configuration
+    // Seed settings for payment plan configuration
     db.prepare(`
       INSERT INTO settings (key, value)
       VALUES (?, ?)
-    `).run('scalev_plan_pro', JSON.stringify({
+    `).run('payment_plan_pro', JSON.stringify({
       storeUniqueId: 'store_pro_test',
-      variantUniqueId: 'variant_pro_test',
       amount: 499000
     }));
 
     db.prepare(`
       INSERT INTO settings (key, value)
       VALUES (?, ?)
-    `).run('scalev_plan_enterprise', JSON.stringify({
+    `).run('payment_plan_enterprise', JSON.stringify({
       storeUniqueId: 'store_ent_test',
-      variantUniqueId: 'variant_ent_test',
       amount: 1499000
     }));
+
+    // Mock the external payment API
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ checkout_url: 'https://checkout.payment.test/mock-checkout-url' }),
+    });
 
     app = createApp({ db });
   });
@@ -81,7 +77,7 @@ describe('Payments API Integration', () => {
       expect(res.body.data).toBeDefined();
       expect(res.body.data.paymentId).toBeDefined();
       expect(res.body.data.orderId).toBeDefined();
-      expect(res.body.data.checkoutUrl).toBe('https://checkout.scalev.test/mock-checkout-url');
+      expect(res.body.data.checkoutUrl).toBe('https://checkout.payment.test/mock-checkout-url');
       expect(res.body.data.planName).toBe('Pro');
       expect(res.body.data.amount).toBe(499000);
     });
@@ -118,13 +114,19 @@ describe('Payments API Integration', () => {
       expect(res.body.error).toContain('already on the Pro plan');
     });
 
-    it('calls ScalevService.createOrder with correct parameters', async () => {
+    it('calls external payment API with correct parameters', async () => {
+      mockFetch.mockClear();
       const res = await auth(request(app).post('/api/payments')).send({
         planId: 'plan_pro'
       });
 
       expect(res.status).toBe(200);
-      // The mock should have been called by the PaymentService
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const callUrl = mockFetch.mock.calls[0][0];
+      expect(callUrl).toContain('/create');
+      const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(callBody.amount).toBe(499000);
+      expect(callBody.order_id).toMatch(/^order_/);
     });
 
     it('creates payment record with pending status', async () => {

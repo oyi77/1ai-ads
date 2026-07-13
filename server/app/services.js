@@ -2,7 +2,6 @@ import config from '../config/index.js';
 import { LLMClient } from '../services/llm-client.js';
 import { AdspirerMcpClient } from '../services/adspirer-mcp-client.js';
 import { TrendingService } from '../services/trending.js';
-import { ScalevService } from '../services/scalev.js';
 import { PaymentService } from '../services/payments.js';
 import { LearningService } from '../services/learning.js';
 import { MetaAdsAPI } from '../services/meta/index.js';
@@ -59,8 +58,7 @@ export function createServices({ db, repos, params }) {
 
   const adspirerClient = new AdspirerMcpClient(repos.platformAccountsRepo);
   const trendingService = new TrendingService(repos.campaignsRepo);
-  const scalevService = (params && params.scalevService) || new ScalevService(repos.settingsRepo);
-  const paymentService = new PaymentService(repos.paymentsRepo, repos.usersRepo, scalevService);
+  const paymentService = new PaymentService(repos.paymentsRepo, repos.usersRepo);
   const learningService = new LearningService(repos.campaignsRepo, repos.adsRepo, repos.landingRepo);
   const utmTagger = new UtmTaggerService(repos.adUtmMapRepo);
 
@@ -130,7 +128,7 @@ export function createServices({ db, repos, params }) {
   const targeting = new TargetingService(repos.targetingSuggestionsRepo, repos.boostRecommendationsRepo);
 
   return {
-    llmClient, adspirerClient, trendingService, scalevService, paymentService,
+    llmClient, adspirerClient, trendingService, paymentService,
     learningService, utmTagger, metaApi, creativeStudio, videoService,
     contentScheduler, adResearchService, orchestrator, realtimeService,
     contentBridge, socialBridge, aiAgent, shopeeAdapter, attributionService,

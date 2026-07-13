@@ -10,7 +10,7 @@ export class PaymentsRepository {
     this.db.prepare(`
       INSERT INTO payments (id, user_id, order_id, amount, currency, provider, provider_ref, metadata)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, userId, orderId || null, amount, currency || 'IDR', provider || 'scalev', providerRef || null, JSON.stringify(metadata || {}));
+    `).run(id, userId, orderId || null, amount, currency || 'IDR', provider || 'payment', providerRef || null, JSON.stringify(metadata || {}));
     return this.findById(id);
   }
 
@@ -43,9 +43,8 @@ export class PaymentsRepository {
   findPlanById(planId) {
     return this.db.prepare('SELECT * FROM plans WHERE id = ?').get(planId) || null;
   }
-
-  getScalevConfig(planName) {
-    const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(`scalev_plan_${planName}`);
+  getPaymentConfig(planName) {
+    const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(`payment_plan_${planName}`);
     return row ? JSON.parse(row.value) : null;
   }
 }
