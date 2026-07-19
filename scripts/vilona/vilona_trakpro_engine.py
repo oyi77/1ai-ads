@@ -305,8 +305,46 @@ ACCOUNTS = {
         "budget_cap_per_camp": 200000,
         "tags": ["studiolands", "selow", "setelanbajukaosmihugajah", "setelangajahthaialand"],
     },
+    "BK_PRODUK_DIGITAL": {
+        "id": "act_1204208138534580",
+        "name": "BerkahKarya Produk Digital",
+        "enabled": False,
+        "roas_winner": 2.0,
+        "roas_super": 5.0,
+        "roas_kill": 0.2,
+        "cpc_kill": 500,
+        "cpc_safe_cbo": 100, "cpc_danger_cbo": 200,
+        "cpc_safe_abo": 150, "cpc_danger_abo": 300,
+        "budget_cap_per_camp": 100000,
+        "tags": ["academy", "digital", "courses"],
+    },
+    "BK_EBOOK_PRIA": {
+        "id": "act_1601373334527521",
+        "name": "BerkahKarya Ebook Pria",
+        "enabled": False,
+        "roas_winner": 2.0,
+        "roas_super": 5.0,
+        "roas_kill": 0.2,
+        "cpc_kill": 500,
+        "cpc_safe_cbo": 100, "cpc_danger_cbo": 200,
+        "cpc_safe_abo": 150, "cpc_danger_abo": 300,
+        "budget_cap_per_camp": 100000,
+        "tags": ["ebook", "digital", "products"],
+    },
+    "BK_WEBSITE": {
+        "id": "act_1005166835197534",
+        "name": "BerkahKarya Website (new)",
+        "enabled": False,
+        "roas_winner": 2.0,
+        "roas_super": 5.0,
+        "roas_kill": 0.2,
+        "cpc_kill": 500,
+        "cpc_safe_cbo": 100, "cpc_danger_cbo": 200,
+        "cpc_safe_abo": 150, "cpc_danger_abo": 300,
+        "budget_cap_per_camp": 100000,
+        "tags": ["website", "academy", "services"],
+    },
 }
-
 # ─── ACCOUNTS ─────────────────────────────────────────────────────────────────
 def log(msg, level="INFO"):
     ts = datetime.now(WIB).strftime("%Y-%m-%d %H:%M:%S")

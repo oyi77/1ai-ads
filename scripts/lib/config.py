@@ -62,6 +62,24 @@ ACCOUNTS: Dict[str, dict] = {
         'currency': 'IDR',
         'timezone': 'Asia/Jakarta',
     },
+    'BK_PRODUK_DIGITAL': {
+        'id': 'act_1204208138534580',
+        'name': 'BerkahKarya Produk Digital',
+        'currency': 'IDR',
+        'timezone': 'Asia/Jakarta',
+    },
+    'BK_EBOOK_PRIA': {
+        'id': 'act_1601373334527521',
+        'name': 'BerkahKarya Ebook Pria',
+        'currency': 'IDR',
+        'timezone': 'Asia/Jakarta',
+    },
+    'BK_WEBSITE': {
+        'id': 'act_1005166835197534',
+        'name': 'BerkahKarya Website (new)',
+        'currency': 'IDR',
+        'timezone': 'Asia/Jakarta',
+    },
 }
 
 # ─── Default Thresholds ──────────────────────────────────────
