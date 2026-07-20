@@ -45,7 +45,6 @@ const config = {
   get fbAppId() { return process.env.FB_APP_ID || ''; },
   get fbAppSecret() { return process.env.FB_APP_SECRET || ''; },
   get fbSystemToken() { return process.env.FB_SYSTEM_TOKEN || ''; },
-  get fbConfigId() { return process.env.FB_CONFIG_ID || ''; },
   get llm() {
     return {
       url: process.env.OMNIROUTE_URL || 'http://localhost:20128/v1/chat/completions',
@@ -65,8 +64,6 @@ const config = {
     };
   },
   get logLevel() { return process.env.LOG_LEVEL || 'info'; },
-  get adSpireApiKey() { return process.env.AD_SPIRE_API_KEY || ''; },
-  get adSpireApiUrl() { return process.env.AD_SPIRE_API_URL || 'https://api.adspire.io/v1'; },
   get adspirerClientId() { return process.env.ADSPIRER_CLIENT_ID || ''; },
   get adspirerRedirectUri() { return process.env.ADSPIRER_REDIRECT_URI || 'http://localhost:5173/api/adspirer/auth/callback'; },
   get similarwebApiKey() { return process.env.SIMILARWEB_API_KEY || ''; },
@@ -80,72 +77,11 @@ const config = {
   get adsLibraryAiCookies() { return process.env.ADS_LIBRARY_AI_COOKIES || null; },
  get telegramBotToken() { return process.env.TELEGRAM_BOT_TOKEN || ''; },
  get telegramChatId() { return process.env.TELEGRAM_CHAT_ID || ''; },
- get notificationWebhooks() { return process.env.NOTIFICATION_WEBHOOKS || ''; },
  get webhookVerifyToken() { return process.env.WEBHOOK_VERIFY_TOKEN || ''; },
  get aiPipelineDirectUrl() { return process.env.AI_PIPELINE_DIRECT_URL || ''; },
  get aiPipelineDirectApiKey() { return process.env.AI_PIPELINE_DIRECT_API_KEY || ''; },
  get aiPipelineDefaultModel() { return process.env.AI_PIPELINE_DEFAULT_MODEL || ''; },
- get gcpServiceAccount() { return process.env.GCP_SERVICE_ACCOUNT || ''; },
- get gcpProjectId() { return process.env.GCP_PROJECT_ID || ''; },
- get bigqueryDataset() { return process.env.BIGQUERY_DATASET || 'adforge_reports'; },
- get gcpServiceAccountEmail() { return process.env.GCP_SERVICE_ACCOUNT_EMAIL || ''; },
-  // Platform: LinkedIn Ads
-  get linkedinAccessToken() { return process.env.LINKEDIN_ACCESS_TOKEN || ''; },
-  get linkedinClientId() { return process.env.LINKEDIN_CLIENT_ID || ''; },
-  get linkedinClientSecret() { return process.env.LINKEDIN_CLIENT_SECRET || ''; },
-  // Platform: Pinterest Ads
-  get pinterestAccessToken() { return process.env.PINTEREST_ACCESS_TOKEN || ''; },
-  get pinterestAdAccountId() { return process.env.PINTEREST_AD_ACCOUNT_ID || ''; },
-  // Platform: Snapchat Ads
-  get snapchatAccessToken() { return process.env.SNAPCHAT_ACCESS_TOKEN || ''; },
-  get snapchatRefreshToken() { return process.env.SNAPCHAT_REFRESH_TOKEN || ''; },
-  // Platform: Twitter/X Ads
-  get twitterAccessToken() { return process.env.TWITTER_ACCESS_TOKEN || ''; },
-  get twitterAccountId() { return process.env.TWITTER_ACCOUNT_ID || ''; },
-  // Platform: Microsoft/Bing Ads
-  get microsoftAccessToken() { return process.env.MICROSOFT_ACCESS_TOKEN || ''; },
-  get microsoftDevToken() { return process.env.MICROSOFT_DEVELOPER_TOKEN || ''; },
-  get microsoftCustomerId() { return process.env.MICROSOFT_CUSTOMER_ID || ''; },
-  // Platform: Shopee
-  get shopeeSellerIds() { return process.env.SHOPEE_SELLER_IDS || ''; },
-  get shopeeApiUrl() { return process.env.SHOPEE_API_URL || ''; },
   get nangoSecretKey() { return process.env.NANGO_SECRET_KEY || ''; },
-  // Platform: Reddit Ads
-  get redditAccessToken() { return process.env.REDDIT_ACCESS_TOKEN || ''; },
-  get redditAccountId() { return process.env.REDDIT_ACCOUNT_ID || ''; },
-  // Platform: Spotify Ads
-  get spotifyAccessToken() { return process.env.SPOTIFY_ACCESS_TOKEN || ''; },
-  get spotifyAccountId() { return process.env.SPOTIFY_ACCOUNT_ID || ''; },
-  // Platform: WhatsApp Business Ads
-  get whatsappAccessToken() { return process.env.WHATSAPP_ACCESS_TOKEN || ''; },
-  get whatsappBusinessAccountId() { return process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || ''; },
-  // Platform: Amazon Ads
-  get amazonAccessToken() { return process.env.AMAZON_ACCESS_TOKEN || ''; },
-  get amazonProfileId() { return process.env.AMAZON_PROFILE_ID || ''; },
-  // Platform: Apple Search Ads
-  get appleAccessToken() { return process.env.APPLE_ACCESS_TOKEN || ''; },
-  get appleOrgId() { return process.env.APPLE_ORG_ID || ''; },
-  // Platform: Criteo Ads
-  get criteoAccessToken() { return process.env.CRITEO_ACCESS_TOKEN || ''; },
-  get criteoAdvertiserId() { return process.env.CRITEO_ADVERTISER_ID || ''; },
-  // Platform: Taboola Ads
-  get taboolaAccessToken() { return process.env.TABOOLA_ACCESS_TOKEN || ''; },
-  get taboolaAccountId() { return process.env.TABOOLA_ACCOUNT_ID || ''; },
-  // Platform: The Trade Desk
-  get thetradedeskAccessToken() { return process.env.THETRADEDESK_ACCESS_TOKEN || ''; },
-  get thetradedeskAdvertiserId() { return process.env.THETRADEDESK_ADVERTISER_ID || ''; },
-  // Platform: Yandex Direct
-  get yandexAccessToken() { return process.env.YANDEX_ACCESS_TOKEN || ''; },
-  get yandexClientId() { return process.env.YANDEX_CLIENT_ID || ''; },
-  // Platform: Baidu Ads
-  get baiduAccessToken() { return process.env.BAIDU_ACCESS_TOKEN || ''; },
-  get baiduAccountId() { return process.env.BAIDU_ACCOUNT_ID || ''; },
-  // Platform: KakaoTalk Ads
-  get kakaoAccessToken() { return process.env.KAKAO_ACCESS_TOKEN || ''; },
-  get kakaoAdAccountId() { return process.env.KAKAO_AD_ACCOUNT_ID || ''; },
-  // Platform: LINE Ads
-  get lineAccessToken() { return process.env.LINE_ACCESS_TOKEN || ''; },
-  get lineAdAccountId() { return process.env.LINE_AD_ACCOUNT_ID || ''; },
 };
 
 export function validateConfig() {

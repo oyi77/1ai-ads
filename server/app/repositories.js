@@ -1,3 +1,6 @@
+import { AdsetsRepository } from '../repositories/adsets.js';
+import { InvoicesRepository } from '../repositories/invoices.js';
+import { SavedAudiencesRepository } from '../repositories/saved-audiences.js';
 import { UsersRepository } from '../repositories/users.js';
 import { RefreshTokensRepository } from '../repositories/refresh-tokens.js';
 import { SettingsRepository } from '../repositories/settings.js';
@@ -53,5 +56,8 @@ export function createRepositories(db) {
     auditRepo: new AuditLogRepository(db),
     boostRecommendationsRepo: new BoostRecommendationsRepository(db),
     targetingSuggestionsRepo: new TargetingSuggestionsRepository(db),
+    adsetsRepo: new AdsetsRepository(db),
+    invoicesRepo: new InvoicesRepository(db),
+    savedAudiencesRepo: new SavedAudiencesRepository(db),
   };
 }

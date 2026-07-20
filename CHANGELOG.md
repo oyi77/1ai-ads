@@ -1,3 +1,26 @@
+## [1.4.0] - 2026-07-20
+
+### Removed
+- **Thin service wrappers**: `InvoiceService`, `AudienceManager` — routes use repos directly
+- **3 orphan files**: `repositories/creative-performance.js`, `services/mcp-client.js`, `services/ai.js`
+- **6 dead config keys**: `fbConfigId`, `adSpireApiKey`, `adSpireApiUrl`, `notificationWebhooks`, plus 4 BigQuery keys and 22 platform credential getters
+- **2 dead dependencies**: `@google-cloud/bigquery` (~40MB), `mcp-meta-ads`
+- **`node-fetch` dependency** — only import replaced with global fetch + `AbortSignal.timeout`
+- **`scripts/test-bq.js`** — would crash on import of removed module
+
+### Fixed
+- **CRITICAL**: `server.js` missing `llmClient` instantiation — server failed to boot
+- **HIGH**: MCP services pass-through — `_mcp.js` → `routes/mcp.js` → `mcp-server.js` now correctly receives services; `competitorSpy` destructuring fixed (enables 6 MCP tools)
+- **3 pre-existing crashes**: `boostApproval`/`targeting` missing from services.js instantiations; `capiMonitor` missing from services.js return
+- **`learning.js`**: replaced unmaintainable `node-fetch` with native global fetch
+- **Invalid `package.json` JSON** after prior edit — restored valid structure
+- **`@tailwindcss/vite` and `tailwindcss`** moved to devDependencies (not runtime deps)
+
+### Changed
+- **Phase 1 cleanup**: 18 files changed (+160 −647), 14 packages removed from `node_modules`
+- **Server boots cleanly** — all 9 background services start without crashes
+
+
 ## [1.3.0] - 2026-06-28
 
 ### Added

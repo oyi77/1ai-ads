@@ -1,3 +1,4 @@
+import { requireAuth } from '../middleware/auth.js';
 import { Router } from 'express';
 import { createCampaignsRouter } from './campaigns.js';
 import { createAdsRouter } from './ads.js';
@@ -7,15 +8,18 @@ import { createTemplatesRouter } from './templates.js';
 import { createBatchRouter } from './batch.js';
 import { createBulkRouter } from './bulk.js';
 import { createPixelRouter } from './pixels.js';
+import { createAdsetsRouter } from './adsets.js';
+import { createInvoicesRouter } from './invoices.js';
 import { createWebhookRouter } from './webhooks.js';
-import { requireAuth } from '../middleware/auth.js';
 
 export function createCampaignsGroupRouter({ repos, services }) {
   const router = Router();
-  router.use('/campaigns', requireAuth, createCampaignsRouter(services.orchestrator, services.metaApi, services.creativeStudio, repos.campaignsRepo, repos.adsRepo));
+  router.use('/campaigns', requireAuth, createCampaignsRouter(services.orchestrator, services.metaApi, services.creativeStudio, repos.campaignsRepo, repos.adsRepo, repos.adsetsRepo, repos.draftsRepo));
   router.use('/ads', requireAuth, createAdsRouter(repos.adsRepo, services.creativeStudio));
   router.use('/landing', requireAuth, createLandingRouter(repos.landingRepo, services.llmClient));
   router.use('/drafts', requireAuth, createDraftRouter(services.draftService));
+  router.use('/adsets', requireAuth, createAdsetsRouter(repos.adsetsRepo));
+  router.use('/invoices', requireAuth, createInvoicesRouter(repos.invoicesRepo));
   router.use('/templates', requireAuth, createTemplatesRouter(repos.templatesRepo));
   router.use('/ops/bulk', requireAuth, createBulkRouter(services.bulkOperations));
   router.use('/batch', requireAuth, createBatchRouter(services.metaApi));

@@ -5,10 +5,11 @@ import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('mcp');
 
-export function createMcpRouter(mcpClient, settingsRepo, campaignsRepo, adsRepo, landingRepo) {
+export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRepo, services) {
+  const mcpClient = services?.mcpClient;
   const router = Router();
 
-  const mcpServer = create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo);
+  const mcpServer = create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, services);
   // Per-user transport map prevents concurrent connections from overwriting each other
   const sseTransports = new Map();
 

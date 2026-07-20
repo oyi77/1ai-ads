@@ -3,7 +3,7 @@ import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('campaigns-route');
 
-export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo) {
+export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo) {
   const router = Router();
 
   // Create full campaign (AI creative → campaign → adset → creative → ad)
@@ -46,8 +46,33 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   // Activate a paused campaign
   router.post('/:id/activate', async (req, res) => {
     try {
-      await orchestrator.activateCampaign(req.params.id);
-      res.json({ success: true, data: { id: req.params.id, status: 'ACTIVE' } });
+      const campaignId = req.params.id;
+      const approvedDrafts = draftsRepo.findAll({ campaignId, status: 'approved', limit: 1 });
+      if (!approvedDrafts || approvedDrafts.total === 0) {
+        return res.status(403).json({ success: false, error: 'Campaign requires an approved activation request. Submit for approval first.' });
+      }
+      await orchestrator.activateCampaign(campaignId);
+      res.json({ success: true, data: { id: campaignId, status: 'ACTIVE' } });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Submit campaign for approval before activation
+  router.post('/:id/submit-for-approval', async (req, res) => {
+    try {
+      const campaignId = req.params.id;
+      const userId = req.user?.id || 'system';
+      const campaign = campaignsRepo.findById(campaignId);
+      if (!campaign) return res.status(404).json({ success: false, error: 'Campaign not found' });
+
+      const draft = draftsRepo.create({
+        type: 'campaign_activation',
+        summary: `Activate campaign "${campaign.name}" (${campaignId})`,
+        proposedBy: userId,
+        campaignId,
+      });
+      res.status(201).json({ success: true, data: draft });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -192,10 +217,32 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
           });
           adsets = adsetData.data || [];
           totalAdsets += adsets.length;
+
+          // Store adsets in local DB
+          for (const as of adsets) {
+            try {
+              const existing = adsetsRepo?.findById?.(as.id);
+              const targetingFlat = as.targeting ? JSON.stringify(as.targeting) : '{}';
+              if (existing) {
+                adsetsRepo?.update?.(as.id, {
+                  name: as.name, status: as.status,
+                  targeting: targetingFlat,
+                });
+              } else {
+                adsetsRepo?.create?.({
+                  id: as.id, campaignId: as.campaign_id,
+                  name: as.name, status: as.status,
+                  dailyBudget: as.daily_budget || 0,
+                  targeting: targetingFlat,
+                  optimizationGoal: as.optimization_goal,
+                  billingEvent: as.billing_event,
+                });
+              }
+            } catch { /* skip individual adset errors */ }
+          }
         } catch (err) {
           log.error('Failed to get adsets', { accountId: account.id, error: err.message });
         }
-
         // Fetch ads and store in DB
         let ads = [];
         try {

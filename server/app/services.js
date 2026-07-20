@@ -138,9 +138,7 @@ export function createServices({ db, repos, params }) {
     draftService, facebookSystemUserService, campaignMonitorService,
     abTestService, fatigueDetector, unifiedReporter, bulkOperations,
     imageGenerator, audienceIntelligence, creativeScorer, whiteLabelService,
-    capiMonitor, creativeLibraryRepo, dashboardWidgetsRepo, nangoAuth,
-    mcpClient: params && params.mcpClient,
-    boostApproval,
-    targeting,
+    capiMonitor,
+    boostApproval, targeting,
   };
 }

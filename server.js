@@ -12,7 +12,7 @@ const { createDatabase } = await import('./db/index.js');
 const { backupDatabase } = await import('./db/backup.js');
 const { createApp, startServices } = await import('./server/app.js');
 const { LLMClient } = await import('./server/services/llm-client.js');
-const { MCPClientManager } = await import('./server/services/mcp-client.js');
+const llmClient = new LLMClient();
 const { seedDemoData } = await import('./db/seed.js');
 const { default: config, validateConfig } = await import('./server/config/index.js');
 
@@ -26,10 +26,8 @@ const db = createDatabase(config.dbPath);
 // Uses OR IGNORE so it's safe in all environments
 seedDemoData(db);
 
-const llmClient = new LLMClient();
-const mcpClient = new MCPClientManager();
+const app = createApp({ db, llmClient });
 
-const app = createApp({ db, llmClient, mcpClient });
 const PORT = config.port;
 
 const server = app.listen(PORT, '0.0.0.0', () => {

@@ -9,7 +9,7 @@ import { calculateProfit, evaluateROAS, getCampaignStatus } from './profitabilit
 const log = createLogger('mcp-server');
 
 export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, services = {}) {
-  const { adGenerator, creativeStudio, aiAgent, competitorSpy, autoOptimizer, llmClient: _llmClient } = services;
+  const { adGenerator, creativeStudio, aiAgent, competitorSpyService: competitorSpy, autoOptimizer, llmClient: _llmClient } = services;
 
   const server = new Server(
     {

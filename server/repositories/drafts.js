@@ -31,10 +31,11 @@ export class DraftsRepository {
     log.debug('approval_drafts table ready');
   }
 
-  findAll({ status, page = 1, limit = 50 } = {}) {
+  findAll({ status, campaignId, page = 1, limit = 50 } = {}) {
     const where = [];
     const params = [];
     if (status) { where.push('status = ?'); params.push(status); }
+    if (campaignId) { where.push('campaign_id = ?'); params.push(campaignId); }
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const total = this.db.prepare(`SELECT COUNT(*) as count FROM approval_drafts ${whereClause}`).get(...params).count;
     const offset = (page - 1) * limit;
@@ -48,13 +49,12 @@ export class DraftsRepository {
     return this.db.prepare('SELECT * FROM approval_drafts WHERE id = ?').get(id) || null;
   }
 
-  create({ type, summary, details, proposedBy = 'ai' }) {
+  create({ type, summary, details, proposedBy = 'ai', campaignId }) {
     const id = uuidv4();
     this.db.prepare(`
-      INSERT INTO approval_drafts (id, type, summary, details_json, proposed_by)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(id, type, summary, details ? JSON.stringify(details) : null, proposedBy);
-    log.info('draft created', { id, type });
+      INSERT INTO approval_drafts (id, type, summary, details_json, proposed_by, campaign_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(id, type, summary, details ? JSON.stringify(details) : null, proposedBy, campaignId || null);
     return this.findById(id);
   }
 

@@ -1,4 +1,3 @@
-import fetch from 'node-fetch';
 import config from '../config/index.js';
 import { createLogger } from '../lib/logger.js';
 
@@ -18,7 +17,7 @@ export class LearningService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(insight),
-        timeout: 5000,
+        signal: AbortSignal.timeout(5000),
       });
 
       if (!response.ok) {
@@ -41,7 +40,7 @@ export class LearningService {
       const response = await fetch(`${BK_HUB_URL}/kb/search?q=${encodeURIComponent(query)}&top_k=${topK}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        timeout: 5000,
+        signal: AbortSignal.timeout(5000),
       });
 
       if (!response.ok) return [];
