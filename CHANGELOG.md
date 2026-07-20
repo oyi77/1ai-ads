@@ -1,3 +1,14 @@
+## [1.5.0] - 2026-07-20
+
+### Removed
+- **Unused `api-response.js`** — zero imports in active code, only archived docs referenced it
+
+### Changed
+- **Phase 2: Platform Route Consolidation** — audited 7 bespoke route files vs `platform-generic.js`
+  - Analysis: all 7 have genuine API differences (nested paths, unique endpoints, different HTTP methods, custom validation)
+  - Decision: bespoke files retained as-is; generic router scope unchanged
+- **Audited 12 "stub" platform directories** — confirmed all are real API clients (150-210 lines each, full CRUD methods) with `hasCustomRoutes: false`, using generic router; none are stubs
+
 ## [1.4.0] - 2026-07-20
 
 ### Removed
