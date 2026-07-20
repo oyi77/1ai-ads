@@ -12,6 +12,9 @@ const { createDatabase } = await import('./db/index.js');
 const { backupDatabase } = await import('./db/backup.js');
 const { createApp, startServices } = await import('./server/app.js');
 const { LLMClient } = await import('./server/services/llm-client.js');
+const { createLogger } = await import('./server/lib/logger.js');
+const log = createLogger('server');
+const syncLog = createLogger('auto-sync');
 const llmClient = new LLMClient();
 const { seedDemoData } = await import('./db/seed.js');
 const { default: config, validateConfig } = await import('./server/config/index.js');
@@ -22,16 +25,17 @@ validateConfig();
 backupDatabase(config.dbPath, __dirname);
 
 const db = createDatabase(config.dbPath);
-// Seed demo data on first run (INSERT OR IGNORE deduplicates on re-seed)
-// Uses OR IGNORE so it's safe in all environments
-seedDemoData(db);
+// Seed demo data for non-production environments only
+if (process.env.NODE_ENV !== 'production') {
+  seedDemoData(db);
+}
 
 const app = createApp({ db, llmClient });
 
 const PORT = config.port;
 
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`1ai-ads running on ${PORT}`);
+  log.info(`1ai-ads running on ${PORT}`);
 });
 
 startServices(app);
@@ -70,39 +74,39 @@ startServices(app);
             total++;
           }
         } catch (err) {
-          console.error('[auto-sync] Account error:', account.id, err.message);
+          syncLog.error('Account sync error', { account: account.id, error: err.message });
         }
       }
-      console.log('[auto-sync] Synced ' + total + ' campaigns from ' + accounts.length + ' accounts');
+      syncLog.info(`Synced ${total} campaigns from ${accounts.length} accounts`);
     } catch (err) {
-      console.error('[auto-sync] Sync failed:', err.message);
+      syncLog.error('Sync failed', { error: err.message });
     }
   }
 
   setTimeout(syncFromMeta, 30000);
   setInterval(syncFromMeta, syncInterval);
-  console.log('[auto-sync] Real-time Meta sync enabled (every 15 min)');
+  syncLog.info('Real-time Meta sync enabled (every 15 min)');
 
   // Start WebSocket realtime polling
   if (app.locals.realtimeService) {
     app.locals.realtimeService.attach(server);
     app.locals.realtimeService.startPolling();
-    console.log('[realtime] WebSocket server started on /ws/realtime');
+    log.info('WebSocket server started on /ws/realtime');
   }
 }
 
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
+  log.info('SIGTERM received, shutting down gracefully');
   server.close(() => {
-    console.log('Server closed');
+    log.info('Server closed');
     process.exit(0);
   });
 });
 
 process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully');
+  log.info('SIGINT received, shutting down gracefully');
   server.close(() => {
-    console.log('Server closed');
+    log.info('Server closed');
     process.exit(0);
   });
 });

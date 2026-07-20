@@ -1,6 +1,9 @@
 import { readdirSync, readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { createLogger } from '../../server/lib/logger.js';
+
+const log = createLogger('migrations');
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -50,15 +53,15 @@ export function runMigrations(db) {
    db.exec(sql);
    db.prepare('INSERT INTO _migrations (name) VALUES (?)').run(file);
    db.exec('COMMIT');
-   console.log(`Migration applied: ${file}`);
+   log.info(`Migration applied: ${file}`);
   } catch (err) {
    db.exec('ROLLBACK');
    if (isIgnorableError(err)) {
     // Column/index already exists — mark as applied
     db.prepare('INSERT OR IGNORE INTO _migrations (name) VALUES (?)').run(file);
-    console.log(`Migration already applied (skipped): ${file}`);
+    log.info(`Migration already applied (skipped): ${file}`);
    } else {
-    console.error(`Migration FAILED: ${file}`, err.message);
+    log.error(`Migration FAILED: ${file}`, err.message);
     throw err;
    }
   }

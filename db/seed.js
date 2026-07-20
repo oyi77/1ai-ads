@@ -1,4 +1,6 @@
 import { hashPassword } from '../server/lib/auth.js';
+import { createLogger } from '../server/lib/logger.js';
+const log = createLogger('seed');
 
 /**
  * Stable demo IDs — deterministic so INSERT OR IGNORE deduplicates on re-seed.
@@ -376,7 +378,7 @@ export function seedTemplates(db, adminUserId) {
     );
   });
 
-  console.log(`Seeded ${templates.length} templates`);
+  log.info(`Seeded ${templates.length} templates`);
 }
 
 export function seedUsers(db) {
@@ -394,7 +396,7 @@ export function seedUsers(db) {
     VALUES (?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
   `).run(USERS.demo.id, USERS.demo.username, USERS.demo.email, passwordHash, USERS.demo.role, USERS.demo.plan);
 
-  console.log('Seeded demo users');
+  log.info('Seeded demo users');
 }
 
 export function seedDemoData(db) {
@@ -571,10 +573,10 @@ export function seedDemoData(db) {
     ],
   }), 'auto');
   seededCompetitors++;
-    console.log(`Seeded demo data: ${seededCampaigns} campaigns, ${seededAds} ads, ${seededLps} landing pages, ${seededPas} platform accounts, ${seededPh} performance history rows, 15 templates, 2 users, ${seededDrafts} drafts, ${seededAbTests} ab tests, ${seededWidgets} widgets, ${seededCompetitors} competitors`);
+    log.info(`Seeded demo data: ${seededCampaigns} campaigns, ${seededAds} ads, ${seededLps} landing pages, ${seededPas} platform accounts, ${seededPh} performance history rows, 15 templates, 2 users, ${seededDrafts} drafts, ${seededAbTests} ab tests, ${seededWidgets} widgets, ${seededCompetitors} competitors`);
     db.exec('COMMIT');
   } catch (err) {
     db.exec('ROLLBACK');
-    console.error('Seed data error (rolled back):', err.message);
+    log.error('Seed data error (rolled back):', err.message);
   }
 }
