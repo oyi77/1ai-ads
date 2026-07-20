@@ -171,7 +171,7 @@ All have sensible defaults. Nothing breaks if env vars are missing.
 ## Testing
 
 ```bash
-npm test              # Unit tests (Vitest) — 1118 tests, 65 files
+npm test              # Unit tests (Vitest) — 1570 tests, 92 files
 npm run test:e2e      # E2E tests (Playwright)
 ```
 

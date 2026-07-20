@@ -125,10 +125,11 @@ export function createServices({ db, repos, params }) {
   const dashboardWidgetsRepo = new DashboardWidgetsRepository(db);
   const nangoAuth = new NangoAuthService();
   const boostApproval = new BoostApprovalService(repos.boostRecommendationsRepo, repos.settingsRepo);
+  const mcpClient = params?.mcpClient;
   const targeting = new TargetingService(repos.targetingSuggestionsRepo, repos.boostRecommendationsRepo);
 
   return {
-    llmClient, adspirerClient, trendingService, paymentService,
+    llmClient, mcpClient, adspirerClient, trendingService, paymentService,
     learningService, utmTagger, metaApi, creativeStudio, videoService,
     contentScheduler, adResearchService, orchestrator, realtimeService,
     contentBridge, socialBridge, aiAgent, shopeeAdapter, attributionService,

@@ -54,15 +54,23 @@ function createMockAdsRepo() {
   };
 }
 
-function createApp(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo) {
+function createMockAdsetsRepo() {
+  return {};
+}
+
+function createMockDraftsRepo() {
+  return { findAll: vi.fn().mockReturnValue({ total: 1, data: [{ status: 'approved' }] }) };
+}
+
+function createApp(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo) {
   const app = express();
   app.use(express.json());
-  app.use('/api/campaigns', createCampaignsRouter(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo));
+  app.use('/api/campaigns', createCampaignsRouter(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo));
   return app;
 }
 
 describe('Campaigns Router', () => {
-  let app, orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo;
+  let app, orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -71,7 +79,9 @@ describe('Campaigns Router', () => {
     creativeStudio = createMockCreativeStudio();
     campaignsRepo = createMockCampaignsRepo();
     adsRepo = createMockAdsRepo();
-    app = createApp(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo);
+    adsetsRepo = createMockAdsetsRepo();
+    draftsRepo = createMockDraftsRepo();
+    app = createApp(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo);
   });
 
   // ─── POST /create ──────────────────────────────────────────────────

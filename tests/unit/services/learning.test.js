@@ -1,14 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LearningService } from '../../../server/services/learning.js';
 
-// Mock node-fetch
-vi.mock('node-fetch', () => ({
-  default: vi.fn(),
-}));
-
-// Get the mocked fetch
-import fetch from 'node-fetch';
-const mockFetch = vi.mocked(fetch);
+// Mock global fetch (LearningService uses global fetch, not node-fetch)
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
 
 // Mock config
 vi.mock('../../../server/config/index.js', () => ({
