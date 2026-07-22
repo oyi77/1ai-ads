@@ -128,6 +128,7 @@ export function createServices({ db, repos, params }) {
     llmClient,
     db,
     settingsRepo: repos.settingsRepo,
+    config,
   });
   const creativeLibraryRepo = new CreativeLibraryRepository(db);
   const dashboardWidgetsRepo = new DashboardWidgetsRepository(db);

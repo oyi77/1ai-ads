@@ -52,6 +52,10 @@ export class WaConversationsRepository {
     return this.db.prepare("SELECT * FROM wa_conversations WHERE capi_event_sent = 0 AND intent_score >= 7 AND status = 'active' ORDER BY intent_score DESC LIMIT ?").all(limit);
   }
 
+  findUnpushedLeads(limit = 10) {
+    return this.db.prepare("SELECT * FROM wa_conversations WHERE intent_score >= 7 AND social_lead_id IS NULL AND status = 'active' ORDER BY intent_score DESC LIMIT ?").all(limit);
+  }
+
   update(id, data) {
     const fields = [];
     const values = [];
@@ -68,6 +72,8 @@ export class WaConversationsRepository {
     if (data.capiSentAt !== undefined) { fields.push('capi_sent_at = ?'); values.push(data.capiSentAt); }
     if (data.contactName !== undefined) { fields.push('contact_name = ?'); values.push(data.contactName); }
     if (data.status !== undefined) { fields.push('status = ?'); values.push(data.status); }
+    if (data.socialLeadId !== undefined) { fields.push('social_lead_id = ?'); values.push(data.socialLeadId); }
+    if (data.socialPushedAt !== undefined) { fields.push('social_pushed_at = ?'); values.push(data.socialPushedAt); }
 
     if (fields.length === 0) return this.findById(id);
 

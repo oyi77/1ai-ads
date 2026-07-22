@@ -78,6 +78,39 @@ export function createWhatsappApiRouter(whatsAppIntelligence) {
     res.json({ success: true, data: result });
   });
 
+  // POST /conversations/push-leads — push high-intent conversations to 1ai-social
+  router.post('/conversations/push-leads', async (req, res) => {
+    try {
+      const result = await whatsAppIntelligence.pushUnpushedLeads(req.body.limit || 10);
+      res.json({ status: 'ok', ...result });
+    } catch (err) {
+      log.error('push_leads_error', { error: err.message });
+      res.status(500).json({ status: 'error', message: err.message });
+    }
+  });
+
+  // POST /conversations/reply — send or auto-generate a reply to a conversation
+  router.post('/conversations/reply', async (req, res) => {
+    const { conversationId, text } = req.body;
+    if (!conversationId) {
+      return res.status(400).json({ success: false, error: 'conversationId required' });
+    }
+
+    if (text) {
+      const reply = await whatsAppIntelligence.sendReply(conversationId, text);
+      if (!reply) {
+        return res.status(404).json({ success: false, error: 'Conversation not found or send failed' });
+      }
+      res.json({ success: true, data: { reply } });
+    } else {
+      const reply = await whatsAppIntelligence._autoReplyForConversation(conversationId);
+      if (!reply) {
+        return res.status(500).json({ success: false, error: 'Auto-reply generation or send failed' });
+      }
+      res.json({ success: true, data: { reply } });
+    }
+  });
+
   // GET /stats — conversation stats
   router.get('/stats', (req, res) => {
     const from = req.query.from;
