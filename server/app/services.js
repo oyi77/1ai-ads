@@ -45,6 +45,7 @@ import { WhiteLabelService } from '../services/white-label.js';
 import { CapiMonitor } from '../services/capi-monitor.js';
 import { CreativeLibraryRepository } from '../repositories/creative-library.js';
 import { DashboardWidgetsRepository } from '../repositories/dashboard-widgets.js';
+import { WhatsAppIntelligenceService } from '../services/whatsapp-intelligence.js';
 import { BoostApprovalService } from '../services/boost-approval.js';
 import { TargetingService } from '../services/targeting.js';
 
@@ -121,6 +122,13 @@ export function createServices({ db, repos, params }) {
   const creativeScorer = new CreativeScorer(db, llmClient, repos.settingsRepo);
   const whiteLabelService = new WhiteLabelService(db, llmClient);
   const capiMonitor = new CapiMonitor(metaApi, db);
+  const waIntelligence = new WhatsAppIntelligenceService({
+    waConversationsRepo: repos.waConversationsRepo,
+    metaApi,
+    llmClient,
+    db,
+    settingsRepo: repos.settingsRepo,
+  });
   const creativeLibraryRepo = new CreativeLibraryRepository(db);
   const dashboardWidgetsRepo = new DashboardWidgetsRepository(db);
   const nangoAuth = new NangoAuthService();
@@ -134,12 +142,11 @@ export function createServices({ db, repos, params }) {
     contentScheduler, adResearchService, orchestrator, realtimeService,
     contentBridge, socialBridge, aiAgent, shopeeAdapter, attributionService,
     googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI,
-    autonomousAgent, autoOptimizer,
+    capiMonitor, waIntelligence, autonomousAgent, autoOptimizer,
     webhookProcessor, dataCleanup, adIntelligenceService, competitorSpyService,
     draftService, facebookSystemUserService, campaignMonitorService,
     abTestService, fatigueDetector, unifiedReporter, bulkOperations,
     imageGenerator, audienceIntelligence, creativeScorer, whiteLabelService,
-    capiMonitor,
     boostApproval, targeting,
   };
 }

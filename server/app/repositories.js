@@ -22,6 +22,7 @@ import { DraftsRepository } from '../repositories/drafts.js';
 import { ShopeeCommissionsRepository } from '../repositories/shopee-commissions.js';
 import { AuditLogRepository } from '../repositories/audit-log.js';
 import { BoostRecommendationsRepository } from '../repositories/boost-recommendations.js';
+import { WaConversationsRepository } from '../repositories/wa-conversations.js';
 import { TargetingSuggestionsRepository } from '../repositories/targeting-suggestions.js';
 
 export function createRepositories(db) {
@@ -59,5 +60,6 @@ export function createRepositories(db) {
     adsetsRepo: new AdsetsRepository(db),
     invoicesRepo: new InvoicesRepository(db),
     savedAudiencesRepo: new SavedAudiencesRepository(db),
+    waConversationsRepo: new WaConversationsRepository(db),
   };
 }
