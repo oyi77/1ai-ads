@@ -6,7 +6,7 @@ const __dirname = dirname(__filename);
 
 // Load .env BEFORE any application imports — ESM hoists static imports
 const { default: dotenv } = await import('dotenv');
-dotenv.config({ path: join(__dirname, '.env') });
+dotenv.config({ path: join(__dirname, '.env'), override: true });
 
 const { createDatabase } = await import('./db/index.js');
 const { backupDatabase } = await import('./db/backup.js');

@@ -75,6 +75,11 @@ export class WhatsAppIntelligenceService {
       this._scoreRecentConversations().catch(err => {
         if (err) log.error('scoring_cycle_failed', { error: err.message });
       });
+
+      // Fire-and-forget auto-labeling
+      this.processAutoLabeling(5).catch(err => {
+        if (err) log.error('auto_labeling_cycle_failed', { error: err.message });
+      });
     }
 
     return { processed };
@@ -107,16 +112,56 @@ Return ONLY valid JSON, no markdown, no explanation.`;
 
     if (!transcript.trim()) return null;
 
+    let parsed;
     try {
-      let response = await this.llm.call(this.SCORE_SYSTEM_PROMPT, transcript, {
-        temperature: 0.3,
-        max_tokens: 500,
-      });
+      // Default: score via 1ai-social. Set SOCIAL_SCORING_URL=local for local LLM.
+      const scoringUrl = this.config.socialScoringUrl;
+      if (scoringUrl === 'local') {
+        // Opt-in: score locally via this.llm
+        let response = await this.llm.call(this.SCORE_SYSTEM_PROMPT, transcript, {
+          temperature: 0.3,
+          max_tokens: 500,
+        });
+        response = response.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+        parsed = JSON.parse(response);
+      } else {
+        const body = {
+          contact_phone: conversation.phone_number,
+          wa_number_id: conversation.wa_phone_number_id,
+          contact_name: conversation.contact_name || null,
+          messages: messages.map(m => ({
+            direction: m.direction,
+            text: m.text,
+            message_type: m.type || 'text',
+          })),
+        };
+        const resp = await fetch(scoringUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!resp.ok) {
+          const errText = await resp.text().catch(() => '');
+          throw new Error(`social_scoring_http_${resp.status}: ${errText}`);
+        }
+        const data = await resp.json();
+        if (data.status === 'error') {
+          throw new Error(`social_scoring_rejected: ${data.status}`);
+        }
+        parsed = {
+          intent_score: data.score_float,
+          intent_label: data.score_label,
+          reasoning: data.reasoning || '',
+          product: data.product || '',
+          estimated_value: data.estimated_value ? parseInt(data.estimated_value, 10) : 0,
+        };
+      }
+    } catch (err) {
+      log.error('scoring_failed', { id: conversation.id, error: err.message });
+      return null;
+    }
 
-      // Strip markdown code fences if present
-      response = response.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-      const parsed = JSON.parse(response);
-
+    try {
       this.repo.update(conversation.id, {
         intentScore: Math.max(0, Math.min(10, Math.round(parsed.intent_score || 0))),
         intentLabel: ['Purchase', 'Lead', 'Support', 'LowIntent'].includes(parsed.intent_label)
@@ -148,7 +193,7 @@ Return ONLY valid JSON, no markdown, no explanation.`;
 
       return parsed;
     } catch (err) {
-      log.error('scoring_failed', { id: conversation.id, error: err.message });
+      log.error('scoring_store_failed', { id: conversation.id, error: err.message });
       return null;
     }
   }
@@ -382,6 +427,74 @@ Balas pesan berikut (langsung dengan teks balasan, tanpa penjelasan):`;
     return text;
   }
 
+  // ── Auto Follow-up ──────────────────────────────────────────────
+
+  FOLLOWUP_PROMPT = `Anda adalah customer service dari PixelAD, platform iklan digital Indonesia. Customer ini sebelumnya sudah menghubungi kami, dan sekarang Anda akan melakukan follow-up karena sudah beberapa hari tidak ada respon.
+
+Berdasarkan riwayat percakapan berikut, buat pesan follow-up yang ramah, tidak memaksa, dan dalam Bahasa Indonesia.
+Panduan:
+- Jika customer sebelumnya bertanya harga/layanan: tanya apakah masih perlu bantuan, berikan info tambahan singkat.
+- Jika customer hanya menyapa: tanya apakah ada yang bisa dibantu.
+- Jika customer sudah siap beli tapi belum lanjut: tawarkan bantuan untuk proses pendaftaran.
+- Maksimal 120 karakter, santai dan natural.
+
+Buat pesan follow-up untuk percakapan berikut (langsung teks balasan, tanpa penjelasan):`;
+
+  async _generateFollowUp(conversation) {
+    if (!conversation) return null;
+    const messages = JSON.parse(conversation.messages || '[]');
+    const transcript = messages
+      .map(m => `${m.direction === 'inbound' ? 'Customer' : 'Business'}: ${m.text}`)
+      .join('\n');
+
+    try {
+      const reply = await this.llm.call(this.FOLLOWUP_PROMPT, transcript, {
+        temperature: 0.7,
+        max_tokens: 200,
+      });
+      const clean = reply.replace(/^["']|["']$/g, '').trim();
+      if (clean.length < 3) return null;
+      return clean;
+    } catch (err) {
+      log.error('followup_generation_failed', { id: conversation.id, error: err.message });
+      return null;
+    }
+  }
+
+  async processFollowUps(daysSinceLastContact = 3, limit = 10) {
+    const candidates = this.repo.findForFollowUp(daysSinceLastContact, limit);
+    let sent = 0;
+    for (const conv of candidates) {
+      const text = await this._generateFollowUp(conv);
+      if (!text) continue;
+
+      const waPhoneNumberId = conv.wa_phone_number_id;
+      const to = conv.phone_number;
+      if (!waPhoneNumberId || !to) continue;
+
+      const result = await this.sendWhatsAppMessage(waPhoneNumberId, to, text);
+      if (result && !result.error) {
+        sent++;
+        const messages = JSON.parse(conv.messages || '[]');
+        messages.push({
+          from: waPhoneNumberId,
+          text,
+          timestamp: Math.floor(Date.now() / 1000).toString(),
+          type: 'text',
+          direction: 'outbound',
+        });
+        this.repo.update(conv.id, {
+          messages,
+          followUpCount: (conv.follow_up_count || 0) + 1,
+          lastFollowUpAt: new Date().toISOString(),
+          lastFollowUpMessage: text,
+        });
+        log.info('followup_sent', { id: conv.id, count: conv.follow_up_count + 1 });
+      }
+    }
+    return { sent, total: candidates.length };
+  }
+
   // ── Lead Pipeline (1ai-social) ──────────────────────────────────
 
   async pushLeadToSocial(convId) {
@@ -434,14 +547,61 @@ Balas pesan berikut (langsung dengan teks balasan, tanpa penjelasan):`;
     return { pushed, total: unpushed.length };
   }
 
+  // ── Auto Labeling ────────────────────────────────────────────────
+
+  LABEL_RULES = [
+    { score: 0.8, label: 'Hot Lead', matchers: ['beli', 'daftar', 'order', 'harga berapa', 'pendaftaran'] },
+    { score: 0.5, label: 'Product Interest', matchers: ['info', 'produk', 'layanan', 'fitur', 'kursus'] },
+    { score: 0.3, label: 'Warm Contact', matchers: ['nanti', 'saya pikir', 'saya lihat'] },
+  ];
+
+  _classifyConversation(conversation) {
+    const messages = JSON.parse(conversation.messages || '[]');
+    const text = messages.map(m => (m.text || '')).join(' ').toLowerCase();
+
+    for (const rule of this.LABEL_RULES) {
+      if (rule.matchers.some(m => text.includes(m))) {
+        return rule.label;
+      }
+    }
+
+    // Use intent score if available
+    const intent = conversation.intent_score || 0;
+    if (intent >= 7) return 'Hot Lead';
+    if (intent >= 4) return 'Warm Lead';
+    if (intent >= 1) return 'Cold Lead';
+
+    return 'Unclassified';
+  }
+
+  async _autoLabelConversation(conversation) {
+    if (!conversation) return null;
+    const currentLabels = typeof conversation.labels === 'string' ? JSON.parse(conversation.labels) : conversation.labels;
+    if (Array.isArray(currentLabels) && currentLabels.length > 0) return null;
+    const label = this._classifyConversation(conversation);
+    this.repo.update(conversation.id, { labels: [label] });
+    log.info('auto_labeled', { id: conversation.id, label });
+    return label;
+  }
+
+  async processAutoLabeling(limit = 20) {
+    const needsLabel = this.repo.findNeedsLabel(limit);
+    let labeled = 0;
+    for (const conv of needsLabel) {
+      await this._autoLabelConversation(conv);
+      labeled++;
+    }
+    return { labeled, total: needsLabel.length };
+  }
+
   // ── Batch Processing ────────────────────────────────────────────
 
   async processUnscoredConversations(limit = 5) {
     const unscored = this.repo.findUnscored(limit);
     let scored = 0;
     for (const conv of unscored) {
-      await this._scoreConversation(conv);
-      scored++;
+      const result = await this._scoreConversation(conv);
+      if (result) scored++;
     }
     return { scored, total: unscored.length };
   }
@@ -454,6 +614,31 @@ Balas pesan berikut (langsung dengan teks balasan, tanpa penjelasan):`;
       sent++;
     }
     return { sent, total: unsent.length };
+  }
+
+  // ── Single-Conversation Operations ──────────────────────────
+
+  async scoreConversation(id) {
+    const conv = this.repo.findById(id);
+    if (!conv) return null;
+    const result = await this._scoreConversation(conv);
+    return result;
+  }
+
+  async sendCapiEventById(id) {
+    const conv = this.repo.findById(id);
+    if (!conv) return null;
+    const eventType = conv.intent_label === 'Purchase' ? 'Purchase' : 'Lead';
+    const result = await this.sendCapiEvent(conv);
+    return { events_sent: result?.events_received === 1 ? 1 : 0, event_type: eventType };
+  }
+
+  async getUnscoredConversations(limit = 20) {
+    return this.repo.findUnscored(limit);
+  }
+
+  async getUnsentCapiConversations(limit = 20) {
+    return this.repo.findUnsentCapi(limit);
   }
 
   // ── Stats ───────────────────────────────────────────────────────

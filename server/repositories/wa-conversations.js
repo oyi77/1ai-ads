@@ -56,6 +56,27 @@ export class WaConversationsRepository {
     return this.db.prepare("SELECT * FROM wa_conversations WHERE intent_score >= 7 AND social_lead_id IS NULL AND status = 'active' ORDER BY intent_score DESC LIMIT ?").all(limit);
   }
 
+  findForFollowUp(daysSinceLastContact = 3, limit = 20) {
+    const cutoff = new Date(Date.now() - daysSinceLastContact * 86400_000).toISOString();
+    return this.db.prepare(`
+      SELECT * FROM wa_conversations
+      WHERE status = 'active'
+        AND updated_at < ?
+        AND (last_follow_up_at IS NULL OR last_follow_up_at < ?)
+        AND follow_up_count < 5
+      ORDER BY updated_at ASC
+      LIMIT ?
+    `).all(cutoff, cutoff, limit);
+  }
+
+  findNeedsLabel(limit = 20) {
+    return this.db.prepare("SELECT * FROM wa_conversations WHERE labels = '[]' AND status = 'active' AND intent_score IS NOT NULL ORDER BY updated_at DESC LIMIT ?").all(limit);
+  }
+
+  findByLabel(label, limit = 50) {
+    return this.db.prepare("SELECT * FROM wa_conversations WHERE labels LIKE ? ORDER BY updated_at DESC LIMIT ?").all(`%"${label}"%`, limit);
+  }
+
   update(id, data) {
     const fields = [];
     const values = [];
@@ -74,6 +95,10 @@ export class WaConversationsRepository {
     if (data.status !== undefined) { fields.push('status = ?'); values.push(data.status); }
     if (data.socialLeadId !== undefined) { fields.push('social_lead_id = ?'); values.push(data.socialLeadId); }
     if (data.socialPushedAt !== undefined) { fields.push('social_pushed_at = ?'); values.push(data.socialPushedAt); }
+    if (data.labels !== undefined) { fields.push('labels = ?'); values.push(JSON.stringify(data.labels)); }
+    if (data.followUpCount !== undefined) { fields.push('follow_up_count = ?'); values.push(data.followUpCount); }
+    if (data.lastFollowUpAt !== undefined) { fields.push('last_follow_up_at = ?'); values.push(data.lastFollowUpAt); }
+    if (data.lastFollowUpMessage !== undefined) { fields.push('last_follow_up_message = ?'); values.push(data.lastFollowUpMessage); }
 
     if (fields.length === 0) return this.findById(id);
 

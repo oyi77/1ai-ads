@@ -64,19 +64,31 @@ export function createWhatsappApiRouter(whatsAppIntelligence) {
     res.json({ success: true, data: unsent.map(formatConversation) });
   });
 
-  // POST /conversations/score — manually trigger scoring for unscored conversations
+  // POST /conversations/score — score a single conversation by ID or batch unscored
   router.post('/conversations/score', async (req, res) => {
-    const limit = Math.min(Math.max(parseInt(req.body?.limit) || 5, 1), 20);
-    const result = await whatsAppIntelligence.processUnscoredConversations(limit);
+    const { conversationId } = req.body || {};
+    if (conversationId) {
+      const result = await whatsAppIntelligence.scoreConversation(conversationId);
+      if (!result) return res.status(404).json({ success: false, error: 'Conversation not found' });
+      return res.json({ success: true, ...result });
+    }
+    const n = Math.min(Math.max(parseInt(req.body?.limit) || 5, 1), 20);
+    const result = await whatsAppIntelligence.processUnscoredConversations(n);
     res.json({ success: true, data: result });
-  });
+  })
 
-  // POST /conversations/send-capi — manually trigger CAPI send for high-intent conversations
+  // POST /conversations/send-capi — send CAPI event for a single conversation ID or batch unsent
   router.post('/conversations/send-capi', async (req, res) => {
-    const limit = Math.min(Math.max(parseInt(req.body?.limit) || 5, 1), 20);
-    const result = await whatsAppIntelligence.processUnsentCapiEvents(limit);
+    const { conversationId } = req.body || {};
+    if (conversationId) {
+      const result = await whatsAppIntelligence.sendCapiEventById(conversationId);
+      if (!result) return res.status(404).json({ success: false, error: 'Conversation not found' });
+      return res.json({ success: true, ...result, conversation_id: conversationId });
+    }
+    const n = Math.min(Math.max(parseInt(req.body?.limit) || 5, 1), 20);
+    const result = await whatsAppIntelligence.processUnsentCapiEvents(n);
     res.json({ success: true, data: result });
-  });
+  })
 
   // POST /conversations/push-leads — push high-intent conversations to 1ai-social
   router.post('/conversations/push-leads', async (req, res) => {
@@ -85,6 +97,31 @@ export function createWhatsappApiRouter(whatsAppIntelligence) {
       res.json({ status: 'ok', ...result });
     } catch (err) {
       log.error('push_leads_error', { error: err.message });
+      res.status(500).json({ status: 'error', message: err.message });
+    }
+  });
+
+  // POST /conversations/auto-followup — trigger follow-up cycle for stale conversations
+  router.post('/conversations/auto-followup', async (req, res) => {
+    try {
+      const result = await whatsAppIntelligence.processFollowUps(
+        req.body.daysSinceLastContact || 3,
+        req.body.limit || 10,
+      );
+      res.json({ status: 'ok', ...result });
+    } catch (err) {
+      log.error('auto_followup_error', { error: err.message });
+      res.status(500).json({ status: 'error', message: err.message });
+    }
+  });
+
+  // POST /conversations/auto-label — trigger auto-labeling for unscored conversations
+  router.post('/conversations/auto-label', async (req, res) => {
+    try {
+      const result = await whatsAppIntelligence.processAutoLabeling(req.body.limit || 20);
+      res.json({ status: 'ok', ...result });
+    } catch (err) {
+      log.error('auto_label_error', { error: err.message });
       res.status(500).json({ status: 'error', message: err.message });
     }
   });

@@ -73,6 +73,7 @@ const config = {
   get contentBridgeApiKey() { return process.env.CONTENT_BRIDGE_API_KEY || ''; },
   get socialBridgeUrl() { return process.env.SOCIAL_BRIDGE_URL || 'http://localhost:8200'; },
   get socialBridgeApiKey() { return process.env.SOCIAL_BRIDGE_API_KEY || ''; },
+  get socialScoringUrl() { return process.env.SOCIAL_SCORING_URL || 'http://localhost:8008/v1/intelligence/score-conversation'; },
   get metaAiCookies() { return process.env.META_AI_COOKIES || null; },
   get adsLibraryAiCookies() { return process.env.ADS_LIBRARY_AI_COOKIES || null; },
  get telegramBotToken() { return process.env.TELEGRAM_BOT_TOKEN || ''; },
