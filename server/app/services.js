@@ -46,6 +46,7 @@ import { CapiMonitor } from '../services/capi-monitor.js';
 import { CreativeLibraryRepository } from '../repositories/creative-library.js';
 import { DashboardWidgetsRepository } from '../repositories/dashboard-widgets.js';
 import { WhatsAppIntelligenceService } from '../services/whatsapp-intelligence.js';
+import { WhatsAppAdsAPI } from '../services/whatsapp/index.js';
 import { BoostApprovalService } from '../services/boost-approval.js';
 import { TargetingService } from '../services/targeting.js';
 
@@ -64,6 +65,7 @@ export function createServices({ db, repos, params }) {
   const utmTagger = new UtmTaggerService(repos.adUtmMapRepo);
 
   const metaApi = new MetaAdsAPI(repos.settingsRepo);
+  const whatsappApi = new WhatsAppAdsAPI(repos.settingsRepo);
   const creativeStudio = new CreativeStudio(llmClient);
   const videoService = new MetaVideoService(metaApi);
   const contentScheduler = new ContentScheduler({ videoService, llmClient, queueRepo: repos.contentSchedulerQueueRepo });
@@ -125,6 +127,7 @@ export function createServices({ db, repos, params }) {
   const waIntelligence = new WhatsAppIntelligenceService({
     waConversationsRepo: repos.waConversationsRepo,
     metaApi,
+    whatsappApi,
     llmClient,
     db,
     settingsRepo: repos.settingsRepo,

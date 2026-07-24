@@ -1,3 +1,4 @@
+import config from '../../config/index.js';
 import { safeFetch } from '../../lib/platform-client.js';
 import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
 import { ConfigurationError, PlatformError } from '../../lib/errors.js';
@@ -8,9 +9,9 @@ export class WhatsAppAdsAPI extends BasePlatformApiClient {
   constructor(settingsRepo) {
     super('whatsapp', settingsRepo, { baseUrl: BASE });
   }
-
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
+    if (config.fbWhatsappToken) return config.fbWhatsappToken;
     if (this.settingsRepo) {
       const whatsappCreds = this.settingsRepo.getCredentials('whatsapp');
       if (whatsappCreds?.access_token) return whatsappCreds.access_token;
@@ -18,7 +19,7 @@ export class WhatsAppAdsAPI extends BasePlatformApiClient {
       if (metaCreds?.access_token) return metaCreds.access_token;
     }
     throw new ConfigurationError(
-      'WhatsApp Business access token not configured. Go to Settings > WhatsApp or Meta to add it.'
+      'WhatsApp access token not configured. Set FB_WHATSAPP_TOKEN or add a WhatsApp account in Settings.'
     );
   }
 
@@ -122,6 +123,22 @@ export class WhatsAppAdsAPI extends BasePlatformApiClient {
     const data = await this._post(`/${accountId}/message_templates`, body);
     this.log.info('WhatsApp message template created', { templateId: data.id });
     return { templateId: data.id, status: data.status };
+  }
+
+  /**
+   * Send a WhatsApp message via Cloud API.
+   * POST /{phoneNumberId}/messages
+   * @param {string} phoneNumberId - WhatsApp Business Phone Number ID
+   * @param {string} to - Recipient phone number
+   * @param {object} messageData - Message payload (e.g. { type: 'text', text: { body: 'hello' } })
+   * @returns {Promise<object>} API response
+   */
+  async sendMessage(phoneNumberId, to, messageData) {
+    return this._post(`/${phoneNumberId}/messages`, {
+      messaging_product: 'whatsapp',
+      to,
+      ...messageData,
+    });
   }
 
   /**

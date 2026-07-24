@@ -4,9 +4,10 @@ import { createLogger } from '../lib/logger.js';
 const log = createLogger('whatsapp-intelligence');
 
 export class WhatsAppIntelligenceService {
-  constructor({ waConversationsRepo, metaApi, llmClient, db, settingsRepo, config }) {
+  constructor({ waConversationsRepo, metaApi, whatsappApi, llmClient, db, settingsRepo, config }) {
     this.repo = waConversationsRepo;
     this.metaApi = metaApi;
+    this.whatsappApi = whatsappApi;
     this.llm = llmClient;
     this.db = db;
     this.settings = settingsRepo;
@@ -291,12 +292,7 @@ Return ONLY valid JSON, no markdown, no explanation.`;
     }
 
     try {
-      const result = await this.metaApi.apiPost(`/${phoneNumberId}/messages`, {
-        messaging_product: 'whatsapp',
-        to,
-        type: 'text',
-        text: { body: text },
-      });
+      const result = await this.whatsappApi.sendMessage(phoneNumberId, to, { type: 'text', text: { body: text } });
 
       const ok = !result?.error;
       if (ok) {

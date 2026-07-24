@@ -44,7 +44,7 @@ describe('WhatsAppAdsAPI', () => {
     it('should throw ConfigurationError when no token available', () => {
       mockSettingsRepo.getCredentials.mockReturnValue(null);
       const apiNoToken = new WhatsAppAdsAPI(mockSettingsRepo);
-      expect(() => apiNoToken._getToken()).toThrow('WhatsApp Business access token not configured');
+      expect(() => apiNoToken._getToken()).toThrow('WhatsApp access token not configured');
     });
   });
 
