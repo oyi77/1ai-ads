@@ -20,10 +20,12 @@ export class PaymentsRepository {
 
   findByUserId(userId, { limit } = {}) {
     let query = 'SELECT * FROM payments WHERE user_id = ? ORDER BY created_at DESC';
+    const params = [userId];
     if (limit) {
-      query += ` LIMIT ${limit}`;
+      query += ' LIMIT ?';
+      params.push(limit);
     }
-    return this.db.prepare(query).all(userId);
+    return this.db.prepare(query).all(...params);
   }
 
   findByOrderId(orderId) {
