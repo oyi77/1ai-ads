@@ -3,6 +3,7 @@
  * Mounted at /api/boost by createRouters().
  */
 import { Router } from 'express';
+import { requireAuth } from '../middleware/auth.js';
 
 export function createBoostRouter({ services }) {
   const router = Router();
@@ -10,8 +11,7 @@ export function createBoostRouter({ services }) {
   const targeting = services.targeting;
 
   // ── POST /api/boost/recommend ─────────────────────────────────
-  // Body: { post_id, page_id, metrics?, target_audience_json? }
-  router.post('/recommend', async (req, res) => {
+  router.post('/recommend', requireAuth, async (req, res) => {
     const { post_id, page_id, metrics, target_audience_json } = req.body ?? {};
     if (!post_id || !page_id) {
       return res.status(400).json({ success: false, error: 'post_id and page_id are required' });
@@ -24,33 +24,32 @@ export function createBoostRouter({ services }) {
     }
   });
 
-  // ── GET /api/boost/queue?status=pending ───────────────────────
-  router.get('/queue', (req, res) => {
+  router.get('/queue', requireAuth, (req, res) => {
     const { status = 'pending', limit = 50, offset = 0 } = req.query;
     const recs = svc.list(status || null, { limit: Number(limit), offset: Number(offset) });
     return res.json({ success: true, data: recs, count: recs.length });
   });
 
   // ── GET /api/boost/:id ────────────────────────────────────────
-  router.get('/:id', (req, res) => {
+  router.get('/:id', requireAuth, (req, res) => {
     const rec = svc.getById(Number(req.params.id));
     if (!rec) return res.status(404).json({ success: false, error: 'Not found' });
     return res.json({ success: true, data: rec });
   });
 
   // ── POST /api/boost/:id/approve ───────────────────────────────
-  router.post('/:id/approve', (req, res) => {
+  router.post('/:id/approve', requireAuth, (req, res) => {
     const rec = svc.getById(Number(req.params.id));
     if (!rec) return res.status(404).json({ success: false, error: 'Not found' });
-    const updated = svc.approve(Number(req.params.id), req.body?.reviewed_by ?? 'api');
+    const updated = svc.approve(Number(req.params.id), req.user?.username ?? 'system');
     return res.json({ success: true, data: updated });
   });
 
   // ── POST /api/boost/:id/reject ────────────────────────────────
-  router.post('/:id/reject', (req, res) => {
+  router.post('/:id/reject', requireAuth, (req, res) => {
     const rec = svc.getById(Number(req.params.id));
     if (!rec) return res.status(404).json({ success: false, error: 'Not found' });
-    const updated = svc.reject(Number(req.params.id), req.body?.reviewed_by ?? 'api');
+    const updated = svc.reject(Number(req.params.id), req.user?.username ?? 'system');
     return res.json({ success: true, data: updated });
   });
 
@@ -68,7 +67,7 @@ export function createBoostRouter({ services }) {
 
   // ── POST /api/boost/targeting/suggest ─────────────────────────
   // Body: { post_id, page_id, category? }
-  router.post('/targeting/suggest', (req, res) => {
+  router.post('/targeting/suggest', requireAuth, (req, res) => {
     const { post_id, page_id, category } = req.body ?? {};
     if (!post_id || !page_id) {
       return res.status(400).json({ success: false, error: 'post_id and page_id are required' });
@@ -82,7 +81,7 @@ export function createBoostRouter({ services }) {
   });
 
   // ── GET /api/boost/targeting/:post_id/:page_id ────────────────
-  router.get('/targeting/:post_id/:page_id', (req, res) => {
+  router.get('/targeting/:post_id/:page_id', requireAuth, (req, res) => {
     try {
       const suggestion = targeting.getOrSuggest(req.params.post_id, req.params.page_id);
       return res.json({ success: true, data: suggestion });
@@ -92,7 +91,7 @@ export function createBoostRouter({ services }) {
   });
 
   // ── GET /api/boost/targeting/patterns?page_id=&days= ─────────
-  router.get('/targeting/patterns', (req, res) => {
+  router.get('/targeting/patterns', requireAuth, (req, res) => {
     const { page_id, days = 30 } = req.query;
     try {
       const result = targeting.analyzeEngagementPatterns({ page_id: page_id || null, days: Number(days) });
@@ -103,7 +102,7 @@ export function createBoostRouter({ services }) {
   });
 
   // ── GET /api/boost/targeting?limit=&offset= ───────────────────
-  router.get('/targeting', (req, res) => {
+  router.get('/targeting', requireAuth, (req, res) => {
     const { limit = 50, offset = 0 } = req.query;
     try {
       const suggestions = targeting.listAll({ limit: Number(limit), offset: Number(offset) });
