@@ -16,7 +16,9 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 
-LEDGER_PATH = Path(os.getenv("CARBON_LEDGER_PATH", "/home/openclaw/projects/data/carbon_ledger.jsonl"))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_DEFAULT_LEDGER = PROJECT_ROOT / "data" / "carbon_ledger.jsonl"
+LEDGER_PATH = Path(os.getenv("CARBON_LEDGER_PATH", str(_DEFAULT_LEDGER)))
 LEDGER_LOCK = threading.Lock()
 
 
