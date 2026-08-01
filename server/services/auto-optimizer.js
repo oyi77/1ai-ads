@@ -140,7 +140,7 @@ export class AutoOptimizer {
 
     // Fire-and-forget: scale_up on a profitable campaign = revenue signal into pool
     if (direction === 'up') {
-      const profitEstimate = insights.revenue != null
+      const profitEstimate = insights.revenue !== null
         ? insights.revenue - insights.spend
         : insights.spend * (percent / 100); // conservative proxy: budget delta as floor
       recordToTreasury({

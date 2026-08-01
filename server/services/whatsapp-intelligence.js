@@ -316,9 +316,7 @@ Panduan:
 - Jika customer sudah siap beli: minta nomor telepon/email untuk dihubungi tim sales.
 - Jika customer complain: minta maaf dan tawarkan solusi.
 
-Balasan maksimal 150 karakter, langsung ke intinya, jangan formal berlebihan.
-
-Balas pesan berikut (langsung dengan teks balasan, tanpa penjelasan):`;
+Balasan maksimal 150 karakter, langsung ke intinya, jangan formal berlebihan.`;
 
   async _generateAutoReply(conversation) {
     if (!conversation) return null;
@@ -327,18 +325,16 @@ Balas pesan berikut (langsung dengan teks balasan, tanpa penjelasan):`;
     const inbound = messages.filter(m => m.direction === 'inbound');
     if (inbound.length === 0) return null;
 
-    const lastMsg = inbound[inbound.length - 1];
     const transcript = messages
       .map(m => `${m.direction === 'inbound' ? 'Customer' : 'Business'}: ${m.text}`)
       .join('\n');
 
     try {
-      const reply = await this.llm.call(this.AUTO_REPLY_PROMPT, transcript, {
-        temperature: 0.5,
-        max_tokens: 200,
+      const reply = await this.llm.call(this.AUTO_REPLY_PROMPT,
+        `Riwayat percakapan:\n${transcript}\n\nBerdasarkan percakapan di atas, balas pesan terakhir dari customer. Langsung dengan teks balasan, tanpa penjelasan.`, {
       });
 
-      const clean = reply.replace(/^["']|["']$/g, '').trim();
+      const clean = reply.replace(/^(Business|AI):\s*/i, '').replace(/^["']|["']$/g, '').trim();
       if (clean.length < 3) return null;
 
       // Append to conversation

@@ -53,7 +53,7 @@ export class PaymentService {
       }
 
       const result = await response.json();
-      const updated = this.paymentsRepo.updateStatus(payment.id, 'processing');
+      this.paymentsRepo.updateStatus(payment.id, 'processing');
       log.info('Payment created via 1ai-payment API', { orderId: payment.orderId, checkoutUrl: result.checkout_url });
       return result;
     } catch (err) {

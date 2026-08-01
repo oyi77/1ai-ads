@@ -1,7 +1,4 @@
 import { Router } from 'express';
-import { createLogger } from '../lib/logger.js';
-
-const log = createLogger('saved-audiences-route');
 
 export function createSavedAudiencesRouter(savedAudiencesRepo) {
   const router = Router();

@@ -1,7 +1,4 @@
 import { Router } from 'express';
-import { createLogger } from '../lib/logger.js';
-
-const log = createLogger('invoices-route');
 
 export function createInvoicesRouter(invoicesRepo) {
   const router = Router();

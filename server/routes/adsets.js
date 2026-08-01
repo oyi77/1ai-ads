@@ -1,7 +1,4 @@
 import { Router } from 'express';
-import { createLogger } from '../lib/logger.js';
-
-const log = createLogger('adsets-route');
 
 export function createAdsetsRouter(adsetsRepo) {
   const router = Router();

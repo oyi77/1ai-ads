@@ -21,7 +21,6 @@ import { RealtimeService } from '../services/realtime-service.js';
 import { ContentBridge } from '../services/content-bridge.js';
 import { SocialBridge } from '../services/social-bridge.js';
 import { AiAgent } from '../services/ai-agent.js';
-import { NangoAuthService } from '../services/nango-auth.js';
 import { ShopeeAdapter } from '../services/shopee-adapter.js';
 import { AttributionService } from '../services/attribution-service.js';
 import { AutonomousAgent } from '../services/autonomous-agent.js';
@@ -43,8 +42,6 @@ import { AudienceIntelligence } from '../services/audience-intelligence.js';
 import { CreativeScorer } from '../services/creative-scorer.js';
 import { WhiteLabelService } from '../services/white-label.js';
 import { CapiMonitor } from '../services/capi-monitor.js';
-import { CreativeLibraryRepository } from '../repositories/creative-library.js';
-import { DashboardWidgetsRepository } from '../repositories/dashboard-widgets.js';
 import { WhatsAppIntelligenceService } from '../services/whatsapp-intelligence.js';
 import { WhatsAppAdsAPI } from '../services/whatsapp/index.js';
 import { BoostApprovalService } from '../services/boost-approval.js';
@@ -133,9 +130,6 @@ export function createServices({ db, repos, params }) {
     settingsRepo: repos.settingsRepo,
     config,
   });
-  const creativeLibraryRepo = new CreativeLibraryRepository(db);
-  const dashboardWidgetsRepo = new DashboardWidgetsRepository(db);
-  const nangoAuth = new NangoAuthService();
   const boostApproval = new BoostApprovalService(repos.boostRecommendationsRepo, repos.settingsRepo);
   const mcpClient = params?.mcpClient;
   const targeting = new TargetingService(repos.targetingSuggestionsRepo, repos.boostRecommendationsRepo);

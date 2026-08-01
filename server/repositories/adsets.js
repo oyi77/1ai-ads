@@ -1,6 +1,4 @@
-import { createLogger } from '../lib/logger.js';
-
-const log = createLogger('adsets-repo');
+import { v4 as uuidv4 } from 'uuid';
 
 export class AdsetsRepository {
   constructor(db) {
@@ -40,7 +38,7 @@ export class AdsetsRepository {
       this.db.prepare(`UPDATE ad_sets SET ${fields.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...params);
       return this.findById(data.id);
     }
-    const id = data.id || require('uuid').v4();
+    const id = data.id || uuidv4();
     this.db.prepare(`
       INSERT INTO ad_sets (id, campaign_id, platform, name, status, daily_budget, targeting_json, optimization_goal, billing_event, platform_adset_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -53,7 +51,6 @@ export class AdsetsRepository {
       data.billingEvent || data.billing_event || null,
       data.platformAdsetId || data.platform_adset_id || data.id || id
     );
-    log.info('adset created', { id });
     return this.findById(id);
   }
 
