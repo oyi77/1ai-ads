@@ -217,7 +217,12 @@ export function startServices(app) {
   webhookProcessor.start();
   dataCleanup.start();
   fatigueDetector.start();
-  capiMonitor.start(() => usersRepo.findAll().map(u => u.id));
+  // CAPI health checks Meta ad accounts (act_<id> or numeric id), not platform
+  // user rows. Filter out UUIDs and seeded demo users to avoid Graph API 400s.
+  capiMonitor.start(() => {
+    const ids = usersRepo.findAll().map(u => u.id);
+    return ids.filter(id => /^act_\d+$/.test(id) || /^\d{11,17}$/.test(id));
+  });
 
   log.info('Background services started');
 }

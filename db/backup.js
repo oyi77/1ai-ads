@@ -30,13 +30,25 @@ export function backupDatabase(dbPath, rootDir) {
       log.error('Backup integrity check error', { backupPath, error: checkErr.message });
     }
 
-    const backups = fs.readdirSync(backupDir)
-      .filter(f => f.endsWith('.backup'))
-      .sort()
-      .reverse();
+    // Retention: keep the newest 7 backup timestamps, deleting the .backup
+    // file AND its -shm/-wal sidecars for older timestamps. Grouping by
+    // timestamp (instead of by .backup suffix) prevents sidecars from
+    // accumulating forever.
+    const KEEP = 7;
+    const files = fs.readdirSync(backupDir);
+    const byTimestamp = new Map();
+    for (const f of files) {
+      const m = f.match(/^adforge\.db\.(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})(\.backup(-shm|-wal)?)?$/);
+      if (!m) continue;
+      if (!byTimestamp.has(m[1])) byTimestamp.set(m[1], []);
+      byTimestamp.get(m[1]).push(f);
+    }
 
-    for (const old of backups.slice(7)) {
-      fs.unlinkSync(join(backupDir, old));
+    const oldTimestamps = [...byTimestamp.keys()].sort().reverse().slice(KEEP);
+    for (const ts of oldTimestamps) {
+      for (const f of byTimestamp.get(ts)) {
+        fs.unlinkSync(join(backupDir, f));
+      }
     }
   } catch (err) {
     log.error('Database backup failed', { error: err.message });

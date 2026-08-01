@@ -13,7 +13,7 @@ module.exports = {
     exec_mode: 'fork',
     autorestart: true,
     watch: false,
-    max_memory_restart: '256M',
+    max_memory_restart: '512M',
     cron_restart: '0 4 * * *',
     max_restarts: 10,
     restart_delay: 5000,
