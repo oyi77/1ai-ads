@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { Shell } from './components/layout/shell';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequireAuth } from './components/RequireAuth';
@@ -8,6 +8,7 @@ import { CookieConsent } from './components/CookieConsent';
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import('./pages/login').then(m => ({ default: m.LoginPage })));
+const LandingPage = lazy(() => import('./pages/landing').then(m => ({ default: m.LandingPage })));
 const DashboardPage = lazy(() => import('./pages/dashboard').then(m => ({ default: m.DashboardPage })));
 const CampaignsPage = lazy(() => import('./pages/campaigns').then(m => ({ default: m.CampaignsPage })));
 const AdsPage = lazy(() => import('./pages/ads').then(m => ({ default: m.AdsPage })));
@@ -50,32 +51,32 @@ export function App() {
     <ErrorBoundary>
       <Suspense fallback={<Loading />}>
         <Routes>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/onboarding" element={<RequireAuth><OnboardingPage /></RequireAuth>} />
-          <Route path="/" element={<RequireAuth><Shell /></RequireAuth>}>
-            <Route index element={<Navigate to="/app" replace />} />
-            <Route path="app" element={<DashboardPage />} />
-            <Route path="campaigns" element={<CampaignsPage />} />
-            <Route path="ads" element={<AdsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="creative-library" element={<CreativeLibraryPage />} />
-            <Route path="creative-fatigue" element={<CreativeFatiguePage />} />
-            <Route path="ab-tests" element={<RequirePro><ABTestsPage /></RequirePro>} />
-            <Route path="reporting" element={<ReportingPage />} />
-            <Route path="automation" element={<RequirePro><AutomationPage /></RequirePro>} />
-            <Route path="competitors" element={<CompetitorsPage />} />
-            <Route path="trending" element={<TrendingPage />} />
-            <Route path="meta-ai" element={<MetaAiPage />} />
-            <Route path="templates" element={<TemplatesPage />} />
-            <Route path="landing-pages" element={<LandingPagesPage />} />
-            <Route path="audiences" element={<RequirePro><AudienceIntelligencePage /></RequirePro>} />
-            <Route path="drafts" element={<DraftsPage />} />
-            <Route path="platforms" element={<PlatformsPage />} />
-            <Route path="attribution" element={<RequirePro><AttributionPage /></RequirePro>} />
-            <Route path="widgets" element={<WidgetsPage />} />
-            <Route path="audit" element={<AuditTrailPage />} />
+          <Route element={<RequireAuth><Shell /></RequireAuth>}>
+            <Route path="/app" element={<DashboardPage />} />
+            <Route path="/campaigns" element={<CampaignsPage />} />
+            <Route path="/ads" element={<AdsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/creative-library" element={<CreativeLibraryPage />} />
+            <Route path="/creative-fatigue" element={<CreativeFatiguePage />} />
+            <Route path="/ab-tests" element={<RequirePro><ABTestsPage /></RequirePro>} />
+            <Route path="/reporting" element={<ReportingPage />} />
+            <Route path="/automation" element={<RequirePro><AutomationPage /></RequirePro>} />
+            <Route path="/competitors" element={<CompetitorsPage />} />
+            <Route path="/trending" element={<TrendingPage />} />
+            <Route path="/meta-ai" element={<MetaAiPage />} />
+            <Route path="/templates" element={<TemplatesPage />} />
+            <Route path="/landing-pages" element={<LandingPagesPage />} />
+            <Route path="/audiences" element={<RequirePro><AudienceIntelligencePage /></RequirePro>} />
+            <Route path="/drafts" element={<DraftsPage />} />
+            <Route path="/platforms" element={<PlatformsPage />} />
+            <Route path="/attribution" element={<RequirePro><AttributionPage /></RequirePro>} />
+            <Route path="/widgets" element={<WidgetsPage />} />
+            <Route path="/audit" element={<AuditTrailPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

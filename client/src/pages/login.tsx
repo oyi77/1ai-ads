@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 
 export function LoginPage() {
@@ -49,7 +49,11 @@ export function LoginPage() {
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg-deep)' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg-deep)', position: 'relative' }}>
+      <Link to="/" style={{
+        position: 'absolute', top: 20, left: 24, display: 'flex', alignItems: 'center', gap: 6,
+        color: 'var(--text-secondary)', fontSize: '0.8rem', textDecoration: 'none', fontFamily: 'var(--font)',
+      }}>← Back to AdForge</Link>
       <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', borderRadius: 14, padding: 40, width: '100%', maxWidth: 380, boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ width: 48, height: 48, borderRadius: 10, background: 'var(--accent-soft)', color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 800, marginBottom: 12 }}>A</div>
