@@ -69,11 +69,11 @@ export function createApp(params) {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https://static.cloudflareinsights.com"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://static.cloudflareinsights.com", "https://www.googletagmanager.com"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'", "wss:", "ws:"],
+        connectSrc: ["'self'", "wss:", "ws:", "https://www.google-analytics.com", "https://analytics.google.com", "https://*.google-analytics.com", "https://stats.g.doubleclick.net", "https://www.google.com"],
       },
     },
   }));
