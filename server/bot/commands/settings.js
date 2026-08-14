@@ -5,7 +5,7 @@
 
 export function handleSettings(deps) {
   return async (ctx) => {
-    const accounts = deps.repos?.platformAccountsRepo?.getAccounts?.() || [];
+    const accounts = deps.repos?.platformAccountsRepo?.findByUserId?.(ctx.userId) || [];
     const metaAccounts = accounts.filter(a => a.platform === 'meta');
 
     ctx.reply(
@@ -46,7 +46,7 @@ export function handleSettingsCallback(deps) {
       case 'sync':
         return ctx.reply('🔄 Syncing campaigns... Use the dashboard for real-time sync status.');
       case 'accounts':
-        const accounts = deps.repos?.platformAccountsRepo?.getAccounts?.() || [];
+        const accounts = deps.repos?.platformAccountsRepo?.findByUserId?.(ctx.userId) || [];
         if (accounts.length === 0) return ctx.reply('No accounts connected. Use /settings to connect.');
         const list = accounts.map(a => `• ${a.account_name} (${a.platform}) ${a.is_active ? '✅' : '⏸'}`).join('\n');
         return ctx.reply(`📊 *Connected Accounts:*\n\n${list}`, { parse_mode: 'Markdown' });

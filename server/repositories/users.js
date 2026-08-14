@@ -8,11 +8,13 @@ export class UsersRepository {
   findByUsername(username) {
     return this.db.prepare('SELECT * FROM users WHERE username = ?').get(username) || null;
   }
-
   findByEmail(email) {
     return this.db.prepare('SELECT * FROM users WHERE email = ?').get(email) || null;
   }
 
+  findByTelegramId(telegramId) {
+    return this.db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegramId) || null;
+  }
   findById(id) {
     return this.db.prepare('SELECT * FROM users WHERE id = ?').get(id) || null;
   }
@@ -21,9 +23,9 @@ export class UsersRepository {
     return this.db.prepare('SELECT id, username, email, role, is_active, created_at, last_login FROM users').all();
   }
 
-  create({ username, email, password_hash, confirmed = 0 }) {
+  create({ username, email, password_hash, confirmed = 0, telegram_id = null }) {
     const id = uuid();
-    this.db.prepare('INSERT INTO users (id, username, email, password_hash, confirmed) VALUES (?, ?, ?, ?, ?)').run(id, username, email, password_hash, confirmed);
+    this.db.prepare('INSERT INTO users (id, username, email, password_hash, confirmed, telegram_id) VALUES (?, ?, ?, ?, ?, ?)').run(id, username, email, password_hash, confirmed, telegram_id);
     return id;
   }
 
@@ -33,7 +35,7 @@ export class UsersRepository {
 
     const fields = [];
     const params = [];
-    const updatable = ['username', 'email', 'password_hash', 'role', 'plan', 'confirmed', 'is_active', 'last_login'];
+    const updatable = ['username', 'email', 'password_hash', 'role', 'plan', 'confirmed', 'is_active', 'last_login', 'telegram_id'];
 
     for (const field of updatable) {
       if (data[field] !== undefined) {

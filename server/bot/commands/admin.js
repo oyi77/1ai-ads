@@ -7,7 +7,7 @@ export function handleAdminStats(deps) {
   return async (ctx) => {
     const userId = ctx.from?.id;
     const adminIds = (process.env.ADMIN_USER_IDS || '').split(',').map(Number).filter(Boolean);
-    if (adminIds.length > 0 && !adminIds.includes(userId)) {
+    if (!adminIds.includes(userId)) {
       return ctx.reply('⛔ Admin only.');
     }
 
@@ -34,7 +34,7 @@ export function handleAdminUsers(deps) {
   return async (ctx) => {
     const userId = ctx.from?.id;
     const adminIds = (process.env.ADMIN_USER_IDS || '').split(',').map(Number).filter(Boolean);
-    if (adminIds.length > 0 && !adminIds.includes(userId)) {
+    if (!adminIds.includes(userId)) {
       return ctx.reply('⛔ Admin only.');
     }
 
@@ -52,7 +52,7 @@ export function handleAdminBroadcast(_deps) {
   return async (ctx) => {
     const userId = ctx.from?.id;
     const adminIds = (process.env.ADMIN_USER_IDS || '').split(',').map(Number).filter(Boolean);
-    if (adminIds.length > 0 && !adminIds.includes(userId)) {
+    if (!adminIds.includes(userId)) {
       return ctx.reply('⛔ Admin only.');
     }
 

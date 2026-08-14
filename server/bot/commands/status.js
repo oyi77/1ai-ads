@@ -5,7 +5,8 @@
 export function handleStatus(deps) {
   return async (ctx) => {
     try {
-      const campaigns = deps.repos?.campaignsRepo?.findAll?.() || [];
+      const result = deps.repos?.campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [], total: 0 };
+      const campaigns = result.data || [];
       const active = campaigns.filter(c => c.status === 'ACTIVE').length;
       const totalSpend = campaigns.reduce((s, c) => s + (c.spend || 0), 0);
       const totalRevenue = campaigns.reduce((s, c) => s + (c.revenue || 0), 0);

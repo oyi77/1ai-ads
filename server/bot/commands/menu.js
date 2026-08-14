@@ -14,7 +14,7 @@ export function handleMenu() {
             [{ text: '📊 Campaign Status', callback_data: 'menu:status' }, { text: '📈 Reports', callback_data: 'menu:reports' }],
             [{ text: '🎯 Create Campaign', callback_data: 'menu:create' }, { text: '🤖 AI Optimize', callback_data: 'menu:optimize' }],
             [{ text: '⚡ Monitor Rules', callback_data: 'menu:monitor' }, { text: '🔧 Settings', callback_data: 'menu:settings' }],
-            [{ text: '💰 Pricing', callback_data: 'menu:pricing' }, { text: '❓ Help', callback_data: 'menu:help' }],
+            [{ text: '🔗 Connect Account', callback_data: 'menu:connect' }],
           ],
         },
       }
@@ -34,6 +34,8 @@ export function handleMenuButton(deps) {
         return handleReportsAction(ctx, deps);
       case 'create':
         return handleCreateAction(ctx);
+      case 'connect':
+        return sendPlatformChoice(ctx);
       case 'optimize':
         return handleOptimizeAction(ctx, deps);
       case 'monitor':
@@ -52,7 +54,8 @@ export function handleMenuButton(deps) {
 
 async function handleStatusAction(ctx, deps) {
   try {
-    const campaigns = deps.repos?.campaignsRepo?.findAll?.() || [];
+    const result = deps.repos?.campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [], total: 0 };
+    const campaigns = result.data || [];
     const active = campaigns.filter(c => c.status === 'ACTIVE').length;
     const totalSpend = campaigns.reduce((s, c) => s + (c.spend || 0), 0);
     const totalRevenue = campaigns.reduce((s, c) => s + (c.revenue || 0), 0);

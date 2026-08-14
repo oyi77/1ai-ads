@@ -6,11 +6,12 @@
  *
  * All asisten-jualan features available via Telegram:
  * - 7 commands (start, menu, cancel, help, status, settings, pricing)
- * - 9 multi-step flows (campaign-create, ad-copy, landing-page, etc.)
+ * - Connect-account wizard (per-customer platform connection via /start buttons)
  * - 10 scheduled jobs (bid-satpam, daily-dashboard, etc.)
  */
 
-import { Telegraf } from 'telegraf';
+import { Telegraf, Scenes } from 'telegraf';
+import { session } from 'telegraf/session';
 import { createLogger } from '../lib/logger.js';
 import { handleStart } from './commands/start.js';
 import { handleMenu, handleMenuButton } from './commands/menu.js';
@@ -21,6 +22,8 @@ import { handleMonitorCallback } from './commands/monitor.js';
 import { handleAdminStats, handleAdminUsers, handleAdminBroadcast } from './commands/admin.js';
 import { initScheduler } from './scheduler.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { identify } from './middleware/identify.js';
+import { connectScene } from './scenes/connect-account.js';
 
 const log = createLogger('bot');
 
@@ -46,6 +49,13 @@ export function initBot(app, deps) {
   bot.context.repos = deps.repos;
   bot.context.services = deps.services;
 
+  // Identify/auto-bind Telegram user -> local multi-tenant account
+  bot.use(identify(deps));
+  // Session + Stage middleware — REQUIRED for WizardScene (connect flow)
+  bot.use(session());
+  const stage = new Scenes.Stage([connectScene]);
+  bot.use(stage);
+
   // ── Commands ─────────────────────────────────────────────
   bot.start(handleStart());
   bot.command('menu', handleMenu());
@@ -63,6 +73,12 @@ export function initBot(app, deps) {
   bot.action(/^settings:/, handleSettingsCallback(deps));
   bot.action(/^monitor:/, handleMonitorCallback(deps));
   bot.action(/^quick:menu$/, handleMenu());
+  // ── Connect wizard (per-customer platform connection) ────
+  bot.action(/^connect:(.+)$/, async (ctx) => {
+    const platform = ctx.match[1];
+    await ctx.answerCbQuery();
+    await ctx.scene.enter('connect-account', { platform });
+  });
 
   // ── Message router ───────────────────────────────────────
   bot.on('text', handleTextMessage(deps));
@@ -100,12 +116,15 @@ export function getBot() {
 
 function handlePricing() {
   return (ctx) => {
+    const plan = ctx.user?.plan || 'free';
+    const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
     ctx.reply(
-      '💰 *AdForge Pricing*\n\n' +
+      `💰 *AdForge Pricing*\n\n` +
+      `Your plan: *${planLabel}*\n\n` +
       '🆓 *Free* — 3 campaigns, basic analytics\n' +
       '💎 *Pro* — Unlimited campaigns, AI optimization, priority support\n' +
       '🏢 *Enterprise* — Custom limits, dedicated support, white-label\n\n' +
-      'Contact @adforge_support for upgrades.',
+      'Use /menu → Connect Account to add integrations. Contact @adforge_support for upgrades.',
       { parse_mode: 'Markdown' }
     );
   };
