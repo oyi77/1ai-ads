@@ -92,7 +92,7 @@ export function initBot(app, deps) {
   app.use(bot.webhookCallback(webhookPath));
 
   // Set webhook (async, non-blocking)
-  const host = process.env.HOSTNAME || 'adforge.aitradepulse.com';
+  const host = process.env.TELEGRAM_WEBHOOK_HOST || 'adforge.aitradepulse.com';
   const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
   bot.telegram.setWebhook(`${protocol}://${host}${webhookPath}`)
     .then(() => log.info('Telegram webhook set', { url: `${protocol}://${host}${webhookPath}` }))
