@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS users (
    username TEXT UNIQUE NOT NULL,
    email TEXT UNIQUE NOT NULL,
    password_hash TEXT NOT NULL,
-   telegram_id TEXT UNIQUE,
+   telegram_id TEXT,
    role TEXT DEFAULT 'user',
    plan TEXT DEFAULT 'free',
    confirmed BOOLEAN DEFAULT 0,
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_plan ON users(plan);
-CREATE INDEX IF NOT EXISTS idx_users_telegram ON users(telegram_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_telegram ON users(telegram_id);
 
 CREATE TABLE IF NOT EXISTS plans (
    id TEXT PRIMARY KEY,
