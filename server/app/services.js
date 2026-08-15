@@ -91,11 +91,11 @@ export function createServices({ db, repos, params }) {
   const pinterestAdsAPI = new PinterestAdsAPI(repos.settingsRepo);
 
   const googleAdsAPI = new GoogleAdsAPI(repos.settingsRepo);
-
   const autonomousAgent = new AutonomousAgent(
     repos.settingsRepo, repos.platformAccountsRepo, repos.campaignsRepo,
     repos.rulesRepo, llmClient, undefined,
-    { metaAdsAPI: metaApi, googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI }
+    { metaAdsAPI: metaApi, googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI },
+    draftService
   );
 
   const autoOptimizer = new AutoOptimizer(metaApi, repos.rulesRepo, repos.campaignsRepo, draftService);

@@ -20,11 +20,12 @@ import { CampaignReporter } from './campaign-reporter.js';
 const log = createLogger('autonomous-agent');
 
 export class AutonomousAgent {
-  constructor(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, llmClient, aiAgent, platformApis = {}) {
+  constructor(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, llmClient, aiAgent, platformApis = {}, draftService = null) {
     this.facebook = new FacebookConnectionService(platformAccountsRepo);
-    this.ruleEvaluator = new RuleEvaluator(settingsRepo, campaignsRepo, rulesRepo, llmClient, platformApis);
+    this.ruleEvaluator = new RuleEvaluator(settingsRepo, campaignsRepo, rulesRepo, llmClient, platformApis, draftService);
     this.reporter = new CampaignReporter(campaignsRepo, rulesRepo, aiAgent);
     this.platformAccountsRepo = platformAccountsRepo;
+    this.draftService = draftService;
     this.scheduler = null;
   }
 

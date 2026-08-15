@@ -14,7 +14,7 @@ import { compare } from '../lib/operators.js';
 const log = createLogger('rule-evaluator');
 
 export class RuleEvaluator {
-  constructor(settingsRepo, campaignsRepo, rulesRepo, llmClient, { metaAdsAPI, googleAdsAPI, tiktokAdsAPI } = {}) {
+  constructor(settingsRepo, campaignsRepo, rulesRepo, llmClient, { metaAdsAPI, googleAdsAPI, tiktokAdsAPI } = {}, draftService = null) {
     this.settingsRepo = settingsRepo;
     this.campaignsRepo = campaignsRepo;
     this.rulesRepo = rulesRepo;
@@ -23,6 +23,7 @@ export class RuleEvaluator {
     this.googleAdsAPI = googleAdsAPI || new GoogleAdsAPI(settingsRepo);
     this.tiktokAdsAPI = tiktokAdsAPI || new TikTokAdsAPI(settingsRepo);
     this.runningRules = new Set();
+    this.draftService = draftService;
   }
 
   static PLATFORM_APIS = {
@@ -80,6 +81,20 @@ export class RuleEvaluator {
   }
 
   async _executeAction(action, campaign) {
+    // Approval gate: route the intended change to a draft instead of mutating live.
+    if (this.draftService) {
+      const intercepted = await this.draftService.guardAutonomousChange({
+        type: `rule_${action.type}`,
+        summary: `Rule action: ${action.type} on campaign ${campaign.id}`,
+        details: { action, campaign },
+        proposedBy: 'rule-evaluator',
+        campaignId: campaign.id,
+      });
+      if (intercepted) {
+        return { campaign_id: campaign.id, action: `pending_approval_${action.type}`, intercepted: true };
+      }
+    }
+
     if (this.runningRules.has(campaign.id)) return null;
     this.runningRules.add(campaign.id);
 
