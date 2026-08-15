@@ -2,6 +2,7 @@
  * /menu command — Main menu with inline buttons
  * Ported from asisten-jualan/bot/handlers/quick_start.py
  */
+import { PLATFORM_NAMES } from '../scenes/connect-account.js';
 
 export function handleMenu() {
   return (ctx) => {
@@ -52,6 +53,24 @@ export function handleMenuButton(deps) {
   };
 }
 
+async function sendPlatformChoice(ctx) {
+  const entries = Object.entries(PLATFORM_NAMES);
+  const inline_keyboard = [];
+  for (let i = 0; i < entries.length; i += 2) {
+    const row = entries.slice(i, i + 2).map(([key, label]) => ({
+      text: label,
+      callback_data: `connect:${key}`,
+    }));
+    inline_keyboard.push(row);
+  }
+  await ctx.reply(
+    '🔗 *Connect an Ad Account*\n\nChoose a platform to connect:',
+    {
+      parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard },
+    }
+  );
+}
 async function handleStatusAction(ctx, deps) {
   try {
     const result = deps.repos?.campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [], total: 0 };

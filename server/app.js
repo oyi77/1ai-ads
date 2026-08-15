@@ -1,4 +1,5 @@
 import fs from 'fs';
+import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
@@ -78,7 +79,7 @@ export function createApp(params) {
     },
   }));
   app.use(metricsMiddleware);
-  app.use(express.json());
+  app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
   app.use(cookieParser());
 
   // EJS template engine for server-rendered dashboard pages
@@ -93,49 +94,47 @@ export function createApp(params) {
   const clientPath = path.join(process.cwd(), 'dist');
   app.use(express.static(clientPath));
 
-  // Proxy webhooks BEFORE API routers (must run before createRouters)
-  
-  // Proxy Telegram webhook requests to Hermes bot (port 8443)
-  app.use('/webhook', async (req, res) => {
-    try {
-      const targetUrl = `${config.hermesBotUrl}${req.originalUrl}`;
-      const response = await fetch(targetUrl, {
-        method: req.method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body),
-        signal: AbortSignal.timeout(30000),
-      });
-      const responseBody = await response.arrayBuffer();
-      res.status(response.status).send(Buffer.from(responseBody));
-    } catch (err) {
-      log.error('Webhook proxy error', err.message);
-      if (!res.headersSent) res.status(502).json({ error: 'webhook proxy failed' });
-    }
-  });
+  // NOTE: /webhook/telegram is handled locally by the Telegraf bot mounted in initBot()
+  // (bot.webhookCallback('/webhook/telegram')). No upstream proxy — the previous
+  // forward to config.hermesBotUrl (:8443) pointed at a non-existent service.
 
-  // Proxy Scalev payment callback → Hermes bot (port 8443)
-  // Cloudflare WAF blocks unknown POST paths; use a standard-looking path
+  // Scalev payment callback — handled locally (no upstream proxy).
+  // Signature: x-scalev-signature = HMAC-SHA256(hex) of the raw body.
   app.post('/api/payments/notify', async (req, res) => {
     const signature = req.headers['x-scalev-signature'];
     if (!signature) {
       return res.status(401).json({ error: 'Missing signature' });
     }
+    const secret = process.env.SCALEV_WEBHOOK_SECRET;
+    if (secret) {
+      const raw = req.rawBody || Buffer.from(JSON.stringify(req.body || {}));
+      const expected = crypto.createHmac('sha256', secret).update(raw).digest('hex');
+      const provided = String(signature).replace(/^sha256=/, '');
+      const valid = expected.length === provided.length &&
+        crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(provided));
+      if (!valid) {
+        return res.status(401).json({ error: 'Invalid signature' });
+      }
+    }
     try {
-      const targetUrl = `${config.hermesBotUrl}/webhook/scalev`;
-      const response = await fetch(targetUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Scalev-Signature': signature,
-        },
-        body: JSON.stringify(req.body),
-        signal: AbortSignal.timeout(30000),
+      const body = req.body || {};
+      const orderId = body.orderId || body.order_id;
+      if (orderId) {
+        const payment = repos.paymentsRepo.findByOrderId(orderId);
+        if (payment) {
+          const status = body.status || body.payment_status || payment.status;
+          repos.paymentsRepo.updateStatus(payment.id, String(status));
+        }
+      }
+      repos.webhookEventsRepo.create({
+        source: 'scalev',
+        eventType: body.type || 'payment',
+        payload: body,
       });
-      const responseBody = await response.arrayBuffer();
-      res.status(response.status).send(Buffer.from(responseBody));
+      return res.status(200).json({ ok: true });
     } catch (err) {
-      log.error('Scalev proxy error', err.message);
-      if (!res.headersSent) res.status(502).json({ error: 'proxy failed' });
+      log.error('Scalev notify error', err.message);
+      return res.status(200).json({ ok: true, stored: false });
     }
   });
 

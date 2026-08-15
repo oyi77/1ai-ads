@@ -8,7 +8,7 @@ import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('bot:scene:connect');
 
-const PLATFORM_NAMES = {
+export const PLATFORM_NAMES = {
   meta: 'Meta (Facebook/Instagram)',
   google: 'Google Ads',
   tiktok: 'TikTok Ads',
