@@ -36,13 +36,7 @@ export function handleSettingsCallback(deps) {
 
     switch (action) {
       case 'connect_meta':
-        return ctx.reply(
-          '🔗 *Connect Meta Account*\n\n' +
-          'Use the web dashboard to connect your Facebook account:\n' +
-          '👉 /app → Settings → Connect Meta\n\n' +
-          'Or paste your access token directly (advanced):',
-          { parse_mode: 'Markdown' }
-        );
+        return ctx.scene.enter('connect-account', { platform: 'meta' });
       case 'sync':
         return ctx.reply('🔄 Syncing campaigns... Use the dashboard for real-time sync status.');
       case 'accounts':

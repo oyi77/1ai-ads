@@ -2,8 +2,8 @@
  * /menu command — Main menu with inline buttons
  * Ported from asisten-jualan/bot/handlers/quick_start.py
  */
+import { handleAds, handleAdsReport } from './ads.js';
 import { PLATFORM_NAMES } from '../scenes/connect-account.js';
-import { handleFbAds } from './fbads.js';
 
 export function handleMenu() {
   return (ctx) => {
@@ -16,7 +16,7 @@ export function handleMenu() {
             [{ text: '📊 Campaign Status', callback_data: 'menu:status' }, { text: '📈 Reports', callback_data: 'menu:reports' }],
             [{ text: '🎯 Create Campaign', callback_data: 'menu:create' }, { text: '🤖 AI Optimize', callback_data: 'menu:optimize' }],
             [{ text: '⚡ Monitor Rules', callback_data: 'menu:monitor' }, { text: '🔧 Settings', callback_data: 'menu:settings' }],
-            [{ text: '📣 Meta Ads', callback_data: 'menu:fbads' }, { text: '🔗 Connect Account', callback_data: 'menu:connect' }],
+            [{ text: '📣 My Meta Ads', callback_data: 'menu:ads' }, { text: '🔗 Connect Account', callback_data: 'menu:connect' }],
           ],
         },
       }
@@ -42,10 +42,10 @@ export function handleMenuButton(deps) {
         return handleOptimizeAction(ctx, deps);
       case 'monitor':
         return ctx.reply('⚡ Monitor rules: /settings to configure spend guards and alerts.');
+      case 'ads':
+        return handleAds(deps)(ctx);
       case 'fbads':
-        return handleFbAds(deps)(ctx);
-      case 'settings':
-        return ctx.reply('🔧 Settings: Use /settings command to manage your account.');
+        return handleAds(deps)(ctx);
       case 'pricing':
         return ctx.reply('💰 See /pricing for plan details.');
       case 'help':
@@ -96,8 +96,9 @@ async function handleStatusAction(ctx, deps) {
   }
 }
 
-async function handleReportsAction(ctx, _deps) {
-  ctx.reply('📈 Reports feature — use the dashboard at /app for detailed analytics.');
+async function handleReportsAction(ctx, deps) {
+  if (deps) return handleAdsReport(deps)(ctx);
+  return ctx.reply('📈 Reports feature — use the dashboard at /app for detailed analytics.');
 }
 
 async function handleCreateAction(ctx) {
