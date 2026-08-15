@@ -157,7 +157,7 @@ export class RuleEvaluator {
     const safeBudget = Math.max(100, newBudget);
 
     if (platform === 'meta') {
-      await api.apiUpdate(`/campaign_${campaignId}`, { budget: Math.round(safeBudget * 100) / 100 });
+      await api.updateCampaign(campaign.campaign_id, { dailyBudget: safeBudget });
     } else if (platform === 'google') {
       await api.updateCampaign(campaign.customer_id, campaign.platform_campaign_id, { budget: safeBudget });
     } else if (platform === 'tiktok') {
@@ -175,7 +175,7 @@ export class RuleEvaluator {
     const api = this._getPlatformApi(platform);
 
     if (platform === 'meta') {
-      await api.apiUpdate(`/campaign_${campaignId}`, { status: 'PAUSED' });
+      await api.updateCampaign(campaign.campaign_id, { status: 'PAUSED' });
     } else if (platform === 'google') {
       await api.updateCampaign(campaign.customer_id, campaign.platform_campaign_id, { status: 'PAUSED' });
     } else if (platform === 'tiktok') {
@@ -193,7 +193,7 @@ export class RuleEvaluator {
     const api = this._getPlatformApi(platform);
 
     if (platform === 'meta') {
-      await api.apiUpdate(`/campaign_${campaignId}`, { status: 'ACTIVE' });
+      await api.updateCampaign(campaign.campaign_id, { status: 'ACTIVE' });
     } else if (platform === 'google') {
       await api.updateCampaign(campaign.customer_id, campaign.platform_campaign_id, { status: 'ENABLED' });
     } else if (platform === 'tiktok') {
@@ -227,7 +227,7 @@ export class RuleEvaluator {
     const campaign = await this.campaignsRepo.getById(campaignId);
     if (!campaign) return { error: 'Campaign not found' };
 
-    const insights = await this.metaAdsAPI.apiGet(`/campaign_${campaignId}`, {
+    const insights = await this.metaAdsAPI.apiGet(`/campaign_${campaign.campaign_id}`, {
       fields: 'spend,roas,cpc,cpm',
       time_span: '7days',
     });
@@ -252,7 +252,7 @@ export class RuleEvaluator {
       else if (suggestion.includes('decrease')) newBudget = currentBudget * 0.8;
     }
 
-    await this.metaAdsAPI.apiUpdate(`/campaign_${campaignId}`, { budget: Math.round(newBudget * 100) / 100 });
+    await this.metaAdsAPI.updateCampaign(campaign.campaign_id, { dailyBudget: newBudget });
 
     return { campaign_id: campaignId, action: 'optimize_budget', from: currentBudget, to: newBudget, suggestion };
   }

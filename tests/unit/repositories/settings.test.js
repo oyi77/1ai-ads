@@ -8,9 +8,12 @@ describe('SettingsRepository', () => {
 
   beforeEach(() => {
     db = createDatabase(':memory:');
+    // Migrations seed feature-flag settings (e.g. approval_required); the
+    // getAll() assertions below assume a pristine DB, so clear them.
+    db.prepare('DELETE FROM settings').run();
     accountsRepo = new PlatformAccountsRepository(db);
     repo = new SettingsRepository(db, accountsRepo);
-  });
+  })
 
   describe('get', () => {
     it('returns null for missing key', () => {

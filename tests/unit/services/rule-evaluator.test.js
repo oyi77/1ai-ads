@@ -61,6 +61,7 @@ describe('RuleEvaluator', () => {
     mockMetaApi = {
       apiUpdate: vi.fn().mockResolvedValue({}),
       apiGet: vi.fn(),
+      updateCampaign: vi.fn().mockResolvedValue({}),
     };
     mockGoogleApi = {
       updateCampaign: vi.fn().mockResolvedValue({}),
@@ -214,14 +215,14 @@ describe('RuleEvaluator', () => {
 
   describe('_scaleCampaign', () => {
     it('should scale up an LC_ campaign via Meta API', async () => {
-      const campaign = { id: 'c1', name: 'LC_Spring', platform: 'meta', budget: 200 };
+      const campaign = { id: 'c1', name: 'LC_Spring', campaign_id: 'camp-1', platform: 'meta', budget: 200 };
       mockCampaignsRepo.getById.mockResolvedValue(campaign);
 
       const result = await evaluator._scaleCampaign('c1', 1.5, 'increase');
       expect(result.direction).toBe('increase');
       expect(result.from).toBe(200);
       expect(result.to).toBe(300);
-      expect(mockMetaApi.apiUpdate).toHaveBeenCalled();
+      expect(mockMetaApi.updateCampaign).toHaveBeenCalledWith('camp-1', { dailyBudget: 300 });
     });
 
     it('should block scaling non-LC_ campaigns', async () => {
@@ -241,11 +242,11 @@ describe('RuleEvaluator', () => {
 
   describe('_pauseCampaign', () => {
     it('should pause a meta campaign', async () => {
-      mockCampaignsRepo.getById.mockResolvedValue({ id: 'c1', platform: 'meta' });
+      mockCampaignsRepo.getById.mockResolvedValue({ id: 'c1', campaign_id: 'pc1', platform: 'meta' });
       const result = await evaluator._pauseCampaign('c1');
       expect(result.action).toBe('pause');
       expect(result.status).toBe('PAUSED');
-      expect(mockMetaApi.apiUpdate).toHaveBeenCalled();
+      expect(mockMetaApi.updateCampaign).toHaveBeenCalledWith('pc1', { status: 'PAUSED' });
     });
 
     it('should pause a google campaign', async () => {
@@ -309,6 +310,39 @@ describe('RuleEvaluator', () => {
       mockRulesRepo.getAllEnabled.mockResolvedValue([]);
       const results = await evaluator.checkCampaigns('user1');
       expect(results).toEqual([]);
+    });
+  });
+
+  describe('Meta action routing', () => {
+    it('routes _pauseCampaign to the platform id via updateCampaign (not internal uuid)', async () => {
+      const campaign = { id: 'uuid-123', campaign_id: '238479123847', platform: 'meta' };
+      mockCampaignsRepo.getById.mockResolvedValue(campaign);
+
+      await evaluator._pauseCampaign('uuid-123');
+
+      expect(mockMetaApi.updateCampaign).toHaveBeenCalledWith('238479123847', { status: 'PAUSED' });
+      expect(mockMetaApi.apiUpdate).not.toHaveBeenCalled();
+    });
+
+    it('routes _scaleCampaign to the platform id with dailyBudget', async () => {
+      const campaign = { id: 'uuid-9', campaign_id: 'camp-9', name: 'LC_Test', platform: 'meta', budget: 200 };
+      mockCampaignsRepo.getById.mockResolvedValue(campaign);
+
+      await evaluator._scaleCampaign('uuid-9', 1.5, 'increase');
+
+      expect(mockMetaApi.updateCampaign).toHaveBeenCalledWith('camp-9', { dailyBudget: 300 });
+    });
+
+    it('routes _optimizeBudget insights GET + update to the platform id', async () => {
+      const campaign = { id: 'uuid-7', campaign_id: 'camp-7', platform: 'meta', budget: 100 };
+      mockCampaignsRepo.getById.mockResolvedValue(campaign);
+      mockMetaApi.apiGet.mockResolvedValue({ data: [{ spend: 10, roas: 2 }] });
+      mockLlmClient.call.mockResolvedValue('{"action":"hold","newBudget":100,"reason":"ok"}');
+
+      await evaluator._optimizeBudget('uuid-7');
+
+      expect(mockMetaApi.apiGet).toHaveBeenCalledWith('/campaign_camp-7', expect.any(Object));
+      expect(mockMetaApi.updateCampaign).toHaveBeenCalledWith('camp-7', { dailyBudget: 100 });
     });
   });
 });
