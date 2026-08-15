@@ -280,6 +280,24 @@ describe('RuleEvaluator', () => {
       expect(results[0].campaign_id).toBe('c1');
     });
 
+    it('should evaluate rules whose condition/action are already parsed objects (live getAllEnabled path)', async () => {
+      const campaigns = [
+        { id: 'c1', status: 'active', stats: { roas: 0.5 } },
+        { id: 'c2', status: 'active', stats: { roas: 3 } },
+      ];
+      // getAllEnabled safe-parses condition/action into objects; evaluateRule must NOT re-parse strings.
+      const rules = [
+        { condition: { type: 'roas', operator: '<', value: 1 }, action: { type: 'scale_down' } },
+      ];
+      mockCampaignsRepo.getByUserId.mockResolvedValue(campaigns);
+      mockRulesRepo.getAllEnabled.mockResolvedValue(rules);
+      mockCampaignsRepo.getById.mockResolvedValue({ id: 'c1', name: 'LC_X', platform: 'meta', budget: 100 });
+
+      const results = await evaluator.checkCampaigns('user1');
+      expect(results).toHaveLength(1);
+      expect(results[0].campaign_id).toBe('c1');
+    });
+
     it('should return empty if no campaigns', async () => {
       mockCampaignsRepo.getByUserId.mockResolvedValue([]);
       const results = await evaluator.checkCampaigns('user1');

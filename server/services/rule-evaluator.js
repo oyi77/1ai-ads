@@ -49,8 +49,8 @@ export class RuleEvaluator {
   }
 
   async evaluateRule(rule, campaign) {
-    const condition = JSON.parse(rule.condition);
-    const action = JSON.parse(rule.action);
+    const condition = typeof rule.condition === 'string' ? JSON.parse(rule.condition) : rule.condition;
+    const action = typeof rule.action === 'string' ? JSON.parse(rule.action) : rule.action;
 
     const matches = this._evaluateCondition(condition, campaign);
     if (matches) {
