@@ -31,6 +31,21 @@ export class SavedAudiencesRepository {
     return this.findById(id);
   }
 
+  update(id, data) {
+    const existing = this.findById(id);
+    if (!existing) return null;
+    const fields = [];
+    const params = [];
+    const updatable = ['name', 'platform', 'description'];
+    for (const field of updatable) {
+      if (data[field] !== undefined) { fields.push(`${field} = ?`); params.push(field === 'description' ? (data[field] || null) : data[field]); }
+    }
+    if (fields.length === 0) return existing;
+    params.push(id);
+    this.db.prepare(`UPDATE saved_audiences SET ${fields.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...params);
+    return this.findById(id);
+  }
+
   remove(id) {
     const result = this.db.prepare('DELETE FROM saved_audiences WHERE id = ?').run(id);
     return result.changes > 0;

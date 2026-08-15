@@ -103,9 +103,9 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   // Search targeting interests — must be before GET /:id to avoid route shadowing
   router.get('/targeting/search', async (req, res) => {
     try {
-      const { q, type } = req.query;
+      const { q } = req.query;
       if (!q) return res.status(400).json({ success: false, error: 'q (query) is required' });
-      const results = await metaApi.searchTargeting(q, type || 'adinterest');
+      const results = await metaApi.getTargetingOptions(q);
       res.json({ success: true, data: results });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });

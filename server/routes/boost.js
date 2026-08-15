@@ -30,29 +30,6 @@ export function createBoostRouter({ services }) {
     return res.json({ success: true, data: recs, count: recs.length });
   });
 
-  // ── GET /api/boost/:id ────────────────────────────────────────
-  router.get('/:id', requireAuth, (req, res) => {
-    const rec = svc.getById(Number(req.params.id));
-    if (!rec) return res.status(404).json({ success: false, error: 'Not found' });
-    return res.json({ success: true, data: rec });
-  });
-
-  // ── POST /api/boost/:id/approve ───────────────────────────────
-  router.post('/:id/approve', requireAuth, (req, res) => {
-    const rec = svc.getById(Number(req.params.id));
-    if (!rec) return res.status(404).json({ success: false, error: 'Not found' });
-    const updated = svc.approve(Number(req.params.id), req.user?.username ?? 'system');
-    return res.json({ success: true, data: updated });
-  });
-
-  // ── POST /api/boost/:id/reject ────────────────────────────────
-  router.post('/:id/reject', requireAuth, (req, res) => {
-    const rec = svc.getById(Number(req.params.id));
-    if (!rec) return res.status(404).json({ success: false, error: 'Not found' });
-    const updated = svc.reject(Number(req.params.id), req.user?.username ?? 'system');
-    return res.json({ success: true, data: updated });
-  });
-
   // ── POST /api/boost/telegram-webhook ─────────────────────────
   // Receives Telegram bot updates; handles /boost_approve_N and /boost_reject_N commands.
   router.post('/telegram-webhook', async (req, res) => {
@@ -110,6 +87,30 @@ export function createBoostRouter({ services }) {
     } catch (err) {
       return res.status(500).json({ success: false, error: err.message });
     }
+  });
+
+  // ── GET /api/boost/:id ────────────────────────────────────────
+  // Registered AFTER /targeting routes so /targeting is not shadowed by /:id.
+  router.get('/:id', requireAuth, (req, res) => {
+    const rec = svc.getById(Number(req.params.id));
+    if (!rec) return res.status(404).json({ success: false, error: 'Not found' });
+    return res.json({ success: true, data: rec });
+  });
+
+  // ── POST /api/boost/:id/approve ───────────────────────────────
+  router.post('/:id/approve', requireAuth, (req, res) => {
+    const rec = svc.getById(Number(req.params.id));
+    if (!rec) return res.status(404).json({ success: false, error: 'Not found' });
+    const updated = svc.approve(Number(req.params.id), req.user?.username ?? 'system');
+    return res.json({ success: true, data: updated });
+  });
+
+  // ── POST /api/boost/:id/reject ────────────────────────────────
+  router.post('/:id/reject', requireAuth, (req, res) => {
+    const rec = svc.getById(Number(req.params.id));
+    if (!rec) return res.status(404).json({ success: false, error: 'Not found' });
+    const updated = svc.reject(Number(req.params.id), req.user?.username ?? 'system');
+    return res.json({ success: true, data: updated });
   });
 
   return router;

@@ -2,10 +2,10 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Megaphone, Settings, LogOut, Menu,
   Library, Activity, FlaskConical, BarChart3, Zap, Eye, GitBranch, LayoutGrid,
-  TrendingUp, Bot, FileText, Globe, Users, Link2, FileEdit, Layers, Shield,
+  TrendingUp, Bot, FileText, Globe, Users, Link2, FileEdit, Layers, Shield, Boxes, Receipt, Bookmark, Target,
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
 import type { CSSProperties } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PlanBadge } from '../RequirePro';
 import { api } from '../../lib/api';
 
@@ -28,8 +28,10 @@ const navItems = [
   { to: '/attribution', label: 'Attribution', icon: GitBranch },
   { to: '/widgets', label: 'Widgets', icon: LayoutGrid },
   { to: '/platforms', label: 'Platforms', icon: Link2 },
-  { to: '/audit', label: 'Audit Trail', icon: Shield },
-  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: '/adsets', label: 'Ad Sets', icon: Boxes },
+  { to: '/invoices', label: 'Invoices', icon: Receipt },
+  { to: '/saved-audiences', label: 'Saved Audiences', icon: Bookmark },
+  { to: '/targeting', label: 'Advanced Targeting', icon: Target },
 ];
 
 const MOBILE_BREAKPOINT = 768;

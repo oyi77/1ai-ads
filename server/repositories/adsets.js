@@ -61,11 +61,19 @@ export class AdsetsRepository {
   update(id, data) {
     const existing = this.findById(id);
     if (!existing) return null;
+    const normalized = {
+      name: data.name,
+      status: data.status,
+      daily_budget: data.daily_budget ?? data.dailyBudget,
+      targeting_json: data.targeting_json ?? (data.targeting !== undefined ? (typeof data.targeting === 'string' ? data.targeting : JSON.stringify(data.targeting || {})) : undefined),
+      optimization_goal: data.optimization_goal ?? data.optimizationGoal,
+      billing_event: data.billing_event ?? data.billingEvent,
+    };
     const fields = [];
     const params = [];
     const updatable = ['name', 'status', 'daily_budget', 'targeting_json', 'optimization_goal', 'billing_event'];
     for (const field of updatable) {
-      if (data[field] !== undefined) { fields.push(`${field} = ?`); params.push(data[field]); }
+      if (normalized[field] !== undefined) { fields.push(`${field} = ?`); params.push(normalized[field]); }
     }
     if (fields.length === 0) return existing;
     params.push(id);

@@ -32,6 +32,10 @@ const NotFoundPage = lazy(() => import('./pages/not-found').then(m => ({ default
 const PrivacyPage = lazy(() => import('./pages/privacy').then(m => ({ default: m.PrivacyPage })));
 const TermsPage = lazy(() => import('./pages/terms').then(m => ({ default: m.TermsPage })));
 const OnboardingPage = lazy(() => import('./pages/onboarding').then(m => ({ default: m.OnboardingPage })));
+const InvoicesPage = lazy(() => import('./pages/invoices').then(m => ({ default: m.InvoicesPage })));
+const AdsetsPage = lazy(() => import('./pages/adsets').then(m => ({ default: m.AdsetsPage })));
+const AudiencesPage = lazy(() => import('./pages/audiences').then(m => ({ default: m.AudiencesPage })));
+const TargetingPage = lazy(() => import('./pages/targeting').then(m => ({ default: m.TargetingPage })));
 const AuditTrailPage = lazy(() => import('./pages/audit-trail').then(m => ({ default: m.AuditTrailPage })));
 
 function Loading() {
@@ -72,8 +76,10 @@ export function App() {
             <Route path="/templates" element={<TemplatesPage />} />
             <Route path="/landing-pages" element={<LandingPagesPage />} />
             <Route path="/audiences" element={<RequirePro><AudienceIntelligencePage /></RequirePro>} />
-            <Route path="/drafts" element={<DraftsPage />} />
-            <Route path="/platforms" element={<PlatformsPage />} />
+            <Route path="/adsets" element={<AdsetsPage />} />
+            <Route path="/invoices" element={<InvoicesPage />} />
+            <Route path="/saved-audiences" element={<AudiencesPage />} />
+            <Route path="/targeting" element={<TargetingPage />} />
             <Route path="/attribution" element={<RequirePro><AttributionPage /></RequirePro>} />
             <Route path="/widgets" element={<WidgetsPage />} />
             <Route path="/audit" element={<AuditTrailPage />} />

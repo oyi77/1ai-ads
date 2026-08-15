@@ -39,5 +39,17 @@ export function createSavedAudiencesRouter(savedAudiencesRepo) {
     }
   });
 
+  // Update a saved audience
+  router.put('/:id', async (req, res) => {
+    try {
+      const { name, platform, description } = req.body;
+      const updated = savedAudiencesRepo.update(req.params.id, { name, platform, description });
+      if (!updated) return res.status(404).json({ success: false, error: 'Audience not found' });
+      res.json({ success: true, data: updated });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   return router;
 }
