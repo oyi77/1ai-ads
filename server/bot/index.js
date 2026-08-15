@@ -20,6 +20,7 @@ import { handleHelp } from './commands/help.js';
 import { handleSettings, handleSettingsCallback } from './commands/settings.js';
 import { handleMonitorCallback } from './commands/monitor.js';
 import { handleAdminStats, handleAdminUsers, handleAdminBroadcast } from './commands/admin.js';
+import { handleFbAds } from './commands/fbads.js';
 import { initScheduler } from './scheduler.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { identify } from './middleware/identify.js';
@@ -66,6 +67,7 @@ export function initBot(app, deps) {
   bot.command('pricing', handlePricing());
   bot.command('admin_stats', handleAdminStats(deps));
   bot.command('admin_users', handleAdminUsers(deps));
+  bot.command('fbads', handleFbAds(deps));
   bot.command('admin_broadcast', handleAdminBroadcast(deps));
 
   // ── Callback queries (inline buttons) ────────────────────

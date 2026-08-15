@@ -9,7 +9,7 @@ import { calculateProfit, evaluateROAS, getCampaignStatus } from './profitabilit
 const log = createLogger('mcp-server');
 
 export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, services = {}) {
-  const { adGenerator, creativeStudio, aiAgent, competitorSpyService: competitorSpy, autoOptimizer, llmClient: _llmClient } = services;
+  const { adGenerator, creativeStudio, aiAgent, competitorSpyService: competitorSpy, autoOptimizer, llmClient: _llmClient, facebookSystemUserService } = services;
 
   const server = new Server(
     {
@@ -261,6 +261,25 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
           description: "Check 1ai-social service health",
           inputSchema: { type: "object", properties: {} },
         },
+        {
+          name: "1ai-ads_meta_list_ad_accounts",
+          description: "List Meta (Facebook/Instagram) ad accounts accessible to the configured system user",
+          inputSchema: { type: "object", properties: {} },
+        },
+        {
+          name: "1ai-ads_meta_create_campaign",
+          description: "Create a Meta campaign under an ad account (act_<id>) via the Graph API",
+          inputSchema: {
+            type: "object",
+            properties: {
+              account_id: { type: "string", description: "Ad account ID, with or without act_ prefix" },
+              name: { type: "string", description: "Campaign name" },
+              objective: { type: "string", description: "Meta objective, e.g. OUTCOME_SALES, OUTCOME_AWARENESS" },
+              status: { type: "string", description: "PAUSED (default) or ACTIVE" },
+            },
+            required: ["account_id", "name", "objective"],
+          },
+        },
       ],
     };
   });
@@ -430,6 +449,22 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
       if (!services.socialBridge) throw new Error("SocialBridge not available");
       const health = await services.socialBridge.healthCheck();
       return { content: [{ type: "text", text: JSON.stringify(health, null, 2) }] };
+    },
+    '1ai-ads_meta_list_ad_accounts': async (_args) => {
+      if (!facebookSystemUserService) throw new Error("Meta system user not configured");
+      const data = await facebookSystemUserService.getAdAccounts();
+      return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    },
+
+    '1ai-ads_meta_create_campaign': async (args) => {
+      if (!facebookSystemUserService) throw new Error("Meta system user not configured");
+      const accountId = String(args.account_id).startsWith('act_') ? args.account_id : `act_${args.account_id}`;
+      const result = await facebookSystemUserService.createCampaign(accountId, {
+        name: args.name,
+        objective: args.objective,
+        status: args.status || 'PAUSED',
+      });
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     },
   };
 
