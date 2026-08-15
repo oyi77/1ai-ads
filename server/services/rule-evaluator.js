@@ -207,20 +207,21 @@ export class RuleEvaluator {
     const campaign = await this.campaignsRepo.getById(campaignId);
     if (!campaign) return { error: 'Campaign not found' };
 
-    const ads = await this.campaignsRepo.getAds(campaignId);
+    // Only ads linked to a live platform ad instance carry platform_id.
+    // The creative library may hold unlinked drafts that must never be mutated.
+    const ads = (await this.campaignsRepo.getAds(campaignId))
+      .filter(ad => ad && ad.platform_id);
+    if (ads.length === 0) return { error: 'No linked ads found' };
+
     const bestAd = ads.sort((a, b) => (b.stats?.roas || 0) - (a.stats?.roas || 0))[0];
 
-    if (bestAd) {
-      await this.metaAdsAPI.apiUpdate(`/ad_${bestAd.platform_id}`, { status: 'ACTIVE' });
-      for (const ad of ads) {
-        if (ad.id !== bestAd.id) {
-          await this.metaAdsAPI.apiUpdate(`/ad_${ad.platform_id}`, { status: 'PAUSED' });
-        }
+    await this.metaAdsAPI.apiUpdate(`/ad_${bestAd.platform_id}`, { status: 'ACTIVE' });
+    for (const ad of ads) {
+      if (ad.id !== bestAd.id) {
+        await this.metaAdsAPI.apiUpdate(`/ad_${ad.platform_id}`, { status: 'PAUSED' });
       }
-      return { campaign_id: campaignId, action: 'optimize_creative', best_ad_id: bestAd.id };
     }
-
-    return { error: 'No ads found' };
+    return { campaign_id: campaignId, action: 'optimize_creative', best_ad_id: bestAd.id };
   }
 
   async _optimizeBudget(campaignId) {

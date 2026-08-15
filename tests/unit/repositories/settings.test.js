@@ -157,4 +157,22 @@ describe('SettingsRepository', () => {
       expect(repo.getCredentials('google')).toEqual({ google_token: 'google_val' });
     });
   });
+
+  describe('approval_required flag', () => {
+    it('defaults to off (config.approvalRequired) when unset', () => {
+      // beforeEach wipes seeded settings; with no DB row the resolver must
+      // fall back to the code default (false), never throw.
+      expect(repo.getApprovalRequired()).toBe(false);
+    });
+
+    it('reflects a persisted on value', () => {
+      repo.setApprovalRequired(true);
+      expect(repo.getApprovalRequired()).toBe(true);
+    });
+
+    it('reflects a persisted off value', () => {
+      repo.setApprovalRequired(false);
+      expect(repo.getApprovalRequired()).toBe(false);
+    });
+  });
 });
