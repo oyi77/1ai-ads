@@ -259,7 +259,7 @@ export function initScheduler(bot, deps) {
   cron.schedule('30 * * * *', async () => {
     log.debug('Running follow-up engine');
     try {
-      const campaigns = deps.repos?.campaignsRepo?.findAll?.() || [];
+      const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.() || { data: [] };
       const winning = campaigns.filter(c => c.status === 'WINNING' && !c.scaled);
       for (const c of winning) {
         await safeSend(
