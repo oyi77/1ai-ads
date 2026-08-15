@@ -13,12 +13,23 @@ const SHOPEE_UPLOADS_KEY = 'shopee_uploads';
 const csvParser = new ShopeeCSVParser();
 const log = createLogger('shopee-dashboard');
 
+/**
+ * settingsRepo.get() returns either a parsed value (the real repo JSON.parses the
+ * stored row) or a raw JSON string (test mocks / legacy callers). Coerce safely so
+ * both call shapes yield an array.
+ */
+function coerceArray(raw) {
+  if (raw === null || raw === undefined) return [];
+  if (Array.isArray(raw)) return raw;
+  try { return JSON.parse(raw); } catch { return []; }
+}
+
 // GET /accounts — list configured Shopee seller accounts
 export function handleListAccounts(settingsRepo) {
   return (req, res) => {
     try {
       const raw = settingsRepo.get(SHOPEE_ACCOUNTS_KEY);
-      const accounts = raw ? raw : [];
+      const accounts = coerceArray(raw);
       res.json({ success: true, accounts });
     } catch (err) {
       log.error('Failed to list Shopee accounts', { error: err.message });
@@ -33,7 +44,7 @@ export function handleListOrders(shopeeAdapter, settingsRepo) {
     const { accountId } = req.params;
     try {
       const raw = settingsRepo.get(SHOPEE_ACCOUNTS_KEY);
-      const accounts = raw ? raw : [];
+      const accounts = coerceArray(raw);
       const account = accounts.find(a => a.id === accountId);
       if (!account) {
         return res.status(404).json({ success: false, error: 'Account not found' });
@@ -57,7 +68,7 @@ export function handleGetSummary(shopeeAdapter, settingsRepo, commissionsRepo) {
     const { accountId } = req.params;
     try {
       const raw = settingsRepo.get(SHOPEE_ACCOUNTS_KEY);
-      const accounts = raw ? raw : [];
+      const accounts = coerceArray(raw);
       const account = accounts.find(a => a.id === accountId);
       if (!account) {
         return res.status(404).json({ success: false, error: 'Account not found' });
@@ -176,7 +187,7 @@ export function handleUpload(settingsRepo, commissionsRepo) {
         let uploads = [];
         try {
           const raw = settingsRepo.get(SHOPEE_UPLOADS_KEY);
-          uploads = raw ? raw : [];
+          uploads = coerceArray(raw);
         } catch {
           uploads = [];
         }
@@ -242,7 +253,7 @@ export function handleListUploads(settingsRepo) {
   return (req, res) => {
     try {
       const raw = settingsRepo.get(SHOPEE_UPLOADS_KEY);
-      const uploads = raw ? raw : [];
+      const uploads = coerceArray(raw);
       // Strip embedded data from list response
       const list = uploads.map(({ data: _data, ...meta }) => meta);
       res.json({ success: true, uploads: list });
@@ -259,7 +270,7 @@ export function handleDeleteUpload(settingsRepo) {
     const { fileId } = req.params;
     try {
       const raw = settingsRepo.get(SHOPEE_UPLOADS_KEY);
-      const uploads = raw ? raw : [];
+      const uploads = coerceArray(raw);
       const idx = uploads.findIndex(u => u.id === fileId);
       if (idx === -1) {
         return res.status(404).json({ success: false, error: 'File not found' });
@@ -320,7 +331,7 @@ function parseMultipart(buffer, boundary) {
 function detectAccountFromFilename(filename, settingsRepo) {
   try {
     const raw = settingsRepo.get(SHOPEE_ACCOUNTS_KEY);
-    const accounts = raw ? JSON.parse(raw) : [];
+    const accounts = coerceArray(raw);
     const lower = filename.toLowerCase();
     const match = accounts.find(a => lower.includes(String(a.id).toLowerCase()));
     return match ? match.id : null;
