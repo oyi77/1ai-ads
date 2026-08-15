@@ -1,0 +1,69 @@
+1ai-ads — Server Boot Verification Receipt
+============================================
+Generated: 2026-08-15 (session: isolated boot re-run)
+Method: Fresh isolated boot using temp-edited .env (port 5008 + copy of live DB)
+        — NOT the skill's shell-export procedure (see DEFECT note; that is unsafe).
+
+GATES
+-----
+[1] ESLint (server code)        : EXIT 0
+    command: npx eslint server --ext .js
+[2] Container health            : 1ai-ads  Up 7 hours (healthy)  0.0.0.0:5000->5000/tcp
+[3] Isolated boot reachable      : HEALTH_HTTP:200  ROOT_HTTP:200  (port 5008)
+    title served: <title>AdForge — Ads Management</title>
+[4] No console.* violations     : PASS — server log uses structured logger only
+                                   (logger module). No console.log/error/warn/info
+                                   in boot output. Only structured JSON log lines
+                                   + 1 node DEP0040 punycode DeprecationWarning
+                                   (benign, from a dependency).
+    Sample boot lines (isolated, 5008):
+      "Platform adapters initialized" (meta.platforms: meta,google,tiktok)
+      "Database backed up to .../backups/adforge.db.2026-08-15T09-41-45.backup"
+      "Rules table created"
+      "TELEGRAM_BOT_TOKEN not set — bot disabled"   (expected; bot off)
+      "Autonomous mode started"
+      "1ai-ads running on 5008"
+[5] Isolated boot did NOT touch live DB:
+      Before: live campaigns = 281
+      Isolated used /tmp/ads-test.db (copy) + PORT 5008
+      After : live campaigns = 281   -> UNCHANGED
+[6] .env restored to live values : PORT=5000  DB_PATH=./db/1ai-ads.db
+[7] Temp artifacts removed       : TMP_CLEAN_DONE (incl. /tmp/ads-test.db[-wal/-shm],
+                                   /tmp/r.txt, /tmp/h.txt, /tmp/eslint.txt,
+                                   backups/adforge.db.2026-08-15T09-41-45.backup)
+[8] Port freed                   : PORT_FREE (no listener on 5008)
+[9] Git working tree             : CLEAN (git status --short empty)
+[10] Migrations present          : _migrations table = 23 rows (prior "missing"
+                                   migrations table" claim was FALSE — corrected)
+
+LIVE DB GROUND TRUTH (data/1ai-ads.db, host == container via docker bind mount
+Source=/home/openclaw/projects/1ai-ads/data -> Destination=/app/data)
+    campaigns = 281
+    _migrations = 23
+
+NOTE ON THE 347 "DISCREPANCY"
+    A prior run reported 347 campaigns from a recovered artifact. That artifact
+    read was CORRUPTED (shaken). Direct SQLite count on the live file = 281.
+    Verified via docker bind mount that host file == container live DB. The
+    347 figure was never real; no pollution occurred.
+
+DEFECT IN `1ai-ads-boot-verify` SKILL (FIXED this session)
+    Lines ~31-33 instructed:
+      "server.js loads .env via dotenv.config({override:true}), but .env lacks
+       DB_PATH, so the shell-exported DB_PATH wins."
+      DB_PATH=/tmp/ads-test.db PORT=5008 NODE_ENV=production node server.js ... &
+    TWO PROBLEMS (now corrected in the SKILL.md):
+      1. FALSE PREMISE: .env DOES contain `DB_PATH=./db/1ai-ads.db`. With
+         dotenv.config({override:true}), the shell export is SILENCED, so the
+         server boots against the LIVE DB, not the temp copy. Following the old
+         skill verbatim during verification MUTATES/USES PRODUCTION DATA.
+      2. `&` background syntax is blocked by this harness.
+    CORRECT PROCEDURE (now in the skill):
+      - Edit .env (Edit tool) to PORT=<alt> and DB_PATH=<temp copy> BEFORE boot.
+      - Boot via `hub` start (no `&`); shell `&` documented as fallback only.
+      - Restore .env and remove temp artifacts after.
+    Skill file: ~/.omp/agent/managed-skills/1ai-ads-boot-verify/SKILL.md
+
+CONCLUSION: 1ai-ads server boots cleanly and safely against an isolated DB copy,
+ESLint passes, container is healthy, live production DB (281 campaigns) was NOT
+touched by verification, and all temp artifacts are cleaned up.
