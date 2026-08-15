@@ -18,7 +18,7 @@ export function handleListAccounts(settingsRepo) {
   return (req, res) => {
     try {
       const raw = settingsRepo.get(SHOPEE_ACCOUNTS_KEY);
-      const accounts = raw ? JSON.parse(raw) : [];
+      const accounts = raw ? raw : [];
       res.json({ success: true, accounts });
     } catch (err) {
       log.error('Failed to list Shopee accounts', { error: err.message });
@@ -33,7 +33,7 @@ export function handleListOrders(shopeeAdapter, settingsRepo) {
     const { accountId } = req.params;
     try {
       const raw = settingsRepo.get(SHOPEE_ACCOUNTS_KEY);
-      const accounts = raw ? JSON.parse(raw) : [];
+      const accounts = raw ? raw : [];
       const account = accounts.find(a => a.id === accountId);
       if (!account) {
         return res.status(404).json({ success: false, error: 'Account not found' });
@@ -57,7 +57,7 @@ export function handleGetSummary(shopeeAdapter, settingsRepo, commissionsRepo) {
     const { accountId } = req.params;
     try {
       const raw = settingsRepo.get(SHOPEE_ACCOUNTS_KEY);
-      const accounts = raw ? JSON.parse(raw) : [];
+      const accounts = raw ? raw : [];
       const account = accounts.find(a => a.id === accountId);
       if (!account) {
         return res.status(404).json({ success: false, error: 'Account not found' });
@@ -176,7 +176,7 @@ export function handleUpload(settingsRepo, commissionsRepo) {
         let uploads = [];
         try {
           const raw = settingsRepo.get(SHOPEE_UPLOADS_KEY);
-          uploads = raw ? JSON.parse(raw) : [];
+          uploads = raw ? raw : [];
         } catch {
           uploads = [];
         }
@@ -242,7 +242,7 @@ export function handleListUploads(settingsRepo) {
   return (req, res) => {
     try {
       const raw = settingsRepo.get(SHOPEE_UPLOADS_KEY);
-      const uploads = raw ? JSON.parse(raw) : [];
+      const uploads = raw ? raw : [];
       // Strip embedded data from list response
       const list = uploads.map(({ data: _data, ...meta }) => meta);
       res.json({ success: true, uploads: list });
@@ -259,7 +259,7 @@ export function handleDeleteUpload(settingsRepo) {
     const { fileId } = req.params;
     try {
       const raw = settingsRepo.get(SHOPEE_UPLOADS_KEY);
-      const uploads = raw ? JSON.parse(raw) : [];
+      const uploads = raw ? raw : [];
       const idx = uploads.findIndex(u => u.id === fileId);
       if (idx === -1) {
         return res.status(404).json({ success: false, error: 'File not found' });
