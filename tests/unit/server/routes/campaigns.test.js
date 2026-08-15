@@ -22,7 +22,7 @@ function createMockOrchestrator() {
 
 function createMockMetaApi() {
   return {
-    searchTargeting: vi.fn(async () => [{ id: '1', name: 'Marketing', audience_size: 50000 }]),
+    getTargetingOptions: vi.fn(async () => [{ id: '1', name: 'Marketing', audience_size: 50000 }]),
     getPages: vi.fn(async () => [{ id: 'p1', name: 'My Page' }]),
     getAdAccounts: vi.fn(async () => [{ id: 'act_123', name: 'Test Ad Account' }]),
     getCampaigns: vi.fn(async () => []),
@@ -58,19 +58,23 @@ function createMockAdsetsRepo() {
   return {};
 }
 
+function createMockPlatformAccountsRepo() {
+  return { findActiveByUserAndPlatform: vi.fn(() => null) };
+}
+
 function createMockDraftsRepo() {
   return { findAll: vi.fn().mockReturnValue({ total: 1, data: [{ status: 'approved' }] }) };
 }
 
-function createApp(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo) {
+function createApp(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo, platformAccountsRepo) {
   const app = express();
   app.use(express.json());
-  app.use('/api/campaigns', createCampaignsRouter(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo));
+  app.use('/api/campaigns', createCampaignsRouter(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo, platformAccountsRepo));
   return app;
 }
 
 describe('Campaigns Router', () => {
-  let app, orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo;
+  let app, orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo, platformAccountsRepo;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -81,7 +85,8 @@ describe('Campaigns Router', () => {
     adsRepo = createMockAdsRepo();
     adsetsRepo = createMockAdsetsRepo();
     draftsRepo = createMockDraftsRepo();
-    app = createApp(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo);
+    platformAccountsRepo = createMockPlatformAccountsRepo();
+    app = createApp(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo, platformAccountsRepo);
   });
 
   // ─── POST /create ──────────────────────────────────────────────────
@@ -102,7 +107,7 @@ describe('Campaigns Router', () => {
       expect(res.body.data.campaignId).toBe('camp-001');
       expect(orchestrator.createFullCampaign).toHaveBeenCalledWith(expect.objectContaining({
         accountId: 'act_123', product: 'Widget', dailyBudget: 50, objective: 'OUTCOME_LEADS',
-      }));
+      }), expect.anything());
       expect(campaignsRepo.upsert).toHaveBeenCalledWith(expect.objectContaining({
         platform: 'meta', campaign_id: 'camp-001', status: 'paused', budget: 50,
       }));
@@ -125,7 +130,7 @@ describe('Campaigns Router', () => {
       const res = await request(app).post('/api/campaigns/camp-001/activate');
       expect(res.status).toBe(200);
       expect(res.body.data.status).toBe('ACTIVE');
-      expect(orchestrator.activateCampaign).toHaveBeenCalledWith('camp-001');
+      expect(orchestrator.activateCampaign).toHaveBeenCalledWith('camp-001', expect.anything());
     });
 
     it('returns 500 on failure', async () => {
@@ -143,7 +148,7 @@ describe('Campaigns Router', () => {
       const res = await request(app).post('/api/campaigns/camp-001/pause');
       expect(res.status).toBe(200);
       expect(res.body.data.status).toBe('PAUSED');
-      expect(orchestrator.pauseCampaign).toHaveBeenCalledWith('camp-001');
+      expect(orchestrator.pauseCampaign).toHaveBeenCalledWith('camp-001', expect.anything());
     });
 
     it('returns 500 on failure', async () => {
@@ -160,7 +165,7 @@ describe('Campaigns Router', () => {
     it('updates campaign budget', async () => {
       const res = await request(app).put('/api/campaigns/camp-001/budget').send({ dailyBudget: '100' });
       expect(res.status).toBe(200);
-      expect(orchestrator.scaleBudget).toHaveBeenCalledWith('camp-001', 100);
+      expect(orchestrator.scaleBudget).toHaveBeenCalledWith('camp-001', 100, expect.anything());
       expect(res.body.data.dailyBudget).toBe('100');
     });
 
@@ -191,11 +196,11 @@ describe('Campaigns Router', () => {
       const res = await request(app).get('/api/campaigns/targeting/search?q=marketing&type=adinterest');
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(1);
-      expect(metaApi.searchTargeting).toHaveBeenCalledWith('marketing', 'adinterest');
+      expect(metaApi.getTargetingOptions).toHaveBeenCalledWith('marketing', 'adinterest');
     });
 
     it('returns 500 when metaApi throws', async () => {
-      metaApi.searchTargeting.mockRejectedValue(new Error('Rate limited'));
+      metaApi.getTargetingOptions.mockRejectedValue(new Error('Rate limited'));
       const res = await request(app).get('/api/campaigns/targeting/search?q=test');
       expect(res.status).toBe(500);
       expect(res.body.error).toBe('Rate limited');

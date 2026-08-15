@@ -1,10 +1,28 @@
 import { Router } from 'express';
 import { createLogger } from '../lib/logger.js';
+import { MetaAdsAPI } from '../services/meta/index.js';
 
 const log = createLogger('campaigns-route');
 
-export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo) {
+export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo, platformAccountsRepo) {
   const router = Router();
+
+  // Resolve the Meta API for the requesting user: their own bound token when
+  // present, else fall back to the global/system token. Keeps web SaaS multi-tenant.
+  function resolveUserMetaApi(req) {
+    const userId = req.user?.id;
+    if (userId && platformAccountsRepo) {
+      try {
+        const acct = platformAccountsRepo.findActiveByUserAndPlatform(userId, 'meta');
+        if (acct && acct.access_token) {
+          return MetaAdsAPI.withToken(acct.access_token);
+        }
+      } catch (err) {
+        log.error('resolveUserMetaApi failed, using system token', { userId, error: err.message });
+      }
+    }
+    return metaApi;
+  }
 
   // Create full campaign (AI creative → campaign → adset → creative → ad)
   router.post('/create', async (req, res) => {
@@ -20,7 +38,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
         objective: objective || 'OUTCOME_TRAFFIC',
         targeting, dailyBudget: parseFloat(dailyBudget),
         landingUrl,
-      });
+      }, resolveUserMetaApi(req));
 
       // Save to local DB
       if (result.campaignId) {
@@ -51,7 +69,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       if (!approvedDrafts || approvedDrafts.total === 0) {
         return res.status(403).json({ success: false, error: 'Campaign requires an approved activation request. Submit for approval first.' });
       }
-      await orchestrator.activateCampaign(campaignId);
+      await orchestrator.activateCampaign(campaignId, resolveUserMetaApi(req));
       res.json({ success: true, data: { id: campaignId, status: 'ACTIVE' } });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -81,7 +99,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   // Pause a running campaign
   router.post('/:id/pause', async (req, res) => {
     try {
-      await orchestrator.pauseCampaign(req.params.id);
+      await orchestrator.pauseCampaign(req.params.id, resolveUserMetaApi(req));
       res.json({ success: true, data: { id: req.params.id, status: 'PAUSED' } });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -93,7 +111,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     try {
       const { dailyBudget } = req.body;
       if (!dailyBudget) return res.status(400).json({ success: false, error: 'dailyBudget is required' });
-      await orchestrator.scaleBudget(req.params.id, parseFloat(dailyBudget));
+      await orchestrator.scaleBudget(req.params.id, parseFloat(dailyBudget), resolveUserMetaApi(req));
       res.json({ success: true, data: { id: req.params.id, dailyBudget } });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -103,9 +121,9 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   // Search targeting interests — must be before GET /:id to avoid route shadowing
   router.get('/targeting/search', async (req, res) => {
     try {
-      const { q } = req.query;
+      const { q, type } = req.query;
       if (!q) return res.status(400).json({ success: false, error: 'q (query) is required' });
-      const results = await metaApi.getTargetingOptions(q);
+      const results = await resolveUserMetaApi(req).getTargetingOptions(q, type);
       res.json({ success: true, data: results });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -113,9 +131,9 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   });
 
   // List Facebook pages — must be before GET /:id to avoid route shadowing
-  router.get('/pages', async (_req, res) => {
+  router.get('/pages', async (req, res) => {
     try {
-      const pages = await metaApi.getPages();
+      const pages = await resolveUserMetaApi(req).getPages();
       res.json({ success: true, data: pages });
     } catch (err) {
       if (err.message.includes('nonexisting field') || err.message.includes('permission')) {
@@ -127,9 +145,9 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   });
 
   // GET /accounts — list Meta ad accounts
-  router.get('/accounts', async (_req, res) => {
+  router.get('/accounts', async (req, res) => {
     try {
-      const accounts = await metaApi.getAdAccounts();
+      const accounts = await resolveUserMetaApi(req).getAdAccounts();
       res.json({ success: true, data: accounts });
     } catch (err) {
       log.error('Failed to get ad accounts', { error: err.message });
@@ -140,13 +158,14 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   // POST /sync — sync campaigns, adsets, ads from Meta to local DB
   router.post('/sync', async (req, res) => {
     try {
+      const api = resolveUserMetaApi(req);
       const { accountId } = req.body;
       log.info('Starting Meta sync', { accountId });
 
       // Get ad accounts
       let accounts;
       try {
-        accounts = await metaApi.getAdAccounts();
+        accounts = await api.getAdAccounts();
       } catch (err) {
         return res.status(500).json({ success: false, error: `Failed to get ad accounts: ${err.message}` });
       }
@@ -170,7 +189,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
         // Fetch campaigns
         let campaigns = [];
         try {
-          campaigns = await metaApi.getCampaigns(account.id);
+          campaigns = await api.getCampaigns(account.id);
         } catch (err) {
           log.error('Failed to get campaigns', { accountId: account.id, error: err.message });
         }
@@ -180,7 +199,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
         if (campaigns.length > 0) {
           try {
             const campaignIds = campaigns.map(c => c.id);
-            insightsMap = await metaApi.getMultiCampaignInsights(campaignIds);
+            insightsMap = await api.getMultiCampaignInsights(campaignIds);
           } catch (err) {
             log.error('Failed to get campaign insights', { error: err.message });
           }
@@ -211,7 +230,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
         // Fetch ad sets
         let adsets = [];
         try {
-          const adsetData = await metaApi._get(`/${account.id}/adsets`, {
+          const adsetData = await api._get(`/${account.id}/adsets`, {
             fields: 'id,name,status,campaign_id,daily_budget,lifetime_budget,targeting,billing_event,optimization_goal',
             limit: '50',
           });
@@ -243,10 +262,11 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
         } catch (err) {
           log.error('Failed to get adsets', { accountId: account.id, error: err.message });
         }
+
         // Fetch ads and store in DB
         let ads = [];
         try {
-          ads = await metaApi.getAds(account.id);
+          ads = await api.getAds(account.id);
           for (const ad of ads) {
             try {
               const existing = adsRepo?.findById?.(ad.id);
@@ -318,11 +338,11 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       res.json({ success: false, error: e.message });
     }
   });
-
   // GET /sync/ads — get ads from Meta (live, not stored) — must be before GET /:id to avoid route shadowing
-  router.get('/sync/ads', async (_req, res) => {
+  router.get('/sync/ads', async (req, res) => {
     try {
-      const accounts = await metaApi.getAdAccounts();
+      const api = resolveUserMetaApi(req);
+      const accounts = await api.getAdAccounts();
       if (!accounts || accounts.length === 0) {
         return res.json({ success: true, data: [], total: 0, page: 1, limit: 20 });
       }
@@ -330,7 +350,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       const allAds = [];
       for (const account of accounts.slice(0, 3)) {
         try {
-          const ads = await metaApi.getAds(account.id, { limit: 50 });
+          const ads = await api.getAds(account.id, { limit: 50 });
           for (const ad of ads) {
             allAds.push({
               id: ad.id,
@@ -357,12 +377,13 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   // Get campaign detail with insights
   router.get('/:id', async (req, res) => {
     try {
-      const insights = await metaApi.getCampaignInsights(req.params.id);
+      const insights = await resolveUserMetaApi(req).getCampaignInsights(req.params.id);
       res.json({ success: true, data: { id: req.params.id, insights } });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
   });
+
 
 
   return router;

@@ -14,7 +14,7 @@ import { createWebhookRouter } from './webhooks.js';
 
 export function createCampaignsGroupRouter({ repos, services }) {
   const router = Router();
-  router.use('/campaigns', requireAuth, createCampaignsRouter(services.orchestrator, services.metaApi, services.creativeStudio, repos.campaignsRepo, repos.adsRepo, repos.adsetsRepo, repos.draftsRepo));
+  router.use('/campaigns', requireAuth, createCampaignsRouter(services.orchestrator, services.metaApi, services.creativeStudio, repos.campaignsRepo, repos.adsRepo, repos.adsetsRepo, repos.draftsRepo, repos.platformAccountsRepo));
   router.use('/ads', requireAuth, createAdsRouter(repos.adsRepo, services.creativeStudio));
   router.use('/landing', requireAuth, createLandingRouter(repos.landingRepo, services.llmClient));
   router.use('/drafts', requireAuth, createDraftRouter(services.draftService));

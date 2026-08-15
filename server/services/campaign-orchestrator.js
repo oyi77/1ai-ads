@@ -24,9 +24,9 @@ export class CampaignOrchestrator {
     return data;
   }
 
-  async _stepCreative(accountId, pageId, product, bestAd, landingUrl, objective, result) {
+  async _stepCreative(accountId, pageId, product, bestAd, landingUrl, objective, result, meta = this.meta) {
     return this._runAndAssign(result.steps, 'create_creative', result, 'creativeId',
-      () => this.meta.createAdCreative(accountId, {
+      () => meta.createAdCreative(accountId, {
         name: `${product} Creative`, pageId,
         message: `${bestAd.hook}\n\n${bestAd.body}`, headline: bestAd.cta || product,
         description: product, linkUrl: landingUrl || 'https://example.com',
@@ -34,23 +34,23 @@ export class CampaignOrchestrator {
       }));
   }
 
-  async _createCampaignStep(accountId, pageId, product, objective, dailyBudget, landingUrl, aiResult, bestAd, result) {
+  async _createCampaignStep(accountId, pageId, product, objective, dailyBudget, landingUrl, aiResult, bestAd, result, meta = this.meta) {
     const steps = result.steps;
     const campaignName = `${product} - ${objective} - ${new Date().toISOString().split('T')[0]}`;
     const campaign = await this._runAndAssign(steps, 'create_campaign', result, 'campaignId',
-      () => this.meta.createCampaign(accountId, { name: campaignName, objective, status: 'PAUSED', dailyBudget }),
+      () => meta.createCampaign(accountId, { name: campaignName, objective, status: 'PAUSED', dailyBudget }),
       { name: campaignName });
 
     const adsetName = `${product} - ${bestAd.hook || product}`;
     const adset = await this._runAndAssign(steps, 'create_adset', result, 'adsetId',
-      () => this.meta.createAdSet(accountId, campaign.id, {
+      () => meta.createAdSet(accountId, campaign.id, {
         name: adsetName, dailyBudget, targeting: this._buildDefaultTargeting(aiResult.targetingSuggestions),
         optimizationGoal: this._objectiveToOptimization(objective),
       }), { name: adsetName });
 
-    const creative = await this._stepCreative(accountId, pageId, product, bestAd, landingUrl, objective, result);
+    const creative = await this._stepCreative(accountId, pageId, product, bestAd, landingUrl, objective, result, meta);
     await this._runAndAssign(steps, 'create_ad', result, 'adId',
-      () => this.meta.createAd(accountId, {
+      () => meta.createAd(accountId, {
         adsetId: adset.id, creativeId: creative.id,
         name: `${product} Ad - ${bestAd.model_name || 'AI'}`, status: 'PAUSED',
       }));
@@ -73,21 +73,23 @@ export class CampaignOrchestrator {
     accountId, pageId, product, target, keunggulan,
     objective = 'OUTCOME_TRAFFIC', targeting: _targeting, dailyBudget,
     landingUrl, platform = 'meta', format = 'single_image',
+    metaApi = null,
   }) {
+    const meta = metaApi || this.meta;
     log.info('Creating full campaign', { product, objective, platform });
     const steps = [];
     const result = { campaignId: null, adsetId: null, creativeId: null, adId: null, steps };
 
     try {
       const { aiResult, bestAd } = await this._generateCreative(product, target, keunggulan, platform, format, steps);
-      await this._createCampaignStep(accountId, pageId, product, objective, dailyBudget, landingUrl, aiResult, bestAd, result);
+      await this._createCampaignStep(accountId, pageId, product, objective, dailyBudget, landingUrl, aiResult, bestAd, result, meta);
       result.status = 'created';
       result.message = 'Campaign created as PAUSED. Activate when ready.';
       result.aiCreative = this._buildAICreative(bestAd, aiResult);
       log.info('Campaign creation completed', { campaignId: result.campaignId, adsetId: result.adsetId, adId: result.adId });
       return result;
     } catch (err) {
-      return this._handleCampaignError(err, steps, result);
+      return this._handleCampaignError(err, steps, result, meta);
     }
   }
 
@@ -99,12 +101,12 @@ export class CampaignOrchestrator {
     return { copy: bestAd, imageDirections: aiResult.imageDirections, videoScript: aiResult.videoScript, allCopies: aiResult.copies };
   }
 
-  _handleCampaignError(err, steps, result) {
+  _handleCampaignError(err, steps, result, meta = this.meta) {
     log.error('Campaign creation failed', { error: err.message });
     this._markStepFailed(steps, err.message);
     result.status = 'failed';
     result.error = err.message;
-    this._cleanupPartialCampaign(result.campaignId);
+    this._cleanupPartialCampaign(result.campaignId, meta);
     return result;
   }
 
@@ -125,22 +127,24 @@ export class CampaignOrchestrator {
     }
   }
 
-  async _cleanupPartialCampaign(campaignId) {
+  async _cleanupPartialCampaign(campaignId, meta = this.meta) {
     if (!campaignId) return;
     try {
-      await this.meta.updateCampaign(campaignId, { status: 'DELETED' });
+      await meta.updateCampaign(campaignId, { status: 'DELETED' });
       log.info('Cleaned up partially created campaign', { campaignId });
     } catch (cleanupErr) {
       log.error('Failed to cleanup campaign', { campaignId, error: cleanupErr.message });
     }
   }
 
-  async activateCampaign(campaignId) {
-    return this.meta.updateCampaign(campaignId, { status: 'ACTIVE' });
+  async activateCampaign(campaignId, metaApi = null) {
+    const meta = metaApi || this.meta;
+    return meta.updateCampaign(campaignId, { status: 'ACTIVE' });
   }
 
-  async pauseCampaign(campaignId) {
-    return this.meta.updateCampaign(campaignId, { status: 'PAUSED' });
+  async pauseCampaign(campaignId, metaApi = null) {
+    const meta = metaApi || this.meta;
+    return meta.updateCampaign(campaignId, { status: 'PAUSED' });
   }
 
   async createAndActivate(params, { autoActivate = false, delayMs = 5 * 60 * 1000 } = {}) {
@@ -153,7 +157,7 @@ export class CampaignOrchestrator {
       
       setTimeout(async () => {
         try {
-          await this.activateCampaign(result.campaignId);
+          await this.activateCampaign(result.campaignId, params.metaApi);
           log.info('Campaign auto-activated', { campaignId: result.campaignId });
         } catch (err) {
           log.error('Auto-activation failed', { campaignId: result.campaignId, error: err.message });
@@ -167,8 +171,9 @@ export class CampaignOrchestrator {
   /**
    * Scale campaign budget up or down.
    */
-  async scaleBudget(campaignId, newDailyBudget) {
-    return this.meta.updateCampaign(campaignId, { dailyBudget: newDailyBudget });
+  async scaleBudget(campaignId, newDailyBudget, metaApi = null) {
+    const meta = metaApi || this.meta;
+    return meta.updateCampaign(campaignId, { dailyBudget: newDailyBudget });
   }
 
   _objectiveToOptimization(objective) {
