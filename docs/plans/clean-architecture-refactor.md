@@ -86,6 +86,15 @@ is explicitly NOT claimed as done.
     live mutation — replaying those is out of scope (no uniform executor exists yet).
   - Tests: `draft-service.test.js` extended with `setExecutor`, `approveDraft` execution loop (replay+approve,
     failure-stays-pending, non-replayable no-op), and `_parseDetails` cases.
+- **Live verification (`da23e89`, 2026-08-15)**: deployed via `docker compose up -d --build`; container healthy.
+  `POST /api/approvals/:id/approve` on a correctly-shaped rule draft (`details.action={type:'pause'}`,
+  `details.campaign=<id>`) invoked the wired executor → `RuleEvaluator._applyAction(pause)` →
+  `RuleEvaluator._pauseCampaign` → real Meta API call. The loop is confirmed END-TO-END: approve triggers
+  the deferred mutation. On the upstream `apiUpdate` error (`Too few parameter values were provided` — a
+  pre-existing Meta-adapter/DB-logging issue, NOT in this loop), the failure-safe correctly left the draft
+  `pending` (retryable) and returned `ValidationError`. Shape note: the guard stores `details.action` as the
+  FULL `{type,...}` object (rule-evaluator.js:89), so the executor passes it straight to `_applyAction`
+  without reshaping — a manually-built draft must match that shape to replay.
 
 ### whatsapp_bm — INTENTIONALLY LEFT BLOCKED (external dependency)
 - WhatsApp Business API: only BM "Produk digital" (ID `1611764243355432`) is accessible from this account.
