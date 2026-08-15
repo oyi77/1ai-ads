@@ -24,6 +24,7 @@ import { AiAgent } from '../services/ai-agent.js';
 import { ShopeeAdapter } from '../services/shopee-adapter.js';
 import { AttributionService } from '../services/attribution-service.js';
 import { AutonomousAgent } from '../services/autonomous-agent.js';
+import { RuleEvaluator } from '../services/rule-evaluator.js';
 import { AutoOptimizer } from '../services/auto-optimizer.js';
 import { WebhookProcessor } from '../services/webhook-processor.js';
 import { DataCleanup } from '../services/data-cleanup.js';
@@ -91,12 +92,22 @@ export function createServices({ db, repos, params }) {
   const pinterestAdsAPI = new PinterestAdsAPI(repos.settingsRepo);
 
   const googleAdsAPI = new GoogleAdsAPI(repos.settingsRepo);
+  const _ruleEvaluator = new RuleEvaluator(
+    repos.settingsRepo, repos.campaignsRepo, repos.rulesRepo, llmClient,
+    { metaAdsAPI: metaApi, googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI },
+    draftService
+  );
+  // Close the approval loop: approveDraft replays the deferred rule action
+  // (details = {action, campaign}) via the same executor the live path uses.
+  draftService.setExecutor((action, campaign) => _ruleEvaluator._applyAction(action, campaign));
   const autonomousAgent = new AutonomousAgent(
     repos.settingsRepo, repos.platformAccountsRepo, repos.campaignsRepo,
     repos.rulesRepo, llmClient, undefined,
     { metaAdsAPI: metaApi, googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI },
     draftService
   );
+  // Share the single RuleEvaluator instance so drafts replay through it.
+  autonomousAgent.ruleEvaluator = _ruleEvaluator;
 
   const autoOptimizer = new AutoOptimizer(metaApi, repos.rulesRepo, repos.campaignsRepo, draftService);
   const webhookProcessor = new WebhookProcessor(repos.webhookEventsRepo, repos.campaignsRepo);

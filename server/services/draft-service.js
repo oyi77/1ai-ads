@@ -6,9 +6,15 @@ const log = createLogger('draft-service');
 const TELEGRAM_API = 'https://api.telegram.org';
 
 export class DraftService {
-  constructor(draftsRepo, telegramService = null) {
+  constructor(draftsRepo, telegramService = null, executor = null) {
     this.draftsRepo = draftsRepo;
     this.telegramService = telegramService;
+    this.executor = executor || null;
+  }
+
+  setExecutor(fn) {
+    this.executor = fn || null;
+    return this;
   }
 
   async listDrafts(status = 'pending', { page = 1, limit = 50 } = {}) {
@@ -38,7 +44,35 @@ export class DraftService {
     if (!existing) throw new NotFoundError('Draft not found');
     if (existing.status !== 'pending') throw new ValidationError(`Draft is already ${existing.status}`);
 
-    const draft = this.draftsRepo.approve(id, { reviewedBy: userId, executionResult });
+    // Externally-executed approval: just record the result.
+    if (executionResult) {
+      const draft = this.draftsRepo.approve(id, { reviewedBy: userId, executionResult });
+      this._notify(draft, 'approved').catch(err =>
+        log.error('notification failed', { draftId: id, error: err.message })
+      );
+      return draft;
+    }
+
+    // Replay the deferred mutation for replayable rule drafts ({action, campaign}),
+    // then approve. On execution failure the draft stays pending and is retryable.
+    const details = this._parseDetails(existing);
+    if (this.executor && details && details.action && details.campaign) {
+      try {
+        const result = await this.executor(details.action, details.campaign);
+        const draft = this.draftsRepo.approve(id, { reviewedBy: userId, executionResult: result });
+        this._notify(draft, 'approved').catch(err =>
+          log.error('notification failed', { draftId: id, error: err.message })
+        );
+        return draft;
+      } catch (err) {
+        log.error('Draft execution failed; draft left pending', { draftId: id, error: err.message });
+        this._notify({ ...existing, summary: `Execution failed: ${existing.summary}` }, 'failed').catch(() => {});
+        throw new ValidationError(`Execution failed: ${err.message}`);
+      }
+    }
+
+    // Non-replayable draft (e.g. ai/optimizer suggestion): approve without live mutation.
+    const draft = this.draftsRepo.approve(id, { reviewedBy: userId });
     this._notify(draft, 'approved').catch(err =>
       log.error('notification failed', { draftId: id, error: err.message })
     );
@@ -106,7 +140,15 @@ export class DraftService {
     }
   }
 
+  _parseDetails(draft) {
+    if (!draft) return null;
+    if (typeof draft.details === 'object' && draft.details !== null) return draft.details;
+    if (typeof draft.details_json === 'string') {
+      try { return JSON.parse(draft.details_json); } catch { return null; }
+    }
+    return null;
+  }
+
   _settings() {
-    return this.draftsRepo?.settingsRepo || null;
   }
 }

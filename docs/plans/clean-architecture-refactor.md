@@ -9,7 +9,7 @@
 
 | Area | Real count | Notes |
 |---|---|---|
-| `server/routes/` files | **77** (73 leaf routers + 4 aggregate `_*.js`) | Not 10. Many are platform-specific custom routers (google-ads, tiktok-ads, …). |
+| `server/routes/` files | **78** (74 leaf routers + 4 aggregate `_*.js`) | Not 10. Many are platform-specific custom routers (google-ads, tiktok-ads, …). |
 | `server/services/` files | **57** | Not 15. |
 | `server/domain/` modules | **5** (partial: `campaign.js`, `adset.js`, `creative.js`, `audience.js`, `metric.js`) | No unified aggregate. |
 | `server/platforms/` | **1** (`index.js` only) | No `base.js`. Platforms are wired via per-route clients, NOT a shared base class. |
@@ -68,6 +68,24 @@ is explicitly NOT claimed as done.
 - Verified: isolated boot (`:5008`) clean; toggle persists; guard intercepts in `RuleEvaluator` (creates pending
   draft, returns `intercepted:true`) and in `ai-agent`/`auto-optimizer`; `false` preserves live behavior.
   Unit tests: `tests/unit/services/rule-evaluator.test.js` (two guard cases), `draft-service.test.js`, `auto-optimizer.test.js`, `ai-agent.test.js` all green.
+
+### approval loop — CLOSED (2026-08-15, commits c4c5163 + this pass)
+- **Double-parse bug fixed (`c4c5163`)**: `RuleEvaluator.evaluateRule` re-`JSON.parse`d `condition`/`action`
+  that `getAllEnabled` already parsed into objects → every firing rule threw `JSON.parse([object Object])`.
+  Now parses only when still a string. This unblocked ALL autonomous cycles (they crashed before any mutation/guard).
+- **Approval execution loop closed (this pass)**: `DraftService.approveDraft` now replays the deferred mutation
+  for rule drafts via an injected executor (`ruleEvaluator._applyAction`, the same fn the live path uses).
+  - `DraftService` accepts a 3rd `executor` ctor arg + `setExecutor(fn)`; `services.js` wires
+    `draftService.setExecutor((action, campaign) => ruleEvaluator._applyAction(action, campaign))` and shares the
+    single `RuleEvaluator` instance with `AutonomousAgent`.
+  - Idempotent: re-approve of a non-`pending` draft → `ValidationError`. Externally-executed approvals
+    (`executionResult` passed) just record the result (no double execution).
+  - Failure-safe: execution error leaves the draft `pending` (retryable) and throws `ValidationError`; the campaign
+    is never mutated in a half-applied state.
+  - Non-replayable drafts (ai/optimizer suggestions, which carry a different `details` shape) still approve WITHOUT
+    live mutation — replaying those is out of scope (no uniform executor exists yet).
+  - Tests: `draft-service.test.js` extended with `setExecutor`, `approveDraft` execution loop (replay+approve,
+    failure-stays-pending, non-replayable no-op), and `_parseDetails` cases.
 
 ### whatsapp_bm — INTENTIONALLY LEFT BLOCKED (external dependency)
 - WhatsApp Business API: only BM "Produk digital" (ID `1611764243355432`) is accessible from this account.

@@ -155,4 +155,75 @@ describe('DraftService', () => {
       // Should not throw
     });
   });
+
+  describe('setExecutor', () => {
+    it('should store an executor and return the service for chaining', () => {
+      const fn = async () => ({});
+      expect(service.setExecutor(fn)).toBe(service);
+      expect(service.executor).toBe(fn);
+    });
+  });
+
+  describe('approveDraft (execution loop)', () => {
+    let execService;
+    let executor;
+
+    const ruleDraft = {
+      id: 'rule-draft-1', type: 'rule_pause', summary: 'Pause campaign cmp_1',
+      details_json: JSON.stringify({ action: { type: 'pause' }, campaign: { id: 'cmp_1', platform: 'meta' } }),
+      status: 'pending', proposedBy: 'rule-evaluator',
+    };
+
+    beforeEach(() => {
+      executor = vi.fn().mockResolvedValue({ campaign_id: 'cmp_1', action: 'pause', status: 'PAUSED' });
+      mockDraftsRepo.findById.mockReturnValue(ruleDraft);
+      execService = new DraftService(mockDraftsRepo, mockTelegram, executor);
+    });
+
+    it('should replay the deferred mutation then approve', async () => {
+      const result = await execService.approveDraft('rule-draft-1', 'admin-1');
+      expect(executor).toHaveBeenCalledWith(
+        { type: 'pause' },
+        { id: 'cmp_1', platform: 'meta' }
+      );
+      expect(mockDraftsRepo.approve).toHaveBeenCalledWith('rule-draft-1', expect.objectContaining({
+        reviewedBy: 'admin-1',
+        executionResult: { campaign_id: 'cmp_1', action: 'pause', status: 'PAUSED' },
+      }));
+      expect(result.status).toBe('approved');
+    });
+
+    it('should leave the draft pending and throw on execution failure', async () => {
+      executor.mockRejectedValue(new Error('meta api down'));
+      await expect(execService.approveDraft('rule-draft-1', 'admin-1'))
+        .rejects.toThrow(ValidationError);
+      expect(mockDraftsRepo.approve).not.toHaveBeenCalled();
+    });
+
+    it('should approve non-replayable drafts without calling the executor', async () => {
+      const plain = { ...sampleDraft, status: 'pending' };
+      mockDraftsRepo.findById.mockReturnValue(plain);
+      const svc = new DraftService(mockDraftsRepo, mockTelegram, executor);
+      await svc.approveDraft('draft-1', 'admin-1');
+      expect(executor).not.toHaveBeenCalled();
+      expect(mockDraftsRepo.approve).toHaveBeenCalled();
+    });
+  });
+
+  describe('_parseDetails', () => {
+    it('should parse a details_json string', () => {
+      const d = { details_json: JSON.stringify({ action: { type: 'pause' }, campaign: { id: 'c1' } }) };
+      expect(service._parseDetails(d)).toEqual({ action: { type: 'pause' }, campaign: { id: 'c1' } });
+    });
+
+    it('should return an object details as-is', () => {
+      const d = { details: { action: { type: 'resume' }, campaign: { id: 'c2' } } };
+      expect(service._parseDetails(d)).toEqual({ action: { type: 'resume' }, campaign: { id: 'c2' } });
+    });
+
+    it('should return null on malformed input', () => {
+      expect(service._parseDetails(null)).toBeNull();
+      expect(service._parseDetails({ details_json: 'not json' })).toBeNull();
+    });
+  });
 });
