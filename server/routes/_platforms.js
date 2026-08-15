@@ -68,7 +68,7 @@ export function createPlatformsGroupRouter({ repos, services, publicRateLimit })
         if (!resolved) {
           try {
             const factory = await getRouteFactory(cfg.routeModule, cfg.routeFactory);
-            cachedRouter = factory(repos.settingsRepo);
+          cachedRouter = factory(repos.settingsRepo, repos.platformAccountsRepo);
             resolved = true;
           } catch (err) {
             next(err);
