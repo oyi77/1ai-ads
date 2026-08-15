@@ -13,7 +13,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     const userId = req.user?.id;
     if (userId && platformAccountsRepo) {
       try {
-        const acct = platformAccountsRepo.findActiveByUserAndPlatform(userId, 'meta');
+        const acct = platformAccountsRepo.getByPlatform(userId, 'meta');
         if (acct && acct.access_token) {
           return MetaAdsAPI.withToken(acct.access_token);
         }

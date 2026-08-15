@@ -59,16 +59,19 @@ function createMockAdsetsRepo() {
 }
 
 function createMockPlatformAccountsRepo() {
-  return { findActiveByUserAndPlatform: vi.fn(() => null) };
+  return { getByPlatform: vi.fn(() => null) };
 }
 
 function createMockDraftsRepo() {
   return { findAll: vi.fn().mockReturnValue({ total: 1, data: [{ status: 'approved' }] }) };
 }
 
-function createApp(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo, platformAccountsRepo) {
+function createApp(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo, platformAccountsRepo, user) {
   const app = express();
   app.use(express.json());
+  if (user) {
+    app.use((req, _res, next) => { req.user = user; next(); });
+  }
   app.use('/api/campaigns', createCampaignsRouter(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo, platformAccountsRepo));
   return app;
 }
@@ -86,7 +89,7 @@ describe('Campaigns Router', () => {
     adsetsRepo = createMockAdsetsRepo();
     draftsRepo = createMockDraftsRepo();
     platformAccountsRepo = createMockPlatformAccountsRepo();
-    app = createApp(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo, platformAccountsRepo);
+    app = createApp(orchestrator, metaApi, creativeStudio, campaignsRepo, adsRepo, adsetsRepo, draftsRepo, platformAccountsRepo, { id: 'user-1' });
   });
 
   // ─── POST /create ──────────────────────────────────────────────────
@@ -392,6 +395,34 @@ describe('Campaigns Router', () => {
       const res = await request(app).get('/api/campaigns/sync/ads');
       expect(res.status).toBe(500);
       expect(res.body.error).toBe('API down');
+    });
+  });
+
+  // ─── Per-user Meta token resolution ─────────────────────────────────
+  describe('per-user Meta token resolution', () => {
+    it('uses the requesting user’s bound token when present', async () => {
+      const userTokenApi = { getAdAccounts: vi.fn(async () => [{ id: 'act_user', name: 'User Acct' }]) };
+      platformAccountsRepo.getByPlatform = vi.fn(() => ({ access_token: 'USER_TOKEN' }));
+      // Stub MetaAdsAPI.withToken to return the per-user api
+      const metaApiMod = await import('../../../../server/services/meta/index.js');
+      const origWithToken = metaApiMod.MetaAdsAPI.withToken;
+      metaApiMod.MetaAdsAPI.withToken = vi.fn(() => userTokenApi);
+      try {
+        const res = await request(app).get('/api/campaigns/accounts');
+        expect(res.status).toBe(200);
+        expect(metaApiMod.MetaAdsAPI.withToken).toHaveBeenCalledWith('USER_TOKEN');
+        expect(userTokenApi.getAdAccounts).toHaveBeenCalled();
+        expect(metaApi.getAdAccounts).not.toHaveBeenCalled();
+      } finally {
+        metaApiMod.MetaAdsAPI.withToken = origWithToken;
+      }
+    });
+
+    it('falls back to system token when user has no bound account', async () => {
+      platformAccountsRepo.getByPlatform = vi.fn(() => null);
+      const res = await request(app).get('/api/campaigns/accounts');
+      expect(res.status).toBe(200);
+      expect(metaApi.getAdAccounts).toHaveBeenCalled();
     });
   });
 });
