@@ -34,10 +34,12 @@ export function createRepositories(db) {
   // Create platformAccountsRepo first since SettingsRepository delegates to it
   const platformAccountsRepo = new PlatformAccountsRepository(db);
 
+  const settingsRepo = new SettingsRepository(db, platformAccountsRepo);
+
   return {
     usersRepo: new UsersRepository(db),
     refreshTokensRepo: new RefreshTokensRepository(db),
-    settingsRepo: new SettingsRepository(db, platformAccountsRepo),
+    settingsRepo,
     landingRepo: new LandingRepository(db),
     campaignsRepo: new CampaignsRepository(db),
     adsRepo: new AdsRepository(db),
@@ -52,7 +54,7 @@ export function createRepositories(db) {
     scheduleRepo,
     attributionRepo: new AttributionRepository(db),
     contentSchedulerQueueRepo,
-    draftsRepo: new DraftsRepository(db),
+    draftsRepo: new DraftsRepository(db, settingsRepo),
     shopeeCommissionsRepo: new ShopeeCommissionsRepository(db),
     auditRepo: new AuditLogRepository(db),
     boostRecommendationsRepo: new BoostRecommendationsRepository(db),

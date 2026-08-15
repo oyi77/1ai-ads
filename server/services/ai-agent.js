@@ -11,13 +11,14 @@ Each suggestion must be: { type: "ad_copy"|"landing_page"|"bid"|"pause_ad"|"crea
 Return ONLY a valid JSON array of suggestions, no other text.`;
 
 export class AiAgent {
-  constructor(settingsRepo, adsRepo, campaignsRepo, llmClient, suggestionsRepo, landingPagesRepo) {
+  constructor(settingsRepo, adsRepo, campaignsRepo, llmClient, suggestionsRepo, landingPagesRepo, draftService = null) {
     this.settingsRepo = settingsRepo;
     this.adsRepo = adsRepo;
     this.campaignsRepo = campaignsRepo;
     this.llmClient = llmClient;
     this.suggestionsRepo = suggestionsRepo;
     this.landingPagesRepo = landingPagesRepo;
+    this.draftService = draftService;
   }
 
   getAutonomyLevel() {
@@ -91,8 +92,20 @@ export class AiAgent {
     });
 
     if (autoApply) {
-      await this._applyChanges(s).catch(err => log.warn('Auto-apply failed', { id, error: err.message }));
-      this.suggestionsRepo.updateStatus(id, 'applied');
+      // Approval gate: if enabled, keep the change as a draft instead of live-apply.
+      const intercepted = this.draftService
+        ? await this.draftService.guardAutonomousChange({
+            type: `ai_apply_${s.type || 'ad_copy'}`,
+            summary: `AI auto-apply ${s.type} on ${s.target_type} ${s.target_id}`,
+            details: { suggestion: s, userId },
+            proposedBy: 'ai-agent',
+            campaignId: s.target_type === 'campaign' ? s.target_id : null,
+          })
+        : false;
+      if (!intercepted) {
+        await this._applyChanges(s).catch(err => log.warn('Auto-apply failed', { id, error: err.message }));
+        this.suggestionsRepo.updateStatus(id, 'applied');
+      }
     }
     return id;
   }

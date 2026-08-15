@@ -13,10 +13,11 @@ import { recordToTreasury, checkWf5Enabled } from './treasuryClient.js';
 const log = createLogger('auto-optimizer');
 
 export class AutoOptimizer {
-  constructor(metaApi, rulesRepo, campaignsRepo) {
+  constructor(metaApi, rulesRepo, campaignsRepo, draftService = null) {
     this.meta = metaApi;
     this.rules = rulesRepo;
     this.campaigns = campaignsRepo;
+    this.draftService = draftService;
     this._interval = null;
   }
 
@@ -97,6 +98,18 @@ export class AutoOptimizer {
   }
 
   async _executeAction(campaignId, action, actionValue, insights) {
+    // Approval gate: route the intended change to a draft instead of mutating live.
+    if (this.draftService) {
+      const intercepted = await this.draftService.guardAutonomousChange({
+        type: `optimization_${action}`,
+        summary: `Auto-optimize: ${action} on campaign ${campaignId}`,
+        details: { campaignId, action, actionValue, insights },
+        proposedBy: 'auto-optimizer',
+        campaignId,
+      });
+      if (intercepted) return { action: `pending_approval_${action}`, campaignId };
+    }
+
     const ACTION_HANDLERS = {
       pause: () => this._pauseAction(campaignId),
       scale_up: () => this._scaleAction(campaignId, actionValue || 20, 'up', insights),

@@ -1,3 +1,5 @@
+import config from '../config/index.js';
+
 
 /**
  * Settings repository for key-value application configuration.
@@ -37,6 +39,19 @@ export class SettingsRepository {
     }
     return result;
   }
+  // ── Approval workflow flag ─────────────────────────────────
+  // Resolved from DB setting, env, or default false.
+  getApprovalRequired() {
+    const dbVal = this.get('approval_required');
+    if (dbVal === 0 || dbVal === '0' || dbVal === false) return false;
+    if (dbVal === 1 || dbVal === '1' || dbVal === true) return true;
+    return config.approvalRequired; // env / default false
+  }
+
+  setApprovalRequired(value) {
+    this.set('approval_required', value ? 1 : 0);
+  }
+
 
   // ── Deprecated: Account management ────────────────────────────
   // These delegate to PlatformAccountsRepository for backward compatibility.

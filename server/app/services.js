@@ -77,8 +77,9 @@ export function createServices({ db, repos, params }) {
   const socialBridgeUrl = repos.settingsRepo.getKey?.('social_bridge_url') || config.socialBridgeUrl;
   const socialBridgeApiKey = repos.settingsRepo.getKey?.('social_bridge_api_key') || config.socialBridgeApiKey;
   const socialBridge = new SocialBridge(socialBridgeUrl, socialBridgeApiKey);
+  const draftService = new DraftService(repos.draftsRepo, null);
 
-  const aiAgent = new AiAgent(repos.settingsRepo, repos.adsRepo, repos.campaignsRepo, llmClient, repos.suggestionsRepo, repos.landingRepo);
+  const aiAgent = new AiAgent(repos.settingsRepo, repos.adsRepo, repos.campaignsRepo, llmClient, repos.suggestionsRepo, repos.landingRepo, draftService);
 
   const shopeeAdapter = new ShopeeAdapter();
   const attributionService = new AttributionService(repos.attributionRepo, shopeeAdapter, repos.campaignsRepo, repos.adsRepo);
@@ -97,12 +98,11 @@ export function createServices({ db, repos, params }) {
     { metaAdsAPI: metaApi, googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI }
   );
 
-  const autoOptimizer = new AutoOptimizer(metaApi, repos.rulesRepo, repos.campaignsRepo);
+  const autoOptimizer = new AutoOptimizer(metaApi, repos.rulesRepo, repos.campaignsRepo, draftService);
   const webhookProcessor = new WebhookProcessor(repos.webhookEventsRepo, repos.campaignsRepo);
   const dataCleanup = new DataCleanup(db);
   const adIntelligenceService = new AdIntelligenceService(db, repos.competitorsRepo);
   const competitorSpyService = new CompetitorSpyService(db, adIntelligenceService, null, repos.competitorsRepo);
-  const draftService = new DraftService(repos.draftsRepo);
   const facebookSystemUserService = new FacebookSystemUserService({
     systemToken: config.fbSystemToken,
     apiVersion: config.metaApiVersion,

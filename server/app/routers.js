@@ -18,6 +18,7 @@ import { createAutomationGroupRouter } from '../routes/_automation.js';
 import { createMcpGroupRouter } from '../routes/_mcp.js';
 import { createBoostRouter } from '../routes/boost.js';
 import { createWhatsappIntelligenceGroupRouter } from '../routes/_whatsapp-intelligence.js';
+import { createApprovalsRouter } from '../routes/approvals.js';
 
 export function createRouters({ app, repos, services }) {
   const publicRateLimit = rateLimit({
@@ -86,4 +87,8 @@ export function createRouters({ app, repos, services }) {
 
   // ── Tracking (public) ────────────────────────────────────────
   app.use('/t', createTrackRouter(repos.adUtmMapRepo, services.utmTagger));
+
+  // ── Approvals (API + server-rendered page; works even with SPA present) ──
+  app.use('/', createApprovalsRouter({ repos, services }));
+
 }

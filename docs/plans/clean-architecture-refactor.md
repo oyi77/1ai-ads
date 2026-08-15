@@ -50,6 +50,24 @@ is explicitly NOT claimed as done.
 - [ ] Audit `server/services/` for thin pass-through wrappers (per AGENTS.md: thin services forbidden) and fold them into repos or delete.
 - [ ] Deferred: per-platform route consolidation (requires per-platform behavior audit + tests).
 
+## Feature Gap Resolution (2026-08-15)
+
+### approval_workflow — BUILT (was the only missing/partial dimension)
+- Reused the existing `approval_drafts` table + `DraftService` (NO parallel `approval_requests` table).
+- Added `approval_request_id` column (migration `024_drafts_approval_request.sql`) + `approval_required` setting (migration `025_approval_setting.sql`).
+- Guard: `DraftService.guardAutonomousChange()` — when `approval_required=true`, autonomous mutations
+  (`AutoOptimizer._executeAction`, `ai-agent._persistSuggestion` autoApply) create a `pending` draft and SKIP live execution; when `false`, execute as today.
+- Review surfaces: `server/routes/approvals.js` (admin API + EJS `/approvals` page) + sidebar link.
+  Approve/reject are `requireAdmin`.
+- `approval_required` defaults OFF → existing behavior preserved until enabled.
+- Verified: isolated boot (`:5008`) clean; toggle persists (`true`→`true`, reset→`false`);
+  guard returns `true`+creates pending draft when flag on, `false` when off.
+
+### whatsapp_bm — INTENTIONALLY LEFT BLOCKED (external dependency)
+- WhatsApp Business API: only BM "Produk digital" (ID `1611764243355432`) is accessible from this account.
+- Berkah Karya Academy's number/page belong to a different BM → blocked until the user supplies the correct BM/WABA ID.
+- No code change; documented here as a known external blocker.
+
 ## Verification Gates (each step)
 - `npx eslint server --ext .js` → EXIT 0.
 - `npx vitest run` (isolated, single instance) → 0 failures (prior baseline: 1570/1570).

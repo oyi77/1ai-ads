@@ -1,0 +1,93 @@
+<% const title = 'Approvals'; const pageTitle = 'Approvals'; const breadcrumb = 'Operations · Approvals'; const activePage = 'approvals'; %>
+<%- include('../layouts/base', { title, pageTitle, breadcrumb, activePage, username: typeof username !== 'undefined' ? username : '', body: '' }) %>
+<script>
+document.querySelector('.main-content').innerHTML = `
+<div class="page-header">
+  <div><h1>Approvals</h1><p>Review autonomous campaign changes before they go live</p></div>
+  <div class="page-actions">
+    <label class="switch-wrap" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input type="checkbox" id="approvalToggle"> Require approval for autonomous changes
+    </label>
+    <button class="btn btn-outline" onclick="loadApprovals()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+  </div>
+</div>
+<div class="card">
+  <div class="card-header" style="display:flex;gap:8px;align-items:center">
+    <h3 style="font-size:0.85rem"><i class="bi bi-check2-square"></i> Pending Drafts</h3>
+    <span id="count" class="badge badge-neutral" style="margin-left:auto">0</span>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="data-table">
+      <thead><tr><th>Summary</th><th>Type</th><th>Source</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody id="tbody"><tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);padding:24px">Loading...</td></tr></tbody>
+    </table>
+  </div>
+</div>`;
+
+const token = document.cookie.split('; ').find(r => r.startsWith('token='))?.split('=')[1];
+const auth = { headers: { 'Authorization': 'Bearer ' + (token || '') } };
+
+async function loadApprovals() {
+  const tb = document.getElementById('tbody');
+  try {
+    const [list, setting] = await Promise.all([
+      fetch('/api/approvals?status=pending', auth).then(r => r.json()),
+      fetch('/api/approvals/setting', auth).then(r => r.json()),
+    ]);
+    const drafts = (list.data || []);
+    document.getElementById('count').textContent = drafts.length;
+    document.getElementById('approvalToggle').checked = !!(setting.data && setting.data.approval_required);
+    if (!drafts.length) {
+      tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);padding:24px">No pending approvals</td></tr>';
+      return;
+    }
+    tb.innerHTML = drafts.map(d => {
+      const detail = d.details ? JSON.stringify(d.details) : '';
+      return `<tr>
+        <td style="font-weight:600">${escapeHtml(d.summary)}</td>
+        <td><span class="badge badge-neutral">${escapeHtml(d.type)}</span></td>
+        <td>${escapeHtml(d.proposedBy || '—')}</td>
+        <td style="font-family:var(--font-mono);font-size:0.8rem">${(d.createdAt||'').replace('T',' ').slice(0,19)}</td>
+        <td>
+          <button class="btn btn-sm btn-outline" onclick="act('${d.id}','approve')"><i class="bi bi-check-lg"></i> Approve</button>
+          <button class="btn btn-sm btn-outline" onclick="act('${d.id}','reject')"><i class="bi bi-x-lg"></i> Reject</button>
+          ${detail ? `<button class="btn btn-sm btn-outline" onclick="showDetail('${encodeURIComponent(detail)}')"><i class="bi bi-info-circle"></i></button>` : ''}
+        </td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-tertiary)">Failed to load</td></tr>';
+  }
+}
+
+async function act(id, action) {
+  const reason = action === 'reject' ? prompt('Rejection reason?') : null;
+  const body = action === 'reject' ? JSON.stringify({ rejectionReason: reason }) : JSON.stringify({});
+  const r = await fetch('/api/approvals/' + id + '/' + action, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
+    body,
+  }).then(r => r.json());
+  if (r.success) loadApprovals();
+  else alert('Error: ' + (r.error || 'unknown'));
+}
+
+function showDetail(enc) {
+  try { alert(JSON.stringify(JSON.parse(decodeURIComponent(enc)), null, 2)); } catch { alert(decodeURIComponent(enc)); }
+}
+
+document.getElementById('approvalToggle').addEventListener('change', async function(e) {
+  await fetch('/api/approvals/setting', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
+    body: JSON.stringify({ enabled: e.target.checked }),
+  });
+  loadApprovals();
+});
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+loadApprovals();
+</script>

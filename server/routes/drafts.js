@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 export function createDraftRouter(draftService) {
   const router = Router();
@@ -36,10 +37,11 @@ export function createDraftRouter(draftService) {
   });
 
   // Approve draft
-  router.post('/:id/approve', async (req, res) => {
+  // Approve draft (admin only)
+  router.post('/:id/approve', requireAuth, requireAdmin, async (req, res) => {
     try {
       const { executionResult } = req.body || {};
-      const draft = await draftService.approveDraft(req.params.id, req.user?.id, executionResult);
+      const draft = await draftService.approveDraft(req.params.id, req.user.id, executionResult);
       res.json({ success: true, data: draft });
     } catch (err) {
       res.status(err.status || 500).json({ success: false, error: err.message });
@@ -47,10 +49,11 @@ export function createDraftRouter(draftService) {
   });
 
   // Reject draft
-  router.post('/:id/reject', async (req, res) => {
+  // Reject draft (admin only)
+  router.post('/:id/reject', requireAuth, requireAdmin, async (req, res) => {
     try {
       const { rejectionReason } = req.body;
-      const draft = await draftService.rejectDraft(req.params.id, req.user?.id, rejectionReason);
+      const draft = await draftService.rejectDraft(req.params.id, req.user.id, rejectionReason);
       res.json({ success: true, data: draft });
     } catch (err) {
       res.status(err.status || 500).json({ success: false, error: err.message });

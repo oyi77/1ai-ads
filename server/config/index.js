@@ -83,7 +83,8 @@ const config = {
  get aiPipelineDirectUrl() { return process.env.AI_PIPELINE_DIRECT_URL || ''; },
  get aiPipelineDirectApiKey() { return process.env.AI_PIPELINE_DIRECT_API_KEY || ''; },
  get aiPipelineDefaultModel() { return process.env.AI_PIPELINE_DEFAULT_MODEL || ''; },
-  get nangoSecretKey() { return process.env.NANGO_SECRET_KEY || ''; },
+ get nangoSecretKey() { return process.env.NANGO_SECRET_KEY || ''; },
+ get approvalRequired() { return process.env.APPROVAL_REQUIRED === 'true' || process.env.APPROVAL_REQUIRED === '1'; },
 };
 
 export function validateConfig() {

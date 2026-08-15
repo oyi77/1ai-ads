@@ -4,8 +4,9 @@ import { createLogger } from '../lib/logger.js';
 const log = createLogger('drafts-repo');
 
 export class DraftsRepository {
-  constructor(db) {
+  constructor(db, settingsRepo = null) {
     this.db = db;
+    this.settingsRepo = settingsRepo;
     this._ensureTable();
   }
 
@@ -49,12 +50,12 @@ export class DraftsRepository {
     return this.db.prepare('SELECT * FROM approval_drafts WHERE id = ?').get(id) || null;
   }
 
-  create({ type, summary, details, proposedBy = 'ai', campaignId }) {
+  create({ type, summary, details, proposedBy = 'ai', campaignId, approvalRequestId = null }) {
     const id = uuidv4();
     this.db.prepare(`
-      INSERT INTO approval_drafts (id, type, summary, details_json, proposed_by, campaign_id)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, type, summary, details ? JSON.stringify(details) : null, proposedBy, campaignId || null);
+      INSERT INTO approval_drafts (id, type, summary, details_json, proposed_by, campaign_id, approval_request_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(id, type, summary, details ? JSON.stringify(details) : null, proposedBy, campaignId || null, approvalRequestId || null);
     return this.findById(id);
   }
 
