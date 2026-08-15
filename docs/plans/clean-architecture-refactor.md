@@ -55,13 +55,19 @@ is explicitly NOT claimed as done.
 ### approval_workflow — BUILT (was the only missing/partial dimension)
 - Reused the existing `approval_drafts` table + `DraftService` (NO parallel `approval_requests` table).
 - Added `approval_request_id` column (migration `024_drafts_approval_request.sql`) + `approval_required` setting (migration `025_approval_setting.sql`).
-- Guard: `DraftService.guardAutonomousChange()` — when `approval_required=true`, autonomous mutations
-  (`AutoOptimizer._executeAction`, `ai-agent._persistSuggestion` autoApply) create a `pending` draft and SKIP live execution; when `false`, execute as today.
+- Guard: `DraftService.guardAutonomousChange()` — when `approval_required=true`, ALL THREE autonomous mutation
+  entry points create a `pending` draft and SKIP live execution; when `false`, execute as today:
+  - `AutoOptimizer._executeAction` (optimization actions)
+  - `ai-agent._persistSuggestion` autoApply (AI suggestion apply)
+  - `RuleEvaluator._executeAction` (rule-driven `scale_up/down`, `pause`, `resume`, `optimize_*`) — **added 2026-08-15 (commit da83fb0)**:
+    wired `draftService` into `RuleEvaluator` + `AutonomousAgent` ctor; this was the missing gate that let rules
+    mutate campaigns live even with approvals enabled.
 - Review surfaces: `server/routes/approvals.js` (admin API + EJS `/approvals` page) + sidebar link.
   Approve/reject are `requireAdmin`.
 - `approval_required` defaults OFF → existing behavior preserved until enabled.
-- Verified: isolated boot (`:5008`) clean; toggle persists (`true`→`true`, reset→`false`);
-  guard returns `true`+creates pending draft when flag on, `false` when off.
+- Verified: isolated boot (`:5008`) clean; toggle persists; guard intercepts in `RuleEvaluator` (creates pending
+  draft, returns `intercepted:true`) and in `ai-agent`/`auto-optimizer`; `false` preserves live behavior.
+  Unit tests: `tests/unit/services/rule-evaluator.test.js` (two guard cases), `draft-service.test.js`, `auto-optimizer.test.js`, `ai-agent.test.js` all green.
 
 ### whatsapp_bm — INTENTIONALLY LEFT BLOCKED (external dependency)
 - WhatsApp Business API: only BM "Produk digital" (ID `1611764243355432`) is accessible from this account.

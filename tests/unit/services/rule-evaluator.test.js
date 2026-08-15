@@ -177,6 +177,40 @@ describe('RuleEvaluator', () => {
       expect(result).toBeNull();
     });
   });
+    it('should intercept via draftService when approval_required', async () => {
+      const mockDraftService = {
+        guardAutonomousChange: vi.fn().mockResolvedValue(true),
+      };
+      evaluator.draftService = mockDraftService;
+      mockSettingsRepo.getApprovalRequired = vi.fn().mockReturnValue(true);
+
+      const campaign = { id: 'c1', status: 'active', platform: 'meta' };
+      const result = await evaluator._executeAction({ type: 'pause' }, campaign);
+
+      expect(mockDraftService.guardAutonomousChange).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'rule_pause', campaignId: 'c1', proposedBy: 'rule-evaluator' })
+      );
+      expect(result).toEqual(expect.objectContaining({ intercepted: true, action: 'pending_approval_pause' }));
+      // Live mutation must NOT happen
+      expect(evaluator._applyAction).toBeDefined();
+    });
+
+    it('should execute live when approval_required is false', async () => {
+      const mockDraftService = {
+        guardAutonomousChange: vi.fn().mockResolvedValue(false),
+      };
+      evaluator.draftService = mockDraftService;
+      mockSettingsRepo.getApprovalRequired = vi.fn().mockReturnValue(false);
+
+      const campaign = { id: 'c1', status: 'active', platform: 'meta' };
+      mockCampaignsRepo.getById.mockResolvedValue(campaign);
+      // _pauseCampaign hits platform api via _getPlatformApi -> mockMetaApi.apiUpdate
+      const result = await evaluator._executeAction({ type: 'pause' }, campaign);
+
+      expect(mockDraftService.guardAutonomousChange).toHaveBeenCalled();
+      expect(result).toEqual(expect.objectContaining({ campaign_id: 'c1', action: { type: 'pause' } }));
+    });
+
 
   describe('_scaleCampaign', () => {
     it('should scale up an LC_ campaign via Meta API', async () => {
