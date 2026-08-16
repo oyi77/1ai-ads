@@ -69,7 +69,7 @@ export function createServices({ db, repos, params }) {
   const contentScheduler = new ContentScheduler({ videoService, llmClient, queueRepo: repos.contentSchedulerQueueRepo });
   const adResearchService = new AdResearchService({ metaApi, db });
   const orchestrator = new CampaignOrchestrator(metaApi, creativeStudio);
-  const realtimeService = new RealtimeService(metaApi, repos.campaignsRepo);
+  const realtimeService = new RealtimeService(metaApi, repos.campaignsRepo, { platformAccountsRepo: repos.platformAccountsRepo, settingsRepo: repos.settingsRepo });
 
   const contentBridgeUrl = repos.settingsRepo.getKey?.('content_bridge_url') || config.contentBridgeUrl;
   const contentBridgeApiKey = repos.settingsRepo.getKey?.('content_bridge_api_key') || config.contentBridgeApiKey;

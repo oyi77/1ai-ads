@@ -1,18 +1,43 @@
 import config from '../config/index.js';
 import { WebSocketServer } from 'ws';
 import { createLogger } from '../lib/logger.js';
+import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
+import { MetaAdsAPI } from './meta/index.js';
 
 const log = createLogger('realtime-service');
 
 export class RealtimeService {
-  constructor(metaApi, campaignsRepo) {
+  constructor(metaApi, campaignsRepo, { platformAccountsRepo = null, settingsRepo = null } = {}) {
     this.metaApi = metaApi;
     this.campaignsRepo = campaignsRepo;
+    this.platformAccountsRepo = platformAccountsRepo;
+    this.settingsRepo = settingsRepo;
     this.wss = null;
     this.clients = new Set();
     this.metrics = new Map(); // campaignId -> latest metrics
     this.pollInterval = null;
     this.POLL_MS = config.intervals.realtimePoll;
+  }
+
+  /**
+   * Resolve the Meta client bound to the campaign OWNER's token (multi-tenant),
+   * falling back to the system client when the owner has no bound account.
+   * Background polling must not read cross-user campaigns with a system token.
+   */
+  _metaApiForOwner(campaign) {
+    const ownerId = campaign?.user_id || campaign?.created_by;
+    if (ownerId && this.platformAccountsRepo) {
+      const token = resolveOwnerPlatformToken('meta', ownerId, {
+        platformAccountsRepo: this.platformAccountsRepo,
+        settingsRepo: this.settingsRepo,
+      });
+      if (token) {
+        const api = new MetaAdsAPI(this.settingsRepo);
+        api.setActiveAccount(null, token);
+        return api;
+      }
+    }
+    return this.metaApi;
   }
 
   /**
@@ -81,7 +106,8 @@ export class RealtimeService {
 
       for (const campaign of activeCampaigns) {
         try {
-          const insights = await this.metaApi.getCampaignInsights(campaign.campaign_id, {
+          const api = this._metaApiForOwner(campaign);
+          const insights = await api.getCampaignInsights(campaign.campaign_id, {
             date_preset: 'today', fields: 'spend,impressions,clicks,actions,cost_per_action_type,ctr,cpc,cpm',
           });
           const data = insights?.data?.[0] || {};
@@ -139,7 +165,9 @@ export class RealtimeService {
    */
   async refreshCampaign(campaignId) {
     try {
-      const insights = await this.metaApi.getCampaignInsights(campaignId, {
+      const campaign = this.campaignsRepo.getById ? this.campaignsRepo.getById(campaignId) : null;
+      const api = this._metaApiForOwner(campaign || { campaign_id: campaignId });
+      const insights = await api.getCampaignInsights(campaignId, {
         date_preset: 'today', fields: 'spend,impressions,clicks,actions,ctr,cpc,cpm',
       });
       const data = insights?.data?.[0] || {};
