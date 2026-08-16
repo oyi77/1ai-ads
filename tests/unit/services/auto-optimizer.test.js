@@ -1,5 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { AutoOptimizer } from '../../../server/services/auto-optimizer.js';
+import { MetaAdsAPI } from '../../../server/services/meta/index.js';
+
+vi.mock('../../../server/services/meta/index.js', () => ({
+  MetaAdsAPI: vi.fn().mockImplementation(function () {
+    this.updateCampaign = vi.fn().mockResolvedValue({});
+    this.getCampaignInsights = vi.fn();
+  }),
+}));
+
 
 // Module-level mock so ESM named exports are writable
 vi.mock('../../../server/services/treasuryClient.js', () => ({
@@ -254,4 +263,86 @@ describe('AutoOptimizer', () => {
     expect(result.checked).toBe(0);
     expect(mockMetaApi.getCampaignInsights).not.toHaveBeenCalled();
   });
+
+
+  describe('_metaForOwner (multi-tenant)', () => {
+    let acctRepo;
+    let settingsRepo;
+
+    beforeEach(() => {
+      acctRepo = { getByPlatform: vi.fn() };
+      settingsRepo = { getCredentials: vi.fn() };
+    });
+
+    it('returns a fresh owner-scoped Meta instance when the owner has a bound token', () => {
+      const opt = new AutoOptimizer(mockMetaApi, mockRulesRepo, mockCampaignsRepo, null, acctRepo, settingsRepo);
+      acctRepo.getByPlatform.mockReturnValue({ user_id: 'owner-1', platform: 'meta', access_token: 'owner-tok-xyz' });
+
+      const meta = opt._metaForOwner({ id: 'c1', user_id: 'owner-1', platform: 'meta' });
+
+      expect(meta).not.toBe(mockMetaApi);
+      expect(meta).toBeInstanceOf(MetaAdsAPI);
+      expect(acctRepo.getByPlatform).toHaveBeenCalledWith('owner-1', 'meta');
+    });
+
+    it('resolves owner via created_by when user_id is absent', () => {
+      const opt = new AutoOptimizer(mockMetaApi, mockRulesRepo, mockCampaignsRepo, null, acctRepo, settingsRepo);
+      acctRepo.getByPlatform.mockReturnValue({ user_id: 'owner-2', platform: 'meta', access_token: 'owner-tok-2' });
+
+      const meta = opt._metaForOwner({ id: 'c2', created_by: 'owner-2', platform: 'meta' });
+
+      expect(meta).not.toBe(mockMetaApi);
+      expect(acctRepo.getByPlatform).toHaveBeenCalledWith('owner-2', 'meta');
+    });
+
+    it('falls back to the system meta when no owner token is bound', () => {
+      const opt = new AutoOptimizer(mockMetaApi, mockRulesRepo, mockCampaignsRepo, null, acctRepo, settingsRepo);
+      acctRepo.getByPlatform.mockReturnValue(null);
+
+      const meta = opt._metaForOwner({ id: 'c3', user_id: 'owner-3', platform: 'meta' });
+
+      expect(meta).toBe(mockMetaApi);
+      expect(acctRepo.getByPlatform).toHaveBeenCalledWith('owner-3', 'meta');
+    });
+
+    it('falls back to system meta when no platformAccountsRepo is wired', () => {
+      const opt = new AutoOptimizer(mockMetaApi, mockRulesRepo, mockCampaignsRepo);
+      const meta = opt._metaForOwner({ id: 'c4', user_id: 'owner-4', platform: 'meta' });
+      expect(meta).toBe(mockMetaApi);
+    });
+  });
+
+  describe('_executeAction owner threading', () => {
+    it('uses the owner-scoped meta (not system) when the owner has a bound token', async () => {
+      const acctRepo = { getByPlatform: vi.fn().mockReturnValue({ user_id: 'owner-9', platform: 'meta', access_token: 'owner-tok-9' }) };
+      const settingsRepo = { getCredentials: vi.fn() };
+      const opt = new AutoOptimizer(mockMetaApi, mockRulesRepo, mockCampaignsRepo, null, acctRepo, settingsRepo);
+
+      const campaign = { id: 'c9', user_id: 'owner-9', platform: 'meta' };
+      const spy = vi.spyOn(opt, '_metaForOwner').mockReturnValue(new MetaAdsAPI(settingsRepo, 'owner-tok-9'));
+      const ownerMeta = opt._metaForOwner(campaign);
+      ownerMeta.updateCampaign = vi.fn().mockResolvedValue({});
+
+      await opt._executeAction('c9', 'pause', null, {}, campaign);
+
+      // System meta must NOT be called — only the owner-scoped instance.
+      expect(mockMetaApi.updateCampaign).not.toHaveBeenCalled();
+      expect(ownerMeta.updateCampaign).toHaveBeenCalledWith('c9', { status: 'PAUSED' });
+      spy.mockRestore();
+    });
+
+    it('uses the system meta when no owner token is bound', async () => {
+      const acctRepo = { getByPlatform: vi.fn().mockReturnValue(null) };
+      const settingsRepo = { getCredentials: vi.fn() };
+      const opt = new AutoOptimizer(mockMetaApi, mockRulesRepo, mockCampaignsRepo, null, acctRepo, settingsRepo);
+
+      const campaign = { id: 'c10', user_id: 'owner-10', platform: 'meta' };
+      const spy = vi.spyOn(opt, '_metaForOwner').mockReturnValue(mockMetaApi);
+
+      await opt._executeAction('c10', 'pause', null, {}, campaign);
+
+      expect(mockMetaApi.updateCampaign).toHaveBeenCalledWith('c10', { status: 'PAUSED' });
+      spy.mockRestore();
+    });
+});
 });

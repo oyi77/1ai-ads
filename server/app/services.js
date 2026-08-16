@@ -94,7 +94,7 @@ export function createServices({ db, repos, params }) {
   const googleAdsAPI = new GoogleAdsAPI(repos.settingsRepo);
   const _ruleEvaluator = new RuleEvaluator(
     repos.settingsRepo, repos.campaignsRepo, repos.rulesRepo, llmClient,
-    { metaAdsAPI: metaApi, googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI },
+    { metaAdsAPI: metaApi, googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI, platformAccountsRepo: repos.platformAccountsRepo },
     draftService
   );
   // Close the approval loop: approveDraft replays the deferred rule action
@@ -109,7 +109,7 @@ export function createServices({ db, repos, params }) {
   // Share the single RuleEvaluator instance so drafts replay through it.
   autonomousAgent.ruleEvaluator = _ruleEvaluator;
 
-  const autoOptimizer = new AutoOptimizer(metaApi, repos.rulesRepo, repos.campaignsRepo, draftService);
+  const autoOptimizer = new AutoOptimizer(metaApi, repos.rulesRepo, repos.campaignsRepo, draftService, repos.platformAccountsRepo, repos.settingsRepo);
   const webhookProcessor = new WebhookProcessor(repos.webhookEventsRepo, repos.campaignsRepo);
   const dataCleanup = new DataCleanup(db);
   const adIntelligenceService = new AdIntelligenceService(db, repos.competitorsRepo);

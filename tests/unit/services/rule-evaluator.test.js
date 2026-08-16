@@ -41,6 +41,7 @@ describe('RuleEvaluator', () => {
   let mockMetaApi;
   let mockGoogleApi;
   let mockTiktokApi;
+  let mockPlatformAccountsRepo;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -62,12 +63,18 @@ describe('RuleEvaluator', () => {
       apiUpdate: vi.fn().mockResolvedValue({}),
       apiGet: vi.fn(),
       updateCampaign: vi.fn().mockResolvedValue({}),
+      setActiveAccount: vi.fn(),
     };
     mockGoogleApi = {
       updateCampaign: vi.fn().mockResolvedValue({}),
+      setActiveAccount: vi.fn(),
     };
     mockTiktokApi = {
       updateCampaign: vi.fn().mockResolvedValue({}),
+      setActiveAccount: vi.fn(),
+    };
+    mockPlatformAccountsRepo = {
+      getByPlatform: vi.fn(),
     };
 
     evaluator = new RuleEvaluator(
@@ -75,15 +82,66 @@ describe('RuleEvaluator', () => {
       mockCampaignsRepo,
       mockRulesRepo,
       mockLlmClient,
-      { metaAdsAPI: mockMetaApi, googleAdsAPI: mockGoogleApi, tiktokAdsAPI: mockTiktokApi }
+      { metaAdsAPI: mockMetaApi, googleAdsAPI: mockGoogleApi, tiktokAdsAPI: mockTiktokApi, platformAccountsRepo: mockPlatformAccountsRepo }
     );
+  });
+
+  describe('multi-tenant owner-scoped platform client', () => {
+    it('uses the owner-bound token via setActiveAccount when present', async () => {
+      mockPlatformAccountsRepo.getByPlatform.mockReturnValue({ user_id: 'user-7', platform: 'meta', access_token: 'owner-meta-tok' });
+      const campaign = { id: 'uuid-1', campaign_id: 'camp-1', platform: 'meta', name: 'LC_X', budget: 200, user_id: 'user-7' };
+      mockCampaignsRepo.getById.mockResolvedValue(campaign);
+
+      await evaluator._scaleCampaign('uuid-1', 1.5, 'increase');
+
+      // Owner resolution must reach the platform-accounts repo for THIS owner
+      expect(mockPlatformAccountsRepo.getByPlatform).toHaveBeenCalledWith('user-7', 'meta');
+      // The meta client must be activated with the OWNER token, not the system token
+      expect(mockMetaApi.setActiveAccount).toHaveBeenCalledWith(null, 'owner-meta-tok');
+      expect(mockMetaApi.updateCampaign).toHaveBeenCalledWith('camp-1', { dailyBudget: 300 });
+    });
+
+    it('falls back to the system client when the owner has no bound account', async () => {
+      mockPlatformAccountsRepo.getByPlatform.mockReturnValue(null);
+      const campaign = { id: 'uuid-2', campaign_id: 'camp-2', platform: 'meta', name: 'LC_Y', budget: 100, user_id: 'user-2' };
+      mockCampaignsRepo.getById.mockResolvedValue(campaign);
+
+      await evaluator._scaleCampaign('uuid-2', 1.5, 'increase');
+
+      expect(mockPlatformAccountsRepo.getByPlatform).toHaveBeenCalledWith('user-2', 'meta');
+      // No owner token → system client is used, setActiveAccount is NOT invoked
+      expect(mockMetaApi.setActiveAccount).not.toHaveBeenCalled();
+      expect(mockMetaApi.updateCampaign).toHaveBeenCalledWith('camp-2', { dailyBudget: 150 });
+    });
+
+    it('scopes per-platform: meta bound, google falls back to system', async () => {
+      mockPlatformAccountsRepo.getByPlatform.mockImplementation((userId, p) => {
+        if (p === 'meta') return { user_id: userId, platform: 'meta', access_token: 'owner-meta-tok' };
+        return null; // no google account bound
+      });
+      const metaCampaign = { id: 'uuid-3', campaign_id: 'camp-3', platform: 'meta', name: 'LC_Z', budget: 100, user_id: 'user-3' };
+      const googleCampaign = { id: 'uuid-4', customer_id: 'CUST-4', platform_campaign_id: 'g-4', platform: 'google', name: 'LC_G', budget: 100, user_id: 'user-3' };
+      mockCampaignsRepo.getById
+        .mockResolvedValueOnce(metaCampaign)
+        .mockResolvedValueOnce(googleCampaign);
+
+      await evaluator._scaleCampaign('uuid-3', 1.5, 'increase');
+      await evaluator._scaleCampaign('uuid-4', 1.5, 'increase');
+
+      expect(mockMetaApi.setActiveAccount).toHaveBeenCalledWith(null, 'owner-meta-tok');
+      expect(mockGoogleApi.setActiveAccount).not.toHaveBeenCalled();
+      expect(mockGoogleApi.updateCampaign).toHaveBeenCalledWith('CUST-4', 'g-4', { budget: 150 });
+    });
   });
 
   it('should create instance with dependencies', () => {
     expect(evaluator.settingsRepo).toBe(mockSettingsRepo);
     expect(evaluator.campaignsRepo).toBe(mockCampaignsRepo);
     expect(evaluator.rulesRepo).toBe(mockRulesRepo);
+    expect(evaluator.llmClient).toBe(mockLlmClient);
     expect(evaluator.metaAdsAPI).toBe(mockMetaApi);
+    expect(evaluator.googleAdsAPI).toBe(mockGoogleApi);
+    expect(evaluator.tiktokAdsAPI).toBe(mockTiktokApi);
   });
 
   it('should create a rule via repository', () => {
@@ -165,10 +223,6 @@ describe('RuleEvaluator', () => {
 
   describe('_executeAction', () => {
     it('should not re-enter the same campaign', async () => {
-      const rule = {
-        condition: JSON.stringify({ type: 'status', value: 'active' }),
-        action: JSON.stringify({ type: 'pause' }),
-      };
       const campaign = { id: 'c1', status: 'active', platform: 'meta' };
       mockCampaignsRepo.getById.mockResolvedValue(campaign);
 
@@ -177,7 +231,7 @@ describe('RuleEvaluator', () => {
       const result = await evaluator._executeAction({ type: 'pause' }, campaign);
       expect(result).toBeNull();
     });
-  });
+
     it('should intercept via draftService when approval_required', async () => {
       const mockDraftService = {
         guardAutonomousChange: vi.fn().mockResolvedValue(true),
@@ -211,7 +265,7 @@ describe('RuleEvaluator', () => {
       expect(mockDraftService.guardAutonomousChange).toHaveBeenCalled();
       expect(result).toEqual(expect.objectContaining({ campaign_id: 'c1', action: { type: 'pause' } }));
     });
-
+  });
 
   describe('_scaleCampaign', () => {
     it('should scale up an LC_ campaign via Meta API', async () => {

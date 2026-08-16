@@ -10,11 +10,12 @@ import { GoogleAdsAPI } from './google/index.js';
 import { TikTokAdsAPI } from './tiktok/index.js';
 import { createLogger } from '../lib/logger.js';
 import { compare } from '../lib/operators.js';
+import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
 
 const log = createLogger('rule-evaluator');
 
 export class RuleEvaluator {
-  constructor(settingsRepo, campaignsRepo, rulesRepo, llmClient, { metaAdsAPI, googleAdsAPI, tiktokAdsAPI } = {}, draftService = null) {
+  constructor(settingsRepo, campaignsRepo, rulesRepo, llmClient, { metaAdsAPI, googleAdsAPI, tiktokAdsAPI, platformAccountsRepo } = {}, draftService = null) {
     this.settingsRepo = settingsRepo;
     this.campaignsRepo = campaignsRepo;
     this.rulesRepo = rulesRepo;
@@ -22,8 +23,29 @@ export class RuleEvaluator {
     this.metaAdsAPI = metaAdsAPI || new MetaAdsAPI(settingsRepo);
     this.googleAdsAPI = googleAdsAPI || new GoogleAdsAPI(settingsRepo);
     this.tiktokAdsAPI = tiktokAdsAPI || new TikTokAdsAPI(settingsRepo);
+    this.platformAccountsRepo = platformAccountsRepo || null;
     this.runningRules = new Set();
     this.draftService = draftService;
+  }
+
+  /**
+   * Resolve a platform API for a campaign mutation as the CAMPAIGN OWNER
+   * (multi-tenant). Falls back to the injected system API only when the
+   * owner has no bound account — never another user's token.
+   */
+  _platformApiForOwner(platform, campaign) {
+    if (this.platformAccountsRepo) {
+      const token = resolveOwnerPlatformToken(platform, campaign?.user_id, {
+        platformAccountsRepo: this.platformAccountsRepo,
+        settingsRepo: this.settingsRepo,
+      });
+      if (token) {
+        const api = this._getPlatformApi(platform);
+        api.setActiveAccount(null, token);
+        return api;
+      }
+    }
+    return this._getPlatformApi(platform);
   }
 
   static PLATFORM_APIS = {
@@ -129,7 +151,6 @@ export class RuleEvaluator {
     optimize_creative: (self, _action, campaign) => self._optimizeCreative(campaign.id),
     optimize_budget: (self, _action, campaign) => self._optimizeBudget(campaign.id),
   };
-
   async _applyAction(action, campaign) {
     const handler = RuleEvaluator.ACTION_HANDLERS[action.type];
     if (!handler) {
@@ -138,7 +159,6 @@ export class RuleEvaluator {
     }
     return handler(this, action, campaign);
   }
-
   async _scaleCampaign(campaignId, multiplier, direction) {
     const campaign = await this.campaignsRepo.getById(campaignId);
     if (!campaign) return { error: 'Campaign not found' };
@@ -151,7 +171,7 @@ export class RuleEvaluator {
     }
 
     const platform = campaign.platform || 'meta';
-    const api = this._getPlatformApi(platform);
+    const api = this._platformApiForOwner(platform, campaign);
     const currentBudget = campaign.budget || 100;
     const newBudget = direction === 'increase' ? currentBudget * multiplier : currentBudget / multiplier;
     const safeBudget = Math.max(100, newBudget);
@@ -172,7 +192,7 @@ export class RuleEvaluator {
     if (!campaign) return { error: 'Campaign not found' };
 
     const platform = campaign.platform || 'meta';
-    const api = this._getPlatformApi(platform);
+    const api = this._platformApiForOwner(platform, campaign);
 
     if (platform === 'meta') {
       await api.updateCampaign(campaign.campaign_id, { status: 'PAUSED' });
@@ -190,7 +210,7 @@ export class RuleEvaluator {
     if (!campaign) return { error: 'Campaign not found' };
 
     const platform = campaign.platform || 'meta';
-    const api = this._getPlatformApi(platform);
+    const api = this._platformApiForOwner(platform, campaign);
 
     if (platform === 'meta') {
       await api.updateCampaign(campaign.campaign_id, { status: 'ACTIVE' });
@@ -207,6 +227,9 @@ export class RuleEvaluator {
     const campaign = await this.campaignsRepo.getById(campaignId);
     if (!campaign) return { error: 'Campaign not found' };
 
+    // Meta-only action: resolve as the campaign owner (multi-tenant).
+    const api = this._platformApiForOwner('meta', campaign);
+
     // Only ads linked to a live platform ad instance carry platform_id.
     // The creative library may hold unlinked drafts that must never be mutated.
     const ads = (await this.campaignsRepo.getAds(campaignId))
@@ -215,10 +238,10 @@ export class RuleEvaluator {
 
     const bestAd = ads.sort((a, b) => (b.stats?.roas || 0) - (a.stats?.roas || 0))[0];
 
-    await this.metaAdsAPI.apiUpdate(`/ad_${bestAd.platform_id}`, { status: 'ACTIVE' });
+    await api.apiUpdate(`/ad_${bestAd.platform_id}`, { status: 'ACTIVE' });
     for (const ad of ads) {
       if (ad.id !== bestAd.id) {
-        await this.metaAdsAPI.apiUpdate(`/ad_${ad.platform_id}`, { status: 'PAUSED' });
+        await api.apiUpdate(`/ad_${ad.platform_id}`, { status: 'PAUSED' });
       }
     }
     return { campaign_id: campaignId, action: 'optimize_creative', best_ad_id: bestAd.id };
@@ -228,7 +251,10 @@ export class RuleEvaluator {
     const campaign = await this.campaignsRepo.getById(campaignId);
     if (!campaign) return { error: 'Campaign not found' };
 
-    const insights = await this.metaAdsAPI.apiGet(`/campaign_${campaign.campaign_id}`, {
+    // Meta-only action: resolve as the campaign owner (multi-tenant).
+    const api = this._platformApiForOwner('meta', campaign);
+
+    const insights = await api.apiGet(`/campaign_${campaign.campaign_id}`, {
       fields: 'spend,roas,cpc,cpm',
       time_span: '7days',
     });
@@ -253,7 +279,7 @@ export class RuleEvaluator {
       else if (suggestion.includes('decrease')) newBudget = currentBudget * 0.8;
     }
 
-    await this.metaAdsAPI.updateCampaign(campaign.campaign_id, { dailyBudget: newBudget });
+    await api.updateCampaign(campaign.campaign_id, { dailyBudget: newBudget });
 
     return { campaign_id: campaignId, action: 'optimize_budget', from: currentBudget, to: newBudget, suggestion };
   }

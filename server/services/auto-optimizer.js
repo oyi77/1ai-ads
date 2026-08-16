@@ -9,16 +9,34 @@ import config from '../config/index.js';
 import { createLogger } from '../lib/logger.js';
 import { compare } from '../lib/operators.js';
 import { recordToTreasury, checkWf5Enabled } from './treasuryClient.js';
+import { MetaAdsAPI } from './meta/index.js';
 
 const log = createLogger('auto-optimizer');
 
 export class AutoOptimizer {
-  constructor(metaApi, rulesRepo, campaignsRepo, draftService = null) {
+  constructor(metaApi, rulesRepo, campaignsRepo, draftService = null, platformAccountsRepo = null, settingsRepo = null) {
     this.meta = metaApi;
     this.rules = rulesRepo;
     this.campaigns = campaignsRepo;
     this.draftService = draftService;
+    this.platformAccountsRepo = platformAccountsRepo;
+    this.settingsRepo = settingsRepo;
     this._interval = null;
+  }
+
+  /**
+   * Resolve a Meta API as the RULE/owner of a given campaign (multi-tenant).
+   * Uses the owner's bound Meta token when present, else falls back to the
+   * injected system metaApi. Never another user's token.
+   */
+  _metaForOwner(campaign) {
+    const ownerId = campaign?.user_id || campaign?.created_by || (campaign && campaign.user && campaign.user.id);
+    if (ownerId && this.platformAccountsRepo) {
+      const acct = this.platformAccountsRepo.getByPlatform(ownerId, 'meta');
+      const token = acct?.access_token || (this.settingsRepo && this.settingsRepo.getCredentials('meta')?.access_token);
+      if (token) return new MetaAdsAPI(this.settingsRepo, token);
+    }
+    return this.meta;
   }
 
   start(intervalMs = 6 * 60 * 60 * 1000) {
@@ -60,9 +78,11 @@ export class AutoOptimizer {
       log.debug('Skipping rule - no valid campaign_id', { ruleId: rule.id, name: rule.name });
       return null;
     }
+    const campaign = await this.campaigns.getById(rule.campaign_id);
+    const meta = this._metaForOwner(campaign);
     let insights;
     try {
-      insights = await this.meta.getCampaignInsights(rule.campaign_id, { datePreset: 'last_7d' });
+      insights = await meta.getCampaignInsights(rule.campaign_id, { datePreset: 'last_7d' });
     } catch (err) {
       log.debug('Skipping rule - insights unavailable', { ruleId: rule.id, error: err.message });
       return null;
@@ -74,7 +94,7 @@ export class AutoOptimizer {
 
     if (!this._evaluateCondition(metricValue, rule.condition_operator, rule.condition_value)) return null;
 
-    const actionResult = await this._executeAction(rule.campaign_id, rule.action, rule.action_value, insights);
+    const actionResult = await this._executeAction(rule.campaign_id, rule.action, rule.action_value, insights, campaign);
     this.rules.markTriggered(rule.id);
     return { rule: rule.name, campaign: rule.campaign_id, metric: rule.condition_metric, value: metricValue, action: rule.action, result: actionResult };
   }
@@ -97,7 +117,7 @@ export class AutoOptimizer {
     return compare(value, operator, threshold);
   }
 
-  async _executeAction(campaignId, action, actionValue, insights) {
+  async _executeAction(campaignId, action, actionValue, insights, campaign) {
     // Approval gate: route the intended change to a draft instead of mutating live.
     if (this.draftService) {
       const intercepted = await this.draftService.guardAutonomousChange({
@@ -110,10 +130,11 @@ export class AutoOptimizer {
       if (intercepted) return { action: `pending_approval_${action}`, campaignId };
     }
 
+    const meta = this._metaForOwner(campaign);
     const ACTION_HANDLERS = {
-      pause: () => this._pauseAction(campaignId),
-      scale_up: () => this._scaleAction(campaignId, actionValue || 20, 'up', insights),
-      scale_down: () => this._scaleAction(campaignId, actionValue || 20, 'down', insights),
+      pause: () => this._pauseAction(campaignId, meta),
+      scale_up: () => this._scaleAction(campaignId, actionValue || 20, 'up', insights, meta),
+      scale_down: () => this._scaleAction(campaignId, actionValue || 20, 'down', insights, meta),
       alert: () => this._alertAction(campaignId),
     };
 
@@ -122,8 +143,8 @@ export class AutoOptimizer {
     return await handler();
   }
 
-  async _pauseAction(campaignId) {
-    await this.meta.updateCampaign(campaignId, { status: 'PAUSED' });
+  async _pauseAction(campaignId, meta = this.meta) {
+    await meta.updateCampaign(campaignId, { status: 'PAUSED' });
     // Fire-and-forget: campaign paused = ad spend without return = loss event
     recordToTreasury({
       source: '1ai-ads',
@@ -136,7 +157,7 @@ export class AutoOptimizer {
     return { action: 'paused', campaignId };
   }
 
-  async _scaleAction(campaignId, percent, direction, insights) {
+  async _scaleAction(campaignId, percent, direction, insights, meta = this.meta) {
     // Rule: Only scale LC_ campaigns
     const campaign = await this.campaigns.getById(campaignId);
     if (campaign && campaign.name && !campaign.name.startsWith('LC_')) {
@@ -149,7 +170,7 @@ export class AutoOptimizer {
     const newBudget = direction === 'down'
       ? Math.max(10000, Math.round(currentBudget * factor))
       : Math.round(currentBudget * factor);
-    await this.meta.updateCampaign(campaignId, { dailyBudget: newBudget });
+    await meta.updateCampaign(campaignId, { dailyBudget: newBudget });
 
     // Fire-and-forget: scale_up on a profitable campaign = revenue signal into pool
     if (direction === 'up') {
