@@ -188,7 +188,7 @@ export class PlatformAccountsRepository {
     ).get(userId, platform);
     if (!row) return null;
     const creds = decryptCredentials(row.credentials);
-    return { ...row, access_token: creds?.access_token || null };
+    return { ...row, access_token: creds?.access_token || null, credentials: creds };
   }
 
   getUsersWithAutoMode() {

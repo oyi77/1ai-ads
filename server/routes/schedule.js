@@ -89,24 +89,26 @@ export function createOptimizeRouter(campaignsRepo, llmClient) {
 
   router.post('/sync-all', async (req, res) => {
     const results = { meta: null, google: null, tiktok: null };
-    
+    const platformAccountsRepo = req.app.locals.platformAccountsRepo;
+    const userId = req.user?.id;
+
     try {
-      const metaAccounts = await req.app.locals.settingsRepo?.getCredentials('meta');
-      if (metaAccounts?.access_token) {
+      const metaAccounts = userId ? platformAccountsRepo?.getByPlatform(userId, 'meta') : null;
+      if (metaAccounts?.credentials?.access_token) {
         results.meta = { synced: true };
       }
     } catch (e) { results.meta = { error: e.message }; }
 
     try {
-      const googleAccounts = await req.app.locals.settingsRepo?.getCredentials('google');
-      if (googleAccounts?.developer_token) {
+      const googleAccounts = userId ? platformAccountsRepo?.getByPlatform(userId, 'google') : null;
+      if (googleAccounts?.credentials?.developer_token) {
         results.google = { synced: true };
       }
     } catch (e) { results.google = { error: e.message }; }
 
     try {
-      const tiktokAccounts = await req.app.locals.settingsRepo?.getCredentials('tiktok');
-      if (tiktokAccounts?.access_token) {
+      const tiktokAccounts = userId ? platformAccountsRepo?.getByPlatform(userId, 'tiktok') : null;
+      if (tiktokAccounts?.credentials?.access_token) {
         results.tiktok = { synced: true };
       }
     } catch (e) { results.tiktok = { error: e.message }; }
