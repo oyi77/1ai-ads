@@ -130,8 +130,12 @@ export function handleListAccounts(settingsRepo) {
   return (req, res) => {
     try {
       const { platform } = req.query;
-      const accounts = settingsRepo.getAccounts ? settingsRepo.getAccounts(platform) : [];
-      const safe = (Array.isArray(accounts) ? accounts : []).map(acc => {
+      const all = settingsRepo.getAccounts ? settingsRepo.getAccounts(platform) : [];
+      // Scope to the requesting user (multi-tenant). platform_accounts rows carry user_id.
+      const accounts = (Array.isArray(all) ? all : []).filter(
+        acc => !req.user || acc.user_id === req.user.id
+      );
+      const safe = accounts.map(acc => {
         const creds = acc.credentials || {};
         const maskedCreds = {};
         for (const [k, v] of Object.entries(creds)) {
@@ -412,8 +416,12 @@ export function handleConnectToken(settingsRepo, metaApi, nangoAuth) {
 // GET /credentials/:platform — legacy
 export function handleGetCredentials(settingsRepo) {
   return (req, res) => {
-    const accounts = settingsRepo.getAccounts(req.params.platform);
-    const acc = accounts.find(a => a.is_active) || accounts[0];
+    const all = settingsRepo.getAccounts(req.params.platform);
+    // Scope to the requesting user (multi-tenant). platform_accounts rows carry user_id.
+    const userAccounts = (Array.isArray(all) ? all : []).filter(
+      a => !req.user || a.user_id === req.user.id
+    );
+    const acc = userAccounts.find(a => a.is_active) || userAccounts[0];
 
     if (!acc) {
       return res.json({ success: true, data: { configured: false, platform: req.params.platform } });

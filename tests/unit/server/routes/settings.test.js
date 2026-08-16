@@ -214,7 +214,7 @@ describe('Settings Router', () => {
   describe('GET /accounts', () => {
     it('returns masked credentials for accounts', async () => {
       settingsRepo.getAccounts.mockReturnValue([
-        { id: 'a1', account_name: 'Account 1', credentials: { access_token: 'EAAGabc123', secret: 'xyz789' } },
+        { id: 'a1', user_id: 'user-1', account_name: 'Account 1', credentials: { access_token: 'EAAGabc123', secret: 'xyz789' } },
       ]);
       const res = await request(app).get('/api/settings/accounts');
       expect(res.status).toBe(200);
@@ -322,7 +322,7 @@ describe('Settings Router', () => {
   describe('GET /credentials/:platform', () => {
     it('returns masked fields for active account', async () => {
       settingsRepo.getAccounts.mockReturnValue([
-        { id: 'a1', is_active: 1, credentials: { access_token: 'EAAGtoken123' } },
+        { id: 'a1', user_id: 'user-1', is_active: 1, credentials: { access_token: 'EAAGtoken123' } },
       ]);
       const res = await request(app).get('/api/settings/credentials/meta');
       expect(res.status).toBe(200);
