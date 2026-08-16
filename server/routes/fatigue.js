@@ -3,12 +3,14 @@ import { Router } from 'express';
 export function createFatigueRouter(fatigueDetector, platformAccountsRepo) {
   const router = Router();
 
-  // Default handler — runs fatigue detection on the first active account
-  router.get('/', async (_req, res) => {
+  // Default handler — runs fatigue detection on the requesting user's first active Meta account
+  router.get('/', async (req, res) => {
     try {
       if (!platformAccountsRepo) return res.json({ success: true, data: [] });
-      const accounts = platformAccountsRepo.getAccounts();
-      const active = accounts.find(a => a.is_active);
+      const userId = req.user?.id;
+      if (!userId) return res.json({ success: true, data: [] });
+      // Scope to the requesting user (multi-tenant). Fatigue detector is Meta-centric.
+      const active = platformAccountsRepo.getByPlatform(userId, 'meta');
       if (!active) return res.json({ success: true, data: [] });
       const result = await fatigueDetector.detectFatigue(active.id);
       res.json({ success: true, data: result });
