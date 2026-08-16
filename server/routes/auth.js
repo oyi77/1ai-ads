@@ -53,7 +53,7 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
       const meData = await meRes.json();
 
       if (settingsRepo) {
-        const existingAccounts = settingsRepo.getAccounts('meta');
+        const existingAccounts = settingsRepo.getAccounts('meta').filter(a => a.user_id === 'admin');
         const existing = existingAccounts.find(a => a.credentials?.fb_user_id === meData.id);
         if (existing) {
           settingsRepo.updateAccount(existing.id, { credentials: { ...existing.credentials, access_token: accessToken } });

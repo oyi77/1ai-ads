@@ -350,7 +350,7 @@ describe('Settings Router', () => {
     });
 
     it('updates existing Default account', async () => {
-      settingsRepo.getAccounts.mockReturnValue([{ id: 'a1', account_name: 'Default' }]);
+      settingsRepo.getAccounts.mockReturnValue([{ id: 'a1', user_id: 'user-1', account_name: 'Default' }]);
       const res = await request(app).post('/api/settings/credentials/meta').send({ access_token: 'newtok' });
       expect(res.status).toBe(200);
       expect(settingsRepo.updateAccount).toHaveBeenCalledWith('a1', expect.objectContaining({ credentials: { access_token: 'newtok' } }));

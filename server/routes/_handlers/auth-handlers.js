@@ -147,7 +147,8 @@ export function handleConnectMetaToken(settingsRepo) {
         log.info('Ad account detection skipped', { error: e.message });
       }
 
-      const existingAccounts = settingsRepo.getAccounts('meta');
+      const userId = req.user?.id || 'admin';
+      const existingAccounts = settingsRepo.getAccounts('meta').filter(a => a.user_id === userId);
       const existing = existingAccounts.find(a => a.account_name === userName || (a.credentials?.access_token === access_token));
 
       let mainId;
@@ -156,7 +157,7 @@ export function handleConnectMetaToken(settingsRepo) {
         mainId = existing.id;
       } else {
         const id = uuid();
-        settingsRepo.addAccount({ id, user_id: 'admin', platform: 'meta', account_name: userName, credentials: { access_token, user_name: meData.name, user_id: meData.id }, is_active: existingAccounts.length === 0 ? 1 : 0 });
+        settingsRepo.addAccount({ id, user_id: userId, platform: 'meta', account_name: userName, credentials: { access_token, user_name: meData.name, user_id: meData.id }, is_active: existingAccounts.length === 0 ? 1 : 0 });
         mainId = id;
       }
 
@@ -164,7 +165,7 @@ export function handleConnectMetaToken(settingsRepo) {
       for (const adAcc of adAccounts) {
         const adExisting = existingAccounts.find(a => a.account_name === adAcc.id);
         if (!adExisting) {
-          settingsRepo.addAccount({ id: uuid(), user_id: 'admin', platform: 'meta', account_name: adAcc.id, credentials: { access_token, ad_account_id: adAcc.account_id, ad_account_name: adAcc.name }, is_active: 0 });
+          settingsRepo.addAccount({ id: uuid(), user_id: userId, platform: 'meta', account_name: adAcc.id, credentials: { access_token, ad_account_id: adAcc.account_id, ad_account_name: adAcc.name }, is_active: 0 });
           connectedCount++;
         }
       }

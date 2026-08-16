@@ -250,8 +250,9 @@ export function handleExchangeMetaToken(settingsRepo, metaApi) {
       const api = new metaApi.constructor(credentialHolder);
       const me = await api.getMe();
 
+      const userId = req.user?.id || 'admin';
       const accountName = `Meta - ${me.name}`;
-      const existingAccounts = settingsRepo.getAccounts('meta');
+      const existingAccounts = settingsRepo.getAccounts('meta').filter(a => a.user_id === userId);
       const existing = existingAccounts.find(a => a.account_name === accountName);
 
       if (existing) {
@@ -317,7 +318,8 @@ export function handleConnectToken(settingsRepo, metaApi, nangoAuth) {
         }
 
         // Save main account with token
-        const existingAccounts = settingsRepo.getAccounts('meta');
+        const userId = req.user?.id || 'admin';
+        const existingAccounts = settingsRepo.getAccounts('meta').filter(a => a.user_id === userId);
         const existing = existingAccounts.find(a =>
           a.account_name === userName ||
           (a.credentials?.access_token === access_token)
@@ -380,7 +382,8 @@ export function handleConnectToken(settingsRepo, metaApi, nangoAuth) {
         });
       } else {
         // Non-Meta platforms: save token directly (no generic platform validation)
-        const existingAccounts = settingsRepo.getAccounts(platform);
+        const userId = req.user?.id || 'admin';
+        const existingAccounts = settingsRepo.getAccounts(platform).filter(a => a.user_id === userId);
         const displayName = account_name || `${platform.charAt(0).toUpperCase() + platform.slice(1)} Account`;
         const existing = existingAccounts.find(a =>
           a.account_name === displayName ||
@@ -441,8 +444,9 @@ export function handlePostCredentials(settingsRepo) {
     const { platform } = req.params;
     const credentials = req.body;
 
-    // Create or update "Default" account for legacy calls
-    const accounts = settingsRepo.getAccounts(platform);
+    // Create or update "Default" account for legacy calls — scoped to the requesting user
+    const userId = req.user?.id || 'admin';
+    const accounts = settingsRepo.getAccounts(platform).filter(a => a.user_id === userId);
     const existingDefault = accounts.find(a => a.account_name === 'Default');
 
     if (existingDefault) {
