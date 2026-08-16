@@ -1,4 +1,6 @@
 import { createLogger } from '../lib/logger.js';
+import { MetaAdsAPI } from './meta/index.js';
+import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
 
 const log = createLogger('campaign-monitor');
 
@@ -17,25 +19,44 @@ export class CampaignMonitorService {
    * @param {object} campaignsRepo
    * @param {object} settingsRepo
    */
-  constructor(metaApi, campaignsRepo, settingsRepo) {
+  constructor(metaApi, campaignsRepo, settingsRepo, platformAccountsRepo = null) {
     this.metaApi = metaApi;
     this.campaignsRepo = campaignsRepo;
     this.settingsRepo = settingsRepo;
+    this.platformAccountsRepo = platformAccountsRepo;
+  }
+
+  /**
+   * Resolve a Meta API client bound to the account owner (multi-tenant).
+   * If userId is provided and the owner has a bound token, use that token.
+   * Falls back to the system metaApi for legacy/system-owned accounts.
+   */
+  _ownerApi(accountId, userId) {
+    if (userId && this.platformAccountsRepo) {
+      const token = resolveOwnerPlatformToken('meta', userId, {
+        platformAccountsRepo: this.platformAccountsRepo,
+        settingsRepo: this.settingsRepo,
+      });
+      if (token) return MetaAdsAPI.withToken(token);
+    }
+    return this.metaApi || null;
   }
 
   /**
    * Fetch current campaign status for an ad account.
    */
-  async getAccountStatus(accountId) {
+  async getAccountStatus(accountId, userId = null) {
     try {
-      const campaigns = await this.metaApi.getCampaigns(accountId);
+      const api = this._ownerApi(accountId, userId);
+      if (!api) return this._emptyStatus(accountId);
+      const campaigns = await api.getCampaigns(accountId);
       const active = campaigns.filter(c => c.status === 'active');
       const paused = campaigns.filter(c => c.status === 'paused');
 
       // Get today's and this week's spend from account insights
       const [todayInsights, weekInsights] = await Promise.all([
-        this.metaApi.getAccountInsights(accountId, { datePreset: 'today' }).catch(() => null),
-        this.metaApi.getAccountInsights(accountId, { datePreset: 'this_week' }).catch(() => null),
+        api.getAccountInsights(accountId, { datePreset: 'today' }).catch(() => null),
+        api.getAccountInsights(accountId, { datePreset: 'this_week' }).catch(() => null),
       ]);
 
       const alerts = await this._detectStatusAlerts(campaigns);
@@ -62,12 +83,14 @@ export class CampaignMonitorService {
   /**
    * Return health score (0-100) based on multiple signals.
    */
-  async getAccountHealth(accountId) {
+  async getAccountHealth(accountId, userId = null) {
     try {
+      const api = this._ownerApi(accountId, userId);
+      if (!api) return { accountId, score: 0, grade: 'N/A', factors: [{ name: 'API unavailable', impact: 0, detail: 'Meta API not configured' }], fetchedAt: new Date().toISOString() };
       const [campaigns, todayInsights, weekInsights] = await Promise.all([
-        this.metaApi.getCampaigns(accountId),
-        this.metaApi.getAccountInsights(accountId, { datePreset: 'today' }).catch(() => null),
-        this.metaApi.getAccountInsights(accountId, { datePreset: 'this_week' }).catch(() => null),
+        api.getCampaigns(accountId),
+        api.getAccountInsights(accountId, { datePreset: 'today' }).catch(() => null),
+        api.getAccountInsights(accountId, { datePreset: 'this_week' }).catch(() => null),
       ]);
 
       let score = 100;
@@ -147,9 +170,11 @@ export class CampaignMonitorService {
   /**
    * Check for campaigns that need attention.
    */
-  async getAlerts(accountId) {
+  async getAlerts(accountId, userId = null) {
     try {
-      const campaigns = await this.metaApi.getCampaigns(accountId);
+      const api = this._ownerApi(accountId, userId);
+      if (!api) return { accountId, alerts: [], count: 0, error: 'Meta API not configured', fetchedAt: new Date().toISOString() };
+      const campaigns = await api.getCampaigns(accountId);
       const alerts = [];
 
       for (const campaign of campaigns) {
@@ -157,7 +182,7 @@ export class CampaignMonitorService {
 
         let insights = null;
         try {
-          insights = await this.metaApi.getCampaignInsights(campaign.id, { datePreset: 'today' });
+          insights = await api.getCampaignInsights(campaign.id, { datePreset: 'today' });
         } catch { /* no insights */ }
 
         // Campaign exceeding daily budget
@@ -235,10 +260,12 @@ export class CampaignMonitorService {
   /**
    * Daily performance trend for the last N days.
    */
-  async getPerformanceTrend(accountId, days = 7) {
+  async getPerformanceTrend(accountId, days = 7, userId = null) {
     try {
       // Meta insights with time_increment gives daily breakdown
-      const data = await this.metaApi._get(`/${accountId}/insights`, {
+      const api = this._ownerApi(accountId, userId);
+      if (!api) return { accountId, days, daily: [], error: 'Meta API not configured', fetchedAt: new Date().toISOString() };
+      const data = await api._get(`/${accountId}/insights`, {
         fields: 'spend,impressions,clicks,ctr,cpc,actions,cost_per_action_type',
         time_increment: '1',
         date_preset: days <= 7 ? 'last_7d' : days <= 30 ? 'last_30d' : 'last_90d',
@@ -272,9 +299,11 @@ export class CampaignMonitorService {
    * Check if any campaigns should be auto-paused:
    * spend > 2x daily budget with 0 conversions.
    */
-  async autoPauseCheck(accountId) {
+  async autoPauseCheck(accountId, userId = null) {
     try {
-      const campaigns = await this.metaApi.getCampaigns(accountId);
+      const api = this._ownerApi(accountId, userId);
+      if (!api) return { accountId, shouldPause: false, campaigns: [], count: 0, error: 'Meta API not configured', fetchedAt: new Date().toISOString() };
+      const campaigns = await api.getCampaigns(accountId);
       const toPause = [];
 
       for (const campaign of campaigns) {
@@ -282,7 +311,7 @@ export class CampaignMonitorService {
 
         let insights = null;
         try {
-          insights = await this.metaApi.getCampaignInsights(campaign.id, { datePreset: 'today' });
+          insights = await api.getCampaignInsights(campaign.id, { datePreset: 'today' });
         } catch { continue; }
 
         if (!insights) continue;

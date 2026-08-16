@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { createLogger } from '../lib/logger.js';
+import { MetaAdsAPI } from './meta/index.js';
 
 const log = createLogger('capi-monitor');
 
@@ -41,7 +42,8 @@ export class CapiMonitor {
    * @param {string} accountId
    * @returns {Promise<Object>}
    */
-  async checkHealth(accountId) {
+  async checkHealth(accountId, opts = {}) {
+    const api = opts.api || this.meta;
     if (!accountId) throw new Error('accountId is required');
 
     log.info('checkHealth', { accountId });
@@ -54,9 +56,9 @@ export class CapiMonitor {
 
     try {
       // Try Meta CAPI diagnostics endpoint
-      const diagnostics = await this.meta.apiGet(`/${accountId}/events`, {
+      const diagnostics = await api.apiGet(`/${accountId}/events`, {
         fields: 'event_stats,event_value',
-        access_token: this.meta._getToken?.() || '',
+        access_token: api._getToken?.() || '',
       });
 
       if (diagnostics?.data) {
@@ -68,7 +70,7 @@ export class CapiMonitor {
 
     try {
       // Try dataset/CAPI health endpoint (requires Marketing API)
-      const datasetInfo = await this.meta.apiGet(`/${accountId}`, {
+      const datasetInfo = await api.apiGet(`/${accountId}`, {
         fields: 'pixel_id,capi_enabled',
       });
 
@@ -81,7 +83,7 @@ export class CapiMonitor {
 
     // Fallback: check recent conversion events via campaign insights
     try {
-      const insights = await this.meta.getAccountInsights(accountId, { datePreset: 'last_7d' });
+      const insights = await api.getAccountInsights(accountId, { datePreset: 'last_7d' });
       if (insights?.conversions > 0) {
         status = status === 'unknown' ? 'likely_active' : status;
         eventCount = eventCount || insights.conversions;
@@ -197,9 +199,11 @@ export class CapiMonitor {
 
     log.info('_checkAll: checking accounts', { count: accountIds.length });
 
-    for (const accountId of accountIds) {
+    for (const entry of accountIds) {
+      const accountId = typeof entry === 'string' ? entry : entry.accountId;
+      const ownerApi = entry && entry.token ? MetaAdsAPI.withToken(entry.token) : this.meta;
       try {
-        const health = await this.checkHealth(accountId);
+        const health = await this.checkHealth(accountId, { api: ownerApi });
         if (health.status === 'no_data' && health.eventCount === 0) {
           log.warn('CAPI health alert: no events detected', { accountId });
         }

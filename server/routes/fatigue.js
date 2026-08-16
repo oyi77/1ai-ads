@@ -12,7 +12,7 @@ export function createFatigueRouter(fatigueDetector, platformAccountsRepo) {
       // Scope to the requesting user (multi-tenant). Fatigue detector is Meta-centric.
       const active = platformAccountsRepo.getByPlatform(userId, 'meta');
       if (!active) return res.json({ success: true, data: [] });
-      const result = await fatigueDetector.detectFatigue(active.id);
+      const result = await fatigueDetector.detectFatigue(active.id, { ownerId: userId });
       res.json({ success: true, data: result });
     } catch {
       res.json({ success: true, data: [] });
@@ -22,7 +22,14 @@ export function createFatigueRouter(fatigueDetector, platformAccountsRepo) {
   // Trigger manual snapshot for an account
   router.get('/snapshot/:accountId', async (req, res) => {
     try {
-      const result = await fatigueDetector.snapshotCreatives(req.params.accountId);
+      if (!platformAccountsRepo) return res.json({ success: true, data: [] });
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
+      const acct = platformAccountsRepo.findById(req.params.accountId);
+      if (!acct || acct.user_id !== userId) {
+        return res.status(403).json({ success: false, error: 'Forbidden' });
+      }
+      const result = await fatigueDetector.snapshotCreatives(req.params.accountId, { ownerId: userId });
       res.json({ success: true, data: result });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -32,8 +39,15 @@ export function createFatigueRouter(fatigueDetector, platformAccountsRepo) {
   // Run fatigue detection for an account
   router.get('/detect/:accountId', async (req, res) => {
     try {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
+      const acct = platformAccountsRepo.findById(req.params.accountId);
+      if (!acct || acct.user_id !== userId) {
+        return res.status(403).json({ success: false, error: 'Forbidden' });
+      }
       const { lookbackDays, frequencyThreshold, ctrDropPercent } = req.query;
       const result = await fatigueDetector.detectFatigue(req.params.accountId, {
+        ownerId: userId,
         lookbackDays: lookbackDays ? parseInt(lookbackDays, 10) : undefined,
         frequencyThreshold: frequencyThreshold ? parseFloat(frequencyThreshold) : undefined,
         ctrDropPercent: ctrDropPercent ? parseFloat(ctrDropPercent) : undefined,
@@ -47,8 +61,9 @@ export function createFatigueRouter(fatigueDetector, platformAccountsRepo) {
   // Get creative performance history for a specific ad
   router.get('/history/:adId', async (req, res) => {
     try {
-      const result = await fatigueDetector.getHistory?.(req.params.adId)
-        ?? { message: 'History endpoint requires fatigue detector with getHistory method' };
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
+      const result = await fatigueDetector.getHistory(req.params.adId, { ownerId: userId });
       res.json({ success: true, data: result });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });

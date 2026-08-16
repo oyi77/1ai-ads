@@ -15,6 +15,8 @@ import { auditLog } from './middleware/audit.js';
 import { AuditLogRepository } from './repositories/audit-log.js';
 import { getMetricsText, metricsMiddleware } from './lib/metrics.js';
 import { initBot } from './bot/index.js';
+import { MetaAdsAPI } from './services/meta/index.js';
+import { resolveOwnerPlatformToken } from './lib/resolve-owner-platform.js';
 
 // ── Sentry (optional, env-gated) ──────────────────────
 if (process.env.SENTRY_DSN) {
@@ -201,6 +203,8 @@ export function createApp(params) {
     fatigueDetector: services.fatigueDetector,
     capiMonitor: services.capiMonitor,
     usersRepo: repos.usersRepo,
+    platformAccountsRepo: repos.platformAccountsRepo,
+    settingsRepo: repos.settingsRepo,
   };
 
   return app;
@@ -208,7 +212,7 @@ export function createApp(params) {
 
 export function startServices(app) {
   const log = createLogger('app');
-  const { autonomousAgent, autoOptimizer, aiAgent, webhookProcessor, dataCleanup, fatigueDetector, capiMonitor, usersRepo } = app.locals._services;
+  const { autonomousAgent, autoOptimizer, aiAgent, webhookProcessor, dataCleanup, fatigueDetector, capiMonitor, usersRepo, platformAccountsRepo, settingsRepo } = app.locals._services;
 
   autonomousAgent.runAutonomousMode();
   autoOptimizer.start();
@@ -218,9 +222,18 @@ export function startServices(app) {
   fatigueDetector.start();
   // CAPI health checks Meta ad accounts (act_<id> or numeric id), not platform
   // user rows. Filter out UUIDs and seeded demo users to avoid Graph API 400s.
+  // CAPI health checks each Meta ad account using its OWNER's token (multi-tenant).
+  // platformAccountsRepo.getAccounts('meta') returns rows keyed by Meta ad account id
+  // with user_id; resolveOwnerPlatformToken fetches that owner's bound Meta access token.
   capiMonitor.start(() => {
-    const ids = usersRepo.findAll().map(u => u.id);
-    return ids.filter(id => /^act_\d+$/.test(id) || /^\d{11,17}$/.test(id));
+    const accounts = platformAccountsRepo.getAccounts('meta');
+    return accounts
+      .filter(a => a.platform === 'meta' && a.user_id)
+      .map(a => ({
+        accountId: a.id,
+        token: resolveOwnerPlatformToken('meta', a.user_id, { platformAccountsRepo, settingsRepo }),
+      }))
+      .filter(x => x.token);
   });
 
   log.info('Background services started');

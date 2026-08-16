@@ -119,11 +119,11 @@ export function createServices({ db, repos, params }) {
     apiVersion: config.metaApiVersion,
   });
 
-  const campaignMonitorService = new CampaignMonitorService(metaApi, repos.campaignsRepo, repos.settingsRepo);
+  const campaignMonitorService = new CampaignMonitorService(metaApi, repos.campaignsRepo, repos.settingsRepo, repos.platformAccountsRepo);
 
   // Phase 1-4 new services
   const abTestService = new ABTestService(metaApi, db);
-  const fatigueDetector = new FatigueDetector(metaApi, db, { creativeStudio, abTestService });
+  const fatigueDetector = new FatigueDetector(metaApi, db, { creativeStudio, abTestService, platformAccountsRepo: repos.platformAccountsRepo, settingsRepo: repos.settingsRepo });
   const platformApis = { meta: metaApi, google: googleAdsAPI, tiktok: tiktokAdsAPI, linkedin: linkedinAdsAPI, twitter: twitterAdsAPI, microsoft: microsoftAdsAPI, snapchat: snapchatAdsAPI, pinterest: pinterestAdsAPI };
   const unifiedReporter = new UnifiedReporter(platformApis, repos.campaignsRepo, db);
   const bulkOperations = new BulkOperations(metaApi, repos.campaignsRepo, repos.adsRepo);

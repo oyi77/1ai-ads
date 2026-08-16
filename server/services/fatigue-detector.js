@@ -1,6 +1,8 @@
 import { createLogger } from '../lib/logger.js';
 import { bus, EVENTS } from '../lib/event-bus.js';
 import { v4 as uuid } from 'uuid';
+import { MetaAdsAPI } from '../services/meta/index.js';
+import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
 
 const log = createLogger('fatigue-detector');
 
@@ -56,9 +58,9 @@ class CreativePerformanceRepository {
     `).all(`-${lookbackDays} days`);
   }
 }
-
 export class FatigueDetector {
-  constructor(metaApi, db, { creativeStudio, abTestService } = {}) {
+  constructor(metaApi, db, opts = {}) {
+    const { creativeStudio, abTestService, platformAccountsRepo, settingsRepo } = opts;
     this.meta = metaApi;
     this.db = db;
     this.creativeStudio = creativeStudio;
@@ -66,6 +68,22 @@ export class FatigueDetector {
     this.repo = new CreativePerformanceRepository(db);
     this._interval = null;
     this._subscriptions = [];
+    this.platformAccountsRepo = platformAccountsRepo || null;
+    this.settingsRepo = settingsRepo || null;
+  }
+
+  /**
+   * Resolve a per-owner MetaAdsAPI client. Background system loops (no ownerId)
+   * fall back to the default this.meta so DB-driven sweeps still work.
+   */
+  _metaApiForOwner(ownerId) {
+    if (!ownerId) return this.meta;
+    const token = resolveOwnerPlatformToken('meta', ownerId, {
+      platformAccountsRepo: this.platformAccountsRepo,
+      settingsRepo: this.settingsRepo,
+    });
+    if (!token) return this.meta;
+    return MetaAdsAPI.withToken(token);
   }
 
   /**
@@ -108,10 +126,11 @@ export class FatigueDetector {
    * Snapshot all creatives for an account into the creative_performance table.
    * Batches Meta API calls in groups of 50 with 1s delay between batches.
    */
-  async snapshotCreatives(accountId) {
+  async snapshotCreatives(accountId, { ownerId } = {}) {
     log.info('Snapshotting creatives', { accountId });
 
-    const ads = await this.meta.getAds(accountId);
+    const meta = this._metaApiForOwner(ownerId);
+    const ads = await meta.getAds(accountId);
     if (!ads || ads.length === 0) {
       log.info('No ads found', { accountId });
       return 0;
@@ -124,7 +143,7 @@ export class FatigueDetector {
       const batch = ads.slice(i, i + BATCH_SIZE);
 
       const results = await Promise.allSettled(
-        batch.map(ad => this._snapshotOneAd(ad, accountId))
+        batch.map(ad => this._snapshotOneAd(ad, accountId, meta))
       );
 
       for (const r of results) {
@@ -141,9 +160,17 @@ export class FatigueDetector {
     return snapshotted;
   }
 
-  async _snapshotOneAd(ad, accountId) {
+  /**
+   * Return stored creative performance history for a specific ad.
+   * Delegates to the creative_performance repository (keyed by ad_id).
+   */
+  async getHistory(adId, { ownerId } = {}) {
+    return this.repo.findByAdId(adId);
+  }
+
+  async _snapshotOneAd(ad, accountId, meta) {
     try {
-      const insights = await this.meta.apiGet(`/${ad.id}/insights`, {
+      const insights = await meta.apiGet(`/${ad.id}/insights`, {
         fields: 'impressions,clicks,spend,actions,ctr,cpc,reach,frequency',
         date_preset: 'today',
       });
@@ -188,6 +215,7 @@ export class FatigueDetector {
    * and linear regression trend analysis (R²>0.5).
    */
   async detectFatigue(accountId, {
+    ownerId,
     lookbackDays = 7,
     frequencyThreshold = 3.0,
     ctrDropPercent = 30,

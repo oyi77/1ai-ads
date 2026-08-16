@@ -21,6 +21,6 @@ export function createAutomationGroupRouter({ repos, services, publicRateLimit }
   router.use('/trending', publicRateLimit, createTrendingRouter(services.trendingService));
   router.use('/research', requireAuth, createResearchRouter(services.adResearchService));
   router.use('/agency', requireAuth, createAgencyRouter(services.whiteLabelService));
-  router.use('/agency/capi', requireAuth, createCapiRouter(services.capiMonitor));
+  router.use('/agency/capi', requireAuth, createCapiRouter(services.capiMonitor, repos.platformAccountsRepo, repos.settingsRepo));
   return router;
 }

@@ -16,6 +16,8 @@ import {
 } from '../domain/optimization.js';
 import { calculateCampaignStats, formatDailyReport } from '../domain/reporting.js';
 import { backupDatabase } from '../../db/backup.js';
+import { MetaAdsAPI } from '../services/meta/index.js';
+import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
 
 const log = createLogger('bot:scheduler');
 
@@ -120,12 +122,13 @@ export function initScheduler(bot, deps) {
 
       for (const account of accounts) {
         try {
-          const metaApi = deps.services?.metaApi;
-          if (!metaApi) {
-            log.debug('metaApi not available — skipping bid satpam');
-            break;
+          const token = resolveOwnerPlatformToken('meta', account.user_id, { platformAccountsRepo: deps.repos?.platformAccountsRepo, settingsRepo: deps.repos?.settingsRepo });
+          const ownerApi = token ? MetaAdsAPI.withToken(token) : null;
+          if (!ownerApi) {
+            log.debug('No owner Meta token — skipping bid satpam');
+            continue;
           }
-          const adsets = await metaApi.getAdSets?.(account.id) || [];
+          const adsets = await ownerApi.getAdSets?.(account.id) || [];
           for (const adset of adsets) {
             const bid = adset.bid_amount;
             if (!bid) continue;
@@ -285,12 +288,13 @@ export function initScheduler(bot, deps) {
       let synced = 0;
       for (const account of accounts) {
         try {
-          const metaApi = deps.services?.metaApi;
-          if (!metaApi) {
-            log.debug('metaApi not available — skipping sync');
-            break;
+          const token = resolveOwnerPlatformToken('meta', account.user_id, { platformAccountsRepo: deps.repos?.platformAccountsRepo, settingsRepo: deps.repos?.settingsRepo });
+          const ownerApi = token ? MetaAdsAPI.withToken(token) : null;
+          if (!ownerApi) {
+            log.debug('No owner Meta token — skipping sync');
+            continue;
           }
-          const remoteCampaigns = await metaApi.getCampaigns?.(account.id) || [];
+          const remoteCampaigns = await ownerApi.getCampaigns?.(account.id) || [];
           for (const rc of remoteCampaigns) {
             deps.repos?.campaignsRepo?.upsert?.({
               platform: 'meta',

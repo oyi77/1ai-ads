@@ -17,7 +17,7 @@ export function createReportingGroupRouter({ repos, services }) {
   router.use('/attribution', requireAuth, requirePlan('pro'), createAttributionRouter(services.attributionService, repos.attributionRepo));
   router.use('/realtime', requireAuth, createRealtimeRouter(services.realtimeService));
   router.use('/competitor-spy', requireAuth, createCompetitorSpyRouter(repos.competitorsRepo, services.adIntelligenceService, services.competitorSpyService));
-  router.use('/campaign-monitor', requireAuth, createCampaignMonitorRouter(services.campaignMonitorService));
+  router.use('/campaign-monitor', requireAuth, createCampaignMonitorRouter(services.campaignMonitorService, repos));
 
   // CSV Export — download campaign data as CSV
   router.get('/reports/export/csv', requireAuth, (req, res) => {
