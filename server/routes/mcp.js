@@ -5,7 +5,7 @@ import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('mcp');
 
-export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRepo, services) {
+export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRepo, platformAccountsRepo, services) {
   const mcpClient = services?.mcpClient;
   const router = Router();
 
@@ -45,7 +45,8 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
     }
 
     // Get stored credentials
-    const credentials = settingsRepo.getCredentials(platform);
+  const userAccount = platformAccountsRepo.findActiveByUserAndPlatform(req.user.id, platform);
+  const credentials = userAccount?.credentials ?? settingsRepo.getCredentials(platform);
     if (!credentials) {
       return res.status(400).json({
         success: false,

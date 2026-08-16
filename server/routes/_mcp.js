@@ -4,6 +4,6 @@ import { requireAuth } from '../middleware/auth.js';
 
 export function createMcpGroupRouter({ repos, services }) {
   const router = Router();
-  router.use('/mcp', requireAuth, createMcpRouter(repos.settingsRepo, repos.campaignsRepo, repos.adsRepo, repos.landingRepo, services));
+  router.use('/mcp', requireAuth, createMcpRouter(repos.settingsRepo, repos.campaignsRepo, repos.adsRepo, repos.landingRepo, repos.platformAccountsRepo, services));
   return router;
 }
