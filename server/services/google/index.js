@@ -9,8 +9,14 @@ export class GoogleAdsAPI extends BasePlatformApiClient {
     super('google', settingsRepo, { baseUrl: BASE });
   }
 
-  // Override: Google uses multiple auth headers
+  // Override: honor a per-user bound token (set via setActiveAccount) before
+  // falling back to the system settings. The Google client is built from
+  // developer/oauth tokens, so we expose the explicit token as creds.
   _getConfig() {
+    if (this._explicitToken) {
+      // Per-user bound token: the stored access_token is the OAuth token.
+      return { oauth_token: this._explicitToken };
+    }
     const creds = this.settingsRepo.getCredentials('google');
     if (!creds?.developer_token) {
       throw new ConfigurationError('Google Ads developer token not configured. Go to Settings > Google Ads. Get one at Google Ads > Tools > API Center.');

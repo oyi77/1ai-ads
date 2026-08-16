@@ -8,9 +8,10 @@ export class TikTokAdsAPI extends BasePlatformApiClient {
   constructor(settingsRepo) {
     super('tiktok', settingsRepo, { baseUrl: BASE });
   }
-
-  // Override: TikTok uses Access-Token header, not Bearer
+  // Override: TikTok uses Access-Token header, not Bearer.
+  // Honor an explicitly-bound (per-user) token first, then system settings.
   _getToken() {
+    if (this._explicitToken) return this._explicitToken;
     const creds = this.settingsRepo.getCredentials('tiktok');
     if (!creds?.access_token) {
       throw new ConfigurationError('TikTok access token not configured. Go to Settings > TikTok to add it. Get one at business-api.tiktok.com/portal');

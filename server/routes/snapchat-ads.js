@@ -1,17 +1,27 @@
 import { Router } from 'express';
 import { SnapchatAdsAPI } from '../services/snapchat/index.js';
+import { resolveUserPlatformToken } from '../lib/resolve-user-platform.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('snapchat-ads');
 
-export function createSnapchatAdsRouter(settingsRepo) {
+export function createSnapchatAdsRouter(settingsRepo, platformAccountsRepo) {
   const router = Router();
-  const snapchatAds = new SnapchatAdsAPI(settingsRepo);
+
+  // Build a Snapchat client bound to the REQUESTING USER's token (SaaS),
+  // falling back to the system token. Per-request (not a shared singleton)
+  // so concurrent users never share token state.
+  function clientFor(req) {
+    const api = new SnapchatAdsAPI(settingsRepo);
+    const token = resolveUserPlatformToken('snapchat', req, platformAccountsRepo, settingsRepo);
+    if (token) api.setActiveAccount(null, token);
+    return api;
+  }
 
   // GET /api/snapchat-ads/status - Check connection status
   router.get('/status', async (req, res) => {
     try {
-      const orgs = await snapchatAds.getOrganizations();
+      const orgs = await clientFor(req).getOrganizations();
       res.json({ success: true, data: { connected: true, organizations: orgs.length } });
     } catch (err) {
       res.json({ success: true, data: { connected: false, error: err.message } });
@@ -21,7 +31,7 @@ export function createSnapchatAdsRouter(settingsRepo) {
   // GET /api/snapchat-ads/organizations - List organizations
   router.get('/organizations', async (req, res) => {
     try {
-      const orgs = await snapchatAds.getOrganizations();
+      const orgs = await clientFor(req).getOrganizations();
       res.json({ success: true, data: { organizations: orgs, total: orgs.length } });
     } catch (err) {
       log.error('Snapchat organizations fetch failed', { error: err.message });
@@ -32,10 +42,10 @@ export function createSnapchatAdsRouter(settingsRepo) {
   // GET /api/snapchat-ads/accounts - List ad accounts across all orgs
   router.get('/accounts', async (req, res) => {
     try {
-      const orgs = await snapchatAds.getOrganizations();
+      const orgs = await clientFor(req).getOrganizations();
       const allAccounts = [];
       for (const org of orgs) {
-        const accounts = await snapchatAds.getAdAccounts(org.id);
+        const accounts = await clientFor(req).getAdAccounts(org.id);
         allAccounts.push(...accounts.map(a => ({ ...a, orgId: org.id, orgName: org.name })));
       }
       res.json({ success: true, data: { accounts: allAccounts, total: allAccounts.length } });
@@ -49,7 +59,7 @@ export function createSnapchatAdsRouter(settingsRepo) {
   router.get('/accounts/:adAccountId/campaigns', async (req, res) => {
     try {
       const { adAccountId } = req.params;
-      const campaigns = await snapchatAds.getCampaigns(adAccountId);
+      const campaigns = await clientFor(req).getCampaigns(adAccountId);
       res.json({ success: true, data: { campaigns, total: campaigns.length } });
     } catch (err) {
       log.error('Snapchat campaigns fetch failed', { error: err.message });
@@ -62,7 +72,7 @@ export function createSnapchatAdsRouter(settingsRepo) {
     try {
       const { adAccountId, campaignId } = req.params;
       const { startDate, endDate, granularity } = req.query;
-      const stats = await snapchatAds.getCampaignStats(adAccountId, campaignId, {
+      const stats = await clientFor(req).getCampaignStats(adAccountId, campaignId, {
         startDate, endDate, granularity,
       });
       res.json({ success: true, data: stats });
@@ -80,7 +90,7 @@ export function createSnapchatAdsRouter(settingsRepo) {
       if (!name) {
         return res.status(400).json({ success: false, error: 'name is required' });
       }
-      const campaign = await snapchatAds.createCampaign(adAccountId, {
+      const campaign = await clientFor(req).createCampaign(adAccountId, {
         name, status, daily_budget_micro, objective,
       });
       res.json({ success: true, data: campaign });
@@ -94,7 +104,7 @@ export function createSnapchatAdsRouter(settingsRepo) {
   router.put('/accounts/:adAccountId/campaigns/:campaignId', async (req, res) => {
     try {
       const { adAccountId, campaignId } = req.params;
-      const result = await snapchatAds.updateCampaign(adAccountId, campaignId, req.body);
+      const result = await clientFor(req).updateCampaign(adAccountId, campaignId, req.body);
       res.json({ success: true, data: result });
     } catch (err) {
       log.error('Snapchat campaign update failed', { error: err.message });
@@ -105,7 +115,7 @@ export function createSnapchatAdsRouter(settingsRepo) {
   // POST /api/snapchat-ads/sync - Sync all accounts
   router.post('/sync', async (req, res) => {
     try {
-      const results = await snapchatAds.syncAllAccounts();
+      const results = await clientFor(req).syncAllAccounts();
       res.json({ success: true, data: { results, total: results.length } });
     } catch (err) {
       log.error('Snapchat sync failed', { error: err.message });

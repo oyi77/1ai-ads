@@ -1,16 +1,27 @@
 import { Router } from 'express';
 import { GoogleAdsAPI } from '../services/google/index.js';
+import { resolveUserPlatformToken } from '../lib/resolve-user-platform.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('google-ads');
 
-export function createGoogleAdsRouter(settingsRepo) {
+export function createGoogleAdsRouter(settingsRepo, platformAccountsRepo) {
   const router = Router();
-  const googleAds = new GoogleAdsAPI(settingsRepo);
+
+  // Build a Google client bound to the REQUESTING USER's token (SaaS),
+  // falling back to the system token. Per-request (not a shared singleton)
+  // so concurrent users never share token state.
+  function clientFor(req) {
+    const api = new GoogleAdsAPI(settingsRepo);
+    const token = resolveUserPlatformToken('google', req, platformAccountsRepo, settingsRepo);
+    if (token) api.setActiveAccount(null, token);
+    return api;
+  }
 
   // GET /api/google-ads/accounts - List accessible Google Ads accounts
   router.get('/accounts', async (req, res) => {
     try {
+      const googleAds = clientFor(req);
       const customerIds = await googleAds.listAccounts();
       const accounts = customerIds.map(id => ({
         id,
@@ -31,7 +42,7 @@ export function createGoogleAdsRouter(settingsRepo) {
       if (!customerId) {
         return res.status(400).json({ success: false, error: 'customerId is required' });
       }
-      const campaigns = await googleAds.getCampaigns(customerId);
+      const campaigns = await clientFor(req).getCampaigns(customerId);
       res.json({ success: true, data: { campaigns, total: campaigns.length } });
     } catch (err) {
       log.error('Google Ads campaigns fetch failed', { error: err.message });
@@ -46,7 +57,7 @@ export function createGoogleAdsRouter(settingsRepo) {
       if (!customerId || !name) {
         return res.status(400).json({ success: false, error: 'customerId and name are required' });
       }
-      const result = await googleAds.createCampaign(customerId, { name, status, dailyBudgetMicros, advertisingChannelType });
+      const result = await clientFor(req).createCampaign(customerId, { name, status, dailyBudgetMicros, advertisingChannelType });
       res.json({ success: true, data: result });
     } catch (err) {
       log.error('Google Ads campaign creation failed', { error: err.message });
@@ -62,7 +73,7 @@ export function createGoogleAdsRouter(settingsRepo) {
       if (!customerId) {
         return res.status(400).json({ success: false, error: 'customerId is required' });
       }
-      const result = await googleAds.updateCampaign(customerId, campaignId, { name, status });
+      const result = await clientFor(req).updateCampaign(customerId, campaignId, { name, status });
       res.json({ success: true, data: result });
     } catch (err) {
       log.error('Google Ads campaign update failed', { error: err.message });
@@ -75,7 +86,7 @@ export function createGoogleAdsRouter(settingsRepo) {
     try {
       const { customerId } = req.params;
       const { days } = req.query;
-      const performance = await googleAds.getCampaignPerformance(customerId, { days: parseInt(days) || 30 });
+      const performance = await clientFor(req).getCampaignPerformance(customerId, { days: parseInt(days) || 30 });
       res.json({ success: true, data: { performance, total: performance.length } });
     } catch (err) {
       log.error('Google Ads performance fetch failed', { error: err.message });
@@ -86,7 +97,7 @@ export function createGoogleAdsRouter(settingsRepo) {
   // POST /api/google-ads/sync - Sync all accounts
   router.post('/sync', async (req, res) => {
     try {
-      const results = await googleAds.syncAllAccounts();
+      const results = await clientFor(req).syncAllAccounts();
       res.json({ success: true, data: { results, total: results.length } });
     } catch (err) {
       log.error('Google Ads sync failed', { error: err.message });

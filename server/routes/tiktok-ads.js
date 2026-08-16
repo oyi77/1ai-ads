@@ -1,23 +1,33 @@
 import { Router } from 'express';
 import { TikTokAdsAPI } from '../services/tiktok/index.js';
+import { resolveUserPlatformToken } from '../lib/resolve-user-platform.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('tiktok-ads');
 
-export function createTikTokAdsRouter(settingsRepo) {
+export function createTikTokAdsRouter(settingsRepo, platformAccountsRepo) {
   const router = Router();
-  const tiktokAds = new TikTokAdsAPI(settingsRepo);
 
-  // GET /api/tiktok-ads/accounts - List TikTok advertiser accounts
+  // Build a TikTok client bound to the REQUESTING USER's token (SaaS),
+  // falling back to the system token. Per-request (not a shared singleton)
+  // so concurrent users never share token state.
+  function clientFor(req) {
+    const api = new TikTokAdsAPI(settingsRepo);
+    const token = resolveUserPlatformToken('tiktok', req, platformAccountsRepo, settingsRepo);
+    if (token) api.setActiveAccount(null, token);
+    return api;
+  }
+
+  // GET /api/tiktok-ads/accounts - List TikTok advertiser accounts for the requesting user
   router.get('/accounts', async (req, res) => {
     try {
-      const creds = settingsRepo.getCredentials('tiktok');
-      if (!creds?.advertiser_ids) {
-        return res.json({ success: true, data: { accounts: [], total: 0 } });
-      }
-      const accounts = creds.advertiser_ids.map(id => ({
-        id,
-        name: `TikTok Ads (${id})`,
+      // Per-user: only the requesting user's own bound accounts (no cross-user leak).
+      const rows = req.user?.id
+        ? platformAccountsRepo?.getAccounts?.('tiktok')?.filter(a => a.user_id === req.user.id) || []
+        : [];
+      const accounts = rows.map(a => ({
+        id: a.account_name || a.id,
+        name: `TikTok Ads (${a.account_name || a.id})`,
         platform: 'tiktok',
       }));
       res.json({ success: true, data: { accounts, total: accounts.length } });
@@ -34,7 +44,7 @@ export function createTikTokAdsRouter(settingsRepo) {
       if (!advertiserId) {
         return res.status(400).json({ success: false, error: 'advertiserId is required' });
       }
-      const data = await tiktokAds.getCampaigns(advertiserId, { page: parseInt(page) || 1, pageSize: parseInt(pageSize) || 50 });
+      const data = await clientFor(req).getCampaigns(advertiserId, { page: parseInt(page) || 1, pageSize: parseInt(pageSize) || 50 });
       res.json({ success: true, data: { campaigns: data.list || [], total: data.page_info?.total_number || 0 } });
     } catch (err) {
       log.error('TikTok campaigns fetch failed', { error: err.message });
@@ -49,7 +59,7 @@ export function createTikTokAdsRouter(settingsRepo) {
       if (!advertiserId || !name) {
         return res.status(400).json({ success: false, error: 'advertiserId and name are required' });
       }
-      const result = await tiktokAds.createCampaign(advertiserId, { name, objectiveType, budget, status });
+      const result = await clientFor(req).createCampaign(advertiserId, { name, objectiveType, budget, status });
       res.json({ success: true, data: result });
     } catch (err) {
       log.error('TikTok campaign creation failed', { error: err.message });
@@ -65,7 +75,7 @@ export function createTikTokAdsRouter(settingsRepo) {
       if (!advertiserId) {
         return res.status(400).json({ success: false, error: 'advertiserId is required' });
       }
-      const result = await tiktokAds.updateCampaign(advertiserId, campaignId, { name, status, budget });
+      const result = await clientFor(req).updateCampaign(advertiserId, campaignId, { name, status, budget });
       res.json({ success: true, data: result });
     } catch (err) {
       log.error('TikTok campaign update failed', { error: err.message });
@@ -82,7 +92,7 @@ export function createTikTokAdsRouter(settingsRepo) {
         return res.status(400).json({ success: false, error: 'campaignIds is required' });
       }
       const ids = Array.isArray(campaignIds) ? campaignIds : campaignIds.split(',');
-      const insights = await tiktokAds.getCampaignInsights(advertiserId, ids, { startDate, endDate });
+      const insights = await clientFor(req).getCampaignInsights(advertiserId, ids, { startDate, endDate });
       res.json({ success: true, data: { insights: insights.list || [], total: insights.page_info?.total_number || 0 } });
     } catch (err) {
       log.error('TikTok insights fetch failed', { error: err.message });
@@ -97,7 +107,7 @@ export function createTikTokAdsRouter(settingsRepo) {
       if (!advertiserId) {
         return res.status(400).json({ success: false, error: 'advertiserId is required' });
       }
-      const data = await tiktokAds.getAds(advertiserId, { page: parseInt(page) || 1, pageSize: parseInt(pageSize) || 50 });
+      const data = await clientFor(req).getAds(advertiserId, { page: parseInt(page) || 1, pageSize: parseInt(pageSize) || 50 });
       res.json({ success: true, data: { ads: data.list || [], total: data.page_info?.total_number || 0 } });
     } catch (err) {
       log.error('TikTok ads fetch failed', { error: err.message });
@@ -112,7 +122,7 @@ export function createTikTokAdsRouter(settingsRepo) {
       if (!advertiserIds || !Array.isArray(advertiserIds)) {
         return res.status(400).json({ success: false, error: 'advertiserIds array is required' });
       }
-      const results = await tiktokAds.syncAllAccounts(advertiserIds);
+      const results = await clientFor(req).syncAllAccounts(advertiserIds);
       res.json({ success: true, data: { results, total: results.length } });
     } catch (err) {
       log.error('TikTok sync failed', { error: err.message });
