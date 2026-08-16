@@ -31,9 +31,8 @@ export function createAuthGroupRouter({ repos, services: _services, publicRateLi
       const user = repos.usersRepo.findById(userId);
       if (!user) return res.status(404).json({ success: false, error: 'User not found' });
 
-      const campaignsResult = repos.campaignsRepo?.findAll?.() || { data: [] };
-      const campaigns = campaignsResult.data || campaignsResult;
-      const platformAccounts = repos.platformAccountsRepo?.findAll?.() || [];
+      const campaigns = repos.campaignsRepo?.findAll?.({ userId }) || { data: [] };
+      const platformAccounts = repos.platformAccountsRepo?.findByUserId?.(userId) || [];
 
       const exportData = {
         exported_at: new Date().toISOString(),

@@ -73,8 +73,7 @@ export class CampaignOrchestrator {
     accountId, pageId, product, target, keunggulan,
     objective = 'OUTCOME_TRAFFIC', targeting: _targeting, dailyBudget,
     landingUrl, platform = 'meta', format = 'single_image',
-    metaApi = null,
-  }) {
+  }, metaApi = null) {
     const meta = metaApi || this.meta;
     log.info('Creating full campaign', { product, objective, platform });
     const steps = [];
