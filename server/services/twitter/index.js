@@ -6,8 +6,8 @@ export class TwitterAdsAPI extends BasePlatformApiClient {
   constructor(settingsRepo) {
     super('twitter', settingsRepo, { baseUrl: 'https://ads-api.twitter.com/12' });
   }
-
   _getToken() {
+    if (this._explicitToken) return this._explicitToken;
     const creds = this.settingsRepo?.getCredentials('twitter');
     if (!creds?.access_token) {
       throw new ConfigurationError(

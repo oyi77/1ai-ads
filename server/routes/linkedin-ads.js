@@ -1,18 +1,28 @@
 import { Router } from 'express';
 import { LinkedInAdsAPI } from '../services/linkedin/index.js';
+import { resolveUserPlatformToken } from '../lib/resolve-user-platform.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('linkedin-ads');
 
-export function createLinkedInAdsRouter(settingsRepo) {
+export function createLinkedInAdsRouter(settingsRepo, platformAccountsRepo) {
   const router = Router();
-  const linkedinAds = new LinkedInAdsAPI(settingsRepo);
+
+  // Build a LinkedIn client bound to the REQUESTING USER's token (SaaS),
+  // falling back to the system token. Per-request (not a shared singleton)
+  // so concurrent users never share token state.
+  function clientFor(req) {
+    const api = new LinkedInAdsAPI(settingsRepo);
+    const token = resolveUserPlatformToken('linkedin', req, platformAccountsRepo, settingsRepo);
+    if (token) api.setActiveAccount(null, token);
+    return api;
+  }
 
   // GET /api/linkedin-ads/status — check if LinkedIn credentials configured
   router.get('/status', async (req, res) => {
     try {
-      const creds = settingsRepo.getCredentials('linkedin');
-      const configured = !!(creds?.access_token);
+      const token = resolveUserPlatformToken('linkedin', req, platformAccountsRepo, settingsRepo);
+      const configured = !!token;
       res.json({ success: true, data: { configured, platform: 'linkedin' } });
     } catch {
       res.json({ success: true, data: { configured: false, platform: 'linkedin' } });
@@ -22,6 +32,7 @@ export function createLinkedInAdsRouter(settingsRepo) {
   // GET /api/linkedin-ads/accounts — list ad accounts
   router.get('/accounts', async (req, res) => {
     try {
+      const linkedinAds = clientFor(req);
       const data = await linkedinAds.getAccounts();
       const accounts = (data.elements || []).map(a => ({
         id: a.id,
@@ -43,6 +54,7 @@ export function createLinkedInAdsRouter(settingsRepo) {
     try {
       const { accountId } = req.params;
       const { start, count } = req.query;
+      const linkedinAds = clientFor(req);
       const data = await linkedinAds.getCampaigns(accountId, {
         start: parseInt(start) || 0,
         count: parseInt(count) || 100,
@@ -60,6 +72,7 @@ export function createLinkedInAdsRouter(settingsRepo) {
       const { accountId } = req.params;
       const { startDate, endDate, campaignIds } = req.query;
       const ids = campaignIds ? (Array.isArray(campaignIds) ? campaignIds : campaignIds.split(',').map(s => s.trim())) : undefined;
+      const linkedinAds = clientFor(req);
       const data = await linkedinAds.getCampaignAnalytics(accountId, { startDate, endDate, campaignIds: ids });
       res.json({ success: true, data: { analytics: data.elements || [], total: data.paging?.total || 0 } });
     } catch (err) {
@@ -76,6 +89,7 @@ export function createLinkedInAdsRouter(settingsRepo) {
       if (!name) {
         return res.status(400).json({ success: false, error: 'name is required' });
       }
+      const linkedinAds = clientFor(req);
       const result = await linkedinAds.createCampaign(accountId, { name, status, type, dailyBudget, runSchedule });
       res.json({ success: true, data: result });
     } catch (err) {
@@ -89,6 +103,7 @@ export function createLinkedInAdsRouter(settingsRepo) {
     try {
       const { campaignId } = req.params;
       const { name, status, dailyBudget, runSchedule } = req.body;
+      const linkedinAds = clientFor(req);
       const result = await linkedinAds.updateCampaign(campaignId, { name, status, dailyBudget, runSchedule });
       res.json({ success: true, data: result });
     } catch (err) {
@@ -100,6 +115,7 @@ export function createLinkedInAdsRouter(settingsRepo) {
   // POST /api/linkedin-ads/sync — sync all accounts
   router.post('/sync', async (req, res) => {
     try {
+      const linkedinAds = clientFor(req);
       const results = await linkedinAds.syncAllAccounts();
       res.json({ success: true, data: { results, total: results.length } });
     } catch (err) {

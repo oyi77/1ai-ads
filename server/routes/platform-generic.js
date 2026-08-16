@@ -4,10 +4,14 @@
  *
  * Used by platforms that don't have a bespoke route file. Platforms with
  * custom needs (Meta, Shopee, etc.) keep their own routers.
+ *
+ * Multi-tenant: each request uses the REQUESTING USER's bound platform token
+ * (via PlatformAccountsRepository), falling back to the system token.
  */
 
 import { Router } from 'express';
 import { getPlatform } from '../platforms/index.js';
+import { resolveUserPlatformToken } from '../lib/resolve-user-platform.js';
 import { createLogger } from '../lib/logger.js';
 
 /**
@@ -15,17 +19,27 @@ import { createLogger } from '../lib/logger.js';
  *
  * @param {string} platformKey — registry key (e.g. 'reddit', 'spotify')
  * @param {string} platformLabel — human name for logs (e.g. 'Reddit Ads')
- * @param {object} settingsRepo — credential/settings repository
+ * @param {object} settingsRepo — credential/settings repository (system token source)
+ * @param {object} [platformAccountsRepo] — PlatformAccountsRepository (per-user tokens)
  * @returns {import('express').Router}
  */
-export function createGenericPlatformRouter(platformKey, platformLabel, settingsRepo) {
+export function createGenericPlatformRouter(platformKey, platformLabel, settingsRepo, platformAccountsRepo) {
   const router = Router();
   const log = createLogger(platformKey);
+
+  // Build a platform client bound to the REQUESTING USER's token (SaaS),
+  // falling back to the system token. Per-request instance.
+  async function clientFor(req) {
+    const api = await getPlatform(platformKey, settingsRepo);
+    const token = resolveUserPlatformToken(platformKey, req, platformAccountsRepo, settingsRepo);
+    if (token) api.setActiveAccount(null, token);
+    return api;
+  }
 
   // GET /accounts — list ad accounts
   router.get('/accounts', async (req, res) => {
     try {
-      const api = await getPlatform(platformKey, settingsRepo);
+      const api = await clientFor(req);
       const accounts = await api.getAccounts();
       res.json({ success: true, data: { accounts, total: accounts.length } });
     } catch (err) {
@@ -37,7 +51,7 @@ export function createGenericPlatformRouter(platformKey, platformLabel, settings
   // GET /campaigns — list campaigns
   router.get('/campaigns', async (req, res) => {
     try {
-      const api = await getPlatform(platformKey, settingsRepo);
+      const api = await clientFor(req);
       const { accountId, ...params } = req.query;
       const campaigns = await api.getCampaigns(accountId, params);
       res.json({ success: true, data: { campaigns, total: campaigns.length } });
@@ -50,7 +64,7 @@ export function createGenericPlatformRouter(platformKey, platformLabel, settings
   // POST /campaigns — create a campaign
   router.post('/campaigns', async (req, res) => {
     try {
-      const api = await getPlatform(platformKey, settingsRepo);
+      const api = await clientFor(req);
       const { accountId, ...body } = req.body;
       const result = await api.createCampaign(accountId, body);
       res.json({ success: true, data: result });
@@ -63,7 +77,7 @@ export function createGenericPlatformRouter(platformKey, platformLabel, settings
   // PUT /campaigns/:campaignId — update a campaign
   router.put('/campaigns/:campaignId', async (req, res) => {
     try {
-      const api = await getPlatform(platformKey, settingsRepo);
+      const api = await clientFor(req);
       const { campaignId } = req.params;
       const { accountId: _accountId, ...body } = req.body;
       const result = await api.updateCampaign(campaignId, body);
@@ -77,7 +91,7 @@ export function createGenericPlatformRouter(platformKey, platformLabel, settings
   // POST /sync — sync all accounts
   router.post('/sync', async (req, res) => {
     try {
-      const api = await getPlatform(platformKey, settingsRepo);
+      const api = await clientFor(req);
       const results = await api.syncAllAccounts();
       res.json({ success: true, data: { results, total: results.length } });
     } catch (err) {

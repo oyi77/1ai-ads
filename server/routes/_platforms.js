@@ -75,11 +75,10 @@ export function createPlatformsGroupRouter({ repos, services, publicRateLimit })
             return;
           }
         }
-        cachedRouter(req, res, next);
+      cachedRouter(req, res, next);
       });
     } else {
-      // Generic router — no custom route file needed
-      router.use(routePath, requireAuth, createGenericPlatformRouter(key, cfg.label, repos.settingsRepo));
+      router.use(routePath, requireAuth, createGenericPlatformRouter(key, cfg.label, repos.settingsRepo, repos.platformAccountsRepo));
     }
   }
 
