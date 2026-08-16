@@ -81,7 +81,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     try {
       const campaignId = req.params.id;
       const userId = req.user?.id || 'system';
-      const campaign = campaignsRepo.findById(campaignId);
+      const campaign = campaignsRepo.findById(campaignId, userId);
       if (!campaign) return res.status(404).json({ success: false, error: 'Campaign not found' });
 
       const draft = draftsRepo.create({

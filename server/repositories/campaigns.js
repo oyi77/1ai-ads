@@ -34,16 +34,19 @@ export class CampaignsRepository {
     return id;
   }
 
-  getDashboardMetrics() {
-    const row = this.db.prepare(`
+  getDashboardMetrics(userId) {
+    let sql = `
       SELECT
         COALESCE(SUM(spend), 0) as total_spend,
         SUM(revenue) as total_revenue,
         COALESCE(SUM(impressions), 0) as total_impressions,
         COALESCE(SUM(clicks), 0) as total_clicks,
         COALESCE(SUM(conversions), 0) as total_conversions
-      FROM campaigns
-    `).get();
+      FROM campaigns`;
+    if (userId) {
+      sql += ' WHERE user_id = ? OR user_id = ?';
+    }
+    const row = this.db.prepare(sql).get(...(userId ? [userId, 'system'] : []));
 
     const total_spend = row.total_spend;
     const total_revenue = row.total_revenue; // null if no revenue data
@@ -61,8 +64,8 @@ export class CampaignsRepository {
     };
   }
 
-  getMetricsByPlatform() {
-    return this.db.prepare(`
+  getMetricsByPlatform(userId) {
+    let sql = `
       SELECT
         platform,
         COALESCE(SUM(spend), 0) as spend,
@@ -70,10 +73,15 @@ export class CampaignsRepository {
         COALESCE(SUM(impressions), 0) as impressions,
         COALESCE(SUM(clicks), 0) as clicks,
         COALESCE(SUM(conversions), 0) as conversions
-      FROM campaigns
+      FROM campaigns`;
+    if (userId) {
+      sql += ' WHERE (user_id = ? OR user_id = ?)';
+    }
+    sql += `
       GROUP BY platform
-      ORDER BY spend DESC
-    `).all().map(row => ({
+      ORDER BY spend DESC`;
+    const params = userId ? [userId, 'system'] : [];
+    return this.db.prepare(sql).all(...params).map(row => ({
       platform: row.platform,
       spend: row.spend,
       revenue: row.revenue,
@@ -83,20 +91,47 @@ export class CampaignsRepository {
     }));
   }
 
-  getTopCampaigns(limit = 5) {
-    return this.db.prepare(`
+  getTopCampaigns(limit = 5, userId) {
+    let sql = `
       SELECT name, platform, spend, revenue, roas, status
       FROM campaigns
-      WHERE spend > 0 AND revenue > 0
+      WHERE spend > 0 AND revenue > 0`;
+    if (userId) {
+      sql += ' AND (user_id = ? OR user_id = ?)';
+    }
+    sql += `
       ORDER BY roas DESC
-      LIMIT ?
-    `).all(limit);
+      LIMIT ?`;
+    const params = userId ? [userId, 'system', limit] : [limit];
+    return this.db.prepare(sql).all(...params);
   }
 
-  findById(id) {
-    const row = this.db.prepare('SELECT * FROM campaigns WHERE id = ?').get(id);
+  findById(id, userId) {
+    let sql = 'SELECT * FROM campaigns WHERE id = ?';
+    if (userId) {
+      sql += ' AND (user_id = ? OR user_id = ?)';
+    }
+    const params = userId ? [id, userId, 'system'] : [id];
+    const row = this.db.prepare(sql).get(...params);
     if (!row) return null;
-    return { ...row, stats: { spend: row.spend, revenue: row.revenue, roas: row.roas, impressions: row.impressions, clicks: row.clicks } };
+    const stats = this.db.prepare(`
+      SELECT COALESCE(SUM(spend),0) as spend,
+             COALESCE(SUM(revenue),0) as revenue,
+             COALESCE(SUM(roas),0) as roas,
+             COALESCE(SUM(impressions),0) as impressions,
+             COALESCE(SUM(clicks),0) as clicks
+      FROM campaigns WHERE id = ?
+    `).get(id);
+    return {
+      ...row,
+      stats: {
+        spend: stats.spend || 0,
+        revenue: stats.revenue || 0,
+        roas: stats.roas || 0,
+        impressions: stats.impressions || 0,
+        clicks: stats.clicks || 0,
+      }
+    };
   }
 
   getById(id) {
@@ -129,7 +164,7 @@ export class CampaignsRepository {
     }));
   }
 
-  update(id, data) {
+  update(id, data, userId) {
     const fields = [];
     const values = [];
     for (const [key, val] of Object.entries(data)) {
@@ -139,8 +174,13 @@ export class CampaignsRepository {
       }
     }
     if (fields.length === 0) return false;
+    let sql = `UPDATE campaigns SET ${fields.join(', ')} WHERE id = ?`;
     values.push(id);
-    const result = this.db.prepare(`UPDATE campaigns SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+    if (userId) {
+      sql += ` AND (user_id = ? OR user_id = 'system')`;
+      values.push(userId);
+    }
+    const result = this.db.prepare(sql).run(...values);
     return result.changes > 0;
   }
 
