@@ -15,7 +15,6 @@ import { auditLog } from './middleware/audit.js';
 import { AuditLogRepository } from './repositories/audit-log.js';
 import { getMetricsText, metricsMiddleware } from './lib/metrics.js';
 import { initBot } from './bot/index.js';
-import { MetaAdsAPI } from './services/meta/index.js';
 import { resolveOwnerPlatformToken } from './lib/resolve-owner-platform.js';
 
 // ── Sentry (optional, env-gated) ──────────────────────

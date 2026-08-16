@@ -133,7 +133,7 @@ export function handleListAccounts(settingsRepo) {
       const all = settingsRepo.getAccounts ? settingsRepo.getAccounts(platform) : [];
       // Scope to the requesting user (multi-tenant). platform_accounts rows carry user_id.
       const accounts = (Array.isArray(all) ? all : []).filter(
-        acc => !req.user || acc.user_id === req.user.id
+        acc => acc.user_id === req.user.id
       );
       const safe = accounts.map(acc => {
         const creds = acc.credentials || {};
@@ -161,7 +161,7 @@ export function handleCreateAccount(settingsRepo) {
     const id = uuid();
     settingsRepo.addAccount({
       id,
-      user_id: req.user?.id || 'admin', // Default to admin for MVP
+      user_id: req.user.id,
       platform,
       account_name,
       credentials
@@ -177,8 +177,17 @@ export function handleUpdateAccount(settingsRepo) {
     const { id } = req.params;
     const { platform, is_active } = req.body;
 
+    const account = settingsRepo.getAccount(id);
+    if (!account) {
+      return res.status(404).json({ success: false, error: 'Account not found' });
+    }
+    // Multi-tenant ownership guard: a user may only mutate their own account.
+    if (!req.user || account.user_id !== req.user.id) {
+      return res.status(404).json({ success: false, error: 'Account not found' });
+    }
+
     if (is_active === 1 && platform) {
-      settingsRepo.setActiveAccount(platform, id);
+      settingsRepo.setActiveAccountForUser(platform, id, req.user.id);
     } else {
       settingsRepo.updateAccount(id, req.body);
     }
@@ -190,10 +199,19 @@ export function handleUpdateAccount(settingsRepo) {
 // DELETE /accounts/:id
 export function handleDeleteAccount(settingsRepo) {
   return (req, res) => {
+    const account = settingsRepo.getAccount(req.params.id);
+    if (!account) {
+      return res.status(404).json({ success: false, error: 'Account not found' });
+    }
+    // Multi-tenant ownership guard: a user may only delete their own account.
+    if (!req.user || account.user_id !== req.user.id) {
+      return res.status(404).json({ success: false, error: 'Account not found' });
+    }
     settingsRepo.deleteAccount(req.params.id);
     res.json({ success: true });
   };
 }
+
 
 // POST /accounts/test — validate credentials (meta)
 export function handleTestAccount(metaApi) {
@@ -250,7 +268,7 @@ export function handleExchangeMetaToken(settingsRepo, metaApi) {
       const api = new metaApi.constructor(credentialHolder);
       const me = await api.getMe();
 
-      const userId = req.user?.id || 'admin';
+      const userId = req.user.id;
       const accountName = `Meta - ${me.name}`;
       const existingAccounts = settingsRepo.getAccounts('meta').filter(a => a.user_id === userId);
       const existing = existingAccounts.find(a => a.account_name === accountName);
@@ -260,7 +278,7 @@ export function handleExchangeMetaToken(settingsRepo, metaApi) {
       } else {
         settingsRepo.addAccount({
           id: uuid(),
-          user_id: req.user?.id || 'admin',
+          user_id: req.user.id,
           platform: 'meta',
           account_name: accountName,
           credentials: { access_token: longToken },
@@ -318,7 +336,7 @@ export function handleConnectToken(settingsRepo, metaApi, nangoAuth) {
         }
 
         // Save main account with token
-        const userId = req.user?.id || 'admin';
+        const userId = req.user.id;
         const existingAccounts = settingsRepo.getAccounts('meta').filter(a => a.user_id === userId);
         const existing = existingAccounts.find(a =>
           a.account_name === userName ||
@@ -335,7 +353,7 @@ export function handleConnectToken(settingsRepo, metaApi, nangoAuth) {
           const id = uuid();
           settingsRepo.addAccount({
             id,
-            user_id: req.user?.id || 'admin',
+            user_id: req.user.id,
             platform: 'meta',
             account_name: userName,
             credentials: { access_token, user_name: meData.name, user_id: meData.id },
@@ -345,7 +363,7 @@ export function handleConnectToken(settingsRepo, metaApi, nangoAuth) {
         }
         // Optionally mirror credentials to Nango
         if (nangoAuth && nangoAuth.enabled) {
-          nangoAuth.storeCredentials(req.user?.id || 'admin', 'meta', { access_token }).catch(err => {
+          nangoAuth.storeCredentials(req.user.id, 'meta', { access_token }).catch(err => {
             log.error('Failed to mirror credentials to Nango', { error: err.message });
           });
         }
@@ -357,7 +375,7 @@ export function handleConnectToken(settingsRepo, metaApi, nangoAuth) {
           if (!adExisting) {
             settingsRepo.addAccount({
               id: uuid(),
-              user_id: req.user?.id || 'admin',
+              user_id: req.user.id,
               platform: 'meta',
               account_name: adAcc.id,
               credentials: { access_token, ad_account_id: adAcc.account_id, ad_account_name: adAcc.name },
@@ -382,7 +400,7 @@ export function handleConnectToken(settingsRepo, metaApi, nangoAuth) {
         });
       } else {
         // Non-Meta platforms: save token directly (no generic platform validation)
-        const userId = req.user?.id || 'admin';
+        const userId = req.user.id;
         const existingAccounts = settingsRepo.getAccounts(platform).filter(a => a.user_id === userId);
         const displayName = account_name || `${platform.charAt(0).toUpperCase() + platform.slice(1)} Account`;
         const existing = existingAccounts.find(a =>
@@ -396,7 +414,7 @@ export function handleConnectToken(settingsRepo, metaApi, nangoAuth) {
           const id = uuid();
           settingsRepo.addAccount({
             id,
-            user_id: req.user?.id || 'admin',
+            user_id: req.user.id,
             platform,
             account_name: displayName,
             credentials: { access_token },
@@ -422,7 +440,7 @@ export function handleGetCredentials(settingsRepo) {
     const all = settingsRepo.getAccounts(req.params.platform);
     // Scope to the requesting user (multi-tenant). platform_accounts rows carry user_id.
     const userAccounts = (Array.isArray(all) ? all : []).filter(
-      a => !req.user || a.user_id === req.user.id
+      a => a.user_id === req.user.id
     );
     const acc = userAccounts.find(a => a.is_active) || userAccounts[0];
 
@@ -444,8 +462,7 @@ export function handlePostCredentials(settingsRepo) {
     const { platform } = req.params;
     const credentials = req.body;
 
-    // Create or update "Default" account for legacy calls — scoped to the requesting user
-    const userId = req.user?.id || 'admin';
+    const userId = req.user.id;
     const accounts = settingsRepo.getAccounts(platform).filter(a => a.user_id === userId);
     const existingDefault = accounts.find(a => a.account_name === 'Default');
 
@@ -454,7 +471,7 @@ export function handlePostCredentials(settingsRepo) {
     } else {
       settingsRepo.addAccount({
         id: uuid(),
-        user_id: req.user?.id || 'admin',
+        user_id: req.user.id,
         platform,
         account_name: 'Default',
         credentials,

@@ -108,6 +108,10 @@ export class SettingsRepository {
   setActiveAccount(platform, id) {
     return this._accountsRepo.setActiveAccount(platform, id);
   }
+  setActiveAccountForUser(platform, id, userId) {
+    return this._accountsRepo.setActiveAccountForUser(platform, id, userId);
+  }
+
 
   /** @deprecated Use platformAccountsRepo.getActiveAccount(platform) */
   getActiveAccount(platform) {

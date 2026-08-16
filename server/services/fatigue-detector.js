@@ -164,7 +164,7 @@ export class FatigueDetector {
    * Return stored creative performance history for a specific ad.
    * Delegates to the creative_performance repository (keyed by ad_id).
    */
-  async getHistory(adId, { ownerId } = {}) {
+  async getHistory(adId, { _ownerId } = {}) {
     return this.repo.findByAdId(adId);
   }
 
@@ -215,7 +215,7 @@ export class FatigueDetector {
    * and linear regression trend analysis (R²>0.5).
    */
   async detectFatigue(accountId, {
-    ownerId,
+    _ownerId,
     lookbackDays = 7,
     frequencyThreshold = 3.0,
     ctrDropPercent = 30,
@@ -514,12 +514,12 @@ export class FatigueDetector {
   async _runSnapshots() {
     try {
       const accounts = this.db.prepare(
-        `SELECT id FROM platform_accounts WHERE platform = 'meta' AND health_status = 'active'`
+        `SELECT id, user_id FROM platform_accounts WHERE platform = 'meta' AND health_status = 'active'`
       ).all();
 
       for (const account of accounts) {
         try {
-          await this.snapshotCreatives(account.id);
+          await this.snapshotCreatives(account.id, { ownerId: account.user_id });
         } catch (err) {
           log.error('Snapshot failed for account', { accountId: account.id, error: err.message });
         }

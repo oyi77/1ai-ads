@@ -173,6 +173,13 @@ export class PlatformAccountsRepository {
     })();
   }
 
+  setActiveAccountForUser(platform, id, userId) {
+    this.db.transaction(() => {
+      this.db.prepare('UPDATE platform_accounts SET is_active = 0 WHERE platform = ? AND user_id = ?').run(platform, userId);
+      this.db.prepare('UPDATE platform_accounts SET is_active = 1 WHERE id = ?').run(id);
+    })();
+  }
+
   // ── Per-user methods ─────────────────────────────────────────
 
   getByPlatform(userId, platform) {

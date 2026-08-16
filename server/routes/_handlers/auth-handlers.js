@@ -147,7 +147,7 @@ export function handleConnectMetaToken(settingsRepo) {
         log.info('Ad account detection skipped', { error: e.message });
       }
 
-      const userId = req.user?.id || 'admin';
+    const userId = req.user.id;
       const existingAccounts = settingsRepo.getAccounts('meta').filter(a => a.user_id === userId);
       const existing = existingAccounts.find(a => a.account_name === userName || (a.credentials?.access_token === access_token));
 

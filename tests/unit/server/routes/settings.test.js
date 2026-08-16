@@ -31,11 +31,13 @@ function createMockSettingsRepo(store = {}) {
     getAll: vi.fn(() => ({ ...store })),
     get: vi.fn((key) => store[key]),
     set: vi.fn((key, value) => { store[key] = value; }),
+    getAccount: vi.fn((id) => ({ id, user_id: 'user-1' })),
     getAccounts: vi.fn(() => []),
     addAccount: vi.fn(),
     updateAccount: vi.fn(),
     deleteAccount: vi.fn(),
     setActiveAccount: vi.fn(),
+    setActiveAccountForUser: vi.fn(),
   };
 }
 
@@ -259,10 +261,10 @@ describe('Settings Router', () => {
   // ─── PUT /accounts/:id ─────────────────────────────────────────────
 
   describe('PUT /accounts/:id', () => {
-    it('calls setActiveAccount when is_active=1 and platform given', async () => {
+    it('calls setActiveAccountForUser when is_active=1 and platform given', async () => {
       const res = await request(app).put('/api/settings/accounts/acc-1').send({ platform: 'meta', is_active: 1 });
       expect(res.status).toBe(200);
-      expect(settingsRepo.setActiveAccount).toHaveBeenCalledWith('meta', 'acc-1');
+      expect(settingsRepo.setActiveAccountForUser).toHaveBeenCalledWith('meta', 'acc-1', 'user-1');
     });
 
     it('calls updateAccount otherwise', async () => {
