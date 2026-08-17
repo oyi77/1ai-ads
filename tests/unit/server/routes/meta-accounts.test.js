@@ -89,16 +89,17 @@ describe('meta-accounts router — per-user token scoping', () => {
     expect(platformAccountsRepo.getByPlatform).toHaveBeenCalledWith('user-1', 'meta');
   });
 
-  it('falls back to system token when user has no bound account', async () => {
+  it('returns 400 when user has no bound account (no system token fallback)', async () => {
     platformAccountsRepo.getByPlatform.mockReturnValue(null);
 
     const app = createApp(platformAccountsRepo, settingsRepo);
-    await request(app)
+    const res = await request(app)
       .get('/api/meta')
       .set('Authorization', 'Bearer test-token');
 
-    // No user token → resolveUserMeta returns api = withToken(null) (system-wide fallback)
-    expect(withToken).toHaveBeenCalledWith(null);
+    // Unbound user must NOT borrow the operator/system token
+    expect(res.status).toBe(400);
+    expect(withToken).not.toHaveBeenCalledWith(null);
     expect(platformAccountsRepo.getByPlatform).toHaveBeenCalledWith('user-1', 'meta');
   });
 
