@@ -88,11 +88,15 @@ export class AdResearchService {
   }
 
   _getToken() {
-    const creds = this.settingsRepo.getCredentials('meta');
-    if (!creds?.access_token) {
-      throw new ConfigurationError('Meta access token not configured');
+    if (this._explicitToken) return this._explicitToken;
+    if (!this._userScoped && this.settingsRepo) {
+      const creds = this.settingsRepo.getCredentials('meta');
+      if (!creds?.access_token) {
+        throw new ConfigurationError('Meta access token not configured');
+      }
+      return creds.access_token;
     }
-    return creds.access_token;
+    throw new ConfigurationError('Meta access token not configured');
   }
 
   _formatDirectAd(ad) {

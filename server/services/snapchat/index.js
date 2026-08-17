@@ -12,7 +12,7 @@ export class SnapchatAdsAPI extends BasePlatformApiClient {
   // Override: Snapchat uses OAuth 2.0 Bearer token
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
-    if (this.settingsRepo) {
+    if (!this._userScoped && this.settingsRepo) {
       const creds = this.settingsRepo.getCredentials('snapchat');
       if (creds?.access_token) return creds.access_token;
     }

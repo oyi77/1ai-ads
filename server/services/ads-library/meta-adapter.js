@@ -233,14 +233,18 @@ export class MetaAdapter extends BasePlatformAdapter {
   }
 
   _getToken() {
-    if (!this.settingsRepo) {
-      throw new ConfigurationError('Settings repository not configured for Meta adapter.');
+    if (this._explicitToken) return this._explicitToken;
+    if (!this._userScoped) {
+      if (!this.settingsRepo) {
+        throw new ConfigurationError('Settings repository not configured for Meta adapter.');
+      }
+      const creds = this.settingsRepo.getCredentials('meta');
+      if (!creds?.access_token) {
+        throw new ConfigurationError('Meta access token not configured. Go to Settings to add it.');
+      }
+      return creds.access_token;
     }
-    const creds = this.settingsRepo.getCredentials('meta');
-    if (!creds?.access_token) {
-      throw new ConfigurationError('Meta access token not configured. Go to Settings to add it.');
-    }
-    return creds.access_token;
+    throw new ConfigurationError('Meta access token not configured. Go to Settings to add it.');
   }
 
   // ---- Private: Scraper fallback ----

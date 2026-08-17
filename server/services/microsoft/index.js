@@ -14,7 +14,7 @@ export class MicrosoftAdsAPI extends BasePlatformApiClient {
    */
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
-    if (this.settingsRepo) {
+    if (!this._userScoped && this.settingsRepo) {
       const creds = this.settingsRepo.getCredentials('microsoft');
       if (creds?.oauth_token) return creds.oauth_token;
     }

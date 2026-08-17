@@ -8,13 +8,18 @@ export class TwitterAdsAPI extends BasePlatformApiClient {
   }
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
-    const creds = this.settingsRepo?.getCredentials('twitter');
-    if (!creds?.access_token) {
-      throw new ConfigurationError(
-        'Twitter/X access token not configured. Go to Settings > Twitter to add it. Create one at developer.twitter.com'
-      );
+    if (!this._userScoped && this.settingsRepo) {
+      const creds = this.settingsRepo.getCredentials('twitter');
+      if (!creds?.access_token) {
+        throw new ConfigurationError(
+          'Twitter/X access token not configured. Go to Settings > Twitter to add it. Create one at developer.twitter.com'
+        );
+      }
+      return creds.access_token;
     }
-    return creds.access_token;
+    throw new ConfigurationError(
+      'Twitter/X access token not configured. Go to Settings > Twitter to add it. Create one at developer.twitter.com'
+    );
   }
 
   // Override: Twitter wraps responses in { data: [...], next_cursor: ... }

@@ -11,12 +11,14 @@ export class WhatsAppAdsAPI extends BasePlatformApiClient {
   }
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
-    if (config.fbWhatsappToken) return config.fbWhatsappToken;
-    if (this.settingsRepo) {
-      const whatsappCreds = this.settingsRepo.getCredentials('whatsapp');
-      if (whatsappCreds?.access_token) return whatsappCreds.access_token;
-      const metaCreds = this.settingsRepo.getCredentials('meta');
-      if (metaCreds?.access_token) return metaCreds.access_token;
+    if (!this._userScoped) {
+      if (config.fbWhatsappToken) return config.fbWhatsappToken;
+      if (this.settingsRepo) {
+        const whatsappCreds = this.settingsRepo.getCredentials('whatsapp');
+        if (whatsappCreds?.access_token) return whatsappCreds.access_token;
+        const metaCreds = this.settingsRepo.getCredentials('meta');
+        if (metaCreds?.access_token) return metaCreds.access_token;
+      }
     }
     throw new ConfigurationError(
       'WhatsApp access token not configured. Set FB_WHATSAPP_TOKEN or add a WhatsApp account in Settings.'

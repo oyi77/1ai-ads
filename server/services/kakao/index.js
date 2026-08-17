@@ -12,7 +12,7 @@ export class KakaoAdsAPI extends BasePlatformApiClient {
   // Override: Kakao uses OAuth 2.0 Bearer token
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
-    if (this.settingsRepo) {
+    if (!this._userScoped && this.settingsRepo) {
       const creds = this.settingsRepo.getCredentials('kakao');
       if (creds?.access_token) return creds.access_token;
     }
