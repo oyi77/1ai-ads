@@ -34,7 +34,7 @@ export class AutoOptimizer {
     if (ownerId && this.platformAccountsRepo) {
       const acct = this.platformAccountsRepo.getByPlatform(ownerId, 'meta');
       const token = acct?.access_token || (this.settingsRepo && this.settingsRepo.getCredentials('meta')?.access_token);
-      if (token) return new MetaAdsAPI(this.settingsRepo, token);
+      if (token) return new MetaAdsAPI(token);
     }
     return this.meta;
   }
