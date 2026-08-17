@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { createLogger } from '../lib/logger.js';
 import config from '../config/index.js';
+import { WebhookHandler } from '../services/webhook-handler.js';
 
 const log = createLogger('wa-intelligence-routes');
 
@@ -12,6 +13,7 @@ const log = createLogger('wa-intelligence-routes');
 export function createWhatsappWebhookRouter(whatsAppIntelligence) {
   const router = Router();
   const VERIFY_TOKEN = config.webhookVerifyToken || 'adforge_webhook_2026';
+  const handler = new WebhookHandler();
 
   router.get('/', (req, res) => {
     const mode = req.query['hub.mode'];
@@ -26,6 +28,11 @@ export function createWhatsappWebhookRouter(whatsAppIntelligence) {
   });
 
   router.post('/', async (req, res) => {
+    const rawBody = JSON.stringify(req.body);
+    const signature = req.headers['x-hub-signature-256'];
+    if (config.fbAppSecret && !handler.verifySignature(config.fbAppSecret, rawBody, signature)) {
+      return res.status(401).send('Invalid signature');
+    }
     try {
       const result = await whatsAppIntelligence.processWebhook(req.body);
       log.info('wa_webhook_processed', { processed: result.processed });

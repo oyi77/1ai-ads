@@ -3,18 +3,22 @@ import crypto from 'crypto';
 
 const log = createLogger('webhook-handler');
 
+export function verifyMetaSignature(appSecret, payload, signature) {
+  if (!appSecret || !signature) return false;
+  const expectedSig = crypto.createHmac('sha256', appSecret).update(payload).digest('hex');
+  const expected = Buffer.from(`sha256=${expectedSig}`);
+  const provided = Buffer.from(signature);
+  if (expected.length !== provided.length) return false;
+  return crypto.timingSafeEqual(provided, expected);
+}
+
 export class WebhookHandler {
   constructor() {
     this.subscriptions = new Map();
   }
 
   verifySignature(appSecret, payload, signature) {
-    if (!appSecret || !signature) return false;
-    const expectedSig = crypto.createHmac('sha256', appSecret).update(payload).digest('hex');
-    const expected = Buffer.from(`sha256=${expectedSig}`);
-    const provided = Buffer.from(signature);
-    if (expected.length !== provided.length) return false;
-    return crypto.timingSafeEqual(provided, expected);
+    return verifyMetaSignature(appSecret, payload, signature);
   }
 
   handleVerification(mode, token, verifyToken) {
