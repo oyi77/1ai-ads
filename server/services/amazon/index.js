@@ -20,7 +20,7 @@ export class AmazonAdsAPI extends BasePlatformApiClient {
 
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
-    if (this.settingsRepo) {
+    if (!this._userScoped && this.settingsRepo) {
       const creds = this.settingsRepo.getCredentials('amazon');
       if (creds?.access_token) return creds.access_token;
     }
