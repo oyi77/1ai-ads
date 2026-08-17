@@ -17,6 +17,9 @@ export class GoogleAdsAPI extends BasePlatformApiClient {
       // Per-user bound token: the stored access_token is the OAuth token.
       return { oauth_token: this._explicitToken };
     }
+    if (this._userScoped) {
+      throw new ConfigurationError('No Google Ads account connected to this user. Connect your account in Settings first.');
+    }
     const creds = this.settingsRepo.getCredentials('google');
     if (!creds?.developer_token) {
       throw new ConfigurationError('Google Ads developer token not configured. Go to Settings > Google Ads. Get one at Google Ads > Tools > API Center.');

@@ -46,7 +46,13 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
 
     // Get stored credentials
   const userAccount = platformAccountsRepo.findActiveByUserAndPlatform(req.user.id, platform);
-  const credentials = userAccount?.credentials ?? settingsRepo.getCredentials(platform);
+  if (!userAccount) {
+    return res.status(400).json({
+      success: false,
+      error: `No ${platform} account connected to your profile. Connect it in Settings first.`,
+    });
+  }
+  const credentials = userAccount.credentials;
     if (!credentials) {
       return res.status(400).json({
         success: false,
