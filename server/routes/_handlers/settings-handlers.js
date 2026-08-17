@@ -189,7 +189,11 @@ export function handleUpdateAccount(settingsRepo) {
     if (is_active === 1 && platform) {
       settingsRepo.setActiveAccountForUser(platform, id, req.user.id);
     } else {
-      settingsRepo.updateAccount(id, req.body);
+      // Strip ownership/scoping keys so a caller cannot reassign this account to
+      // another user_id or change its platform — that would expose the account's
+      // token to a different user (cross-tenant leak).
+      const { user_id: _uid, platform: _plat, id: _id, ...safeBody } = req.body;
+      settingsRepo.updateAccount(id, safeBody);
     }
 
     res.json({ success: true });
