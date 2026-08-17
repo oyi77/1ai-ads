@@ -31,7 +31,7 @@ export function createWhatsappWebhookRouter(whatsAppIntelligence) {
   });
 
   router.post('/', async (req, res) => {
-    const rawBody = JSON.stringify(req.body);
+    const rawBody = req.rawBody;
     const signature = req.headers['x-hub-signature-256'];
     if (config.fbAppSecret && !handler.verifySignature(config.fbAppSecret, rawBody, signature)) {
       return res.status(401).send('Invalid signature');
