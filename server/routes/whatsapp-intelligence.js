@@ -4,6 +4,9 @@ import config from '../config/index.js';
 import { WebhookHandler } from '../services/webhook-handler.js';
 
 const log = createLogger('wa-intelligence-routes');
+if (!config.fbAppSecret) {
+  log.warn('FB_APP_SECRET is not set — WhatsApp webhook signature verification is DISABLED (requests accepted fail-open)');
+}
 
 /**
  * Public webhook router — Meta WhatsApp Cloud API verification + event delivery.
