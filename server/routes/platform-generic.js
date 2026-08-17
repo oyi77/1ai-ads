@@ -12,6 +12,7 @@
 import { Router } from 'express';
 import { getPlatform } from '../platforms/index.js';
 import { resolveUserPlatformToken } from '../lib/resolve-user-platform.js';
+import { ValidationError } from '../lib/errors.js';
 import { createLogger } from '../lib/logger.js';
 
 /**
@@ -32,7 +33,10 @@ export function createGenericPlatformRouter(platformKey, platformLabel, settings
   async function clientFor(req) {
     const api = await getPlatform(platformKey, settingsRepo);
     const token = resolveUserPlatformToken(platformKey, req, platformAccountsRepo, settingsRepo);
-    if (token) api.setActiveAccount(null, token);
+    if (!token) {
+      throw new ValidationError(`${platformLabel} account not connected. Please connect your account in Settings.`);
+    }
+    api.setActiveAccount(null, token, true);
     return api;
   }
 

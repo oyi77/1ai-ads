@@ -42,7 +42,7 @@ export function createMetaAccountsRouter(settingsRepo, platformAccountsRepo) {
       settingsRepo.delete(`meta_${userId}_access_token`);
       return { token: legacyToken, api: MetaAdsAPI.withToken(legacyToken) };
     }
-    return { token: null, api: MetaAdsAPI.withToken(null) };
+    return { token: null, api: null };
   }
 
   function unauthorized(res, msg = 'Meta account not connected. Please connect your Meta account first.') {

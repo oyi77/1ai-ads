@@ -22,18 +22,18 @@ describe('resolveUserPlatformToken', () => {
     expect(resolveUserPlatformToken('linkedin', req, repo, settings)).toBe('USER_TOK');
   });
 
-  it('falls back to system token when the user has none', () => {
+  it('returns null when the user has no bound token (no system fallback)', () => {
     const repo = makePlatformAccountsRepo(null);
     const settings = makeSettingsRepo({ linkedin: { access_token: 'SYS_TOK' } });
     const req = { user: { id: 'u1' } };
-    expect(resolveUserPlatformToken('linkedin', req, repo, settings)).toBe('SYS_TOK');
+    expect(resolveUserPlatformToken('linkedin', req, repo, settings)).toBeNull();
   });
 
-  it('falls back to a raw-string system token', () => {
+  it('returns null for a raw-string system token (no cross-user borrow)', () => {
     const repo = makePlatformAccountsRepo(null);
     const settings = makeSettingsRepo({ twitter: 'SYS_TOK' });
     const req = { user: { id: 'u1' } };
-    expect(resolveUserPlatformToken('twitter', req, repo, settings)).toBe('SYS_TOK');
+    expect(resolveUserPlatformToken('twitter', req, repo, settings)).toBeNull();
   });
 
   it('returns null when neither user nor system has a token', () => {
@@ -43,11 +43,11 @@ describe('resolveUserPlatformToken', () => {
     expect(resolveUserPlatformToken('linkedin', req, repo, settings)).toBeNull();
   });
 
-  it('falls back to system token when req.user is missing (admin context)', () => {
+  it('returns null when req.user is missing (no implicit admin borrow)', () => {
     const repo = makePlatformAccountsRepo(null);
     const settings = makeSettingsRepo({ linkedin: { access_token: 'SYS_TOK' } });
     const req = {};
-    expect(resolveUserPlatformToken('linkedin', req, repo, settings)).toBe('SYS_TOK');
+    expect(resolveUserPlatformToken('linkedin', req, repo, settings)).toBeNull();
   });
 
   it('never crosses users — a different user\'s token is not returned', () => {

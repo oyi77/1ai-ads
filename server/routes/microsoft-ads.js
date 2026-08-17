@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { MicrosoftAdsAPI } from '../services/microsoft/index.js';
 import { resolveUserPlatformToken } from '../lib/resolve-user-platform.js';
+import { ValidationError } from '../lib/errors.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('microsoft-ads');
@@ -11,12 +12,15 @@ export function createMicrosoftAdsRouter(settingsRepo, platformAccountsRepo) {
   // Build a Microsoft client bound to the REQUESTING USER's token (SaaS),
   // falling back to the system token. Per-request (not a shared singleton)
   // so concurrent users never share token state.
-  function clientFor(req) {
-    const api = new MicrosoftAdsAPI(settingsRepo);
-    const token = resolveUserPlatformToken('microsoft', req, platformAccountsRepo, settingsRepo);
-    if (token) api.setActiveAccount(null, token);
-    return api;
+function clientFor(req) {
+  const api = new MicrosoftAdsAPI(settingsRepo);
+  const token = resolveUserPlatformToken('microsoft', req, platformAccountsRepo, settingsRepo);
+  if (!token) {
+    throw new ValidationError('Microsoft account not connected. Please connect your account in Settings.');
   }
+  api.setActiveAccount(null, token, true);
+  return api;
+}
 
   // GET /api/microsoft-ads/status — Connection status (per-user)
   router.get('/status', async (req, res) => {

@@ -12,11 +12,14 @@ export class TikTokAdsAPI extends BasePlatformApiClient {
   // Honor an explicitly-bound (per-user) token first, then system settings.
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
-    const creds = this.settingsRepo.getCredentials('tiktok');
-    if (!creds?.access_token) {
-      throw new ConfigurationError('TikTok access token not configured. Go to Settings > TikTok to add it. Get one at business-api.tiktok.com/portal');
+    if (!this._userScoped && this.settingsRepo) {
+      const creds = this.settingsRepo.getCredentials('tiktok');
+      if (!creds?.access_token) {
+        throw new ConfigurationError('TikTok access token not configured. Go to Settings > TikTok to add it. Get one at business-api.tiktok.com/portal');
+      }
+      return creds.access_token;
     }
-    return creds.access_token;
+    throw new ConfigurationError('TikTok access token not configured. Go to Settings > TikTok to add it. Get one at business-api.tiktok.com/portal');
   }
 
   // Override: TikTok returns data in nested { data: ... } structure

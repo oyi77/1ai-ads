@@ -32,9 +32,9 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     // 1. Explicit token (set via constructor or setActiveAccount)
     if (this._explicitToken) return this._explicitToken;
     // 2. System token from .env (backward compat)
-    if (config.fbSystemToken) return config.fbSystemToken;
+    if (!this._userScoped && config.fbSystemToken) return config.fbSystemToken;
     // 3. Active platform account from platform_accounts table
-    if (this.settingsRepo) {
+    if (!this._userScoped && this.settingsRepo) {
       const creds = this.settingsRepo.getCredentials('meta');
       if (typeof creds === 'string' && creds.length > 10) return creds;
       if (creds?.access_token) return creds.access_token;

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { createLogger } from '../lib/logger.js';
 import { MetaAdsAPI } from '../services/meta/index.js';
+import { ValidationError } from '../lib/errors.js';
 
 const log = createLogger('campaigns-route');
 
@@ -8,7 +9,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   const router = Router();
 
   // Resolve the Meta API for the requesting user: their own bound token when
-  // present, else fall back to the global/system token. Keeps web SaaS multi-tenant.
+  // present. Unbound users get a clear 400 — never the operator system token.
   function resolveUserMetaApi(req) {
     const userId = req.user?.id;
     if (userId && platformAccountsRepo) {
@@ -18,10 +19,10 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
           return MetaAdsAPI.withToken(acct.access_token);
         }
       } catch (err) {
-        log.error('resolveUserMetaApi failed, using system token', { userId, error: err.message });
+        log.error('resolveUserMetaApi failed', { userId, error: err.message });
       }
     }
-    return metaApi;
+    throw new ValidationError('Meta account is not connected. Connect your Meta account in Settings before using campaign features.');
   }
 
   // Create full campaign (AI creative → campaign → adset → creative → ad)
@@ -57,7 +58,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
 
       res.json({ success: true, data: result });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(err.status || 500).json({ success: false, error: err.message });
     }
   });
 
@@ -72,7 +73,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       await orchestrator.activateCampaign(campaignId, resolveUserMetaApi(req));
       res.json({ success: true, data: { id: campaignId, status: 'ACTIVE' } });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(err.status || 500).json({ success: false, error: err.message });
     }
   });
 
@@ -92,7 +93,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       });
       res.status(201).json({ success: true, data: draft });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(err.status || 500).json({ success: false, error: err.message });
     }
   });
 
@@ -102,7 +103,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       await orchestrator.pauseCampaign(req.params.id, resolveUserMetaApi(req));
       res.json({ success: true, data: { id: req.params.id, status: 'PAUSED' } });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(err.status || 500).json({ success: false, error: err.message });
     }
   });
 
@@ -114,7 +115,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       await orchestrator.scaleBudget(req.params.id, parseFloat(dailyBudget), resolveUserMetaApi(req));
       res.json({ success: true, data: { id: req.params.id, dailyBudget } });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(err.status || 500).json({ success: false, error: err.message });
     }
   });
 
@@ -126,7 +127,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       const results = await resolveUserMetaApi(req).getTargetingOptions(q, type);
       res.json({ success: true, data: results });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(err.status || 500).json({ success: false, error: err.message });
     }
   });
 
@@ -139,7 +140,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       if (err.message.includes('nonexisting field') || err.message.includes('permission')) {
         res.json({ success: true, data: [] });
       } else {
-        res.status(500).json({ success: false, error: err.message });
+        res.status(err.status || 500).json({ success: false, error: err.message });
       }
     }
   });
@@ -151,7 +152,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       res.json({ success: true, data: accounts });
     } catch (err) {
       log.error('Failed to get ad accounts', { error: err.message });
-      res.status(500).json({ success: false, error: err.message });
+      res.status(err.status || 500).json({ success: false, error: err.message });
     }
   });
 
@@ -167,7 +168,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       try {
         accounts = await api.getAdAccounts();
       } catch (err) {
-        return res.status(500).json({ success: false, error: `Failed to get ad accounts: ${err.message}` });
+        return res.status(err.status || 500).json({ success: false, error: `Failed to get ad accounts: ${err.message}` });
       }
 
       if (!accounts || accounts.length === 0) {
@@ -299,7 +300,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       });
     } catch (err) {
       log.error('Sync failed', { error: err.message });
-      res.status(500).json({ success: false, error: err.message });
+      res.status(err.status || 500).json({ success: false, error: err.message });
     }
   });
 
@@ -325,7 +326,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       );
       res.json({ success: true, data: result });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(err.status || 500).json({ success: false, error: err.message });
     }
   });
 
@@ -370,7 +371,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
 
       res.json({ success: true, data: allAds, total: allAds.length, page: 1, limit: 20 });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(err.status || 500).json({ success: false, error: err.message });
     }
   });
 
@@ -380,7 +381,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       const insights = await resolveUserMetaApi(req).getCampaignInsights(req.params.id);
       res.json({ success: true, data: { id: req.params.id, insights } });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(err.status || 500).json({ success: false, error: err.message });
     }
   });
 

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { SnapchatAdsAPI } from '../services/snapchat/index.js';
 import { resolveUserPlatformToken } from '../lib/resolve-user-platform.js';
+import { ValidationError } from '../lib/errors.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('snapchat-ads');
@@ -11,12 +12,15 @@ export function createSnapchatAdsRouter(settingsRepo, platformAccountsRepo) {
   // Build a Snapchat client bound to the REQUESTING USER's token (SaaS),
   // falling back to the system token. Per-request (not a shared singleton)
   // so concurrent users never share token state.
-  function clientFor(req) {
-    const api = new SnapchatAdsAPI(settingsRepo);
-    const token = resolveUserPlatformToken('snapchat', req, platformAccountsRepo, settingsRepo);
-    if (token) api.setActiveAccount(null, token);
-    return api;
+function clientFor(req) {
+  const api = new SnapchatAdsAPI(settingsRepo);
+  const token = resolveUserPlatformToken('snapchat', req, platformAccountsRepo, settingsRepo);
+  if (!token) {
+    throw new ValidationError('Snapchat account not connected. Please connect your account in Settings.');
   }
+  api.setActiveAccount(null, token, true);
+  return api;
+}
 
   // GET /api/snapchat-ads/status - Check connection status
   router.get('/status', async (req, res) => {

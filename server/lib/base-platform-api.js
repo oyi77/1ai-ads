@@ -14,17 +14,22 @@ export class BasePlatformApiClient {
     this.settingsRepo = settingsRepo;
     this._explicitToken = null;
     this._activeAccountId = null;
+    this._userScoped = false;
     this._baseUrl = opts.baseUrl || '';
     this.log = createLogger(`${platformName}-api`);
   }
 
   /**
    * Resolve API token. Override in subclasses for platform-specific resolution.
-   * Default: check explicit token > settings repo > throw
+   * Default: explicit token > operator/system settings (only when not user-scoped) > throw.
+   *
+   * When a request has been bound to a specific user's account via setActiveAccount(..., true),
+   * the operator/system token fallback is disabled so an unconnected user gets a clear error
+   * instead of silently borrowing the operator's shared credential.
    */
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
-    if (this.settingsRepo) {
+    if (!this._userScoped && this.settingsRepo) {
       const creds = this.settingsRepo.getCredentials(this.platformName);
       if (creds?.access_token) return creds.access_token;
     }
@@ -35,15 +40,21 @@ export class BasePlatformApiClient {
 
   /**
    * Set active account context for multi-account support.
+   * @param {string|null} accountId - Active account id (or null)
+   * @param {string|null} accessToken - Explicit token for this account (or null)
+   * @param {boolean} [userScoped] - When true, restrict this client to the user's own token;
+   *   disables the operator/system settings fallback.
    */
-  setActiveAccount(accountId, accessToken) {
+  setActiveAccount(accountId, accessToken, userScoped = false) {
     this._activeAccountId = accountId;
     this._explicitToken = accessToken;
+    this._userScoped = !!userScoped;
   }
 
   clearActiveAccount() {
     this._activeAccountId = null;
     this._explicitToken = null;
+    this._userScoped = false;
   }
 
   /**

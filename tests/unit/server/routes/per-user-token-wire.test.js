@@ -149,12 +149,10 @@ describe('per-user token reaches the wire (cross-user leak proof)', () => {
     expect(lastAuth).not.toBe(`Bearer ${SYS_TOK}`);
   });
 
-  it('user with NO bound account falls back to SYSTEM token (not another user)', async () => {
-    await request(app).get('/linkedin-ads/accounts').set('Authorization', `Bearer ${authTokenForUser('u2')}`);
-    expect(fetchCalls).toBeGreaterThan(0);
-    expect(lastAuth).toBe(`Bearer ${SYS_TOK}`);
-    expect(lastAuth).not.toBe(`Bearer ${USER_TOK}`);
-    expect(lastAuth).not.toBe(`Bearer ${OTHER_TOK}`);
+  it('user with NO bound account gets 400 (no system fallback for user routes)', async () => {
+    const r = await request(app).get('/linkedin-ads/accounts').set('Authorization', `Bearer ${authTokenForUser('u2')}`);
+    expect(r.status).toBe(400);
+    expect(fetchCalls).toBe(0);
   });
 
   it('unauthenticated request has no token on the wire (401 before client build)', async () => {

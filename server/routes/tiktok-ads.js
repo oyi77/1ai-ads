@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { TikTokAdsAPI } from '../services/tiktok/index.js';
 import { resolveUserPlatformToken } from '../lib/resolve-user-platform.js';
+import { ValidationError } from '../lib/errors.js';
 import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('tiktok-ads');
@@ -11,12 +12,15 @@ export function createTikTokAdsRouter(settingsRepo, platformAccountsRepo) {
   // Build a TikTok client bound to the REQUESTING USER's token (SaaS),
   // falling back to the system token. Per-request (not a shared singleton)
   // so concurrent users never share token state.
-  function clientFor(req) {
-    const api = new TikTokAdsAPI(settingsRepo);
-    const token = resolveUserPlatformToken('tiktok', req, platformAccountsRepo, settingsRepo);
-    if (token) api.setActiveAccount(null, token);
-    return api;
+function clientFor(req) {
+  const api = new TikTokAdsAPI(settingsRepo);
+  const token = resolveUserPlatformToken('tiktok', req, platformAccountsRepo, settingsRepo);
+  if (!token) {
+    throw new ValidationError('TikTok account not connected. Please connect your account in Settings.');
   }
+  api.setActiveAccount(null, token, true);
+  return api;
+}
 
   // GET /api/tiktok-ads/accounts - List TikTok advertiser accounts for the requesting user
   router.get('/accounts', async (req, res) => {

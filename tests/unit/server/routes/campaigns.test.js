@@ -9,6 +9,11 @@ vi.mock('../../../../server/lib/logger.js', () => ({
   }),
 }));
 
+const metaHolder = vi.hoisted(() => ({ api: null }));
+vi.mock('../../../../server/services/meta/index.js', () => ({
+  MetaAdsAPI: { withToken: vi.fn((token) => metaHolder.api) },
+}));
+
 import { createCampaignsRouter } from '../../../../server/routes/campaigns.js';
 
 function createMockOrchestrator() {
@@ -59,7 +64,7 @@ function createMockAdsetsRepo() {
 }
 
 function createMockPlatformAccountsRepo() {
-  return { getByPlatform: vi.fn(() => null) };
+  return { getByPlatform: vi.fn(() => ({ access_token: 'test-token' })) };
 }
 
 function createMockDraftsRepo() {
@@ -83,6 +88,7 @@ describe('Campaigns Router', () => {
     vi.clearAllMocks();
     orchestrator = createMockOrchestrator();
     metaApi = createMockMetaApi();
+    metaHolder.api = metaApi;
     creativeStudio = createMockCreativeStudio();
     campaignsRepo = createMockCampaignsRepo();
     adsRepo = createMockAdsRepo();
@@ -418,11 +424,10 @@ describe('Campaigns Router', () => {
       }
     });
 
-    it('falls back to system token when user has no bound account', async () => {
+    it('returns 400 when user has no bound account (no system fallback for user routes)', async () => {
       platformAccountsRepo.getByPlatform = vi.fn(() => null);
       const res = await request(app).get('/api/campaigns/accounts');
-      expect(res.status).toBe(200);
-      expect(metaApi.getAdAccounts).toHaveBeenCalled();
+      expect(res.status).toBe(400);
     });
   });
 });
