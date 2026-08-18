@@ -124,3 +124,55 @@ describe('Meta webhook routers — raw-body signature', () => {
       .expect(401);
   });
 });
+
+// ── Fail-closed: a presented signature is mandatory when the secret is unset ──
+// Production misconfig (empty FB_APP_SECRET) must NOT silently accept signed
+// webhooks. Presented signature + missing secret → 401. No signature header at
+// all → dev-mode passthrough (200), so local/dev traffic without sigs still works.
+describe('Meta webhook routers — fail-closed when secret missing', () => {
+  const saved = process.env.FB_APP_SECRET;
+  beforeEach(() => {
+    process.env.FB_APP_SECRET = ''; // secret NOT configured (prod misconfig)
+  });
+  afterEach(() => {
+    process.env.FB_APP_SECRET = saved;
+  });
+
+  it('createWebhookRouter: signed payload with no secret → 401 (secret-not-configured)', async () => {
+    const { app } = buildApp();
+    await request(app)
+      .post('/webhooks')
+      .set('Content-Type', 'application/json')
+      .set('x-hub-signature-256', sigFor(raw))
+      .send(raw)
+      .expect(401);
+  });
+
+  it('createWhatsappWebhookRouter: signed payload with no secret → 401 (secret-not-configured)', async () => {
+    const { app } = buildApp();
+    await request(app)
+      .post('/whatsapp-intelligence/webhook')
+      .set('Content-Type', 'application/json')
+      .set('x-hub-signature-256', sigFor(raw))
+      .send(raw)
+      .expect(401);
+  });
+
+  it('createWebhookRouter: no signature header → 200 (dev-mode passthrough)', async () => {
+    const { app } = buildApp();
+    await request(app)
+      .post('/webhooks')
+      .set('Content-Type', 'application/json')
+      .send(raw)
+      .expect(200);
+  });
+
+  it('createWhatsappWebhookRouter: no signature header → 200 (dev-mode passthrough)', async () => {
+    const { app } = buildApp();
+    await request(app)
+      .post('/whatsapp-intelligence/webhook')
+      .set('Content-Type', 'application/json')
+      .send(raw)
+      .expect(200);
+  });
+});
