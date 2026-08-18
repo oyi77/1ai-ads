@@ -125,11 +125,13 @@ describe('Meta webhook routers — raw-body signature', () => {
   });
 });
 
-// ── Fail-closed: a presented signature is mandatory when the secret is unset ──
-// Production misconfig (empty FB_APP_SECRET) must NOT silently accept signed
-// webhooks. Presented signature + missing secret → 401. No signature header at
-// all → dev-mode passthrough (200), so local/dev traffic without sigs still works.
-describe('Meta webhook routers — fail-closed when secret missing', () => {
+// ── Fail-open-with-verification: verify only when secret is configured ──
+// Honors the operator's intended design (commit 7f701f7): if FB_APP_SECRET is
+// set AND a signature header is present, verify it (mismatch → 401). If the
+// secret is unset (e.g. prod misconfig), the request is accepted regardless of
+// signature (fail-open), so Meta-signed deliveries keep flowing. No signature
+// header at all → dev-mode passthrough (200).
+describe('Meta webhook routers — verify only when secret configured', () => {
   const saved = process.env.FB_APP_SECRET;
   beforeEach(() => {
     process.env.FB_APP_SECRET = ''; // secret NOT configured (prod misconfig)
@@ -138,24 +140,24 @@ describe('Meta webhook routers — fail-closed when secret missing', () => {
     process.env.FB_APP_SECRET = saved;
   });
 
-  it('createWebhookRouter: signed payload with no secret → 401 (secret-not-configured)', async () => {
+  it('createWebhookRouter: signed payload with no secret → 200 (fail-open)', async () => {
     const { app } = buildApp();
     await request(app)
       .post('/webhooks')
       .set('Content-Type', 'application/json')
       .set('x-hub-signature-256', sigFor(raw))
       .send(raw)
-      .expect(401);
+      .expect(200);
   });
 
-  it('createWhatsappWebhookRouter: signed payload with no secret → 401 (secret-not-configured)', async () => {
+  it('createWhatsappWebhookRouter: signed payload with no secret → 200 (fail-open)', async () => {
     const { app } = buildApp();
     await request(app)
       .post('/whatsapp-intelligence/webhook')
       .set('Content-Type', 'application/json')
       .set('x-hub-signature-256', sigFor(raw))
       .send(raw)
-      .expect(401);
+      .expect(200);
   });
 
   it('createWebhookRouter: no signature header → 200 (dev-mode passthrough)', async () => {
