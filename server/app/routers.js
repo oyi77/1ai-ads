@@ -17,6 +17,7 @@ import { createReportingGroupRouter } from '../routes/_reporting.js';
 import { createAutomationGroupRouter } from '../routes/_automation.js';
 import { createMcpGroupRouter } from '../routes/_mcp.js';
 import { createBoostRouter } from '../routes/boost.js';
+import { createWebhookRouter } from '../routes/webhooks.js';
 import { createWhatsappIntelligenceGroupRouter } from '../routes/_whatsapp-intelligence.js';
 import { createApprovalsRouter } from '../routes/approvals.js';
 
@@ -84,6 +85,8 @@ export function createRouters({ app, repos, services }) {
 
   // ── WhatsApp Intelligence ─────────────────────────────
   app.use('/', createWhatsappIntelligenceGroupRouter(deps));
+  // ── Meta webhook (public, no auth) ───────────────────────
+  app.use('/webhooks', createWebhookRouter(repos.webhookEventsRepo));
 
   // ── Tracking (public) ────────────────────────────────────────
   app.use('/t', createTrackRouter(repos.adUtmMapRepo, services.utmTagger));

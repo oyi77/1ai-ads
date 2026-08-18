@@ -10,7 +10,6 @@ import { createBulkRouter } from './bulk.js';
 import { createPixelRouter } from './pixels.js';
 import { createAdsetsRouter } from './adsets.js';
 import { createInvoicesRouter } from './invoices.js';
-import { createWebhookRouter } from './webhooks.js';
 
 export function createCampaignsGroupRouter({ repos, services }) {
   const router = Router();
@@ -24,6 +23,5 @@ export function createCampaignsGroupRouter({ repos, services }) {
   router.use('/ops/bulk', requireAuth, createBulkRouter(services.bulkOperations));
   router.use('/batch', requireAuth, createBatchRouter(services.metaApi));
   router.use('/pixels', requireAuth, createPixelRouter(services.metaApi));
-  router.use('/webhooks', createWebhookRouter(repos.webhookEventsRepo));
   return router;
 }
