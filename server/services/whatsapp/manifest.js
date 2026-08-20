@@ -7,5 +7,7 @@ export default {
   routePath: 'whatsapp-ads',
   icon: 'MessageCircle',
   envPrefix: 'WHATSAPP',
-  hasCustomRoutes: false,
+  hasCustomRoutes: true,
+  routeModule: '../routes/whatsapp-ads.js',
+  routeFactory: 'createWhatsAppAdsRouter',
 };
