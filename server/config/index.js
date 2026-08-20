@@ -80,6 +80,7 @@ const config = {
  get telegramBotToken() { return process.env.TELEGRAM_BOT_TOKEN || ''; },
  get telegramChatId() { return process.env.TELEGRAM_CHAT_ID || ''; },
  get webhookVerifyToken() { return process.env.WEBHOOK_VERIFY_TOKEN || ''; },
+ get scalevWebhookSecret() { return process.env.SCALEV_WEBHOOK_SECRET || ''; },
  get aiPipelineDirectUrl() { return process.env.AI_PIPELINE_DIRECT_URL || ''; },
  get aiPipelineDirectApiKey() { return process.env.AI_PIPELINE_DIRECT_API_KEY || ''; },
  get aiPipelineDefaultModel() { return process.env.AI_PIPELINE_DEFAULT_MODEL || ''; },

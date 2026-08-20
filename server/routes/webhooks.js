@@ -23,27 +23,36 @@ export function createWebhookRouter(webhookEventsRepo) {
   router.post('/', async (req, res) => {
     const rawBody = req.rawBody;
     const signature = req.headers['x-hub-signature-256'];
-    if (signature && config.fbAppSecret) {
-      if (!handler.verifySignature(config.fbAppSecret, rawBody, signature)) {
-        return res.status(401).send('Invalid signature');
-      }
+    if (!config.fbAppSecret) {
+      log.error('FB_APP_SECRET unset — webhook rejected (fail-closed)');
+      return res.status(500).send('Configuration error');
     }
-
-    const events = await handler.processEvent(req.body);
-    if (events.length > 0) {
-      try {
-        for (const event of events) {
-          webhookEventsRepo.create({
-            source: event.field || 'meta',
-            eventType: event.entryId || '',
-            payload: event.value || {},
-          });
+    if (!signature) {
+      return res.status(401).send('Missing signature');
+    }
+    if (!handler.verifySignature(config.fbAppSecret, rawBody, signature)) {
+      return res.status(401).send('Invalid signature');
+    }
+    try {
+      const events = await handler.processEvent(req.body);
+      if (events.length > 0) {
+        try {
+          for (const event of events) {
+            webhookEventsRepo.create({
+              source: event.field || 'meta',
+              eventType: event.entryId || '',
+              payload: event.value || {},
+            });
+          }
+        } catch (err) {
+          log.error('Failed to store webhook events', { error: err.message });
         }
-      } catch (err) {
-        log.error('Failed to store webhook events', { error: err.message });
       }
+      res.status(200).send('OK');
+    } catch (err) {
+      log.error('webhook_process_error', { error: err.message });
+      res.status(500).send('Processing error');
     }
-    res.status(200).send('OK');
   });
 
   return router;

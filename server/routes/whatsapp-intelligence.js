@@ -4,9 +4,6 @@ import config from '../config/index.js';
 import { WebhookHandler } from '../services/webhook-handler.js';
 
 const log = createLogger('wa-intelligence-routes');
-if (!config.fbAppSecret) {
-  log.warn('FB_APP_SECRET is not set — WhatsApp webhook signature verification is DISABLED (requests accepted fail-open)');
-}
 
 /**
  * Public webhook router — Meta WhatsApp Cloud API verification + event delivery.
@@ -33,10 +30,15 @@ export function createWhatsappWebhookRouter(whatsAppIntelligence) {
   router.post('/', async (req, res) => {
     const rawBody = req.rawBody;
     const signature = req.headers['x-hub-signature-256'];
-    if (signature && config.fbAppSecret) {
-      if (!handler.verifySignature(config.fbAppSecret, rawBody, signature)) {
-        return res.status(401).send('Invalid signature');
-      }
+    if (!config.fbAppSecret) {
+      log.error('FB_APP_SECRET unset — WhatsApp webhook rejected (fail-closed)');
+      return res.status(500).send('Configuration error');
+    }
+    if (!signature) {
+      return res.status(401).send('Missing signature');
+    }
+    if (!handler.verifySignature(config.fbAppSecret, rawBody, signature)) {
+      return res.status(401).send('Invalid signature');
     }
     try {
       const result = await whatsAppIntelligence.processWebhook(req.body);
@@ -44,7 +46,7 @@ export function createWhatsappWebhookRouter(whatsAppIntelligence) {
       res.status(200).send('OK');
     } catch (err) {
       log.error('wa_webhook_error', { error: err.message });
-      res.status(200).send('OK'); // Always return 200 to acknowledge delivery
+      res.status(500).send('Processing error');
     }
   });
 

@@ -31,18 +31,10 @@ export function createRouters({ app, repos, services }) {
     validate: { xForwardedForHeader: false },
   });
 
-  const userRateLimit = rateLimit({
-    windowMs: 60000,
-    max: 200,
-    message: { success: false, error: 'Rate limit exceeded' },
-    standardHeaders: true,
-    legacyHeaders: false,
-    validate: { xForwardedForHeader: false, keyGeneratorIpFallback: false },
-  });
 
   const mcpClient = services.mcpClient;
 
-  const deps = { repos, services, publicRateLimit, userRateLimit, mcpClient };
+  const deps = { repos, services, publicRateLimit, mcpClient };
 
   // ── Server-Rendered Dashboard Pages (BEFORE API routes) ───
   // Only serve EJS pages when React SPA dist doesn't exist.

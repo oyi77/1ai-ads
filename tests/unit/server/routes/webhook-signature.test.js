@@ -125,56 +125,72 @@ describe('Meta webhook routers — raw-body signature', () => {
   });
 });
 
-// ── Fail-open-with-verification: verify only when secret is configured ──
-// Honors the operator's intended design (commit 7f701f7): if FB_APP_SECRET is
-// set AND a signature header is present, verify it (mismatch → 401). If the
-// secret is unset (e.g. prod misconfig), the request is accepted regardless of
-// signature (fail-open), so Meta-signed deliveries keep flowing. No signature
-// header at all → dev-mode passthrough (200).
-describe('Meta webhook routers — verify only when secret configured', () => {
+// ── Fail-closed: reject when secret absent or signature missing ──
+// Security mandate: a Meta webhook must be verifiable. With no FB_APP_SECRET
+// configured, the endpoint cannot verify → 500 (config error). With a secret set
+// but no signature header → 401. (Tampered-signature → 401 is covered above.)
+describe('Meta webhook routers — fail-closed when secret absent or signature missing', () => {
   const saved = process.env.FB_APP_SECRET;
-  beforeEach(() => {
-    process.env.FB_APP_SECRET = ''; // secret NOT configured (prod misconfig)
+
+  it('createWebhookRouter: signed payload with no secret → 500 (config error)', async () => {
+    process.env.FB_APP_SECRET = '';
+    const { app } = buildApp();
+    try {
+      await request(app)
+        .post('/webhooks')
+        .set('Content-Type', 'application/json')
+        .set('x-hub-signature-256', sigFor(raw))
+        .send(raw)
+        .expect(500);
+    } finally {
+      process.env.FB_APP_SECRET = saved;
+    }
   });
-  afterEach(() => {
+
+  it('createWhatsappWebhookRouter: signed payload with no secret → 500 (config error)', async () => {
+    process.env.FB_APP_SECRET = '';
+    const { app } = buildApp();
+    try {
+      await request(app)
+        .post('/whatsapp-intelligence/webhook')
+        .set('Content-Type', 'application/json')
+        .set('x-hub-signature-256', sigFor(raw))
+        .send(raw)
+        .expect(500);
+    } finally {
+      process.env.FB_APP_SECRET = saved;
+    }
+  });
+
+  it('createWebhookRouter: no signature header with secret set → 401 (missing signature)', async () => {
+    process.env.FB_APP_SECRET = SECRET;
+    const { app } = buildApp();
+    try {
+      await request(app)
+        .post('/webhooks')
+        .set('Content-Type', 'application/json')
+        .send(raw)
+        .expect(401);
+    } finally {
+      process.env.FB_APP_SECRET = saved;
+    }
+  });
+
+  it('createWhatsappWebhookRouter: no signature header with secret set → 401 (missing signature)', async () => {
+    process.env.FB_APP_SECRET = SECRET;
+    const { app } = buildApp();
+    try {
+      await request(app)
+        .post('/whatsapp-intelligence/webhook')
+        .set('Content-Type', 'application/json')
+        .send(raw)
+        .expect(401);
+    } finally {
+      process.env.FB_APP_SECRET = saved;
+    }
+  });
+
+  afterAll(() => {
     process.env.FB_APP_SECRET = saved;
-  });
-
-  it('createWebhookRouter: signed payload with no secret → 200 (fail-open)', async () => {
-    const { app } = buildApp();
-    await request(app)
-      .post('/webhooks')
-      .set('Content-Type', 'application/json')
-      .set('x-hub-signature-256', sigFor(raw))
-      .send(raw)
-      .expect(200);
-  });
-
-  it('createWhatsappWebhookRouter: signed payload with no secret → 200 (fail-open)', async () => {
-    const { app } = buildApp();
-    await request(app)
-      .post('/whatsapp-intelligence/webhook')
-      .set('Content-Type', 'application/json')
-      .set('x-hub-signature-256', sigFor(raw))
-      .send(raw)
-      .expect(200);
-  });
-
-  it('createWebhookRouter: no signature header → 200 (dev-mode passthrough)', async () => {
-    const { app } = buildApp();
-    await request(app)
-      .post('/webhooks')
-      .set('Content-Type', 'application/json')
-      .send(raw)
-      .expect(200);
-  });
-
-  it('createWhatsappWebhookRouter: no signature header → 200 (dev-mode passthrough)', async () => {
-    const { app } = buildApp();
-    await request(app)
-      .post('/whatsapp-intelligence/webhook')
-      .set('Content-Type', 'application/json')
-      .send(raw)
-      .expect(200);
   });
 });

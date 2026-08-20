@@ -99,6 +99,11 @@ export function createApp(params) {
   // (bot.webhookCallback('/webhook/telegram')). No upstream proxy — the previous
   // forward to config.hermesBotUrl (:8443) pointed at a non-existent service.
 
+  // Audit log must be mounted BEFORE route handlers so all API mutations are recorded.
+  const auditRepo = new AuditLogRepository(db);
+  repos.auditRepo = auditRepo;
+  app.use(auditLog(auditRepo));
+
   // Scalev payment callback — handled locally (no upstream proxy).
   // Signature: x-scalev-signature = HMAC-SHA256(hex) of the raw body.
   app.post('/api/payments/notify', async (req, res) => {
@@ -106,16 +111,18 @@ export function createApp(params) {
     if (!signature) {
       return res.status(401).json({ error: 'Missing signature' });
     }
-    const secret = process.env.SCALEV_WEBHOOK_SECRET;
-    if (secret) {
-      const raw = req.rawBody || Buffer.from(JSON.stringify(req.body || {}));
-      const expected = crypto.createHmac('sha256', secret).update(raw).digest('hex');
-      const provided = String(signature).replace(/^sha256=/, '');
-      const valid = expected.length === provided.length &&
-        crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(provided));
-      if (!valid) {
-        return res.status(401).json({ error: 'Invalid signature' });
-      }
+    const secret = config.scalevWebhookSecret;
+    if (!secret) {
+      log.error('SCALEV_WEBHOOK_SECRET not configured — rejecting Scalev payment webhook (fail-closed)');
+      return res.status(500).json({ error: 'Webhook secret not configured' });
+    }
+    const raw = req.rawBody || Buffer.from(JSON.stringify(req.body || {}));
+    const expected = crypto.createHmac('sha256', secret).update(raw).digest('hex');
+    const provided = String(signature).replace(/^sha256=/, '');
+    const valid = expected.length === provided.length &&
+      crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(provided));
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid signature' });
     }
     try {
       const body = req.body || {};
@@ -134,8 +141,8 @@ export function createApp(params) {
       });
       return res.status(200).json({ ok: true });
     } catch (err) {
-      log.error('Scalev notify error', err.message);
-      return res.status(200).json({ ok: true, stored: false });
+      log.error('Scalev notify error', { error: err.message });
+      return res.status(500).json({ error: 'Processing failed' });
     }
   });
 
@@ -160,10 +167,6 @@ export function createApp(params) {
   });
 
 
-
-  const auditRepo = new AuditLogRepository(db);
-  repos.auditRepo = auditRepo;
-  app.use(auditLog(auditRepo));
 
   createRouters({ app, repos, services });
 
