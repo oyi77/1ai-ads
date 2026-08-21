@@ -56,6 +56,9 @@ export function handleLogin(usersRepo, refreshTokensRepo) {
         return res.status(401).json({ success: false, error: 'Invalid credentials' });
       }
 
+      if (user.is_active === 0) {
+        return res.status(401).json({ success: false, error: 'Account disabled' });
+      }
       refreshTokensRepo.deleteByUserId(user.id);
       const accessToken = generateToken({ id: user.id, username: user.username, role: user.role || 'user', plan: user.plan || 'free' });
       const refreshToken = generateRefreshToken({ id: user.id, username: user.username });
@@ -92,9 +95,12 @@ export function handleRefreshToken(usersRepo, refreshTokensRepo) {
       }
 
       const user = usersRepo.findById(payload.id);
-      if (!user) return res.status(401).json({ success: false, error: 'User not found' });
-
+      if (user.is_active === 0) {
+        refreshTokensRepo.deleteByToken(refreshToken);
+        return res.status(401).json({ success: false, error: 'Account disabled' });
+      }
       const newAccessToken = generateToken({ id: user.id, username: user.username, role: user.role || 'user', plan: user.plan || 'free' });
+
       const newRefreshToken = generateRefreshToken({ id: user.id, username: user.username });
       refreshTokensRepo.deleteByToken(refreshToken);
       const expiresAt = new Date();

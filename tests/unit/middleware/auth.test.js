@@ -71,6 +71,19 @@ describe('requireAuth middleware', () => {
     requireAuth(req, res, next);
     expect(next).toHaveBeenCalled();
   });
+  it('rejects token for a disabled user (is_active = 0, admin soft-delete / ban)', () => {
+    // The admin disable path (DELETE /api/admin/users/:id, PUT /api/admin/users/:id
+    // { is_active: 0 }) does not remove the row, so a deleted-row existence check
+    // is insufficient — an is_active=0 user must also be rejected.
+    const token = generateToken({ id: 'banned-1', username: 'banned' });
+    const { req, res } = mockReqRes(`Bearer ${token}`);
+    req.app = { locals: { usersRepo: { findById: () => ({ id: 'banned-1', is_active: 0 }) } } };
+    const next = vi.fn();
+
+    expect(() => requireAuth(req, res, next)).toThrow(AuthError);
+    expect(next).not.toHaveBeenCalled();
+  });
+
 
   it('passes through when no usersRepo is available (test harness)', () => {
     const token = generateToken({ id: '2', username: 'test' });
