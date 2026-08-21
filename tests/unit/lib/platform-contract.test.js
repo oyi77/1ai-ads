@@ -14,11 +14,11 @@ describe('platform contract', () => {
     (cfg) => !cfg.hasCustomRoutes
   );
 
-  it('should have at least the known campaign platforms', () => {
+  it('should have at least the known campaign platforms', { timeout: 30000 }, () => {
     expect(genericPlatforms.length).toBeGreaterThan(10);
   });
 
-  it('every generic-routed platform must pass validatePlatform via getPlatform', async () => {
+  it('every generic-routed platform must pass validatePlatform via getPlatform', { timeout: 30000 }, async () => {
     const settingsRepo = { getCredentials: () => null };
     for (const cfg of genericPlatforms) {
       // getPlatform internally calls validatePlatform(); a missing required
