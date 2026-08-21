@@ -31,22 +31,25 @@ export async function subscribeUserWebhook(userId, userMetaAppsRepo, opts = {}) 
     return { ok: false, status: 0, body: { error: 'no_app_secret' } };
   }
 
-  const apiVersion = opts.apiVersion || creds.apiVersion || config.metaApiVersion;
+  const apiVersion = (opts.apiVersion || creds.apiVersion || config.metaApiVersion || 'v22.0').replace(/^v?/, 'v');
   const host = opts.host || process.env.TELEGRAM_WEBHOOK_HOST || 'adforge.aitradepulse.com';
   const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
   const callbackUrl = `${protocol}://${host}/webhooks/u/${userId}`;
 
+  // Graph API subscriptions: access_token MUST be the app access token
+  // (APP_ID|APP_SECRET) passed as a query param; `object` is singular and
+  // `feed` is the only field grantable with a System User token here.
   const params = new URLSearchParams({
-    client_id: creds.app_id,
-    client_secret: creds.app_secret,
+    object: 'user',
     callback_url: callbackUrl,
     verify_token: String(userId),
-    objects: 'page',
-    fields: 'feed,messages',
+    fields: 'feed',
     include_values: 'true',
+    // app-access-token in body avoids URL-query `|` encoding quirks across Node/undici versions
+    access_token: `${creds.app_id}|${creds.app_secret}`,
   });
 
-  const url = `https://graph.facebook.com/v${apiVersion}/${creds.app_id}/subscriptions`;
+  const url = `https://graph.facebook.com/${apiVersion}/${creds.app_id}/subscriptions`;
   try {
     const res = await fetch(url, { method: 'POST', body: params });
     const body = await res.json().catch(() => ({}));
