@@ -49,4 +49,35 @@ describe('requireAuth middleware', () => {
 
     expect(() => requireAuth(req, res, next)).toThrow(AuthError);
   });
+
+  it('rejects token for a user that no longer exists (GDPR erase)', () => {
+    // Production sets app.locals.usersRepo; simulate it with a findById that
+    // returns null (deleted user). A stateless JWT otherwise survives deletion.
+    const token = generateToken({ id: 'ghost-1', username: 'gone' });
+    const { req, res } = mockReqRes(`Bearer ${token}`);
+    req.app = { locals: { usersRepo: { findById: () => null } } };
+    const next = vi.fn();
+
+    expect(() => requireAuth(req, res, next)).toThrow(AuthError);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('accepts token when usersRepo finds the user', () => {
+    const token = generateToken({ id: 'alive-1', username: 'ok' });
+    const { req, res } = mockReqRes(`Bearer ${token}`);
+    req.app = { locals: { usersRepo: { findById: () => ({ id: 'alive-1' }) } } };
+    const next = vi.fn();
+
+    requireAuth(req, res, next);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('passes through when no usersRepo is available (test harness)', () => {
+    const token = generateToken({ id: '2', username: 'test' });
+    const { req, res } = mockReqRes(`Bearer ${token}`);
+    const next = vi.fn();
+
+    requireAuth(req, res, next);
+    expect(next).toHaveBeenCalled();
+  });
 });

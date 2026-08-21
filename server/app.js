@@ -222,20 +222,27 @@ export function startServices(app) {
   webhookProcessor.start();
   dataCleanup.start();
   fatigueDetector.start();
-  // CAPI health checks Meta ad accounts (act_<id> or numeric id), not platform
-  // user rows. Filter out UUIDs and seeded demo users to avoid Graph API 400s.
-  // CAPI health checks each Meta ad account using its OWNER's token (multi-tenant).
-  // platformAccountsRepo.getAccounts('meta') returns rows keyed by Meta ad account id
-  // with user_id; resolveOwnerPlatformToken fetches that owner's bound Meta access token.
+  // CAPI health checks each Meta AD ACCOUNT (act_<id> / numeric id) using its
+  // OWNER's bound token (multi-tenant). The real Meta node id is stored in
+  // credentials.ad_account_id — NOT platform_accounts.id (an internal UUID).
+  // Passing the internal UUID to the Graph API is what produced the repeated
+  // `Object with ID '<uuid>' does not exist` 400s. Skip rows with no
+  // ad_account_id and seeded demo rows (demo-meta-token-*) which aren't real
+  // Meta ad accounts.
   capiMonitor.start(() => {
     const accounts = platformAccountsRepo.getAccounts('meta');
     return accounts
-      .filter(a => a.platform === 'meta' && a.user_id)
-      .map(a => ({
-        accountId: a.id,
-        token: resolveOwnerPlatformToken('meta', a.user_id, { platformAccountsRepo, settingsRepo }),
-      }))
-      .filter(x => x.token);
+      .filter(a => a.platform === 'meta' && a.user_id && a.credentials?.ad_account_id)
+      .map(a => {
+        const raw = String(a.credentials.ad_account_id);
+        const accountId = raw.startsWith('act_') ? raw : `act_${raw}`;
+        const token = resolveOwnerPlatformToken('meta', a.user_id, { platformAccountsRepo, settingsRepo });
+        // Skip placeholder/demo tokens (e.g. demo-meta-token-*) — not real
+        // Meta connections, so their Graph calls always 400 with bad-token.
+        if (!token || /^(demo|test|fake|placeholder)/i.test(token)) return null;
+        return { accountId, token };
+      })
+      .filter(Boolean);
   });
 
   log.info('Background services started');
