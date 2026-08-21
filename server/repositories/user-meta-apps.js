@@ -69,6 +69,12 @@ export class UserMetaAppsRepository {
   upsert(userId, fields) {
     const id = uuid();
     const now = new Date().toISOString();
+    // Accept both snake_case (REST handler) and camelCase (model layer / tests).
+    const appId = fields.appId ?? fields.app_id;
+    const appSecret = fields.appSecret ?? fields.app_secret;
+    const systemToken = fields.systemToken ?? fields.system_token;
+    const threadsId = fields.threadsId ?? fields.threads_id ?? null;
+    const threadsSecret = fields.threadsSecret ?? fields.threads_secret ?? null;
     const tx = this.db.transaction(() => {
       this.db
         .prepare('UPDATE user_meta_apps SET is_active = 0 WHERE user_id = ?')
@@ -82,11 +88,11 @@ export class UserMetaAppsRepository {
         .run(
           id,
           String(userId),
-          fields.appId,
-          encryptToken(fields.appSecret),
-          encryptToken(fields.systemToken),
-          fields.threadsId || null,
-          fields.threadsSecret ? encryptToken(fields.threadsSecret) : null,
+          appId,
+          encryptToken(appSecret),
+          encryptToken(systemToken),
+          threadsId || null,
+          threadsSecret ? encryptToken(threadsSecret) : null,
           now,
           now,
         );
