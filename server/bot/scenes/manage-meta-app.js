@@ -12,6 +12,7 @@
  */
 import { Scenes } from 'telegraf';
 import { createLogger } from '../../lib/logger.js';
+import { subscribeUserWebhook } from '../../lib/meta-subscribe.js';
 
 const log = createLogger('bot:scene:metaapp');
 
@@ -117,6 +118,11 @@ export const manageMetaAppScene = new Scenes.WizardScene(
         threadsId,
         threadsSecret,
       });
+      // Best-effort: subscribe the user's Meta app to their per-user webhook.
+      // Parity with REST /api/meta-app. A failure here does not fail the save.
+      subscribeUserWebhook(ctx.userId, repo).catch((err) =>
+        log.warn('meta_app_subscribe_async_failed', { userId: ctx.userId, error: err.message })
+      );
       log.info('Meta App Creds saved via bot', {
         userId: ctx.userId,
         appId,
