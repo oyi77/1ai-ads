@@ -9,6 +9,18 @@ export class FacebookSystemUserService {
     this.baseUrl = `https://graph.facebook.com/${apiVersion}`;
   }
 
+  /** Build a fresh instance from resolved user creds (no shared operator token). */
+  static fromCreds({ system_token, apiVersion }) {
+    return new FacebookSystemUserService({ systemToken: system_token, apiVersion: apiVersion || 'v22.0' });
+  }
+
+  /** Re-point this instance at a different token (per-request isolation). */
+  setCreds({ systemToken, apiVersion }) {
+    if (systemToken) this.systemToken = systemToken;
+    if (apiVersion) this.baseUrl = `https://graph.facebook.com/${apiVersion}`;
+    return this;
+  }
+
   async _graphGet(path, params = {}) {
     const url = new URL(`${this.baseUrl}${path}`);
     url.searchParams.set('access_token', this.systemToken);

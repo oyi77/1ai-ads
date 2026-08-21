@@ -1,10 +1,11 @@
 import crypto from 'crypto';
 import { createLogger } from '../lib/logger.js';
+import { buildUserMetaClients } from '../lib/meta-user-factory.js';
 
-const log = createLogger('whatsapp-intelligence');
+const log = createLogger('whatsapp_intelligence');
 
 export class WhatsAppIntelligenceService {
-  constructor({ waConversationsRepo, metaApi, whatsappApi, llmClient, db, settingsRepo, config }) {
+  constructor({ waConversationsRepo, metaApi, whatsappApi, llmClient, db, settingsRepo, config, userMetaAppsRepo }) {
     this.repo = waConversationsRepo;
     this.metaApi = metaApi;
     this.whatsappApi = whatsappApi;
@@ -12,6 +13,7 @@ export class WhatsAppIntelligenceService {
     this.db = db;
     this.settings = settingsRepo;
     this.config = config;
+    this.userMetaAppsRepo = userMetaAppsRepo;
     this._pixelId = null;
   }
 
@@ -284,15 +286,22 @@ Return ONLY valid JSON, no markdown, no explanation.`;
     }
 
   // ── WhatsApp Sending ───────────────────────────────────────────
-
-  async sendWhatsAppMessage(phoneNumberId, to, text) {
+  async sendWhatsAppMessage(phoneNumberId, to, text, userId = null) {
     if (!phoneNumberId || !to || !text) {
       log.warn('send_message_missing_params', { phoneNumberId, to });
       return null;
     }
 
+    // Per-user App Creds routing: use the user's system token for WhatsApp send
+    // when available, otherwise fall back to the shared (global env) client.
+    let api = this.whatsappApi;
+    if (userId && this.userMetaAppsRepo) {
+      const clients = buildUserMetaClients(userId, this.userMetaAppsRepo);
+      if (clients.whatsappApi) api = clients.whatsappApi;
+    }
+
     try {
-      const result = await this.whatsappApi.sendMessage(phoneNumberId, to, { type: 'text', text: { body: text } });
+      const result = await api.sendMessage(phoneNumberId, to, { type: 'text', text: { body: text } });
 
       const ok = !result?.error;
       if (ok) {

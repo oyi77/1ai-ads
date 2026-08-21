@@ -45,7 +45,8 @@ const config = {
   get fbAppId() { return process.env.FB_APP_ID || ''; },
   get fbAppSecret() { return process.env.FB_APP_SECRET || ''; },
   get fbSystemToken() { return process.env.FB_SYSTEM_TOKEN || ''; },
-  get fbWhatsappToken() { return process.env.FB_WHATSAPP_TOKEN || ''; },
+  get fbThreadsId() { return process.env.FB_THREADS_ID || ''; },
+  get fbThreadsSecret() { return process.env.FB_THREADS_SECRET || ''; },
   get llm() {
     return {
       url: process.env.OMNIROUTE_URL || 'http://localhost:20128/v1/chat/completions',

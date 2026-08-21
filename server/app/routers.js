@@ -18,8 +18,10 @@ import { createAutomationGroupRouter } from '../routes/_automation.js';
 import { createMcpGroupRouter } from '../routes/_mcp.js';
 import { createBoostRouter } from '../routes/boost.js';
 import { createWebhookRouter } from '../routes/webhooks.js';
+import { createUserWebhookRouter } from '../routes/webhooks-user.js';
 import { createWhatsappIntelligenceGroupRouter } from '../routes/_whatsapp-intelligence.js';
 import { createApprovalsRouter } from '../routes/approvals.js';
+import { createMetaAppRouter } from '../routes/meta-app.js';
 
 export function createRouters({ app, repos, services }) {
   const publicRateLimit = rateLimit({
@@ -79,6 +81,10 @@ export function createRouters({ app, repos, services }) {
   app.use('/', createWhatsappIntelligenceGroupRouter(deps));
   // ── Meta webhook (public, no auth) ───────────────────────
   app.use('/webhooks', createWebhookRouter(repos.webhookEventsRepo));
+  // ── Per-user Meta webhook (verify token = userId, signed w/ user app_secret) ──
+  app.use('/webhooks/u', createUserWebhookRouter(repos.userMetaAppsRepo));
+  // ── Per-user Meta App Creds (REST) ──────────────────────────
+  app.use('/api/meta-app', createMetaAppRouter(repos.userMetaAppsRepo));
 
   // ── Tracking (public) ────────────────────────────────────────
   app.use('/t', createTrackRouter(repos.adUtmMapRepo, services.utmTagger));

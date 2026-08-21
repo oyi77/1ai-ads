@@ -24,6 +24,7 @@ import { AuditLogRepository } from '../repositories/audit-log.js';
 import { BoostRecommendationsRepository } from '../repositories/boost-recommendations.js';
 import { WaConversationsRepository } from '../repositories/wa-conversations.js';
 import { TargetingSuggestionsRepository } from '../repositories/targeting-suggestions.js';
+import { UserMetaAppsRepository } from '../repositories/user-meta-apps.js';
 
 export function createRepositories(db) {
   const scheduleRepo = new ScheduleRepository(db);
@@ -63,5 +64,6 @@ export function createRepositories(db) {
     invoicesRepo: new InvoicesRepository(db),
     savedAudiencesRepo: new SavedAudiencesRepository(db),
     waConversationsRepo: new WaConversationsRepository(db),
+    userMetaAppsRepo: new UserMetaAppsRepository(db),
   };
 }

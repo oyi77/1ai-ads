@@ -9,6 +9,13 @@ export class WhatsAppAdsAPI extends BasePlatformApiClient {
   constructor(settingsRepo) {
     super('whatsapp', settingsRepo, { baseUrl: BASE });
   }
+
+  /** Per-user WABA token injection (system-user or per-app token). */
+  static withToken(token) {
+    const api = new WhatsAppAdsAPI(null);
+    api.setActiveAccount(null, token);
+    return api;
+  }
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
     if (!this._userScoped) {

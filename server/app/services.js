@@ -140,6 +140,7 @@ export function createServices({ db, repos, params }) {
     db,
     settingsRepo: repos.settingsRepo,
     config,
+    userMetaAppsRepo: repos.userMetaAppsRepo,
   });
   const boostApproval = new BoostApprovalService(repos.boostRecommendationsRepo, repos.settingsRepo);
   const mcpClient = params?.mcpClient;

@@ -26,6 +26,7 @@ import { initScheduler } from './scheduler.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { identify } from './middleware/identify.js';
 import { connectScene } from './scenes/connect-account.js';
+import { manageMetaAppScene } from './scenes/manage-meta-app.js';
 
 const log = createLogger('bot');
 
@@ -53,9 +54,9 @@ export function initBot(app, deps) {
 
   // Identify/auto-bind Telegram user -> local multi-tenant account
   bot.use(identify(deps));
-  // Session + Stage middleware — REQUIRED for WizardScene (connect flow)
+  // Session + Stage middleware — REQUIRED for WizardScene (connect + meta-app flows)
   bot.use(session());
-  const stage = new Scenes.Stage([connectScene]);
+  const stage = new Scenes.Stage([connectScene, manageMetaAppScene]);
   bot.use(stage);
 
   // ── Commands ─────────────────────────────────────────────
@@ -71,7 +72,7 @@ export function initBot(app, deps) {
   bot.command('admin_broadcast', handleAdminBroadcast(deps));
   bot.command('fbads', handleFbAds(deps));
   bot.command('ads', handleAds(deps));
-
+  bot.command('metaapp', (ctx) => ctx.scene.enter('manage-meta-app'));
   // ── Callback queries (inline buttons) ────────────────────
   bot.action(/^menu:/, handleMenuButton(deps));
   bot.action(/^settings:(.+)$/, handleSettingsCallback(deps));
