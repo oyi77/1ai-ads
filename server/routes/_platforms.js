@@ -40,7 +40,7 @@ export function createPlatformsGroupRouter({ repos, services, publicRateLimit })
   const router = Router();
 
   // ── Platform metadata endpoint (for frontend) ───────────────
-  router.get('/api/platforms', (_req, res) => {
+  router.get('/platforms', (_req, res) => {
     const platforms = Object.entries(PLATFORM_REGISTRY).map(([, cfg]) => ({
       key: cfg.key,
       label: cfg.label,
