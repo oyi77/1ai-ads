@@ -17,11 +17,6 @@ const { withToken } = vi.hoisted(() => ({ withToken: vi.fn((token) => ({ __token
 vi.mock('../../../../server/services/meta/index.js', () => ({
   MetaAdsAPI: { withToken },
 }));
-// ── Mock jwt so routes that verify inline resolve req.user.id ──
-vi.mock('jsonwebtoken', () => ({
-  default: { verify: () => ({ id: 'user-1' }) },
-  verify: () => ({ id: 'user-1' }),
-}));
 // ── Mock global fetch (no real Meta calls) ────────────────────
 vi.stubGlobal(
   'fetch',
@@ -51,14 +46,16 @@ function createApp(platformAccountsRepo, settingsRepo) {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    // Simulate requireAuth
+    // Simulate requireAuth: a real bearer token populates req.user.id; an
+    // absent token means the request was never authenticated (401 upstream).
     const auth = req.headers.authorization?.replace('Bearer ', '');
-    req.user = auth ? { id: 'user-1', sub: 'user-1', token: auth } : { id: 'default' };
+    req.user = auth ? { id: 'user-1', sub: 'user-1', token: auth } : null;
     next();
   });
   app.use('/api/meta', createMetaAccountsRouter(settingsRepo, platformAccountsRepo));
   return app;
 }
+
 
 describe('meta-accounts router — per-user token scoping', () => {
   let platformAccountsRepo;
@@ -122,6 +119,8 @@ describe('meta-accounts router — per-user token scoping', () => {
   it('returns 401 when authentication missing', async () => {
     const app = createApp(platformAccountsRepo, settingsRepo);
     const res = await request(app).get('/api/meta/business-managers');
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
   });
 
   it('returns 400 when user has no connected Meta account', async () => {

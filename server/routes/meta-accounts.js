@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import config from '../config/index.js';
 import { v4 as uuid } from 'uuid';
-import jwt from 'jsonwebtoken';
 import { MetaAdsAPI } from '../services/meta/index.js';
 import { createLogger } from '../lib/logger.js';
 
@@ -10,12 +9,25 @@ const log = createLogger('meta-accounts');
 /**
  * Per-user Meta account router.
  * Each requesting user binds AND uses their own Meta token (SaaS multi-tenancy).
- * Falls back to the system token only when the user has no bound account.
+ * No system-wide fallback: an unbound user simply gets a 400/401.
+ *
+ * This router is mounted under `requireAuth` (server/routes/_platforms.js), so
+ * `req.user.id` is verified upstream; the inline guard below is a fail-closed
+ * normalization in case it is mounted without auth.
  */
 export function createMetaAccountsRouter(settingsRepo, platformAccountsRepo) {
   const router = Router();
-  const API_VERSION = config.metaApiVersion;
+  // Self-contained auth guard (router is mounted under requireAuth, but we
+  // normalize here: any request without a verified user fails closed with 401
+  // instead of throwing on req.user.id later).
+  router.use((req, res, next) => {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+    next();
+  });
 
+  const API_VERSION = config.metaApiVersion;
   /**
    * Resolve the Meta access token for the authenticated user.
    * 1. Per-user binding in platform_accounts (user_id + platform = 'meta').
@@ -52,7 +64,7 @@ export function createMetaAccountsRouter(settingsRepo, platformAccountsRepo) {
   // GET /api/meta/accounts - Fetch all Ad Accounts for current user
   router.get('/', async (req, res) => {
     try {
-      const userId = req.user?.id || req.user?.sub || 'default';
+      const userId = req.user.id;
       const { token } = resolveUserMeta(userId);
       if (!token) return unauthorized(res);
 
@@ -84,17 +96,7 @@ export function createMetaAccountsRouter(settingsRepo, platformAccountsRepo) {
   // GET /api/meta/business-managers - Fetch Business Managers
   router.get('/business-managers', async (req, res) => {
     try {
-      const token = req.headers.authorization?.replace('Bearer ', '');
-      if (!token) return res.status(401).json({ success: false, error: 'Authentication required' });
-
-      let decoded;
-      try {
-        decoded = jwt.verify(token, config.jwtSecret);
-      } catch {
-        return res.status(401).json({ success: false, error: 'Invalid token' });
-      }
-
-      const { token: metaToken } = resolveUserMeta(decoded.id);
+      const { token: metaToken } = resolveUserMeta(req.user.id);
       if (!metaToken) return unauthorized(res, 'Meta account not connected');
 
       const bizManagersUrl = `https://graph.facebook.com/${API_VERSION}/me/businesses?fields=id,name,username,platform_type&access_token=${metaToken}`;
@@ -123,17 +125,7 @@ export function createMetaAccountsRouter(settingsRepo, platformAccountsRepo) {
   router.get('/business-manager/:id/ad-accounts', async (req, res) => {
     try {
       const businessManagerId = req.params.id;
-      const token = req.headers.authorization?.replace('Bearer ', '');
-      if (!token) return res.status(401).json({ success: false, error: 'Authentication required' });
-
-      let decoded;
-      try {
-        decoded = jwt.verify(token, config.jwtSecret);
-      } catch {
-        return res.status(401).json({ success: false, error: 'Invalid token' });
-      }
-
-      const { token: metaToken } = resolveUserMeta(decoded.id);
+      const { token: metaToken } = resolveUserMeta(req.user.id);
       if (!metaToken) return unauthorized(res, 'Meta account not connected');
 
       const accountsUrl = `https://graph.facebook.com/${API_VERSION}/${businessManagerId}/adaccounts?fields=name,account_id,account_status,currency,business_name,budget_restriction_amount&access_token=${metaToken}`;
@@ -171,17 +163,7 @@ export function createMetaAccountsRouter(settingsRepo, platformAccountsRepo) {
   // GET /api/meta/pages — Fetch Facebook Pages (fanpages) for connected account
   router.get('/pages', async (req, res) => {
     try {
-      const token = req.headers.authorization?.replace('Bearer ', '');
-      if (!token) return res.status(401).json({ success: false, error: 'Authentication required' });
-
-      let decoded;
-      try {
-        decoded = jwt.verify(token, config.jwtSecret);
-      } catch {
-        return res.status(401).json({ success: false, error: 'Invalid token' });
-      }
-
-      const { token: metaToken } = resolveUserMeta(decoded.id);
+      const { token: metaToken } = resolveUserMeta(req.user.id);
       if (!metaToken) return unauthorized(res, 'Meta account not connected');
 
       const pagesUrl = `https://graph.facebook.com/${API_VERSION}/me/accounts?fields=id,name,category,access_token,perms,tasks&access_token=${metaToken}`;

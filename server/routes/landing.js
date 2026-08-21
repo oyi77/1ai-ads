@@ -6,6 +6,14 @@ const VALID_THEMES = ['dark', 'light'];
 export function createLandingRouter(landingRepo, landingGenerator) {
   const router = express.Router();
 
+  // Load a landing page only if it belongs to the requesting user.
+  // Returns null when missing OR owned by another user (never leaks existence).
+  const getOwnedPage = (id, userId) => {
+    const page = landingRepo.findById(id);
+    if (!page || page.user_id !== userId) return null;
+    return page;
+  };
+
   // GET /api/landing - List all landing pages
   router.get('/', (req, res) => {
     const userId = req.user?.id || 'system';
@@ -17,7 +25,7 @@ export function createLandingRouter(landingRepo, landingGenerator) {
 
   // GET /api/landing/:id - Get single landing page
   router.get('/:id', (req, res) => {
-    const page = landingRepo.findById(req.params.id);
+    const page = getOwnedPage(req.params.id, req.user.id);
     if (!page) {
       return res.status(404).json({ success: false, error: 'Landing page not found' });
     }
@@ -64,7 +72,7 @@ export function createLandingRouter(landingRepo, landingGenerator) {
       }
 
       let html = html_output;
-      
+
       if (!html) {
         if (req.body.is_ai) {
           html = await landingGenerator.generateLandingPage(
@@ -85,6 +93,7 @@ export function createLandingRouter(landingRepo, landingGenerator) {
       }
 
       const id = landingRepo.create({
+        userId: req.user.id,
         name: name || `Landing: ${product_name}`,
         template: template || 'dark',
         theme: theme || 'dark',
@@ -103,16 +112,17 @@ export function createLandingRouter(landingRepo, landingGenerator) {
 
   // PUT /api/landing/:id - Update landing page
   router.put('/:id', (req, res) => {
-    const page = landingRepo.update(req.params.id, req.body);
+    const page = getOwnedPage(req.params.id, req.user.id);
     if (!page) {
       return res.status(404).json({ success: false, error: 'Landing page not found' });
     }
-    res.json({ success: true, data: page });
+    const updated = landingRepo.update(req.params.id, req.body);
+    res.json({ success: true, data: updated });
   });
 
   // DELETE /api/landing/:id - Delete landing page
   router.delete('/:id', (req, res) => {
-    const existing = landingRepo.findById(req.params.id);
+    const existing = getOwnedPage(req.params.id, req.user.id);
     if (!existing) {
       return res.status(404).json({ success: false, error: 'Landing page not found' });
     }
@@ -122,26 +132,28 @@ export function createLandingRouter(landingRepo, landingGenerator) {
 
   // POST /api/landing/:id/deploy - Publish landing page
   router.post('/:id/deploy', (req, res) => {
-    const slug = req.body.slug;
-    const page = landingRepo.update(req.params.id, { is_published: true, slug: slug });
-    if (!page) {
+    const owned = getOwnedPage(req.params.id, req.user.id);
+    if (!owned) {
       return res.status(404).json({ success: false, error: 'Landing page not found' });
     }
+    const slug = req.body.slug;
+    const page = landingRepo.update(req.params.id, { is_published: true, slug: slug });
     res.json({ success: true, data: page });
   });
 
   // POST /api/landing/:id/undeploy - Unpublish landing page
   router.post('/:id/undeploy', (req, res) => {
-    const page = landingRepo.update(req.params.id, { is_published: false });
-    if (!page) {
+    const owned = getOwnedPage(req.params.id, req.user.id);
+    if (!owned) {
       return res.status(404).json({ success: false, error: 'Landing page not found' });
     }
+    const page = landingRepo.update(req.params.id, { is_published: false });
     res.json({ success: true, data: page });
   });
 
   // GET /api/landing/:id/export - Export landing page as HTML
   router.get('/:id/export', (req, res) => {
-    const page = landingRepo.findById(req.params.id);
+    const page = getOwnedPage(req.params.id, req.user.id);
     if (!page) {
       return res.status(404).json({ success: false, error: 'Landing page not found' });
     }
