@@ -280,9 +280,8 @@ export function handleAdsManage(deps) {
 }
 
 // ── Disconnect a specific connection by platform_accounts.id ──
-export function handleAdsDisconnectConfirm(deps) {
+export function handleAdsDisconnectConfirm(deps, id) {
   return async (ctx) => {
-    const id = ctx.match?.[1];
     const repo = deps?.repos?.platformAccountsRepo;
     if (!id || !repo) return ctx.reply('⚠️ Invalid request.');
     const row = repo.findById(id);

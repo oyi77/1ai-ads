@@ -130,8 +130,7 @@ describe('per-user ads handlers (disable/enable scoped to user token)', () => {
       findById: () => ({ id: 'acc1', user_id: 'u1', account_name: 'Acc1', platform: 'meta', is_active: 1 }),
     });
     const ctx = makeCtx('u1');
-    ctx.match = ['', 'acc1'];
-    await handleAdsDisconnectConfirm(deps)(ctx);
+    await handleAdsDisconnectConfirm(deps, 'acc1')(ctx);
     expect(deps.repos.platformAccountsRepo.update).toHaveBeenCalledWith('acc1', { is_active: 0 });
     expect(ctx._replies[0]).toContain('Disconnected');
   });
@@ -141,8 +140,7 @@ describe('per-user ads handlers (disable/enable scoped to user token)', () => {
       findById: () => ({ id: 'acc1', user_id: 'OTHER_USER', account_name: 'Acc1', platform: 'meta', is_active: 1 }),
     });
     const ctx = makeCtx('u1');
-    ctx.match = ['', 'acc1'];
-    await handleAdsDisconnectConfirm(deps)(ctx);
+    await handleAdsDisconnectConfirm(deps, 'acc1')(ctx);
     expect(ctx._replies[0]).toContain('Connection not found');
     expect(deps.repos.platformAccountsRepo.update).not.toHaveBeenCalled();
   });

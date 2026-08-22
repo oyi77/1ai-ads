@@ -83,7 +83,7 @@ export function initBot(app, deps) {
 bot.action(/^ads:disconnect(?::(.+))?$/, async (ctx) => {
     await ctx.answerCbQuery();
     const id = ctx.match?.[1];
-    const handler = id ? handleAdsDisconnectConfirm(deps) : handleAdsDisconnect(deps);
+    const handler = id ? handleAdsDisconnectConfirm(deps, id) : handleAdsDisconnect(deps);
     await handler(ctx);
   });
   bot.action(/^ads:manage$/, async (ctx) => {
