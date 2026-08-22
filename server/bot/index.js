@@ -18,9 +18,9 @@ import { handleMenu, handleMenuButton } from './commands/menu.js';
 import { handleStatus } from './commands/status.js';
 import { handleHelp } from './commands/help.js';
 import { handleSettings, handleSettingsCallback } from './commands/settings.js';
-import { handleMonitorCallback } from './commands/monitor.js';
+import { handleMonitor, handleMonitorCallback } from './commands/monitor.js';
 import { handleAdminStats, handleAdminUsers, handleAdminBroadcast } from './commands/admin.js';
-import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport, handleAdsDisconnect } from './commands/ads.js';
+import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm } from './commands/ads.js';
 import { handleFbAds } from './commands/fbads.js';
 import { initScheduler } from './scheduler.js';
 import { errorHandler } from './middleware/error-handler.js';
@@ -72,15 +72,29 @@ export function initBot(app, deps) {
   bot.command('admin_broadcast', handleAdminBroadcast(deps));
   bot.command('fbads', handleFbAds(deps));
   bot.command('ads', handleAds(deps));
-  bot.command('metaapp', (ctx) => ctx.scene.enter('manage-meta-app'));
+  bot.command('monitor', handleMonitor(deps));
   // ── Callback queries (inline buttons) ────────────────────
-  bot.action(/^menu:/, handleMenuButton(deps));
+  bot.action(/^menu:(.+)$/, handleMenuButton(deps));
   bot.action(/^settings:(.+)$/, handleSettingsCallback(deps));
   bot.action(/^ads:select:(.+)$/, async (ctx) => { await ctx.answerCbQuery(); await handleAdsSelect(deps)(ctx, ctx.match[1]); });
   bot.action(/^ads:toggle:(.+):(.+):(.+)$/, async (ctx) => { await ctx.answerCbQuery(); const [, acct, camp, mode] = ctx.match; await handleAdsToggle(deps)(ctx, acct, camp, mode); });
   bot.action(/^ads:report$/, async (ctx) => { await ctx.answerCbQuery(); await handleAdsReport(deps)(ctx); });
-  bot.action(/^ads:disconnect$/, async (ctx) => { await ctx.answerCbQuery(); await handleAdsDisconnect(deps)(ctx); });
-  bot.action(/^monitor:/, handleMonitorCallback(deps));
+bot.action(/^ads:disconnect(?::(.+))?$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const id = ctx.match?.[1];
+    const handler = id ? handleAdsDisconnectConfirm(deps) : handleAdsDisconnect(deps);
+    await handler(ctx);
+  });
+  bot.action(/^ads:manage$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    await handleAdsManage(deps)(ctx);
+  });
+  bot.action(/^ads$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    await handleAds(deps)(ctx);
+  });
+  bot.action(/^monitor:(.+)$/, handleMonitorCallback(deps));
+  bot.action(/^rule:(.+)$/, handleMonitorCallback(deps));
   bot.action(/^quick:menu$/, handleMenu());
   // ── Connect wizard (per-customer platform connection) ────
   bot.action(/^connect:(.+)$/, async (ctx) => {

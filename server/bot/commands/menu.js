@@ -3,6 +3,7 @@
  * Ported from asisten-jualan/bot/handlers/quick_start.py
  */
 import { handleAds, handleAdsReport } from './ads.js';
+import { handleSettings } from './settings.js';
 import { PLATFORM_NAMES } from '../scenes/connect-account.js';
 
 export function handleMenu() {
@@ -40,8 +41,8 @@ export function handleMenuButton(deps) {
         return sendPlatformChoice(ctx);
       case 'optimize':
         return handleOptimizeAction(ctx, deps);
-      case 'monitor':
-        return ctx.reply('⚡ Monitor rules: /settings to configure spend guards and alerts.');
+      case 'monitor':   return ctx.reply('⚡ Monitor rules: /settings to configure spend guards and alerts.');
+      case 'settings':  return handleSettings(deps)(ctx);
       case 'ads':
         return handleAds(deps)(ctx);
       case 'fbads':

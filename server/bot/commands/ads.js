@@ -99,6 +99,9 @@ export function handleAds(deps) {
                 { text: '📈 All Accounts Report', callback_data: 'ads:report' },
                 { text: '🔌 Disconnect', callback_data: 'ads:disconnect' },
               ],
+              [
+                { text: '⚙️ Manage Connections', callback_data: 'ads:manage' },
+              ],
             ],
           },
         }
@@ -235,17 +238,70 @@ export function handleAdsReport(deps) {
 
 // ── Disconnect: deactivate stored account ───────────────────
 export function handleAdsDisconnect(deps) {
+  // Bare /ads:disconnect (no id) → show the per-connection manage list
+  // so the user explicitly picks which connection to drop (id-scoped).
+  const manage = handleAdsManage(deps);
+  return async (ctx) => manage(ctx);
+}
+
+// ── Manage Connections: list every stored Meta connection ────
+export function handleAdsManage(deps) {
   return async (ctx) => {
     const repo = deps?.repos?.platformAccountsRepo;
-    const acct = getUserMetaAccount(ctx, deps);
-    if (!acct) return ctx.reply('🔌 No Meta account connected.');
-    try {
-      repo.update(acct.id, { is_active: 0 });
-      return ctx.reply('🗑 Disconnected your Meta account from AdForge. Your token is retained but inactive — reconnect via /settings anytime.');
-    } catch (err) {
-      log.error('ads disconnect failed', { userId: ctx.userId, error: err?.message });
-      return ctx.reply('⚠️ Could not disconnect. Try again later.');
+    if (!repo) return ctx.reply('⚠️ Storage unavailable.');
+    const rows = (repo.findByUserId(ctx.userId) || [])
+      .filter((r) => r.platform === 'meta')
+      .sort((a, b) => {
+        if (a.is_active !== b.is_active) return b.is_active ? -1 : 1;
+        return (a.created_at || '') < (b.created_at || '') ? 1 : -1;
+      });
+    if (!rows.length) {
+      return ctx.reply('🔌 You have no Meta connections stored. Connect one via /settings → Connect Meta Account.');
     }
+    const lines = rows.map((r, i) => `${i + 1}. ${r.is_active ? '✅' : '⛔️'} *${r.account_name}*`).join('\n');
+    await ctx.reply(
+      `⚙️ *Manage Meta Connections*\n\n${lines}\n\nTap a connection to disconnect it.`,
+      {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            ...rows.map((r) => [
+              {
+                text: `${r.is_active ? '🔌 Disconnect' : '🟢 Inactive'}: ${r.account_name}`,
+                callback_data: `ads:disconnect:${r.id}`,
+              },
+            ]),
+            [{ text: '⬅️ Back', callback_data: 'ads' }],
+          ],
+        },
+      }
+    );
+  };
+}
+
+// ── Disconnect a specific connection by platform_accounts.id ──
+export function handleAdsDisconnectConfirm(deps) {
+  return async (ctx) => {
+    const id = ctx.match?.[1];
+    const repo = deps?.repos?.platformAccountsRepo;
+    if (!id || !repo) return ctx.reply('⚠️ Invalid request.');
+    const row = repo.findById(id);
+    if (!row || row.user_id !== ctx.userId) {
+      return ctx.reply('⚠️ Connection not found.');
+    }
+    // Deactivate ONLY this connection (scoped to the current user by id + user_id check).
+    repo.update(id, { is_active: 0 });
+    const remaining = (repo.findByUserId(ctx.userId) || []).filter(
+      (r) => r.platform === 'meta' && r.is_active
+    );
+    if (!remaining.length) {
+      return ctx.reply(`🗑 Disconnected *${row.account_name}*. You now have no active Meta connection.`);
+    }
+    const names = remaining.map((r) => `• ${r.account_name}`).join('\n');
+    await ctx.reply(
+      `🗑 Disconnected *${row.account_name}*.\n\nRemaining active Meta connections:\n${names}`,
+      { parse_mode: 'Markdown' }
+    );
   };
 }
 

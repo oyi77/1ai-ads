@@ -74,6 +74,8 @@ export const connectScene = new Scenes.WizardScene(
         account_name: accountName,
         credentials: { access_token: token },
       });
+      // Enforce single-active invariant: only the newly connected account stays active.
+      repo.setActiveAccountForUser(platform, created.id, ctx.userId);
       log.info('Platform account connected via bot', {
         userId: ctx.userId,
         platform,
