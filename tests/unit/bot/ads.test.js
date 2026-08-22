@@ -22,7 +22,7 @@ vi.mock('../../../server/services/meta/index.js', () => {
   };
 });
 
-const { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport, handleAdsDisconnect } =
+const { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm } =
   await import('../../../server/bot/commands/ads.js');
 
 function makeCtx(userId = 'u1') {
@@ -36,11 +36,12 @@ function makeCtx(userId = 'u1') {
   };
 }
 
-function makeDeps(accessToken = null, storedId = 'acc1') {
+function makeDeps(accessToken = null, storedId = 'acc1', extra = {}) {
   const repo = {
     getByPlatform: (userId, platform) =>
       accessToken ? { id: storedId, user_id: userId, platform, access_token: accessToken, is_active: 1 } : null,
-    findByUserId: () => [],
+    findByUserId: () => extra.findByUserId || [],
+    findById: extra.findById || (() => null),
     update: vi.fn(() => ({ id: storedId })),
   };
   return { repos: { platformAccountsRepo: repo } };
@@ -114,11 +115,35 @@ describe('per-user ads handlers (disable/enable scoped to user token)', () => {
     expect(mockGetAccountInsights).toHaveBeenCalledWith('1181078009580337', expect.objectContaining({ datePreset: 'last_30d' }));
   });
 
-  it('handleAdsDisconnect deactivates the stored account row', async () => {
-    const deps = makeDeps('USER_TOKEN');
-    const ctx = makeCtx();
+  it('handleAdsDisconnect lists the user\'s connections without directly deactivating', async () => {
+    const deps = makeDeps('USER_TOKEN', 'acc1', {
+      findByUserId: [{ id: 'acc1', user_id: 'u1', platform: 'meta', account_name: 'Acc1', is_active: 1 }],
+    });
+    const ctx = makeCtx('u1');
     await handleAdsDisconnect(deps)(ctx);
+    expect(deps.repos.platformAccountsRepo.update).not.toHaveBeenCalled();
+    expect(ctx._replies[0]).toContain('Manage Meta Connections');
+  });
+
+  it('handleAdsDisconnectConfirm deactivates the user\'s OWN connection by id', async () => {
+    const deps = makeDeps('USER_TOKEN', 'acc1', {
+      findById: () => ({ id: 'acc1', user_id: 'u1', account_name: 'Acc1', platform: 'meta', is_active: 1 }),
+    });
+    const ctx = makeCtx('u1');
+    ctx.match = ['', 'acc1'];
+    await handleAdsDisconnectConfirm(deps)(ctx);
     expect(deps.repos.platformAccountsRepo.update).toHaveBeenCalledWith('acc1', { is_active: 0 });
     expect(ctx._replies[0]).toContain('Disconnected');
+  });
+
+  it('handleAdsDisconnectConfirm rejects a connection owned by another user', async () => {
+    const deps = makeDeps('USER_TOKEN', 'acc1', {
+      findById: () => ({ id: 'acc1', user_id: 'OTHER_USER', account_name: 'Acc1', platform: 'meta', is_active: 1 }),
+    });
+    const ctx = makeCtx('u1');
+    ctx.match = ['', 'acc1'];
+    await handleAdsDisconnectConfirm(deps)(ctx);
+    expect(ctx._replies[0]).toContain('Connection not found');
+    expect(deps.repos.platformAccountsRepo.update).not.toHaveBeenCalled();
   });
 });

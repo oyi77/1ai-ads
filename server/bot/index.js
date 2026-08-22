@@ -73,6 +73,7 @@ export function initBot(app, deps) {
   bot.command('fbads', handleFbAds(deps));
   bot.command('ads', handleAds(deps));
   bot.command('monitor', handleMonitor(deps));
+  bot.command('metaapp', (ctx) => ctx.scene.enter('manage-meta-app'));
   // ── Callback queries (inline buttons) ────────────────────
   bot.action(/^menu:(.+)$/, handleMenuButton(deps));
   bot.action(/^settings:(.+)$/, handleSettingsCallback(deps));
