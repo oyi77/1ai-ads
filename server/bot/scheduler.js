@@ -55,7 +55,7 @@ export function initScheduler(bot, deps) {
   cron.schedule('0 */6 * * *', async () => {
     log.info('Running campaign monitor job');
     try {
-      const campaigns = deps.repos?.campaignsRepo?.findAll?.() || [];
+      const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.() || { data: [] };
       const active = campaigns.filter(c => c.status === 'ACTIVE');
       const EVAL_DAYS = parseInt(process.env.EVALUATION_DAYS || '3', 10);
 
@@ -123,12 +123,17 @@ export function initScheduler(bot, deps) {
       for (const account of accounts) {
         try {
           const token = resolveOwnerPlatformToken('meta', account.user_id, { platformAccountsRepo: deps.repos?.platformAccountsRepo, settingsRepo: deps.repos?.settingsRepo });
-          const ownerApi = token ? MetaAdsAPI.withToken(token) : null;
-          if (!ownerApi) {
-            log.debug('No owner Meta token — skipping bid satpam');
+          if (!token || token.startsWith('demo-meta-token')) {
+            log.debug('No real Meta token — skipping bid satpam');
             continue;
           }
-          const adsets = await ownerApi.getAdSets?.(account.id) || [];
+          const ownerApi = MetaAdsAPI.withToken(token);
+          const adAccountId = account.credentials?.ad_account_id;
+          if (!adAccountId || !/^\d+$/.test(String(adAccountId).replace(/^act_/, ''))) {
+            log.debug('No real Meta ad-account id — skipping bid satpam');
+            continue;
+          }
+          const adsets = await ownerApi.getAdSets?.(adAccountId) || [];
           for (const adset of adsets) {
             const bid = adset.bid_amount;
             if (!bid) continue;
@@ -160,7 +165,7 @@ export function initScheduler(bot, deps) {
   cron.schedule('0 0 * * *', async () => {
     log.info('Running daily dashboard job');
     try {
-      const campaigns = deps.repos?.campaignsRepo?.findAll?.() || [];
+      const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.() || { data: [] };
       const stats = calculateCampaignStats(campaigns);
       const report = formatDailyReport(stats);
       await safeSend(bot, report, { parse_mode: 'Markdown' });
@@ -211,7 +216,7 @@ export function initScheduler(bot, deps) {
       const activeRules = rules.filter(r => r.is_active);
       if (activeRules.length === 0) return;
 
-      const campaigns = deps.repos?.campaignsRepo?.findAll?.() || [];
+      const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.() || { data: [] };
       for (const rule of activeRules) {
         for (const campaign of campaigns) {
           if (rule.condition_metric === 'spend' && (campaign.spend || 0) > rule.condition_value) {
@@ -289,12 +294,21 @@ export function initScheduler(bot, deps) {
       for (const account of accounts) {
         try {
           const token = resolveOwnerPlatformToken('meta', account.user_id, { platformAccountsRepo: deps.repos?.platformAccountsRepo, settingsRepo: deps.repos?.settingsRepo });
-          const ownerApi = token ? MetaAdsAPI.withToken(token) : null;
+          if (!token || token.startsWith('demo-meta-token')) {
+            log.debug('Placeholder Meta token — skipping sync', { account: account.account_name });
+            continue;
+          }
+          const ownerApi = MetaAdsAPI.withToken(token);
           if (!ownerApi) {
             log.debug('No owner Meta token — skipping sync');
             continue;
           }
-          const remoteCampaigns = await ownerApi.getCampaigns?.(account.id) || [];
+          const adAccountId = account.credentials?.ad_account_id;
+          if (!adAccountId || !/^\d+$/.test(String(adAccountId).replace(/^act_/, ''))) {
+            log.debug('No real Meta ad-account id — skipping sync', { account: account.account_name });
+            continue;
+          }
+          const remoteCampaigns = await ownerApi.getCampaigns?.(adAccountId) || [];
           for (const rc of remoteCampaigns) {
             deps.repos?.campaignsRepo?.upsert?.({
               platform: 'meta',
@@ -324,7 +338,7 @@ export function initScheduler(bot, deps) {
   cron.schedule('0 18 * * *', async () => {
     log.info('Running daily eval guard');
     try {
-      const campaigns = deps.repos?.campaignsRepo?.findAll?.() || [];
+      const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.() || { data: [] };
       const active = campaigns.filter(c => c.status === 'ACTIVE');
       const underperformers = [];
 

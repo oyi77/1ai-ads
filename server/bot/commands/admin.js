@@ -13,7 +13,7 @@ export function handleAdminStats(deps) {
 
     try {
       const users = deps.repos?.usersRepo?.findAll?.() || [];
-      const campaigns = deps.repos?.campaignsRepo?.findAll?.() || [];
+      const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.() || { data: [] };
       const accounts = deps.repos?.platformAccountsRepo?.getAccounts?.() || [];
 
       ctx.reply(
