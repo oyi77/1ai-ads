@@ -1,4 +1,5 @@
 import { createLogger } from '../lib/logger.js';
+import { MetricsNormalizer } from './metrics-normalizer.js';
 
 const log = createLogger('unified-reporter');
 
@@ -17,6 +18,7 @@ export class UnifiedReporter {
     this.apis = platformApis;
     this.campaignsRepo = campaignsRepo;
     this.db = db;
+    this.normalizer = new MetricsNormalizer();
   }
 
   // ── Public API ───────────────────────────────────────────────
@@ -51,6 +53,24 @@ export class UnifiedReporter {
         cpc: (dm.clicks || 0) > 0 ? (dm.spend || 0) / (dm.clicks || 0) : 0,
         connected: true,
       });
+    }
+
+    // Mark platforms without synced metrics as "coming soon"
+    for (const key of this.normalizer.platformKeys()) {
+      if (!byPlatform.some((p) => p.platform === key)) {
+        byPlatform.push({
+          platform: key,
+          spend: 0,
+          revenue: 0,
+          roas: 0,
+          impressions: 0,
+          clicks: 0,
+          conversions: 0,
+          ctr: 0,
+          cpc: 0,
+          connected: false,
+        });
+      }
     }
 
     const overallROAS = totals.spend > 0 ? totals.revenue / totals.spend : 0;
@@ -274,11 +294,12 @@ export class UnifiedReporter {
         for (const acct of accounts) {
           try {
             const data = await api.getAccountInsights(acct.id, { datePreset });
-            total.spend += parseFloat(data?.spend || 0);
-            total.revenue += parseFloat(data?.revenue || 0);
-            total.impressions += parseInt(data?.impressions || 0, 10);
-            total.clicks += parseInt(data?.clicks || 0, 10);
-            total.conversions += parseInt(data?.conversions || 0, 10);
+            const n = this.normalizer.normalizePlatformStats('meta', data);
+            total.spend += n.spend;
+            total.revenue += n.revenue;
+            total.impressions += n.impressions;
+            total.clicks += n.clicks;
+            total.conversions += n.conversions;
           } catch { /* per-account error, continue */ }
         }
         return total;
@@ -298,10 +319,12 @@ export class UnifiedReporter {
             const perf = await api.getCampaignPerformance(acct.id || acct, { days });
             if (Array.isArray(perf)) {
               for (const row of perf) {
-                total.spend += (row.costMicros || 0) / 1_000_000;
-                total.impressions += row.impressions || 0;
-                total.clicks += row.clicks || 0;
-                total.conversions += row.conversions || 0;
+                const n = this.normalizer.normalizePlatformStats('google', row);
+                total.spend += n.spend;
+                total.revenue += n.revenue;
+                total.impressions += n.impressions;
+                total.clicks += n.clicks;
+                total.conversions += n.conversions;
               }
             }
           } catch { /* per-account */ }
@@ -324,10 +347,12 @@ export class UnifiedReporter {
             const insights = await api.getCampaignInsights(advId, [], { startDate: null, endDate: null });
             if (Array.isArray(insights)) {
               for (const row of insights) {
-                total.spend += parseFloat(row.spend || row.cost || 0);
-                total.impressions += parseInt(row.impressions || 0, 10);
-                total.clicks += parseInt(row.clicks || 0, 10);
-                total.conversions += parseInt(row.conversions || 0, 10);
+                const n = this.normalizer.normalizePlatformStats('tiktok', row);
+                total.spend += n.spend;
+                total.revenue += n.revenue;
+                total.impressions += n.impressions;
+                total.clicks += n.clicks;
+                total.conversions += n.conversions;
               }
             }
           } catch { /* per-account */ }
@@ -349,10 +374,12 @@ export class UnifiedReporter {
             const analytics = await api.getCampaignAnalytics(acct.id || acct);
             if (Array.isArray(analytics)) {
               for (const row of analytics) {
-                total.spend += parseFloat(row.costInLocalCurrency || row.spend || 0);
-                total.impressions += parseInt(row.impressions || 0, 10);
-                total.clicks += parseInt(row.clicks || 0, 10);
-                total.conversions += parseInt(row.conversions || 0, 10);
+                const n = this.normalizer.normalizePlatformStats('linkedin', row);
+                total.spend += n.spend;
+                total.revenue += n.revenue;
+                total.impressions += n.impressions;
+                total.clicks += n.clicks;
+                total.conversions += n.conversions;
               }
             }
           } catch { /* per-account */ }

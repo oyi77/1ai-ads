@@ -13,8 +13,13 @@ interface ReportingData {
 type PlatformRow = ReportingData['byPlatform'][number];
 
 const platformColumns: Column<PlatformRow>[] = [
-  { key: 'platform', label: 'Platform', sortable: true, width: 120, render: (p) => (
-    <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{p.platform}</span>
+  { key: 'platform', label: 'Platform', sortable: true, width: 160, render: (p) => (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{p.platform}</span>
+      {!p.connected && (
+        <span style={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 999, padding: '2px 8px', whiteSpace: 'nowrap' }}>Coming soon</span>
+      )}
+    </span>
   )},
   { key: 'spend', label: 'Spend', sortable: true, align: 'right', render: (p) => `Rp ${(p.spend || 0).toLocaleString('id-ID')}` },
   { key: 'revenue', label: 'Revenue', sortable: true, align: 'right', render: (p) => `Rp ${(p.revenue || 0).toLocaleString('id-ID')}` },

@@ -131,6 +131,7 @@
 
 **Acceptance**: Dashboard shows combined metrics for connected platforms; Meta populated, others flagged.
 **Rollback**: revert + rebuild.
+**Status: IMPLEMENTED (2026-08-24)** — `server/services/metrics-normalizer.js` (new) exports `PLATFORM_KEYS` (8) + `class MetricsNormalizer` with `platformKeys()` / `normalizePlatformStats(platform, raw)` / `aggregate(entries)` (byte-mirrors `_fetchPlatformInsights` math: meta `parseFloat(raw.spend/revenue)` + `parseInt` counts; google `costMicros/1e6` → spend with counts passed through raw; tiktok spend `raw.spend || raw.cost`; linkedin spend `raw.costInLocalCurrency || raw.spend`; unknown → zeros; `aggregate` sums 5 fields, `roas = spend>0 ? revenue/spend : 0`). `unified-reporter.js` constructs `MetricsNormalizer` in its ctor and maps per-row stats at meta `:297-302`, google `:322-327`, tiktok `:350-355`, linkedin `:377-382`; `getUnifiedDashboard` pushes zeroed `connected:false` rows for every platform key without synced metrics (`:58-74`) so non-synced platforms show "Coming soon". Frontend `client/src/pages/reporting.tsx:16-23` renders platform name + `Coming soon` pill when `!p.connected`. New test file `tests/unit/services/metrics-normalizer.test.js` (10 cases); `unified-reporter.test.js` unchanged (18 green). Gates: lint exit 0; vitest **1777/1777** (116 files).
 
 ---
 
@@ -139,7 +140,7 @@
 - `npm run test` (vitest run only).
 - Deploy: `docker compose up -d --build` (NO `--no-cache` — better-sqlite3 native gyp breaks under Node v22.23.2).
 - Live verify: `curl /health` → 200; `docker exec 1ai-ads sha256sum /app/<f>` vs `git show <sha>:<f> | sha256sum` → MATCH.
-- Full suite green: `npm run test` → **1767 passed / 1767** (115 files), 2026-08-23. P3 added `tests/unit/bot/menu.test.js` 7 cases; P4 added `tests/unit/bot/settings.test.js` 9 cases.)
+- Full suite green: `npm run test` → **1777 passed / 1777** (116 files), 2026-08-24. P3 added `tests/unit/bot/menu.test.js` 7 cases; P4 added `tests/unit/bot/settings.test.js` 9 cases; P5 added `tests/unit/services/metrics-normalizer.test.js` 10 cases.)
 
 ## 5. Open items
 - `approveDraft` owner-scoping is enforced in the **bot callback** (Phase 2 step 5), NOT inside `approveDraft`, to keep the admin web route working. Decision recorded; do not move scoping into `approveDraft`.
