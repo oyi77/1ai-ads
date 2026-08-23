@@ -3,23 +3,33 @@
  * Ported from asisten-jualan/bot/handlers/settings_update.py
  */
 
+import { PLATFORM_NAMES } from '../scenes/connect-account.js';
 export function handleSettings(deps) {
   return async (ctx) => {
     const accounts = deps.repos?.platformAccountsRepo?.findByUserId?.(ctx.userId) || [];
-    const metaAccounts = accounts.filter(a => a.platform === 'meta');
+
+    const platformRows = Object.entries(PLATFORM_NAMES).map(([key, label]) => {
+      const active = accounts.find(a => a.platform === key && a.is_active);
+      const status = active
+        ? `✅ Connected (${active.account_name})`
+        : '— Belum terhubung';
+      const button = key === 'meta'
+        ? { text: '🔑 Hubungkan via Token', callback_data: 'settings:connect_meta' }
+        : { text: '🔗 Connect', url: `https://adforge.aitradepulse.com/platforms?platform=${key}` };
+      return { label, status, button };
+    });
+
+    const body = platformRows.map(r => `• ${r.label}: ${r.status}`).join('\n');
 
     ctx.reply(
       '🔧 *Settings*\n\n' +
-      `Connected accounts: ${metaAccounts.length}\n` +
-      (metaAccounts.length > 0
-        ? metaAccounts.map(a => `• ${a.account_name} (${a.is_active ? '✅ active' : '⏸ paused'})`).join('\n')
-        : 'No accounts connected yet.') +
-      '\n\nChoose an action:',
+      `${body}\n\n` +
+      'Pilih platform untuk terhubung lewat web, atau kelola akun:',
       {
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [
-            [{ text: '🔗 Connect Meta Account', callback_data: 'settings:connect_meta' }],
+            ...platformRows.map(r => [r.button]),
             [{ text: '🔄 Sync Campaigns', callback_data: 'settings:sync' }],
             [{ text: '📊 View Accounts', callback_data: 'settings:accounts' }],
           ],

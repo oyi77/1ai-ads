@@ -108,16 +108,18 @@
 ### Phase 4 — Hybrid OAuth connect (largest; decision point)
 **Target wants in-bot OAuth 2.0 for 8 platforms.** The bot is a thin frontend; building a full OAuth redirect server in-bot is high-risk.
 
-**Recommended (pragmatic)**: Setting → per-platform "Connect" buttons that **deep-link to `/app/settings?platform=<p>`** (web already does real OAuth). Bot shows status (connected/empty) read from `platform_accounts`. Meta stays in-bot token paste (already live). This satisfies "connect 8 platforms" without a second OAuth server.
+**Recommended (pragmatic)**: Setting → per-platform "Connect" buttons that **deep-link to `/app/platforms?platform=<p>`** (web already does real connect). Bot shows status (connected/empty) read from `platform_accounts`. Meta stays in-bot token paste (already live). This satisfies "connect 8 platforms" without a second OAuth server.
 **Alternative** (heavy): add Google/LinkedIn in-bot OAuth — bot sends OAuth URL → user pastes `code` → server exchanges via env `client_id/secret`. Meta unchanged.
 
 **Todos (recommended path)**
-1. `start.js`/`menu.js` Setting: list 8 platforms with connected/empty status; each "Connect" → `https://adforge.aitradepulse.com/settings?platform=<p>` (valid route, `App.tsx:67`).
+1. `start.js`/`menu.js` Setting: list 8 platforms with connected/empty status; each "Connect" → `https://adforge.aitradepulse.com/platforms?platform=<p>` (valid route, `App.tsx:87`).
 2. Confirm `/settings` renders a per-platform connect UI (web side; likely exists).
 3. Keep Meta in-bot paste as-is.
 
 **Acceptance**: all 8 platforms reachable for connect from the bot; no 404; Meta still works in-bot.
 **Rollback**: revert menu/start + rebuild.
+**Status: IMPLEMENTED (2026-08-23)** — `handleSettings` (server/bot/commands/settings.js) now builds 8 per-platform rows from `PLATFORM_NAMES` with status read from `platform_accounts` (`✅ Connected (<account_name>)` if any `is_active` row, else `— Belum terhubung`). Meta keeps its in-bot token-paste button (`🔑 Hubungkan via Token` → `settings:connect_meta` scene); the other 7 platforms get `🔗 Connect` url buttons deep-linking to `https://adforge.aitradepulse.com/platforms?platform=<p>`. Web side: `platforms.tsx` adds `useSearchParams` — `?platform=<p>` scrolls to and highlights the matching card (`id=platform-card-<p>`, accent border). New test file `tests/unit/bot/settings.test.js` (9 cases). Gates: lint exit 0; vitest **1767/1767** (115 files).
+**Deviation from Todos**: deep-link target is `/platforms?platform=<p>` (NOT `/settings` — platforms.tsx renders the full connect UI; settings.tsx has no `?platform=` handling). Web connect is token-paste for ALL platforms (`settings-handlers.js:306-360` — Meta verifies via Graph `/me` + ad-account auto-detect); bot copy makes NO OAuth claim. Meta stays in-bot; status row is bot-side only (read-only `findByUserId`).
 
 ### Phase 5 — Cross-platform normalization (enhancement, Meta-first)
 **Goal**: Dashboard/Monitor aggregate a common metric shape across platforms; Meta rich, others "Coming soon".
@@ -137,9 +139,9 @@
 - `npm run test` (vitest run only).
 - Deploy: `docker compose up -d --build` (NO `--no-cache` — better-sqlite3 native gyp breaks under Node v22.23.2).
 - Live verify: `curl /health` → 200; `docker exec 1ai-ads sha256sum /app/<f>` vs `git show <sha>:<f> | sha256sum` → MATCH.
-- Full suite green: `npm run test` → **1758 passed / 1758** (114 files), 2026-08-23. (`tests/unit/repositories/settings.test.js` no longer fails; P3 added `tests/unit/bot/menu.test.js` 7 cases.)
+- Full suite green: `npm run test` → **1767 passed / 1767** (115 files), 2026-08-23. P3 added `tests/unit/bot/menu.test.js` 7 cases; P4 added `tests/unit/bot/settings.test.js` 9 cases.)
 
 ## 5. Open items
 - `approveDraft` owner-scoping is enforced in the **bot callback** (Phase 2 step 5), NOT inside `approveDraft`, to keep the admin web route working. Decision recorded; do not move scoping into `approveDraft`.
 | Advisory reconciliation (2026-08-23): an assertion that "there is NO `autonomous_rules` table" is **false** — verified `rules.js:10` + `:110`. The table exists and carries `user_id`. Valid advisory points already reflected: `guardAutonomousChange` keys off the global `approval_required` setting flag, and `approveDraft`/`rejectDraft` have zero ownership scoping (any Telegram user could approve any draft by id) — Phase 2 adds the `user_id` linkage + ownership check as **required** new scope, not existing behavior. |
-- Phase 4 path is a **recommendation** pending user sign-off (in-bot OAuth vs deep-link). Default = deep-link.
+- Phase 4 path is **signed off + implemented (2026-08-23)**: deep-link (Setting → per-platform "Connect" → `/platforms?platform=<p>`), NOT in-bot OAuth.

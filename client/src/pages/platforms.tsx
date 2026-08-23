@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link2, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
@@ -18,6 +19,15 @@ interface Platform {
 export function PlatformsPage() {
   const queryClient = useQueryClient();
   const [tokenInputs, setTokenInputs] = useState<Record<string, string>>({});
+  const [searchParams] = useSearchParams();
+  const highlightPlatform = searchParams.get('platform');
+
+  useEffect(() => {
+    if (highlightPlatform) {
+      document.getElementById(`platform-card-${highlightPlatform}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightPlatform]);
+
 
   const { data: accounts } = useQuery<Platform[]>({
     queryKey: ['platforms', 'accounts'],
@@ -77,7 +87,19 @@ export function PlatformsPage() {
           const token = tokenInputs[p.key] || '';
 
           return (
-            <div key={p.key} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 20 }}>
+            <div
+              id={`platform-card-${p.key}`}
+              key={p.key}
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+                borderRadius: 10,
+                padding: 20,
+                ...(p.key === highlightPlatform
+                  ? { borderColor: 'var(--accent)', boxShadow: '0 0 0 1px var(--accent)' }
+                  : {}),
+              }}
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                 <div>
                   <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 4 }}>{p.label}</h3>
