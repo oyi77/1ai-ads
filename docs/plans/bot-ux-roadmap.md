@@ -31,7 +31,7 @@
 | Web approval routes are **admin-gated** | `server/routes/approvals.js:53` `POST /api/approvals/:id/approve` `requireAuth, requireAdmin` |
 | `/platforms` deep-link from bot is **DEAD** | `start.js:34` links `adforge.aitradepulse.com/platforms`; `client/src/App.tsx` has lazy import but **no `<Route>`** → `*` NotFound |
 | `/settings` deep-link is **VALID** | `start.js:80,85` → `App.tsx:67` |
-| AI Optimize is **stubbed** | `menu.js:115-126` `handleOptimizeAction` — no LLM call, no Apply; replies "use web dashboard /app" |
+| AI Optimize = in-process LLM suggestion + Apply | `menu.js:115-149` `handleOptimizeAction` — `tryLlmSuggestion` (LLM advisory) with deterministic worst-ROAS pause fallback; draft via `guardAutonomousChange` → Apply/Dismiss |
 | Connect = token/API-key **PASTE**, Meta only live | `connect-account.js` |
 | API envelope unwrapped client-side | `client/src/lib/api.ts:97` `(json.data ?? json) as T` |
 
@@ -46,7 +46,7 @@
 | Dashboard aggregates all platforms | Meta-only, no aggregation | **P5** |
 | Buat Kampanye = wizard | "use /app" stub | keep /app (ensure deep-link works) |
 | Monitor = per-platform actions | Meta-only (`/ads`) | (out of scope; Meta works) |
-| AI Optimize → LLM → Apply | stub | **P3** |
+| AI Optimize → LLM → Apply | in-process LLM suggestion + deterministic fallback; Apply executes via P2 executor | **P3** ✅ |
 | Scheduler → Telegram confirm → execute | alert-only to admin | **P2** |
 
 ---
@@ -100,8 +100,8 @@
 3. Tests: `tests/unit/bot/menu.test.js` (optimize creates draft + Apply button).
 4. Lint + test + deploy + verify.
 
-**Status: IMPLEMENTED (2026-08-23)** — `handleOptimizeAction` (menu.js:115-167) resolves the owner's active Meta campaign with the **lowest ROAS** (`roas` number, else `spend>0 ? revenue/spend : 0`), creates an owner-scoped draft via `guardAutonomousChange({ type:'ai_optimize', summary, details:{action:{type:'pause'}, campaign}, proposedBy:'ai', userId:ctx.userId, campaignId })`, and replies with `✅ Apply` (`approval:approve:<id>`) / `❌ Dismiss` (`approval:reject:<id>`). New test file `tests/unit/bot/menu.test.js` (7 cases). Gates: lint exit 0; vitest **1758/1758** (114 files).
-**Deviation from Todos**: suggestion is **deterministic worst-ROAS pause**, not LLM — no LLM client exists in bot-command `deps`. Action is replayable: `details.action = { type:'pause' }` (OBJECT) so the P2 executor (`_applyAction` → `ACTION_HANDLERS.pause` → `_pauseCampaign`) re-fetches by `campaign.id` and pauses the real Meta campaign; a flat-string `details.action` would log "Unknown action type" and no-op. Guard-false branch replies with `/app` Settings hint (no keyboard).
+**Status: IMPLEMENTED (2026-08-24)** — `handleOptimizeAction` (menu.js:115-149) tries an in-process LLM suggestion first: `const llmClient = deps?.services?.llmClient` → `tryLlmSuggestion` (menu.js:156-186) prompts with `OPTIMIZE_SYSTEM_PROMPT` constraining `type` to `"pause"|"scale_up"|"scale_down"` and the user's active Meta campaigns, parses JSON, validates shape, and maps the action through `ACTION_HANDLERS`; every failure (no client, throw, timeout, non-JSON, wrong shape, unknown campaign) falls back to the deterministic worst-ROAS pause. Suggestion creates an owner-scoped draft via `guardAutonomousChange({ type:'ai_optimize', summary, details:{action, campaign}, proposedBy:'ai', userId:ctx.userId, campaignId })` and replies with `✅ Apply` (`approval:approve:<id>`) / `❌ Dismiss` (`approval:reject:<id>`). New test file `tests/unit/bot/menu.test.js` (11 cases, incl. 4 LLM-path). Gates: lint exit 0; vitest **1781/1781** (116 files).
+**Deviation from Todos**: suggestion is **LLM advisory with deterministic fallback**, not pure rule-evaluator. The LLM is safe-fallible by design — the button MUST always produce a suggestion, so any LLM failure yields the worst-ROAS pause draft (same action as before, now better-labeled). `amount` is honored only for scale types (`Number.isFinite`, else `1.5`/`0.8` defaults); `pause` always gets `amount:null`; rationale truncated to 200 chars folded into the summary. Action is replayable: `details.action = { type, amount }` (OBJECT) so the P2 executor (`_applyAction` → `ACTION_HANDLERS`) re-fetches by `campaign.id`; a flat-string `details.action` would log "Unknown action type" and no-op. Guard-false branch replies with `/app` Settings hint (no keyboard).
 
 **Rollback**: revert `menu.js` to stub + rebuild.
 

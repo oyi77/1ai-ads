@@ -124,44 +124,103 @@ async function handleOptimizeAction(ctx, deps) {
       );
     }
 
-    // Deterministic suggestion: pause the worst performer (lowest ROAS).
+    const llmClient = deps?.services?.llmClient;
+    if (llmClient) {
+      const llmSuggestion = await tryLlmSuggestion(llmClient, campaigns);
+      if (llmSuggestion) return await proposeOptimization(ctx, deps, llmSuggestion);
+    }
+
+    // Deterministic fallback: pause the worst performer (lowest ROAS).
     const campaign = campaigns.reduce((worst, c) => {
       const roas = typeof c.roas === 'number' ? c.roas : (c.spend > 0 ? (c.revenue || 0) / c.spend : 0);
       const worstRoas = typeof worst.roas === 'number' ? worst.roas : (worst.spend > 0 ? (worst.revenue || 0) / worst.spend : 0);
       return roas < worstRoas ? c : worst;
     });
 
-    const draft = await deps?.services?.draftService?.guardAutonomousChange?.({
-      type: 'ai_optimize',
-      summary: `AI menyarankan pause untuk ${campaign.name || campaign.id} (ROAS rendah)`,
-      details: { action: { type: 'pause' }, campaign },
-      proposedBy: 'ai',
-      userId: ctx.userId,
-      campaignId: campaign.id,
+    return await proposeOptimization(ctx, deps, {
+      campaign,
+      type: 'pause',
+      amount: null,
+      rationale: 'ROAS rendah',
     });
-
-    if (!draft) {
-      return ctx.reply(
-        '🤖 *AI Optimization*\n\n' +
-        'AI auto-apply sedang nonaktif. Nyalakan persetujuan di /app → Settings, ' +
-        'atau gunakan dashboard: /app',
-        { parse_mode: 'Markdown' }
-      );
-    }
-
-    return ctx.reply(
-      `🤖 *Saran AI*: pause *${campaign.name || campaign.id}*\n\nSetujui atau tolak:`,
-      {
-        parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: [[
-            { text: '✅ Apply', callback_data: `approval:approve:${draft.id}` },
-            { text: '❌ Dismiss', callback_data: `approval:reject:${draft.id}` },
-          ]],
-        },
-      }
-    );
   } catch {
     return ctx.reply('⚠️ Gagal memproses optimasi. Coba lagi nanti.');
   }
+}
+
+const OPTIMIZE_SYSTEM_PROMPT = `You are an AI advertising optimization assistant.
+Analyze the given Meta ad campaigns and recommend ONE optimization as a JSON object:
+{ "campaign_id": string, "type": "pause"|"scale_up"|"scale_down", "amount": number (optional, for scale actions), "rationale": string }
+Only reference campaigns present in the data. Return ONLY the JSON object, no other text.`;
+
+async function tryLlmSuggestion(llmClient, campaigns) {
+  try {
+    const context = campaigns.map(c => ({
+      id: c.id,
+      name: c.name || c.id,
+      status: c.status,
+      budget: c.budget || 0,
+      spend: c.spend || 0,
+      revenue: c.revenue || 0,
+      roas: typeof c.roas === 'number' ? c.roas : (c.spend > 0 ? (c.revenue || 0) / c.spend : 0),
+    }));
+    const response = await llmClient.call(
+      OPTIMIZE_SYSTEM_PROMPT,
+      `Recommend the best optimization for these Meta campaigns:\n${JSON.stringify(context)}`
+    );
+    const parsed = JSON.parse(response);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || !parsed.campaign_id) return null;
+    const campaign = campaigns.find(c => c.id === parsed.campaign_id);
+    if (!campaign) return null;
+    const type = ['pause', 'scale_up', 'scale_down'].includes(parsed.type) ? parsed.type : 'pause';
+    const amount = Number.isFinite(parsed.amount) ? parsed.amount : null;
+    return {
+      campaign,
+      type,
+      amount: type === 'pause' ? null : amount,
+      rationale: typeof parsed.rationale === 'string' ? parsed.rationale.slice(0, 200) : '',
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function proposeOptimization(ctx, deps, suggestion) {
+  const { campaign, type, amount, rationale } = suggestion;
+  const action = type === 'pause' ? { type: 'pause' } : { type, amount: amount || (type === 'scale_up' ? 1.5 : 0.8) };
+  const summary = type === 'pause'
+    ? `AI menyarankan pause untuk ${campaign.name || campaign.id}${rationale ? ` — ${rationale}` : ''}`
+    : `AI menyarankan ${type === 'scale_up' ? 'naikkan' : 'turunkan'} budget ${campaign.name || campaign.id}${rationale ? ` — ${rationale}` : ''}`;
+  const label = type === 'pause' ? 'pause' : (type === 'scale_up' ? 'naikkan budget' : 'turunkan budget');
+
+  const draft = await deps?.services?.draftService?.guardAutonomousChange?.({
+    type: 'ai_optimize',
+    summary,
+    details: { action, campaign },
+    proposedBy: 'ai',
+    userId: ctx.userId,
+    campaignId: campaign.id,
+  });
+
+  if (!draft) {
+    return ctx.reply(
+      '🤖 *AI Optimization*\n\n' +
+      'AI auto-apply sedang nonaktif. Nyalakan persetujuan di /app → Settings, ' +
+      'atau gunakan dashboard: /app',
+      { parse_mode: 'Markdown' }
+    );
+  }
+
+  return ctx.reply(
+    `🤖 *Saran AI*: ${label} *${campaign.name || campaign.id}*\n\nSetujui atau tolak:`,
+    {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [[
+          { text: '✅ Apply', callback_data: `approval:approve:${draft.id}` },
+          { text: '❌ Dismiss', callback_data: `approval:reject:${draft.id}` },
+        ]],
+      },
+    }
+  );
 }

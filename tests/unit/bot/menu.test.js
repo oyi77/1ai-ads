@@ -8,6 +8,7 @@ function makeDeps(overrides = {}) {
         guardAutonomousChange: vi.fn(async () => ({ id: 'd1', status: 'pending' })),
         ...(overrides.services?.draftService ?? {}),
       },
+      ...(overrides.services?.llmClient ? { llmClient: overrides.services.llmClient } : {}),
     },
     repos: {
       campaignsRepo: {
@@ -134,5 +135,93 @@ describe('menu:optimize — AI Optimization (P3)', () => {
 
     expect(ctx._replies).toHaveLength(1);
     expect(ctx._replies[0].msg).toContain('Gagal memproses optimasi');
+  });
+  it('uses the LLM suggestion when the LLM returns valid JSON', async () => {
+    deps.services.llmClient = {
+      call: vi.fn(async () => '{"campaign_id":"c2","type":"pause","rationale":"ROAS 0.4 terlalu rendah"}'),
+    };
+    deps.repos.campaignsRepo.findAll.mockReturnValue({
+      data: [metaCampaign('c1', { roas: 2.5 }), metaCampaign('c2', { roas: 0.4 })],
+      total: 2,
+    });
+
+    await handleMenuButton(deps)(ctx);
+
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledTimes(1);
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 'c2',
+        details: { action: { type: 'pause' }, campaign: expect.objectContaining({ id: 'c2' }) },
+        summary: expect.stringContaining('ROAS 0.4 terlalu rendah'),
+      })
+    );
+    expect(ctx._replies).toHaveLength(1);
+    expect(ctx._replies[0].msg).toContain('Saran AI');
+    expect(ctx._replies[0].opts.reply_markup.inline_keyboard[0]).toEqual([
+      { text: '✅ Apply', callback_data: 'approval:approve:d1' },
+      { text: '❌ Dismiss', callback_data: 'approval:reject:d1' },
+    ]);
+  });
+
+  it('falls back to the worst-ROAS campaign when the LLM throws', async () => {
+    deps.services.llmClient = {
+      call: vi.fn(async () => { throw new Error('boom'); }),
+    };
+    deps.repos.campaignsRepo.findAll.mockReturnValue({
+      data: [metaCampaign('c1', { roas: 2.5 }), metaCampaign('c2', { roas: 0.4 })],
+      total: 2,
+    });
+
+    await handleMenuButton(deps)(ctx);
+
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledTimes(1);
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 'c2',
+        details: { action: { type: 'pause' }, campaign: expect.objectContaining({ id: 'c2' }) },
+      })
+    );
+  });
+
+  it('falls back to the worst-ROAS campaign when the LLM returns non-JSON', async () => {
+    deps.services.llmClient = {
+      call: vi.fn(async () => 'not json'),
+    };
+    deps.repos.campaignsRepo.findAll.mockReturnValue({
+      data: [metaCampaign('c1', { roas: 2.5 }), metaCampaign('c2', { roas: 0.4 })],
+      total: 2,
+    });
+
+    await handleMenuButton(deps)(ctx);
+
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledTimes(1);
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 'c2',
+        details: { action: { type: 'pause' }, campaign: expect.objectContaining({ id: 'c2' }) },
+      })
+    );
+  });
+
+  it('maps a scale_up LLM suggestion to an action with amount and a "naikkan budget" label', async () => {
+    deps.services.llmClient = {
+      call: vi.fn(async () => '{"campaign_id":"c1","type":"scale_up","rationale":"potensi tumbuh"}'),
+    };
+    deps.repos.campaignsRepo.findAll.mockReturnValue({
+      data: [metaCampaign('c1', { roas: 2.5 })],
+      total: 1,
+    });
+
+    await handleMenuButton(deps)(ctx);
+
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledTimes(1);
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 'c1',
+        details: { action: { type: 'scale_up', amount: 1.5 }, campaign: expect.objectContaining({ id: 'c1' }) },
+      })
+    );
+    expect(ctx._replies).toHaveLength(1);
+    expect(ctx._replies[0].msg).toContain('naikkan budget');
   });
 });
