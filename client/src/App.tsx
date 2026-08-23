@@ -83,6 +83,8 @@ export function App() {
             <Route path="/attribution" element={<RequirePro><AttributionPage /></RequirePro>} />
             <Route path="/widgets" element={<WidgetsPage />} />
             <Route path="/audit" element={<AuditTrailPage />} />
+            <Route path="/drafts" element={<DraftsPage />} />
+            <Route path="/platforms" element={<PlatformsPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

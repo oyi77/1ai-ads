@@ -14,76 +14,19 @@ export function handleStart() {
 
     log.info('User started bot', { userId, name });
 
+    // MENU UTAMA — first node of the target product flowchart.
+    // Quick Setup (connect picker) is offered as an action, not a gate.
     await ctx.reply(
       `👋 *Welcome to AdForge, ${name}!*\n\n` +
-      'I\'m your AI-powered ad management assistant. ' +
-      'Let me help you set up your ad empire.\n\n' +
-      '*Quick Setup:*',
-      { parse_mode: 'Markdown' }
-    );
-
-    await ctx.reply(
-      '*Step 1: Connect Your Ad Platform*\n\n' +
-      'Choose a platform to connect. You\'ll need an access token from your ad manager.\n\n' +
-      '📘 *Meta* — Facebook & Instagram ads\n' +
-      '🔍 *Google* — Search, Display, YouTube ads\n' +
-      '🎵 *TikTok* — TikTok For Business ads\n' +
-      '💼 *LinkedIn* — B2B advertising\n' +
-      '🐦 *Twitter/X* — Promoted tweets\n\n' +
-      'You can also connect via the web dashboard:\n' +
-      '👉 https://adforge.aitradepulse.com/platforms',
+      '🤖 *AI-powered ad management.* Choose an option:',
       {
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [
-            [
-              { text: '📘 Meta', callback_data: 'connect:meta' },
-              { text: '🔍 Google', callback_data: 'connect:google' },
-            ],
-            [
-              { text: '🎵 TikTok', callback_data: 'connect:tiktok' },
-              { text: '💼 LinkedIn', callback_data: 'connect:linkedin' },
-            ],
-            [{ text: '⏭️ Skip Setup', callback_data: 'quick:menu' }],
-          ],
-        },
-      }
-    );
-  };
-}
-
-export function handleConnect() {
-  return async (ctx) => {
-    const platform = ctx.match?.[1] || 'meta';
-    const platformNames = {
-      meta: 'Meta (Facebook/Instagram)',
-      google: 'Google Ads',
-      tiktok: 'TikTok Ads',
-      linkedin: 'LinkedIn Ads',
-      twitter: 'Twitter/X Ads',
-      snapchat: 'Snapchat Ads',
-      pinterest: 'Pinterest Ads',
-      microsoft: 'Microsoft/Bing Ads',
-    };
-
-    const pName = platformNames[platform] || platform;
-
-    await ctx.reply(
-      `*Connect ${pName}*\n\n` +
-      'To connect, you need an access token from your ad platform.\n\n' +
-      '*How to get your token:*\n' +
-      `1. Go to your ${pName} developer portal\n` +
-      '2. Create an app or use existing one\n' +
-      '3. Generate an access token with ads permissions\n' +
-      '4. Paste the token below\n\n' +
-      'Or use the web dashboard for easier setup:\n' +
-      '👉 https://adforge.aitradepulse.com/settings',
-      {
-        parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '🌐 Open Web Dashboard', url: 'https://adforge.aitradepulse.com/settings' }],
-            [{ text: '📋 Main Menu', callback_data: 'quick:menu' }],
+            [{ text: '📊 Dashboard', callback_data: 'menu:status' }, { text: '🎯 Buat Kampanye', callback_data: 'menu:create' }],
+            [{ text: '📈 Monitor', callback_data: 'menu:monitor' }, { text: '🤖 AI Optimize', callback_data: 'menu:optimize' }],
+            [{ text: '🔧 Setting', callback_data: 'menu:settings' }, { text: '📣 My Meta Ads', callback_data: 'menu:ads' }],
+            [{ text: '🔗 Connect Account', callback_data: 'menu:connect' }],
           ],
         },
       }
