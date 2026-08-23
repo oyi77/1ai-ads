@@ -100,7 +100,9 @@
 3. Tests: `tests/unit/bot/menu.test.js` (optimize creates draft + Apply button).
 4. Lint + test + deploy + verify.
 
-**Acceptance**: AI Optimize no longer says "use /app"; produces a draftable suggestion with a working Apply.
+**Status: IMPLEMENTED (2026-08-23)** — `handleOptimizeAction` (menu.js:115-167) resolves the owner's active Meta campaign with the **lowest ROAS** (`roas` number, else `spend>0 ? revenue/spend : 0`), creates an owner-scoped draft via `guardAutonomousChange({ type:'ai_optimize', summary, details:{action:{type:'pause'}, campaign}, proposedBy:'ai', userId:ctx.userId, campaignId })`, and replies with `✅ Apply` (`approval:approve:<id>`) / `❌ Dismiss` (`approval:reject:<id>`). New test file `tests/unit/bot/menu.test.js` (7 cases). Gates: lint exit 0; vitest **1758/1758** (114 files).
+**Deviation from Todos**: suggestion is **deterministic worst-ROAS pause**, not LLM — no LLM client exists in bot-command `deps`. Action is replayable: `details.action = { type:'pause' }` (OBJECT) so the P2 executor (`_applyAction` → `ACTION_HANDLERS.pause` → `_pauseCampaign`) re-fetches by `campaign.id` and pauses the real Meta campaign; a flat-string `details.action` would log "Unknown action type" and no-op. Guard-false branch replies with `/app` Settings hint (no keyboard).
+
 **Rollback**: revert `menu.js` to stub + rebuild.
 
 ### Phase 4 — Hybrid OAuth connect (largest; decision point)
@@ -135,7 +137,7 @@
 - `npm run test` (vitest run only).
 - Deploy: `docker compose up -d --build` (NO `--no-cache` — better-sqlite3 native gyp breaks under Node v22.23.2).
 - Live verify: `curl /health` → 200; `docker exec 1ai-ads sha256sum /app/<f>` vs `git show <sha>:<f> | sha256sum` → MATCH.
-- Full suite green: `npm run test` → **1751 passed / 1751** (113 files), 2026-08-23. (`tests/unit/repositories/settings.test.js` no longer fails.)
+- Full suite green: `npm run test` → **1758 passed / 1758** (114 files), 2026-08-23. (`tests/unit/repositories/settings.test.js` no longer fails; P3 added `tests/unit/bot/menu.test.js` 7 cases.)
 
 ## 5. Open items
 - `approveDraft` owner-scoping is enforced in the **bot callback** (Phase 2 step 5), NOT inside `approveDraft`, to keep the admin web route working. Decision recorded; do not move scoping into `approveDraft`.

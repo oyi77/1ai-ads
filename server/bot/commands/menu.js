@@ -112,15 +112,56 @@ async function handleCreateAction(ctx) {
   );
 }
 
-async function handleOptimizeAction(ctx, _deps) {
-  ctx.reply(
-    '🤖 *AI Optimization*\n\n' +
-    'The AI agent analyzes your campaigns and suggests:\n' +
-    '• Budget adjustments\n' +
-    '• Audience targeting changes\n' +
-    '• Creative refreshes\n' +
-    '• Bid optimization\n\n' +
-    'Use the dashboard for detailed AI insights: /app',
-    { parse_mode: 'Markdown' }
-  );
+async function handleOptimizeAction(ctx, deps) {
+  try {
+    const result = deps?.repos?.campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [], total: 0 };
+    const campaigns = (result.data || []).filter(c => c.platform === 'meta' && c.status === 'ACTIVE');
+
+    if (campaigns.length === 0) {
+      return ctx.reply(
+        '🤖 *AI Optimization*\n\nTidak ada kampanye Meta aktif untuk dioptimalkan.',
+        { parse_mode: 'Markdown' }
+      );
+    }
+
+    // Deterministic suggestion: pause the worst performer (lowest ROAS).
+    const campaign = campaigns.reduce((worst, c) => {
+      const roas = typeof c.roas === 'number' ? c.roas : (c.spend > 0 ? (c.revenue || 0) / c.spend : 0);
+      const worstRoas = typeof worst.roas === 'number' ? worst.roas : (worst.spend > 0 ? (worst.revenue || 0) / worst.spend : 0);
+      return roas < worstRoas ? c : worst;
+    });
+
+    const draft = await deps?.services?.draftService?.guardAutonomousChange?.({
+      type: 'ai_optimize',
+      summary: `AI menyarankan pause untuk ${campaign.name || campaign.id} (ROAS rendah)`,
+      details: { action: { type: 'pause' }, campaign },
+      proposedBy: 'ai',
+      userId: ctx.userId,
+      campaignId: campaign.id,
+    });
+
+    if (!draft) {
+      return ctx.reply(
+        '🤖 *AI Optimization*\n\n' +
+        'AI auto-apply sedang nonaktif. Nyalakan persetujuan di /app → Settings, ' +
+        'atau gunakan dashboard: /app',
+        { parse_mode: 'Markdown' }
+      );
+    }
+
+    return ctx.reply(
+      `🤖 *Saran AI*: pause *${campaign.name || campaign.id}*\n\nSetujui atau tolak:`,
+      {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [[
+            { text: '✅ Apply', callback_data: `approval:approve:${draft.id}` },
+            { text: '❌ Dismiss', callback_data: `approval:reject:${draft.id}` },
+          ]],
+        },
+      }
+    );
+  } catch {
+    return ctx.reply('⚠️ Gagal memproses optimasi. Coba lagi nanti.');
+  }
 }
