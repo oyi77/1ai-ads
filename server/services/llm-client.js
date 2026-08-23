@@ -54,6 +54,7 @@ export class LLMClient {
       ],
       temperature: options.temperature || 0.8,
       max_tokens: options.max_tokens || 4000,
+      stream: false,
     };
   }
 

@@ -33,6 +33,7 @@ describe('LLMClient', () => {
     expect(payload.messages[0].content).toBe('system msg');
     expect(payload.messages[1].role).toBe('user');
     expect(payload.temperature).toBe(0.5);
+    expect(payload.stream).toBe(false);
   });
 
   it('extractContent handles valid response', () => {
