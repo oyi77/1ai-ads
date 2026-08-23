@@ -21,6 +21,7 @@ import { handleSettings, handleSettingsCallback } from './commands/settings.js';
 import { handleMonitor, handleMonitorCallback } from './commands/monitor.js';
 import { handleAdminStats, handleAdminUsers, handleAdminBroadcast } from './commands/admin.js';
 import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm } from './commands/ads.js';
+import { handleApprovalApprove, handleApprovalReject } from './commands/approvals.js';
 import { handleFbAds } from './commands/fbads.js';
 import { initScheduler } from './scheduler.js';
 import { errorHandler } from './middleware/error-handler.js';
@@ -94,6 +95,8 @@ bot.action(/^ads:disconnect(?::(.+))?$/, async (ctx) => {
     await ctx.answerCbQuery();
     await handleAds(deps)(ctx);
   });
+  bot.action(/^approval:approve:(.+)$/, async (ctx) => { await ctx.answerCbQuery(); await handleApprovalApprove(deps)(ctx, ctx.match[1]); });
+  bot.action(/^approval:reject:(.+)$/, async (ctx) => { await ctx.answerCbQuery(); await handleApprovalReject(deps)(ctx, ctx.match[1]); });
   bot.action(/^monitor:(.+)$/, handleMonitorCallback(deps));
   bot.action(/^rule:(.+)$/, handleMonitorCallback(deps));
   bot.action(/^quick:menu$/, handleMenu());

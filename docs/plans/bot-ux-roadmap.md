@@ -18,16 +18,16 @@
 |---|---|
 | Bot + web are the **same process** | `server/app.js:174` `initBot(app, { repos, services })`; `server/bot/index.js:53` `bot.context.services = deps.services` |
 | Handlers reach `ctx.services.draftService` / `ctx.services.ruleEvaluator` **in-process** — NO HTTP hop | same as above |
-| `approval_drafts` columns | `server/repositories/drafts.js:15-28` — `id, type, summary, details_json, proposed_by, status, reviewed_at, reviewed_by, rejection_reason, execution_result, created_at, updated_at`. **NO `user_id`**. `proposed_by`/`reviewed_by` are free-text, default `'ai'`. |
-| `DraftsRepository.create({type, summary, details, proposedBy, campaignId, approvalRequestId})` | `drafts.js:53-60` (no userId) |
+| `approval_drafts` columns | `server/repositories/drafts.js:15-28` — `id, type, summary, details_json, proposed_by, status, reviewed_at, reviewed_by, rejection_reason, execution_result, created_at, updated_at` + **`user_id`** (migration 028, P2). `proposed_by`/`reviewed_by` are free-text, default `'ai'`. |
+| `DraftsRepository.create({type, summary, details, proposedBy, userId, campaignId, approvalRequestId})` | `drafts.js:53-60` (`userId` added P2); `findByUser(userId, {status})` added P2 |
 | `approveDraft(id, userId, executionResult=null)` | `draft-service.js:42` — only checks `status==='pending'`; records `reviewedBy`. **No owner-scoping** |
 | `rejectDraft(id, userId, rejectionReason=null)` | `draft-service.js:82` — same, no owner-scoping |
-| `guardAutonomousChange({type, summary, details, proposedBy='ai', campaignId=null})` | `draft-service.js:99` — **no `userId` param** |
+| `guardAutonomousChange({type, summary, details, proposedBy='ai', userId=null, campaignId=null})` | `draft-service.js:99` — stamps `userId`; returns created draft when approval ON, `false` otherwise |
 | Executor already wired | `server/app/services.js` (~L94) `draftService.setExecutor((action, campaign) => _ruleEvaluator._applyAction(action, campaign))` |
 | `guardAutonomousChange` gates on GLOBAL `approval_required` (settings, migration 025), NOT per-rule | `draft-service.js:100` `if (!settingsRepo.getApprovalRequired()) return false` — separate from `autonomous_rules.user_id` (used only for ownership routing). |
 | `autonomous_rules` table EXISTS (per-rule; has `user_id`) | `rules.js:10` `this.table='autonomous_rules'`; `:110` `countEnabled(userId)` → `WHERE user_id = ? AND enabled = 1`. Scheduler loop (`scheduler.js:215`) iterates `rule` rows that carry `user_id` for ownership. |
-| Scheduler is **alert-only** (`initScheduler`, 10 cron jobs) | `scheduler.js:214-240` rule loop: `findAll()` → `filter(is_active)` → `safeSend` to admin `TELEGRAM_CHAT_ID`. grep `guardAutonomousChange\|approval_drafts` in scheduler = 0 |
-| Per-rule owner available in scheduler | `scheduler.js:215,220` loop has `rule` with `rule.user_id` (resolvable to `telegram_id` via users table — `db/migrations/023_add_telegram_id.sql`) |
+| Scheduler job #5 "Rule Guard" creates owner-scoped drafts + Telegram Approve/Reject | `scheduler.js:231-277` — `guardAutonomousChange({…, userId: rule.user_id})` → inline keyboard `approval:approve:<id>` / `approval:reject:<id>`; no telegram_id → admin `TELEGRAM_CHAT_ID` alert fallback |
+| Per-rule owner used for draft + notification routing | `scheduler.js:215,220` loop has `rule.user_id`; resolved to `telegram_id` via `usersRepo.getTelegramIdByUserId` (P2) |
 | Web approval routes are **admin-gated** | `server/routes/approvals.js:53` `POST /api/approvals/:id/approve` `requireAuth, requireAdmin` |
 | `/platforms` deep-link from bot is **DEAD** | `start.js:34` links `adforge.aitradepulse.com/platforms`; `client/src/App.tsx` has lazy import but **no `<Route>`** → `*` NotFound |
 | `/settings` deep-link is **VALID** | `start.js:80,85` → `App.tsx:67` |
@@ -88,7 +88,8 @@
 9. Lint + test + deploy + verify as P1.
 
 **Acceptance**: a triggered rule creates an `approval_draft` with `user_id`; owning user receives Telegram Approve/Reject; approve mutates the campaign via the executor; a different user's approve is rejected.
-**Rollback**: revert migration (drop column if supported) + rebuild; column nullable so safe to leave.
+**Status: IMPLEMENTED (2026-08-23)** — migration 028; `DraftsRepository` userId + `findByUser`; `DraftService` userId passthrough + missing-`await` fix; scheduler job #5 rule→draft→owner Telegram; `server/bot/commands/approvals.js` + `index.js` callbacks; 3 test files. Gates: lint exit 0; vitest **1751/1751** (113 files).
+**Deviation from step 5 text**: ownership guard is **fail-closed** — `draft.user_id !== ctx.userId` (no null short-circuit), so ownerless/legacy drafts are rejected for everyone (stricter than the `draft.user_id &&` fail-open sketch; matches `ads.js:288`). `approveDraft`/`rejectDraft` remain unscoped by design (§5) so the web admin route keeps working.
 
 ### Phase 3 — AI Optimize → Apply (reuses P2 infra)
 **Goal**: `AI Optimize` produces a real suggestion draft (owner-scoped) and an inline `Apply` button; Apply executes via the same executor.
@@ -134,7 +135,7 @@
 - `npm run test` (vitest run only).
 - Deploy: `docker compose up -d --build` (NO `--no-cache` — better-sqlite3 native gyp breaks under Node v22.23.2).
 - Live verify: `curl /health` → 200; `docker exec 1ai-ads sha256sum /app/<f>` vs `git show <sha>:<f> | sha256sum` → MATCH.
-- `tests/unit/repositories/settings.test.js` has 3 **pre-existing** failures (migration 025 seeds `approval_required=0`) — out of scope, do not "fix".
+- Full suite green: `npm run test` → **1751 passed / 1751** (113 files), 2026-08-23. (`tests/unit/repositories/settings.test.js` no longer fails.)
 
 ## 5. Open items
 - `approveDraft` owner-scoping is enforced in the **bot callback** (Phase 2 step 5), NOT inside `approveDraft`, to keep the admin web route working. Decision recorded; do not move scoping into `approveDraft`.

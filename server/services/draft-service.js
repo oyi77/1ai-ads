@@ -21,15 +21,16 @@ export class DraftService {
     return this.draftsRepo.findAll({ status, page, limit });
   }
 
-  async createDraft({ type, summary, details, proposedBy = 'ai', campaignId = null, approvalRequestId = null }) {
+  async createDraft({ type, summary, details, proposedBy = 'ai', userId = null, campaignId = null, approvalRequestId = null }) {
     if (!type) throw new ValidationError('type is required');
     if (!summary) throw new ValidationError('summary is required');
 
-    const draft = this.draftsRepo.create({
+    const draft = await this.draftsRepo.create({
       type,
       summary,
       details,
       proposedBy,
+      userId,
       campaignId,
       approvalRequestId,
     });
@@ -40,7 +41,7 @@ export class DraftService {
   }
 
   async approveDraft(id, userId, executionResult = null) {
-    const existing = this.draftsRepo.findById(id);
+    const existing = await this.draftsRepo.findById(id);
     if (!existing) throw new NotFoundError('Draft not found');
     if (existing.status !== 'pending') throw new ValidationError(`Draft is already ${existing.status}`);
 
@@ -80,7 +81,7 @@ export class DraftService {
   }
 
   async rejectDraft(id, userId, rejectionReason = null) {
-    const existing = this.draftsRepo.findById(id);
+    const existing = await this.draftsRepo.findById(id);
     if (!existing) throw new NotFoundError('Draft not found');
     if (existing.status !== 'pending') throw new ValidationError(`Draft is already ${existing.status}`);
 
@@ -94,15 +95,16 @@ export class DraftService {
   /**
    * Guard for autonomous mutation paths (auto-optimizer, ai-agent).
    * When approval is required, the intended change is recorded as a draft instead
-   * of being applied live. Returns true when the caller should SKIP the live mutation.
+   * of being applied live. Returns the created draft when approval is required,
+   * or false when the caller may proceed with the live mutation.
    */
-  async guardAutonomousChange({ type, summary, details, proposedBy = 'ai', campaignId = null }) {
+  async guardAutonomousChange({ type, summary, details, proposedBy = 'ai', userId = null, campaignId = null }) {
     if (!this.draftsRepo.settingsRepo || !this.draftsRepo.settingsRepo.getApprovalRequired()) {
       return false;
     }
     const reqId = `apr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    await this.createDraft({ type, summary, details, proposedBy, campaignId, approvalRequestId: reqId });
-    return true;
+    const draft = await this.createDraft({ type, summary, details, proposedBy, userId, campaignId, approvalRequestId: reqId });
+    return draft;
   }
 
   async _notify(draft, action) {

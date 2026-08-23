@@ -17,17 +17,23 @@ export class DraftsRepository {
         type TEXT NOT NULL,
         summary TEXT NOT NULL,
         details_json TEXT,
+        user_id TEXT,
         proposed_by TEXT DEFAULT 'ai',
         status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected')),
         reviewed_at TEXT,
         reviewed_by TEXT,
         rejection_reason TEXT,
         execution_result TEXT,
+        campaign_id TEXT,
+        approval_request_id TEXT,
         created_at TEXT DEFAULT (datetime('now')),
         updated_at TEXT DEFAULT (datetime('now'))
       );
       CREATE INDEX IF NOT EXISTS idx_drafts_status ON approval_drafts(status);
       CREATE INDEX IF NOT EXISTS idx_drafts_created ON approval_drafts(created_at);
+      CREATE INDEX IF NOT EXISTS idx_drafts_user ON approval_drafts(user_id);
+      CREATE INDEX IF NOT EXISTS idx_drafts_campaign ON approval_drafts(campaign_id);
+      CREATE INDEX IF NOT EXISTS idx_drafts_request ON approval_drafts(approval_request_id);
     `);
     log.debug('approval_drafts table ready');
   }
@@ -49,13 +55,23 @@ export class DraftsRepository {
   findById(id) {
     return this.db.prepare('SELECT * FROM approval_drafts WHERE id = ?').get(id) || null;
   }
+  findByUser(userId, { status } = {}) {
+    const params = [userId];
+    let where = 'user_id = ?';
+    if (status) { where += ' AND status = ?'; params.push(status); }
+    const total = this.db.prepare(`SELECT COUNT(*) as count FROM approval_drafts WHERE ${where}`).get(...params).count;
+    const data = this.db.prepare(
+      `SELECT * FROM approval_drafts WHERE ${where} ORDER BY created_at DESC`
+    ).all(...params);
+    return { data, total };
+  }
 
-  create({ type, summary, details, proposedBy = 'ai', campaignId, approvalRequestId = null }) {
+  create({ type, summary, details, proposedBy = 'ai', userId = null, campaignId, approvalRequestId = null }) {
     const id = uuidv4();
     this.db.prepare(`
-      INSERT INTO approval_drafts (id, type, summary, details_json, proposed_by, campaign_id, approval_request_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, type, summary, details ? JSON.stringify(details) : null, proposedBy, campaignId || null, approvalRequestId || null);
+      INSERT INTO approval_drafts (id, type, summary, details_json, user_id, proposed_by, campaign_id, approval_request_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, type, summary, details ? JSON.stringify(details) : null, userId || null, proposedBy, campaignId || null, approvalRequestId || null);
     return this.findById(id);
   }
 

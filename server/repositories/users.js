@@ -18,6 +18,9 @@ export class UsersRepository {
   findById(id) {
     return this.db.prepare('SELECT * FROM users WHERE id = ?').get(id) || null;
   }
+  getTelegramIdByUserId(userId) {
+    return this.db.prepare('SELECT telegram_id FROM users WHERE id = ?').get(userId)?.telegram_id ?? null;
+  }
 
   findAll() {
     return this.db.prepare('SELECT id, username, email, role, is_active, created_at, last_login FROM users').all();

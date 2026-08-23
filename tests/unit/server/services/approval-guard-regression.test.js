@@ -27,7 +27,7 @@ describe('DraftService.guardAutonomousChange regression (1ai-ads #adforge)', () 
     expect(draftsRepo.create).not.toHaveBeenCalled();
   });
 
-  it('returns true (block) when approval_required ON and creates a draft', async () => {
+  it('returns the created draft (block) when approval_required ON', async () => {
     const draftsRepo = makeDraftsRepo(true);
     const svc = new DraftService(draftsRepo);
     const res = await svc.guardAutonomousChange({
@@ -37,9 +37,16 @@ describe('DraftService.guardAutonomousChange regression (1ai-ads #adforge)', () 
       proposedBy: 'rule',
       campaignId: '123',
     });
-    expect(res).toBe(true);
+    expect(res).toMatchObject({ id: 'd1' });
     expect(draftsRepo.settingsRepo.getApprovalRequired).toHaveBeenCalled();
     expect(draftsRepo.create).toHaveBeenCalledTimes(1);
+    expect(draftsRepo.create).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'autonomous_action',
+      summary: 'scale up',
+      proposedBy: 'rule',
+      campaignId: '123',
+      approvalRequestId: expect.stringMatching(/^apr_/),
+    }));
   });
 
   it('propagates error when draft creation throws (current: no fail-open wrapper)', async () => {

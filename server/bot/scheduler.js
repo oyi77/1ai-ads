@@ -18,6 +18,7 @@ import { calculateCampaignStats, formatDailyReport } from '../domain/reporting.j
 import { backupDatabase } from '../../db/backup.js';
 import { MetaAdsAPI } from '../services/meta/index.js';
 import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
+import { compare } from '../lib/operators.js';
 
 const log = createLogger('bot:scheduler');
 
@@ -37,6 +38,21 @@ async function safeSend(bot, text, extra) {
   } catch (err) {
     log.error('Failed to send Telegram message', { error: err.message });
   }
+}
+
+/**
+ * Evaluate a rule against a raw campaigns-table row (no .stats wrapper).
+ * Mirrors RuleEvaluator._evaluateCondition but reads direct columns.
+ * @param {{ condition: object }} rule — parsed rule from rulesRepo.findAll()
+ * @param {object} campaign — raw campaigns row
+ * @returns {boolean}
+ */
+export function evaluateRuleForCampaign(rule, campaign) {
+  const condition = rule.condition;
+  if (!condition || typeof condition !== 'object') return false;
+  if (condition.type === 'status') return campaign.status === condition.value;
+  const metric = campaign[condition.type] ?? campaign.stats?.[condition.type] ?? 0;
+  return compare(metric, condition.operator, condition.value);
 }
 
 /**
@@ -207,24 +223,51 @@ export function initScheduler(bot, deps) {
   });
 
   // ────────────────────────────────────────────────────────────
-  // 5. Realtime Spend Guard — every 5 minutes
-  //    Compare campaign spend to automation rules. Alert on exceed.
+  // 5. Rule Guard — every 5 minutes
+  //    Evaluate automation rules against campaigns. On match, record an
+  //    owner-scoped approval draft and prompt the owner with an
+  //    Approve/Reject inline keyboard.
   // ────────────────────────────────────────────────────────────
   cron.schedule('*/5 * * * *', async () => {
     try {
       const rules = deps.repos?.rulesRepo?.findAll?.() || [];
-      const activeRules = rules.filter(r => r.is_active);
+      const activeRules = rules.filter(r => r.enabled);
       if (activeRules.length === 0) return;
 
       const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.() || { data: [] };
       for (const rule of activeRules) {
+        const action = rule.action || {};
         for (const campaign of campaigns) {
-          if (rule.condition_metric === 'spend' && (campaign.spend || 0) > rule.condition_value) {
-            await safeSend(
-              bot,
-              `⚠️ *${campaign.name}* spend Rp ${(campaign.spend || 0).toLocaleString('id-ID')} exceeds rule *${rule.name}* (limit: Rp ${rule.condition_value.toLocaleString('id-ID')})`,
-              { parse_mode: 'Markdown' },
-            );
+          if (!evaluateRuleForCampaign(rule, campaign)) continue;
+
+          const draft = await deps.services?.draftService?.guardAutonomousChange?.({
+            type: `rule_${action.type}`,
+            summary: `Rule ${rule.name}: ${rule.condition.type} → ${action.type} on ${campaign.name}`,
+            details: { action: rule.action, campaign },
+            proposedBy: 'ai',
+            campaignId: campaign.id,
+            userId: rule.user_id,
+          });
+          if (!draft) continue;
+
+          const telegramId = deps.repos?.usersRepo?.getTelegramIdByUserId?.(rule.user_id);
+          if (!telegramId) {
+            await safeSend(bot, `⚠️ *${campaign.name}* matched rule *${rule.name}* — draft awaiting approval in /app`);
+            continue;
+          }
+          const text = `⚠️ Rule *${rule.name}* matched *${campaign.name}*\nProposed action: *${action.type}*\n\nApprove or reject:`;
+          try {
+            await bot.telegram.sendMessage(telegramId, text, {
+              reply_markup: {
+                inline_keyboard: [[
+                  { text: '✅ Approve', callback_data: `approval:approve:${draft.id}` },
+                  { text: '❌ Reject', callback_data: `approval:reject:${draft.id}` },
+                ]],
+              },
+            });
+          } catch (err) {
+            log.error('Failed to send approval prompt to owner', { telegramId, error: err.message });
+            await safeSend(bot, `⚠️ *${campaign.name}* matched rule *${rule.name}* — draft awaiting approval in /app`);
           }
         }
       }
