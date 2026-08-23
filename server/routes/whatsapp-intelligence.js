@@ -12,7 +12,7 @@ const log = createLogger('wa-intelligence-routes');
  */
 export function createWhatsappWebhookRouter(whatsAppIntelligence) {
   const router = Router();
-  const VERIFY_TOKEN = config.webhookVerifyToken || 'adforge_webhook_2026';
+  const VERIFY_TOKEN = config.webhookVerifyToken;
   const handler = new WebhookHandler();
 
   router.get('/', (req, res) => {

@@ -237,7 +237,12 @@ export class PaymentService {
       hmac.update(payload);
       const computed = hmac.digest('hex');
 
-      const isValid = computed === signature;
+      // Constant-time comparison to avoid timing side-channels (mirrors app.js Scalev check).
+      const expectedBuf = Buffer.from(computed);
+      const providedBuf = Buffer.from(signature);
+      const isValid =
+        expectedBuf.length === providedBuf.length &&
+        crypto.timingSafeEqual(expectedBuf, providedBuf);
       if (!isValid) {
         log.warn('Webhook signature verification failed', { orderId });
       }
