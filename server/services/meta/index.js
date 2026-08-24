@@ -154,22 +154,17 @@ export class MetaAdsAPI extends BasePlatformApiClient {
 
   async getMultiCampaignInsights(campaignIds, { datePreset = 'last_30d' } = {}) {
     if (!campaignIds.length) return {};
-    // Meta supports up to 50 IDs in one request
-    const chunks = [];
-    for (let i = 0; i < campaignIds.length; i += 50) {
-      chunks.push(campaignIds.slice(i, i + 50));
-    }
-
+    // The batch `GET /?ids=...` form is deprecated (Meta returns 500 code 100
+    // "The ids query parameter is deprecated in v26.0+"), so fetch per-campaign
+    // insights in parallel. Failed lookups resolve to null; consumers treat
+    // missing/null entries as empty (`insights[id] || {}`).
+    const results = await Promise.allSettled(
+      campaignIds.map((id) => this.getCampaignInsights(id, { datePreset }))
+    );
     const allResults = {};
-    for (const chunk of chunks) {
-      const data = await this._get('/', {
-        ids: chunk.join(','),
-        fields: `insights.date_preset(${datePreset}){spend,impressions,clicks,ctr,cpc,actions,action_values,cost_per_action_type}`,
-      });
-      for (const [id, res] of Object.entries(data)) {
-        allResults[id] = this._parseInsights(res.insights?.data?.[0]);
-      }
-    }
+    campaignIds.forEach((id, i) => {
+      allResults[id] = results[i].status === 'fulfilled' ? results[i].value : null;
+    });
     return allResults;
   }
 

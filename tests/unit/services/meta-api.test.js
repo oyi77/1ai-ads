@@ -398,4 +398,36 @@ describe('MetaAdsAPI', () => {
       expect(Object.keys(body)).toEqual(['status']);
     });
   });
+
+  describe('getMultiCampaignInsights', () => {
+    it('fetches per-campaign insights without the deprecated ids= param', async () => {
+      const spy = vi.spyOn(api, 'getCampaignInsights')
+        .mockResolvedValue({ spend: 10, revenue: 30, clicks: 5 });
+      const result = await api.getMultiCampaignInsights(['camp_1', 'camp_2'], { datePreset: 'last_7d' });
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect(spy).toHaveBeenCalledWith('camp_1', { datePreset: 'last_7d' });
+      expect(spy).toHaveBeenCalledWith('camp_2', { datePreset: 'last_7d' });
+      // Regression: the old implementation hit `GET /` with an `ids:` query
+      // param — Meta now returns 500 code 100 ("The ids query parameter is
+      // deprecated in v26.0+") for that form.
+      expect(result).toEqual({
+        camp_1: { spend: 10, revenue: 30, clicks: 5 },
+        camp_2: { spend: 10, revenue: 30, clicks: 5 },
+      });
+    });
+
+    it('returns null for failed campaigns while keeping successful ones', async () => {
+      vi.spyOn(api, 'getCampaignInsights').mockImplementation(async (id) => {
+        if (id === 'camp_bad') throw new Error('Meta API error');
+        return { spend: 20 };
+      });
+      const result = await api.getMultiCampaignInsights(['camp_ok', 'camp_bad']);
+      expect(result).toEqual({ camp_ok: { spend: 20 }, camp_bad: null });
+    });
+
+    it('returns empty object for empty input', async () => {
+      const result = await api.getMultiCampaignInsights([]);
+      expect(result).toEqual({});
+    });
+  });
 });
