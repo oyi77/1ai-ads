@@ -248,7 +248,7 @@ describe('menu:optimize — AI Optimization (P3)', () => {
 
   it('coerces a string amount into a number for scale_up', async () => {
     deps.services.llmClient = {
-      call: vi.fn(async () => '{"campaign_id":"c1","type":"scale_up","amount":"20","rationale":"naikkan"}'),
+      call: vi.fn(async () => '{"campaign_id":"c1","type":"scale_up","amount":"3","rationale":"naikkan"}'),
     };
     deps.repos.campaignsRepo.findAll.mockReturnValue({
       data: [metaCampaign('c1', { roas: 2.5 })],
@@ -260,7 +260,7 @@ describe('menu:optimize — AI Optimization (P3)', () => {
     expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledWith(
       expect.objectContaining({
         campaignId: 'c1',
-        details: { action: { type: 'scale_up', amount: 20 }, campaign: expect.objectContaining({ id: 'c1' }) },
+        details: { action: { type: 'scale_up', amount: 3 }, campaign: expect.objectContaining({ id: 'c1' }) },
       })
     );
   });
