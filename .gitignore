@@ -40,6 +40,7 @@ tmp_data/
 tmp_*.sh
 tmp_*.mjs
 tmp_*.py
+tmp/
 
 # Reports and test outputs
 reports/*.json
