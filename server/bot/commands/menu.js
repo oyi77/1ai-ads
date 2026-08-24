@@ -179,7 +179,7 @@ async function handleOptimizeAction(ctx, deps, scope) {
           { parse_mode: 'Markdown' }
         );
       }
-      const insights = await api.getMultiCampaignInsights(active.map(c => c.id), { datePreset: 'last_30d' });
+      const insights = await api.getMultiCampaignInsights(active.map(c => c.id), { datePreset: 'last_30d', accountId: scope });
       campaigns = active.map(c => {
         const ins = insights[c.id] || {};
         const spend = ins.spend || 0;

@@ -200,7 +200,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
         if (campaigns.length > 0) {
           try {
             const campaignIds = campaigns.map(c => c.id);
-            insightsMap = await api.getMultiCampaignInsights(campaignIds);
+            insightsMap = await api.getMultiCampaignInsights(campaignIds, { accountId: account.id });
           } catch (err) {
             log.error('Failed to get campaign insights', { error: err.message });
           }

@@ -152,20 +152,44 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     return this._parseInsights(data.data?.[0]);
   }
 
-  async getMultiCampaignInsights(campaignIds, { datePreset = 'last_30d' } = {}) {
+  async getMultiCampaignInsights(campaignIds, { datePreset = 'last_30d', accountId = null } = {}) {
     if (!campaignIds.length) return {};
-    // The batch `GET /?ids=...` form is deprecated (Meta returns 500 code 100
-    // "The ids query parameter is deprecated in v26.0+"), so fetch per-campaign
-    // insights in parallel. Failed lookups resolve to null; consumers treat
-    // missing/null entries as empty (`insights[id] || {}`).
+
+    // Preferred path: ONE account-level insights call with a campaign.id IN
+    // filter. Avoids both the deprecated `GET /?ids=...` form (Meta returns
+    // 500 code 100 "The ids query parameter is deprecated in v26.0+") and the
+    // N per-object requests of the fan-out below. Meta omits campaigns with
+    // no data in range, so absent ids map to null; consumers treat null as
+    // empty (`insights[id] || {}`).
+    if (accountId) {
+      const filtering = JSON.stringify([
+        { field: 'campaign.id', operator: 'IN', value: campaignIds },
+      ]);
+      const data = await this._get(`/${accountId}/insights`, {
+        level: 'campaign',
+        filtering,
+        fields: 'campaign_id,spend,impressions,clicks,ctr,cpc,actions,action_values,cost_per_action_type',
+        limit: '100',
+        date_preset: datePreset,
+      });
+      const byId = {};
+      for (const row of data.data || []) {
+        if (row.campaign_id) byId[row.campaign_id] = this._parseInsights(row);
+      }
+      const allResults = {};
+      for (const id of campaignIds) allResults[id] = byId[id] ?? null;
+      return allResults;
+    }
+
+    // Fallback (no accountId given): per-campaign parallel fan-out.
     const results = await Promise.allSettled(
       campaignIds.map((id) => this.getCampaignInsights(id, { datePreset }))
     );
-    const allResults = {};
+    const fanout = {};
     campaignIds.forEach((id, i) => {
-      allResults[id] = results[i].status === 'fulfilled' ? results[i].value : null;
+      fanout[id] = results[i].status === 'fulfilled' ? results[i].value : null;
     });
-    return allResults;
+    return fanout;
   }
 
   async getAccountInsights(accountId, { datePreset = 'last_30d' } = {}) {

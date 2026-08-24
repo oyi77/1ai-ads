@@ -429,5 +429,32 @@ describe('MetaAdsAPI', () => {
       const result = await api.getMultiCampaignInsights([]);
       expect(result).toEqual({});
     });
+
+    it('uses ONE account-level call when accountId is provided', async () => {
+      const getSpy = vi.spyOn(api, '_get').mockResolvedValue({
+        data: [
+          { campaign_id: 'camp_1', spend: '1000', impressions: '5000', clicks: '50' },
+        ],
+      });
+      const insightSpy = vi.spyOn(api, 'getCampaignInsights');
+      const result = await api.getMultiCampaignInsights(['camp_1', 'camp_missing'], {
+        datePreset: 'last_30d',
+        accountId: 'act_123',
+      });
+      // Single batched call, no per-object fan-out
+      expect(getSpy).toHaveBeenCalledTimes(1);
+      expect(getSpy).toHaveBeenCalledWith('/act_123/insights', expect.objectContaining({
+        level: 'campaign',
+        fields: 'campaign_id,spend,impressions,clicks,ctr,cpc,actions,action_values,cost_per_action_type',
+        date_preset: 'last_30d',
+        limit: '100',
+      }));
+      const filtering = JSON.parse(getSpy.mock.calls[0][1].filtering);
+      expect(filtering).toEqual([{ field: 'campaign.id', operator: 'IN', value: ['camp_1', 'camp_missing'] }]);
+      expect(insightSpy).not.toHaveBeenCalled();
+      // Campaigns absent from Meta's response map to null
+      expect(result.camp_1.spend).toBe(1000);
+      expect(result.camp_missing).toBeNull();
+    });
   });
 });
