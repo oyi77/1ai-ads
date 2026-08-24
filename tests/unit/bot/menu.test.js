@@ -1,6 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handleMenuButton } from '../../../server/bot/commands/menu.js';
 
+// Mock the MetaAdsAPI service so the optimize picker/scoped path can run offline.
+const mockGetAdAccounts = vi.fn();
+const mockGetCampaigns = vi.fn();
+const mockGetMultiCampaignInsights = vi.fn();
+const mockGetAccountInsights = vi.fn();
+
+vi.mock('../../../server/services/meta/index.js', () => {
+  return {
+    MetaAdsAPI: {
+      withToken: vi.fn((token) => ({
+        getAdAccounts: mockGetAdAccounts,
+        getCampaigns: mockGetCampaigns,
+        getMultiCampaignInsights: mockGetMultiCampaignInsights,
+        getAccountInsights: mockGetAccountInsights,
+      })),
+    },
+  };
+});
+
 function makeDeps(overrides = {}) {
   return {
     services: {
@@ -16,12 +35,17 @@ function makeDeps(overrides = {}) {
         findAll: vi.fn(() => ({ data: [], total: 0 })),
         ...(overrides.repos?.campaignsRepo ?? {}),
       },
+      platformAccountsRepo: {
+        getByPlatform: vi.fn(() => null),
+        findByUserId: vi.fn(() => []),
+        ...(overrides.repos?.platformAccountsRepo ?? {}),
+      },
     },
     ...overrides,
   };
 }
 
-function makeCtx(userId = 'u1', match = ['menu:optimize', 'optimize']) {
+function makeCtx(userId = 'u1', match = ['menu:optimize:global', 'optimize:global']) {
   const replies = [];
   return {
     userId,
@@ -46,6 +70,7 @@ describe('menu:optimize — AI Optimization (P3)', () => {
   beforeEach(() => {
     deps = makeDeps();
     ctx = makeCtx('u1');
+    vi.clearAllMocks();
   });
 
   it('creates an owner-scoped approval draft for the lowest-ROAS active Meta campaign with Apply/Dismiss buttons', async () => {
@@ -325,5 +350,68 @@ describe('menu:optimize — AI Optimization (P3)', () => {
         details: { action: { type: 'scale_down', amount: 2 }, campaign: expect.objectContaining({ id: 'c1' }) },
       })
     );
+  });
+  it('prompts to connect a Meta account when optimize is triggered without one', async () => {
+    const bareCtx = makeCtx('u1', ['menu:optimize', 'optimize']);
+    const bareDeps = makeDeps({
+      repos: {
+        platformAccountsRepo: { getByPlatform: vi.fn(() => null), findByUserId: vi.fn(() => []) },
+      },
+    });
+
+    await handleMenuButton(bareDeps)(bareCtx);
+
+    expect(bareCtx._replies[0].msg).toBe('🔌 Connect a Meta account first via /start.');
+    expect(bareDeps.services.draftService.guardAutonomousChange).not.toHaveBeenCalled();
+  });
+
+  it('shows an ads-account picker with Global and Back buttons when no scope is given', async () => {
+    const bareCtx = makeCtx('u1', ['menu:optimize', 'optimize']);
+    deps.repos.platformAccountsRepo.getByPlatform.mockReturnValue({ access_token: 'tok' });
+    mockGetAdAccounts.mockResolvedValue([{ id: 'acc1', name: 'Acc One' }]);
+
+    await handleMenuButton(deps)(bareCtx);
+
+    expect(bareCtx._replies[0].msg).toBe('🔄 Loading your Meta ad accounts…');
+    expect(bareCtx._replies[1].msg).toContain('Pilih akun iklan');
+    expect(bareCtx._replies[1].opts.reply_markup.inline_keyboard[0][0]).toEqual({
+      text: '⚙️ Acc One (acc1)',
+      callback_data: 'menu:optimize:acc1',
+    });
+    expect(bareCtx._replies[1].opts.reply_markup.inline_keyboard[1]).toEqual([
+      { text: '🌐 Global', callback_data: 'menu:optimize:global' },
+      { text: '⬅️ Back', callback_data: 'menu:optimize' },
+    ]);
+    expect(deps.services.draftService.guardAutonomousChange).not.toHaveBeenCalled();
+  });
+
+  it('optimizes a single scoped ads account via the Meta API', async () => {
+    const bareCtx = makeCtx('u1', ['menu:optimize:acc1', 'optimize:acc1']);
+    deps.repos.platformAccountsRepo.getByPlatform.mockReturnValue({ access_token: 'tok' });
+    mockGetCampaigns.mockResolvedValue([{ id: 'c1', name: 'C1', status: 'active', dailyBudget: 10000 }]);
+    mockGetMultiCampaignInsights.mockResolvedValue({ c1: { spend: 100, revenue: 40 } });
+
+    await handleMenuButton(deps)(bareCtx);
+
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 'c1',
+        details: expect.objectContaining({
+          action: { type: 'pause' },
+          campaign: expect.objectContaining({ id: 'c1' }),
+        }),
+      })
+    );
+  });
+
+  it('optimizes all active campaigns on the explicit global path', async () => {
+    deps.repos.campaignsRepo.findAll.mockReturnValue({
+      data: [metaCampaign('g1', { roas: 1.0, name: 'Global One' })],
+      total: 1,
+    });
+
+    await handleMenuButton(deps)(ctx);
+
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledTimes(1);
   });
 });

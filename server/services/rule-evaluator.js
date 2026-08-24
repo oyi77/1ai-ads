@@ -63,7 +63,7 @@ export class RuleEvaluator {
   }
 
 
-  createRule(userId, { name, condition, action, priority = 1, enabled = true }) {
+  createRule(userId, { name, condition, action, priority = 1, enabled = true, account_id = null }) {
     return this.rulesRepo.create({
       user_id: userId,
       name,
@@ -72,6 +72,7 @@ export class RuleEvaluator {
       priority,
       enabled,
       created_at: new Date().toISOString(),
+      account_id,
     });
   }
 

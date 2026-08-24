@@ -22,7 +22,8 @@ export class RulesRepository {
         priority INTEGER DEFAULT 1,
         enabled INTEGER DEFAULT 1,
         created_at TEXT NOT NULL,
-        updated_at TEXT
+        updated_at TEXT,
+        account_id TEXT
       );
       
       CREATE INDEX IF NOT EXISTS idx_user_rules ON ${this.table}(user_id, enabled);
@@ -36,8 +37,8 @@ export class RulesRepository {
     const actionStr = typeof rule.action === 'string' ? rule.action : JSON.stringify(rule.action);
 
     const stmt = this.db.prepare(`
-      INSERT INTO ${this.table} (user_id, name, condition, action, priority, enabled, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO ${this.table} (user_id, name, condition, action, priority, enabled, created_at, account_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     const result = stmt.run(
@@ -47,7 +48,8 @@ export class RulesRepository {
       actionStr,
       rule.priority,
       rule.enabled ? 1 : 0,
-      now
+      now,
+      rule.account_id ?? null
     );
     
     log.info('Rule created', { id: result.lastInsertRowid, userId: rule.user_id });
@@ -63,6 +65,7 @@ export class RulesRepository {
     if (updates.action) { set.push('action = ?'); values.push(updates.action); }
     if (updates.priority !== undefined) { set.push('priority = ?'); values.push(updates.priority); }
     if (updates.enabled !== undefined) { set.push('enabled = ?'); values.push(updates.enabled ? 1 : 0); }
+    if (updates.account_id !== undefined) { set.push('account_id = ?'); values.push(updates.account_id ?? null); }
     
     if (set.length === 0) return false;
     
@@ -90,7 +93,8 @@ export class RulesRepository {
       priority: r.priority,
       enabled: r.enabled === 1,
       created_at: r.created_at,
-      updated_at: r.updated_at
+      updated_at: r.updated_at,
+      account_id: r.account_id,
     }));
   }
 
@@ -102,7 +106,24 @@ export class RulesRepository {
       condition: safeParse(r.condition),
       action: safeParse(r.action),
       priority: r.priority,
-      enabled: true
+      enabled: true,
+      updated_at: r.updated_at,
+      account_id: r.account_id,
+    }));
+  }
+
+  getAllEnabledForScope(userId, accountId) {
+    return this.db.prepare(
+      `SELECT * FROM ${this.table} WHERE user_id = ? AND enabled = 1 AND (account_id IS NULL OR account_id = ?)`
+    ).all(userId, accountId).map(r => ({
+      id: r.id,
+      user_id: r.user_id,
+      name: r.name,
+      condition: safeParse(r.condition),
+      action: safeParse(r.action),
+      priority: r.priority,
+      enabled: true,
+      account_id: r.account_id
     }));
   }
 
@@ -127,6 +148,7 @@ export class RulesRepository {
       enabled: r.enabled === 1,
       created_at: r.created_at,
       updated_at: r.updated_at,
+      account_id: r.account_id,
     }));
   }
 
@@ -143,6 +165,7 @@ export class RulesRepository {
       campaign_id: r.campaign_id,
       created_at: r.created_at,
       updated_at: r.updated_at,
+      account_id: r.account_id,
     }));
   }
 
@@ -156,12 +179,12 @@ export class RulesRepository {
   createMany(rules) {
     const now = new Date().toISOString();
     const stmt = this.db.prepare(`
-      INSERT INTO ${this.table} (user_id, name, condition, action, priority, enabled, created_at)
-      VALUES ${rules.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ')}
+      INSERT INTO ${this.table} (user_id, name, condition, action, priority, enabled, created_at, account_id)
+      VALUES ${rules.map(() => '(?, ?, ?, ?, ?, ?, ?, ?)').join(', ')}
     `);
     
     const values = rules.flatMap(r => [
-      r.user_id, r.name, r.condition, r.action, r.priority, r.enabled ? 1 : 0, now
+      r.user_id, r.name, r.condition, r.action, r.priority, r.enabled ? 1 : 0, now, r.account_id ?? null
     ]);
     
     const result = stmt.run(...values);

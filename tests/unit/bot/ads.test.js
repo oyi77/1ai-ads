@@ -144,4 +144,14 @@ describe('per-user ads handlers (disable/enable scoped to user token)', () => {
     expect(ctx._replies[0]).toContain('Connection not found');
     expect(deps.repos.platformAccountsRepo.update).not.toHaveBeenCalled();
   });
+
+  it('handleAdsReport renders a scoped report for a specific account', async () => {
+    const ctx = makeCtx();
+    mockGetAdAccounts.mockResolvedValue([{ id: 'acc1', name: 'Acc One' }]);
+    mockGetAccountInsights.mockResolvedValue({ spend: 500000, revenue: 750000, clicks: 120, impressions: 5000 });
+    await handleAdsReport(makeDeps('USER_TOKEN'))(ctx, 'acc1');
+    expect(ctx._replies[0]).toContain('Acc One');
+    expect(ctx._replies[0]).toContain('Rp 500.000');
+    expect(mockGetAccountInsights).toHaveBeenCalledWith('acc1', expect.objectContaining({ datePreset: 'last_30d' }));
+  });
 });

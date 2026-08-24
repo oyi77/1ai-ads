@@ -15,19 +15,19 @@ const log = createLogger('bot:ads');
 const BACKEND = process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com';
 
 /** Resolve the current user's stored Meta token, or null. */
-function getUserMetaAccount(ctx, deps) {
+export function getUserMetaAccount(ctx, deps) {
   const repo = deps?.repos?.platformAccountsRepo;
   if (!repo) return null;
   return repo.getByPlatform(ctx.userId, 'meta') || null;
 }
 
-function makeApi(ctx, deps) {
+export function makeApi(ctx, deps) {
   const acct = getUserMetaAccount(ctx, deps);
   if (!acct?.access_token) return { api: null, acct };
   return { api: MetaAdsAPI.withToken(acct.access_token), acct };
 }
 
-function isExpiredToken(err) {
+export function isExpiredToken(err) {
   // Meta returns a 190/110/463 code with "Session has expired" or "user token"
   const code = err?.code || err?.error?.code;
   const msg = `${err?.message || ''} ${err?.error?.message || ''}`.toLowerCase();
@@ -182,7 +182,49 @@ export function handleAdsToggle(deps) {
 
 // ── Report: spend + insights across accounts ────────────────
 export function handleAdsReport(deps) {
-  return async (ctx) => {
+  return async (ctx, accountId) => {
+    if (accountId) {
+      const { api } = makeApi(ctx, deps);
+      if (!api) return ctx.reply('🔌 Connect a Meta account first via /start.');
+      let accounts;
+      try {
+        accounts = await api.getAdAccounts();
+      } catch (err) {
+        log.error('ads report scoped list failed', { userId: ctx.userId, error: err?.message });
+        return ctx.reply('⚠️ Could not load your accounts for the report.');
+      }
+      const acct = accounts.find((a) => String(a.id) === String(accountId));
+      if (!acct) return ctx.reply('⚠️ Akun tidak ditemukan.');
+
+      let ins;
+      try {
+        ins = await api.getAccountInsights(accountId, { datePreset: 'last_30d' });
+      } catch (err) {
+        if (isExpiredToken(err)) {
+          return ctx.reply('🔑 Sesi Meta kamu sudah kedaluwarsa. Hubungkan ulang via /start.');
+        }
+        log.warn('ads report scoped failed', { accountId, error: err?.message });
+        return ctx.reply('⚠️ Gagal mengambil report akun ini.');
+      }
+      if (!ins) return ctx.reply('📭 Tidak ada data insight untuk akun ini.');
+
+      const roas = ins.spend > 0 ? (ins.revenue / ins.spend).toFixed(2) : '0.00';
+      const body =
+        `📊 *Report: ${acct.name} (30d)*\n\n` +
+        `Total Spend: ${fmtCurrency(ins.spend)}\n` +
+        `Total Revenue: ${fmtCurrency(ins.revenue)}\n` +
+        `ROAS: ${roas}x\n` +
+        `Clicks: ${(ins.clicks || 0).toLocaleString('id-ID')}\n` +
+        `Impressions: ${(ins.impressions || 0).toLocaleString('id-ID')}`;
+
+      return ctx.reply(body, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [[{ text: '🔄 Refresh', callback_data: `menu:reports:${accountId}` }]],
+        },
+      });
+    }
+
     const { api } = makeApi(ctx, deps);
     if (!api) return ctx.reply('🔌 Connect a Meta account first via /start.');
     await ctx.reply('📈 Gathering your ad report…');

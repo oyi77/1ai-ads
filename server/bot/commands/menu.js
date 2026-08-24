@@ -2,7 +2,7 @@
  * /menu command — Main menu with inline buttons
  * Ported from asisten-jualan/bot/handlers/quick_start.py
  */
-import { handleAds, handleAdsReport } from './ads.js';
+import { handleAds, handleAdsReport, getUserMetaAccount, makeApi, isExpiredToken } from './ads.js';
 import { handleSettings } from './settings.js';
 import { PLATFORM_NAMES } from '../scenes/connect-account.js';
 import { resolveScaleDefault } from '../../lib/scale-defaults.js';
@@ -29,19 +29,20 @@ export function handleMenu() {
 export function handleMenuButton(deps) {
   return async (ctx) => {
     const action = ctx.match[1];
+    const [base, scope] = action.split(':');
     await ctx.answerCbQuery();
 
-    switch (action) {
+    switch (base) {
       case 'status':
         return handleStatusAction(ctx, deps);
       case 'reports':
-        return handleReportsAction(ctx, deps);
+        return scope ? handleAdsReport(deps)(ctx, scope) : handleReportsAction(ctx, deps);
       case 'create':
         return handleCreateAction(ctx);
       case 'connect':
         return sendPlatformChoice(ctx);
       case 'optimize':
-        return handleOptimizeAction(ctx, deps);
+        return handleOptimizeAction(ctx, deps, scope);
       case 'monitor':   return ctx.reply('⚡ Monitor rules: /settings to configure spend guards and alerts.');
       case 'settings':  return handleSettings(deps)(ctx);
       case 'ads':
@@ -113,10 +114,87 @@ async function handleCreateAction(ctx) {
   );
 }
 
-async function handleOptimizeAction(ctx, deps) {
+async function handleOptimizeAction(ctx, deps, scope) {
+  if (!scope) {
+    const acct = getUserMetaAccount(ctx, deps);
+    if (!acct) return ctx.reply('🔌 Connect a Meta account first via /start.');
+
+    const { api } = makeApi(ctx, deps);
+    if (!api) return ctx.reply('🔌 Connect a Meta account first via /start.');
+
+    let accounts;
+    try {
+      await ctx.reply('🔄 Loading your Meta ad accounts…');
+      accounts = await api.getAdAccounts();
+    } catch (e) {
+      return ctx.reply(isExpiredToken(e)
+        ? '🔑 Sesi Meta kamu sudah kedaluwarsa. Hubungkan ulang via /start.'
+        : '⚠️ Gagal memuat daftar akun.');
+    }
+
+    if (!accounts || accounts.length === 0) {
+      return ctx.reply('✅ Terhubung, tapi tidak ada akun iklan ditemukan untuk token ini.');
+    }
+
+    return ctx.reply(
+      '🤖 *AI Optimization*\n\nPilih akun iklan yang mau dioptimalkan:',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            ...accounts.map((a) => [{ text: `⚙️ ${a.name} (${a.id})`, callback_data: `menu:optimize:${a.id}` }]),
+            [
+              { text: '🌐 Global', callback_data: 'menu:optimize:global' },
+              { text: '⬅️ Back', callback_data: 'menu:optimize' },
+            ],
+          ],
+        },
+      }
+    );
+  }
+
   try {
-    const result = deps?.repos?.campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [], total: 0 };
-    const campaigns = (result.data || []).filter(c => c.platform === 'meta' && c.status === 'ACTIVE');
+    let campaigns;
+    if (scope === 'global') {
+      const result = deps?.repos?.campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [], total: 0 };
+      campaigns = (result.data || []).filter(c => c.platform === 'meta' && c.status === 'ACTIVE');
+    } else {
+      const acct = getUserMetaAccount(ctx, deps);
+      if (!acct) return ctx.reply('🔌 Connect a Meta account first via /start.');
+      const { api } = makeApi(ctx, deps);
+      if (!api) return ctx.reply('🔌 Connect a Meta account first via /start.');
+
+      let live;
+      try {
+        live = await api.getCampaigns(scope);
+      } catch (e) {
+        return ctx.reply(isExpiredToken(e)
+          ? '🔑 Sesi Meta kamu sudah kedaluwarsa. Hubungkan ulang via /start.'
+          : '⚠️ Gagal memuat kampanye akun ini.');
+      }
+      const active = (live || []).filter(c => c.status === 'active');
+      if (active.length === 0) {
+        return ctx.reply(
+          '🤖 *AI Optimization*\n\nTidak ada kampanye Meta aktif untuk dioptimalkan.',
+          { parse_mode: 'Markdown' }
+        );
+      }
+      const insights = await api.getMultiCampaignInsights(active.map(c => c.id), { datePreset: 'last_30d' });
+      campaigns = active.map(c => {
+        const ins = insights[c.id] || {};
+        const spend = ins.spend || 0;
+        const revenue = ins.revenue || 0;
+        return {
+          id: c.id,
+          name: c.name || c.id,
+          status: c.status,
+          budget: c.dailyBudget || 0,
+          spend,
+          revenue,
+          roas: spend > 0 ? revenue / spend : 0,
+        };
+      });
+    }
 
     if (campaigns.length === 0) {
       return ctx.reply(
@@ -125,28 +203,32 @@ async function handleOptimizeAction(ctx, deps) {
       );
     }
 
-    const llmClient = deps?.services?.llmClient;
-    if (llmClient) {
-      const llmSuggestion = await tryLlmSuggestion(llmClient, campaigns);
-      if (llmSuggestion) return await proposeOptimization(ctx, deps, llmSuggestion);
-    }
-
-    // Deterministic fallback: pause the worst performer (lowest ROAS).
-    const campaign = campaigns.reduce((worst, c) => {
-      const roas = typeof c.roas === 'number' ? c.roas : (c.spend > 0 ? (c.revenue || 0) / c.spend : 0);
-      const worstRoas = typeof worst.roas === 'number' ? worst.roas : (worst.spend > 0 ? (worst.revenue || 0) / worst.spend : 0);
-      return roas < worstRoas ? c : worst;
-    });
-
-    return await proposeOptimization(ctx, deps, {
-      campaign,
-      type: 'pause',
-      amount: null,
-      rationale: 'ROAS rendah',
-    });
+    return await runOptimize(ctx, deps, campaigns);
   } catch {
     return ctx.reply('⚠️ Gagal memproses optimasi. Coba lagi nanti.');
   }
+}
+
+async function runOptimize(ctx, deps, campaigns) {
+  const llmClient = deps?.services?.llmClient;
+  if (llmClient) {
+    const llmSuggestion = await tryLlmSuggestion(llmClient, campaigns);
+    if (llmSuggestion) return await proposeOptimization(ctx, deps, llmSuggestion);
+  }
+
+  // Deterministic fallback: pause the worst performer (lowest ROAS).
+  const campaign = campaigns.reduce((worst, c) => {
+    const roas = typeof c.roas === 'number' ? c.roas : (c.spend > 0 ? (c.revenue || 0) / c.spend : 0);
+    const worstRoas = typeof worst.roas === 'number' ? worst.roas : (worst.spend > 0 ? (worst.revenue || 0) / worst.spend : 0);
+    return roas < worstRoas ? c : worst;
+  });
+
+  return await proposeOptimization(ctx, deps, {
+    campaign,
+    type: 'pause',
+    amount: null,
+    rationale: 'ROAS rendah',
+  });
 }
 
 const OPTIMIZE_SYSTEM_PROMPT = `You are an AI advertising optimization assistant.
