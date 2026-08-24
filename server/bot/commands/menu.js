@@ -150,7 +150,7 @@ async function handleOptimizeAction(ctx, deps) {
 
 const OPTIMIZE_SYSTEM_PROMPT = `You are an AI advertising optimization assistant.
 Analyze the given Meta ad campaigns and recommend ONE optimization as a JSON object:
-{ "campaign_id": string, "type": "pause"|"scale_up"|"scale_down", "amount": number (optional, for scale actions), "rationale": string }
+{ "campaign_id": string, "type": "pause"|"scale_up"|"scale_down", "amount": number (optional, MULTIPLIER: scale_up → budget × amount, e.g. 1.5 = +50%; scale_down → budget ÷ amount, e.g. 0.8 = −20%; omit or use 1 for pause; 0 < amount ≤ 5), "rationale": string }
 Only reference campaigns present in the data. Return ONLY the JSON object, no other text.`;
 
 async function tryLlmSuggestion(llmClient, campaigns) {
@@ -168,12 +168,16 @@ async function tryLlmSuggestion(llmClient, campaigns) {
       OPTIMIZE_SYSTEM_PROMPT,
       `Recommend the best optimization for these Meta campaigns:\n${JSON.stringify(context)}`
     );
-    const parsed = JSON.parse(response);
+    if (typeof response !== 'string' || !response.trim()) return null;
+    const clean = String(response).replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    const parsed = JSON.parse(clean);
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || !parsed.campaign_id) return null;
     const campaign = campaigns.find(c => c.id === parsed.campaign_id);
     if (!campaign) return null;
     const type = ['pause', 'scale_up', 'scale_down'].includes(parsed.type) ? parsed.type : 'pause';
-    const amount = Number.isFinite(parsed.amount) ? parsed.amount : null;
+    const raw = parsed.amount;
+    const coerced = raw === null || raw === undefined || raw === '' ? null : Number(raw);
+    const amount = coerced !== null && Number.isFinite(coerced) ? coerced : null;
     return {
       campaign,
       type,

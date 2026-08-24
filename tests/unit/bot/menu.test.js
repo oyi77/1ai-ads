@@ -224,4 +224,63 @@ describe('menu:optimize — AI Optimization (P3)', () => {
     expect(ctx._replies).toHaveLength(1);
     expect(ctx._replies[0].msg).toContain('naikkan budget');
   });
+
+  it('parses an LLM suggestion wrapped in a markdown JSON fence', async () => {
+    deps.services.llmClient = {
+      call: vi.fn(async () => '```json\n{"campaign_id":"c2","type":"pause","rationale":"ROAS 0.4 terlalu rendah"}\n```'),
+    };
+    deps.repos.campaignsRepo.findAll.mockReturnValue({
+      data: [metaCampaign('c1', { roas: 2.5 }), metaCampaign('c2', { roas: 0.4 })],
+      total: 2,
+    });
+
+    await handleMenuButton(deps)(ctx);
+
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledTimes(1);
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 'c2',
+        details: { action: { type: 'pause' }, campaign: expect.objectContaining({ id: 'c2' }) },
+      })
+    );
+    expect(ctx._replies[0].msg).toContain('Saran AI');
+  });
+
+  it('coerces a string amount into a number for scale_up', async () => {
+    deps.services.llmClient = {
+      call: vi.fn(async () => '{"campaign_id":"c1","type":"scale_up","amount":"20","rationale":"naikkan"}'),
+    };
+    deps.repos.campaignsRepo.findAll.mockReturnValue({
+      data: [metaCampaign('c1', { roas: 2.5 })],
+      total: 1,
+    });
+
+    await handleMenuButton(deps)(ctx);
+
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 'c1',
+        details: { action: { type: 'scale_up', amount: 20 }, campaign: expect.objectContaining({ id: 'c1' }) },
+      })
+    );
+  });
+
+  it('passes a numeric scale_down amount through as a divisor', async () => {
+    deps.services.llmClient = {
+      call: vi.fn(async () => '{"campaign_id":"c1","type":"scale_down","amount":0.5,"rationale":"turunkan"}'),
+    };
+    deps.repos.campaignsRepo.findAll.mockReturnValue({
+      data: [metaCampaign('c1', { roas: 2.5 })],
+      total: 1,
+    });
+
+    await handleMenuButton(deps)(ctx);
+
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 'c1',
+        details: { action: { type: 'scale_down', amount: 0.5 }, campaign: expect.objectContaining({ id: 'c1' }) },
+      })
+    );
+  });
 });
