@@ -283,4 +283,47 @@ describe('menu:optimize — AI Optimization (P3)', () => {
       })
     );
   });
+
+  it('fills a scale_down default (1.25 divisor) when the LLM omits amount', async () => {
+    deps.services.llmClient = {
+      call: vi.fn(async () => '{"campaign_id":"c1","type":"scale_down","rationale":"turunkan"}'),
+    };
+    deps.repos.campaignsRepo.findAll.mockReturnValue({
+      data: [metaCampaign('c1', { roas: 2.5 })],
+      total: 1,
+    });
+
+    await handleMenuButton(deps)(ctx);
+
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledTimes(1);
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 'c1',
+        details: { action: { type: 'scale_down', amount: 1.25 }, campaign: expect.objectContaining({ id: 'c1' }) },
+      })
+    );
+  });
+
+  it('uses the settings-DB scale_down default when configured', async () => {
+    deps = makeDeps({
+      repos: {
+        settingsRepo: { get: vi.fn((key) => (key === 'optimize_scale_down_default' ? 2 : null)) },
+        campaignsRepo: {
+          findAll: vi.fn(() => ({ data: [metaCampaign('c1', { roas: 2.5 })], total: 1 })),
+        },
+      },
+    });
+    deps.services.llmClient = {
+      call: vi.fn(async () => '{"campaign_id":"c1","type":"scale_down","rationale":"turunkan"}'),
+    };
+
+    await handleMenuButton(deps)(ctx);
+
+    expect(deps.services.draftService.guardAutonomousChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 'c1',
+        details: { action: { type: 'scale_down', amount: 2 }, campaign: expect.objectContaining({ id: 'c1' }) },
+      })
+    );
+  });
 });

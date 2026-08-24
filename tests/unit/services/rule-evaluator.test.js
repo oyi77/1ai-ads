@@ -294,6 +294,43 @@ describe('RuleEvaluator', () => {
     });
   });
 
+  describe('configurable scale defaults', () => {
+    it('uses the settings-DB scale_up default when configured', async () => {
+      mockSettingsRepo.get = vi.fn((key) => (key === 'optimize_scale_up_default' ? 2 : null));
+      const campaign = { id: 'c1', name: 'LC_Spring', campaign_id: 'camp-1', platform: 'meta', budget: 200 };
+      mockCampaignsRepo.getById.mockResolvedValue(campaign);
+
+      const result = await evaluator._applyAction({ type: 'scale_up' }, campaign);
+
+      expect(result.direction).toBe('increase');
+      expect(result.to).toBe(400);
+      expect(mockMetaApi.updateCampaign).toHaveBeenCalledWith('camp-1', { dailyBudget: 400 });
+    });
+
+    it('falls back to the code default (1.5) when no setting is configured', async () => {
+      const campaign = { id: 'c1', name: 'LC_Spring', campaign_id: 'camp-1', platform: 'meta', budget: 200 };
+      mockCampaignsRepo.getById.mockResolvedValue(campaign);
+
+      const result = await evaluator._applyAction({ type: 'scale_up' }, campaign);
+
+      expect(result.direction).toBe('increase');
+      expect(result.to).toBe(300);
+      expect(mockMetaApi.updateCampaign).toHaveBeenCalledWith('camp-1', { dailyBudget: 300 });
+    });
+
+    it('divides by the scale_down default in the _optimizeBudget decrease parse-fallback', async () => {
+      const campaign = { id: 'c1', campaign_id: 'camp-1', platform: 'meta', budget: 100 };
+      mockCampaignsRepo.getById.mockResolvedValue(campaign);
+      mockMetaApi.apiGet.mockResolvedValue({ data: [{}] });
+      mockLlmClient.call.mockResolvedValue('please decrease the budget');
+
+      await evaluator._optimizeBudget('c1');
+
+      expect(mockMetaApi.apiGet).toHaveBeenCalledWith('/campaign_camp-1', expect.any(Object));
+      expect(mockMetaApi.updateCampaign).toHaveBeenCalledWith('camp-1', { dailyBudget: 80 });
+    });
+  });
+
   describe('_pauseCampaign', () => {
     it('should pause a meta campaign', async () => {
       mockCampaignsRepo.getById.mockResolvedValue({ id: 'c1', campaign_id: 'pc1', platform: 'meta' });

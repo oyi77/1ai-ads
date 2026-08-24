@@ -11,6 +11,7 @@ import { TikTokAdsAPI } from './tiktok/index.js';
 import { createLogger } from '../lib/logger.js';
 import { compare } from '../lib/operators.js';
 import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
+import { resolveScaleDefault } from '../lib/scale-defaults.js';
 
 const log = createLogger('rule-evaluator');
 
@@ -57,6 +58,10 @@ export class RuleEvaluator {
     const resolver = RuleEvaluator.PLATFORM_APIS[platform];
     return resolver ? resolver(this) : this.metaAdsAPI;
   }
+  _scaleDefault(type) {
+    return resolveScaleDefault(type, this.settingsRepo);
+  }
+
 
   createRule(userId, { name, condition, action, priority = 1, enabled = true }) {
     return this.rulesRepo.create({
@@ -144,8 +149,8 @@ export class RuleEvaluator {
   }
 
   static ACTION_HANDLERS = {
-    scale_up: (self, action, campaign) => self._scaleCampaign(campaign.id, action.amount || 1.5, 'increase'),
-    scale_down: (self, action, campaign) => self._scaleCampaign(campaign.id, action.amount || 0.8, 'decrease'),
+    scale_up: (self, action, campaign) => self._scaleCampaign(campaign.id, action.amount || self._scaleDefault('scale_up'), 'increase'),
+    scale_down: (self, action, campaign) => self._scaleCampaign(campaign.id, action.amount || self._scaleDefault('scale_down'), 'decrease'),
     pause: (self, _action, campaign) => self._pauseCampaign(campaign.id),
     resume: (self, _action, campaign) => self._resumeCampaign(campaign.id),
     optimize_creative: (self, _action, campaign) => self._optimizeCreative(campaign.id),
@@ -275,8 +280,8 @@ export class RuleEvaluator {
       else if (parsed.action === 'decrease' && typeof parsed.newBudget === 'number') newBudget = parsed.newBudget;
     } catch (parseErr) {
       log.warn('LLM budget suggestion parse failed', { campaignId, error: parseErr.message });
-      if (suggestion.includes('increase')) newBudget = currentBudget * 1.5;
-      else if (suggestion.includes('decrease')) newBudget = currentBudget * 0.8;
+      if (suggestion.includes('increase')) newBudget = currentBudget * this._scaleDefault('scale_up');
+      else if (suggestion.includes('decrease')) newBudget = currentBudget / this._scaleDefault('scale_down');
     }
 
     await api.updateCampaign(campaign.campaign_id, { dailyBudget: newBudget });
