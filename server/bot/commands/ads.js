@@ -115,7 +115,7 @@ async function replyAccountList(ctx, accounts, page) {
   const lines = slice
     .map(
       (a, i) =>
-        `${start + i + 1}. ${a.name} (` + (a.id.startsWith('act_') ? a.id : `act_${a.id}`) +
+        `${start + i + 1}. ${escMd(a.name)} (` + (a.id.startsWith('act_') ? a.id : `act_${a.id}`) +
         `) — ${a.status === 'active' ? '✅ active' : a.status === 'disabled' ? '⏸ disabled' : a.status}`
     )
     .join('\n');
@@ -184,7 +184,7 @@ export function handleAdsSelect(deps) {
 async function replyCampaignList(ctx, accountId, campaigns, page) {
   const { slice, pages, p } = pageSlice(campaigns, page, CAMPAIGNS_PER_PAGE);
   const lines = slice
-    .map((c) => `• ${c.name} — ${c.status === 'active' ? '✅ ON' : c.status === 'paused' ? '⏸ OFF' : c.status}`)
+    .map((c) => `• ${escMd(c.name)} — ${c.status === 'active' ? '✅ ON' : c.status === 'paused' ? '⏸ OFF' : c.status}`)
     .join('\n');
   return ctx.reply(
     `⚙️ *Campaigns (${campaigns.length}) — ${accountId}*\n\n${lines}\n\n` +
@@ -325,7 +325,7 @@ export function handleAdsReport(deps) {
         totalClicks += ins.clicks || 0;
         totalImpr += ins.impressions || 0;
         perAcct.push(
-          `• ${acct.name}: ${fmtCurrency(ins.spend)} spend · ${money(ins.revenue)} rev · ${ins.clicks || 0} clicks`
+          `• ${escMd(acct.name)}: ${fmtCurrency(ins.spend)} spend · ${money(ins.revenue)} rev · ${ins.clicks || 0} clicks`
         );
       } catch (err) {
         log.warn('ads report acct failed', { accountId: acct.id, error: err?.message });
@@ -426,6 +426,11 @@ export function handleFbAds(deps) {
 
 
 // ── Per-account detailed report + AI recommendation ─────────
+/** Escape Telegram-Markdown special chars in user/platform-controlled strings. */
+function escMd(s) {
+  return String(s ?? '').replace(/([_*`\[\]])/g, '\\$1');
+}
+
 function fmtRoas(v) { return v === null || v === undefined ? '—' : `${Number(v).toFixed(2)}x`; }
 function fmtCpr(v) { return v === null || v === undefined ? '—' : fmtCurrency(v); }
 
@@ -449,7 +454,7 @@ export function handleAdsAccountReport(deps) {
       const avg = report.comparison.avg7d;
       const ai = report.ai;
       const body =
-        `📊 *LAPORAN AKUN — ${report.accountName}*
+        `📊 *LAPORAN AKUN — ${escMd(report.accountName)}*
 ` +
         `🗓 Hari ini sampai sekarang (WIB)\n\n` +
         `💰 *Belanja:* ${fmtCurrency(s.spend)}\n` +
@@ -463,11 +468,11 @@ export function handleAdsAccountReport(deps) {
         `• Kemarin: ${fmtCurrency(y.spend)} · ROAS ${fmtRoas(y.roas)}\n` +
         `• Rata-rata 7 hari: ${fmtCurrency(avg.spend)} · ROAS ${fmtRoas(avg.roas)}\n\n` +
         `🤖 *ANALISIS & REKOMENDASI AI*\n` +
-        `✅ Kekuatan: ${ai.strengths}\n` +
-        `⚠️ Kelemahan: ${ai.weaknesses}\n` +
-        `📈 Peluang: ${ai.opportunities}\n` +
-        `🔧 Tindakan: ${ai.actions}\n` +
-        `🚨 Risiko: ${ai.risk}\n\n` +
+        `✅ Kekuatan: ${escMd(ai.strengths)}\n` +
+        `⚠️ Kelemahan: ${escMd(ai.weaknesses)}\n` +
+        `📈 Peluang: ${escMd(ai.opportunities)}\n` +
+        `🔧 Tindakan: ${escMd(ai.actions)}\n` +
+        `🚨 Risiko: ${escMd(ai.risk)}\n\n` +
         `_Read-only • Tidak ada iklan yang diubah._`;
       return ctx.reply(body, {
         parse_mode: 'Markdown',
