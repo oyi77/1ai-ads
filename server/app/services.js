@@ -47,6 +47,8 @@ import { WhatsAppIntelligenceService } from '../services/whatsapp-intelligence.j
 import { WhatsAppAdsAPI } from '../services/whatsapp/index.js';
 import { BoostApprovalService } from '../services/boost-approval.js';
 import { TargetingService } from '../services/targeting.js';
+import { CreativeLibraryRepository } from '../repositories/creative-library.js';
+import { DashboardWidgetsRepository } from '../repositories/dashboard-widgets.js';
 
 export function createServices({ db, repos, params }) {
   const llmClient = (params && params.llmClient) || new LLMClient({
@@ -145,6 +147,8 @@ export function createServices({ db, repos, params }) {
   const boostApproval = new BoostApprovalService(repos.boostRecommendationsRepo, repos.settingsRepo);
   const mcpClient = params?.mcpClient;
   const targeting = new TargetingService(repos.targetingSuggestionsRepo, repos.boostRecommendationsRepo);
+  const creativeLibraryRepo = new CreativeLibraryRepository(db);
+  const dashboardWidgetsRepo = new DashboardWidgetsRepository(db);
 
   return {
     llmClient, mcpClient, adspirerClient, trendingService, paymentService,
@@ -157,6 +161,6 @@ export function createServices({ db, repos, params }) {
     draftService, facebookSystemUserService, campaignMonitorService,
     abTestService, fatigueDetector, unifiedReporter, bulkOperations,
     imageGenerator, audienceIntelligence, creativeScorer, whiteLabelService,
-    boostApproval, targeting,
+    boostApproval, targeting, creativeLibraryRepo, dashboardWidgetsRepo,
   };
 }

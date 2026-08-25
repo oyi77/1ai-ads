@@ -8,8 +8,8 @@ All endpoints are prefixed with `/api`. Protected endpoints require `Authorizati
 |--------|----------|------|-------------|
 | POST | `/api/auth/register` | Public | Register user |
 | POST | `/api/auth/login` | Public | Login, returns JWT + refresh token |
-| POST | `/api/auth/refresh` | Public | Refresh JWT |
-| GET | `/api/auth/me` | Protected | Current user profile |
+| POST | `/api/auth/refresh-token` | Public | Refresh JWT |
+| POST | `/api/auth/logout` | Public | Revoke refresh token |
 
 ## Campaigns
 
@@ -157,6 +157,10 @@ All endpoints are prefixed with `/api`. Protected endpoints require `Authorizati
 |--------|----------|-------------|
 | GET | `/api/creative/library` | List saved creatives |
 | POST | `/api/creative/library` | Save creative |
+| GET | `/api/creative/library/top` | Top performing creatives (scoped to user) |
+| PUT | `/api/creative/library/:id` | Update creative |
+| DELETE | `/api/creative/library/:id` | Delete creative |
+| POST | `/api/creative/library/:id/use` | Record creative usage (increments times_used) |
 | GET | `/api/creative/fatigue/detect/:id` | Detect creative fatigue |
 | POST | `/api/creative/generate` | Generate ad copies (AI) |
 | POST | `/api/creative/score` | Score creative quality |

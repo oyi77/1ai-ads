@@ -17,7 +17,8 @@ export function createCreativeLibraryRouter(creativeLibRepo) {
         page: +page,
         limit: +limit,
       });
-      res.json({ success: true, data: result.data, total: result.total, page: result.page, limit: result.limit });
+      const rows = result.data.map(r => ({ ...r, tags: typeof r.tags === 'string' ? JSON.parse(r.tags) : (r.tags || []) }));
+      res.json({ success: true, data: rows, total: result.total, page: result.page, limit: result.limit });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -27,8 +28,11 @@ export function createCreativeLibraryRouter(creativeLibRepo) {
   // Get top performing creatives
   router.get('/top', async (req, res) => {
     try {
-      const { limit } = req.query;
-      const result = creativeLibRepo.findTop({
+      const userId = req.user?.id || req.userId;
+      const { limit, metric } = req.query;
+      const result = creativeLibRepo.getTopPerformers({
+        userId,
+        metric,
         limit: limit ? parseInt(limit, 10) : 10,
       });
       res.json({ success: true, data: result });
@@ -80,8 +84,7 @@ export function createCreativeLibraryRouter(creativeLibRepo) {
   // Record creative usage (increment times_used)
   router.post('/:id/use', async (req, res) => {
     try {
-      const { campaignId } = req.body;
-      const result = creativeLibRepo.recordUsage(req.params.id, campaignId);
+      const result = creativeLibRepo.incrementUsage(req.params.id);
       if (!result) {
         return res.status(404).json({ success: false, error: 'Creative not found' });
       }
