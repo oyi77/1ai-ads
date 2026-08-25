@@ -22,6 +22,17 @@ const { default: config, validateConfig } = await import('./server/config/index.
 // Validate required configuration before starting
 validateConfig();
 
+// ── Process-level safety net ─────────────────────────────────
+// A single floating rejected promise (e.g. a sync bot handler calling
+// ctx.reply() without returning it) must NEVER take the whole server —
+// and with it the Telegram webhook for every user — down with it.
+process.on('unhandledRejection', (reason) => {
+  log.error('Unhandled promise rejection (contained)', { reason: String(reason).slice(0, 500) });
+});
+process.on('uncaughtException', (err) => {
+  log.error('Uncaught exception (contained)', { error: err.message, stack: err.stack?.split('\n').slice(0, 4).join(' ') });
+});
+
 backupDatabase(config.dbPath, __dirname);
 
 const db = createDatabase(config.dbPath);
