@@ -148,7 +148,17 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   // GET /accounts — list Meta ad accounts
   router.get('/accounts', async (req, res) => {
     try {
-      const accounts = await resolveUserMetaApi(req).getAdAccounts();
+      const api = resolveUserMetaApi(req);
+      let accounts;
+      try {
+        accounts = await api.getAdAccounts();
+        // Token proven to work — record health so the UI can show token state.
+        try { platformAccountsRepo.updateHealthByPlatform(req.user?.id, 'meta', 'ok', null); } catch { /* non-fatal */ }
+      } catch (err) {
+        const expired = /190|session has expired/i.test(`${err?.message}${err?.error?.message || ''}`);
+        try { platformAccountsRepo.updateHealthByPlatform(req.user?.id, 'meta', 'invalid_token', err.message?.slice(0, 200)); } catch { /* non-fatal */ }
+        throw expired ? Object.assign(new Error('Meta token expired or invalid. Reconnect in Settings.'), { status: 400 }) : err;
+      }
       res.json({ success: true, data: accounts });
     } catch (err) {
       log.error('Failed to get ad accounts', { error: err.message });

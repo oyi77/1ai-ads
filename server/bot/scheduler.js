@@ -29,6 +29,17 @@ function getChatId() {
   return id;
 }
 
+/** Escape HTML special chars in dynamic bot content. */
+function esc(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function fmtRp(n) {
+  return `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
+}
+function fmtRoas2(v) {
+  return v === null || v === undefined ? '—' : `${Number(v).toFixed(2)}x`;
+}
+
 /** Send a Markdown message to the admin chat; no-op when chatId missing. */
 async function safeSend(bot, text, extra) {
   const chatId = getChatId();
@@ -273,6 +284,71 @@ export function initScheduler(bot, deps) {
       }
     } catch (err) {
       log.error('Spend guard failed', { error: err.message });
+    }
+  });
+
+  // ────────────────────────────────────────────────────────────
+  // 5b. Daily Per-Account AI Report Digest — 08:00 WIB (01:00 UTC)
+  //     For each user with a connected Meta account, send a compact
+  //     per-account performance report + AI recommendations. Includes a
+  //     "since last digest" window and skips accounts with zero activity
+  //     since the previous digest (no spam for dormant accounts).
+  // ────────────────────────────────────────────────────────────
+  cron.schedule('0 1 * * *', async () => {
+    log.info('Running daily account report digest');
+    try {
+      const repo = deps.repos?.platformAccountsRepo;
+      const settingsRepo = deps.repos?.settingsRepo;
+      const usersRepo = deps.repos?.usersRepo;
+      if (!repo || !usersRepo) return;
+
+      const accounts = repo.getDistinctUserPlatforms
+        ? repo.getDistinctUserPlatforms('meta')
+        : [];
+      // getDistinctUserPlatforms returns [{ user_id }] rows
+      const { AccountReportService } = await import('../services/account-report-service.js');
+      const { MetaAdsAPI } = await import('../services/meta/index.js');
+      const svc = new AccountReportService({ llmClient: deps.services?.llmClient });
+
+      let sent = 0;
+      for (const row of accounts) {
+        try {
+          const pa = repo.getByPlatform(row.user_id, 'meta');
+          if (!pa?.access_token) continue;
+          const user = usersRepo.findById(row.user_id);
+          if (!user?.telegram_id) continue;
+
+          const lastAt = settingsRepo?.get(`last_report_at_${row.user_id}`);
+          const sinceDate = lastAt ? new Date(lastAt).toISOString().slice(0, 10) : null;
+
+          const api = MetaAdsAPI.withToken(pa.access_token);
+          const owned = await api.getAdAccounts();
+          for (const acc of owned.slice(0, 5)) {
+            const report = await svc.buildReport(api, acc.id, acc.name, { sinceDate });
+            // Skip fully dormant accounts unless this is the first digest
+            const s = report.summary;
+            const sl = report.sinceLastReport;
+            if (sinceDate && s.spend === 0 && (!sl || sl.spend === 0)) continue;
+
+            const lines = [
+              `📊 <b>Digest Harian — ${esc(acc.name)}</b>`,
+              `💰 Belanja: ${fmtRp(s.spend)} · ROAS ${fmtRoas2(s.roas)} · Purchase ${s.purchases}`,
+            ];
+            if (sl && sinceDate) {
+              lines.push(`↩️ Sejak digest lalu (${sinceDate}): ${fmtRp(sl.spend)} · ROAS ${fmtRoas2(sl.roas)} · Purchase ${sl.purchases}`);
+            }
+            if (report.ai?.actions) lines.push(`🔧 ${esc(report.ai.actions)}`);
+            await bot.telegram.sendMessage(user.telegram_id, lines.join('\n'), { parse_mode: 'HTML' });
+            sent++;
+          }
+          settingsRepo?.set(`last_report_at_${row.user_id}`, new Date().toISOString());
+        } catch (err) {
+          log.warn('Digest failed for user', { userId: row.user_id, error: err.message });
+        }
+      }
+      log.info('Daily account report digest complete', { messagesSent: sent });
+    } catch (err) {
+      log.error('Daily account report digest failed', { error: err.message });
     }
   });
 

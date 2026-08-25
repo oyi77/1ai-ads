@@ -4,8 +4,8 @@
  */
 
 export function handleHelp() {
-  return (ctx) => {
-    ctx.reply(
+  return async (ctx) => {
+    await ctx.reply(
       '❓ *AdForge Help Guide*\n\n' +
       '*Commands:*\n' +
       '/start — Welcome & onboarding\n' +

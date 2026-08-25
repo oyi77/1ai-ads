@@ -12,7 +12,7 @@ export function handleStatus(deps) {
       const totalRevenue = campaigns.reduce((s, c) => s + (c.revenue || 0), 0);
       const roas = totalSpend > 0 ? (totalRevenue / totalSpend).toFixed(2) : '0.00';
 
-      ctx.reply(
+      await ctx.reply(
         `📊 *Account Status*\n\n` +
         `Campaigns: ${active} active / ${campaigns.length} total\n` +
         `Total Spend: Rp ${totalSpend.toLocaleString('id-ID')}\n` +
@@ -22,7 +22,7 @@ export function handleStatus(deps) {
         { parse_mode: 'Markdown' }
       );
     } catch {
-      ctx.reply('⚠️ Failed to load status. Is the database connected?');
+      await ctx.reply('⚠️ Failed to load status. Is the database connected?');
     }
   };
 }

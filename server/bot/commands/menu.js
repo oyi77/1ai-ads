@@ -8,8 +8,8 @@ import { PLATFORM_NAMES } from '../scenes/connect-account.js';
 import { resolveScaleDefault } from '../../lib/scale-defaults.js';
 
 export function handleMenu() {
-  return (ctx) => {
-    ctx.reply(
+  return async (ctx) => {
+    await ctx.reply(
       '📋 *AdForge Menu*\n\nChoose an option:',
       {
         parse_mode: 'Markdown',

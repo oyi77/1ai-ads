@@ -182,8 +182,8 @@ function handleTextMessage(_deps) {
 }
 
 function handlePhotoMessage(_deps) {
-  return (ctx) => {
-    ctx.reply('📸 Photo received! Use /menu to see what you can do with it.', {
+  return async (ctx) => {
+    await ctx.reply('📸 Photo received! Use /menu to see what you can do with it.', {
       reply_markup: {
         inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]],
       },

@@ -8,6 +8,8 @@ import type { CSSProperties } from 'react';
 
 interface Platform {
   id: string;
+  health_status?: string | null;
+  last_error?: string | null;
   name: string;
   platform: string;
   connected: boolean;
@@ -108,10 +110,26 @@ export function PlatformsPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{
                     padding: '4px 10px', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600,
-                    background: existing ? 'rgba(52,211,153,0.1)' : 'rgba(139,146,168,0.1)',
-                    color: existing ? 'var(--green)' : 'var(--text-tertiary)',
-                  }}>
-                    {existing ? `✅ ${existing.account_name || existing.platform}` : 'Not Connected'}
+                    background: existing
+                      ? (existing.health_status === 'invalid_token'
+                          ? 'rgba(239,68,68,0.12)'
+                          : existing.health_status === 'ok'
+                            ? 'rgba(52,211,153,0.1)'
+                            : 'rgba(139,146,168,0.1)')
+                      : 'rgba(139,146,168,0.1)',
+                    color: existing
+                      ? (existing.health_status === 'invalid_token'
+                          ? '#ef4444'
+                          : existing.health_status === 'ok'
+                            ? 'var(--green)'
+                            : 'var(--text-tertiary)')
+                      : 'var(--text-tertiary)',
+                  }} title={existing?.last_error || undefined}>
+                    {existing
+                      ? existing.health_status === 'invalid_token'
+                        ? `⚠️ Token expired — reconnect (${existing.account_name || existing.platform})`
+                        : `✅ ${existing.account_name || existing.platform}`
+                      : 'Not Connected'}
                   </div>
                   {existing && (
                     <button

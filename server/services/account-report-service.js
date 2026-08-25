@@ -41,14 +41,26 @@ export class AccountReportService {
     this.llmClient = llmClient || null;
   }
 
-  async buildReport(metaApi, accountId, accountName = accountId) {
-    const [today, yesterday, week] = await Promise.all([
+  async buildReport(metaApi, accountId, accountName = accountId, { sinceDate = null } = {}) {
+    const windows = [
       metaApi.getAccountInsights(accountId, { datePreset: 'today' }).catch(() => null),
       metaApi.getAccountInsights(accountId, { datePreset: 'yesterday' }).catch(() => null),
       metaApi.getAccountInsights(accountId, { datePreset: 'last_7d' }).catch(() => null),
-    ]);
+    ];
+    // "Since last report" — Meta custom time_range from the stored report date to today
+    let sinceInsightsPromise = Promise.resolve(null);
+    if (sinceDate) {
+      const since = new Date(sinceDate);
+      const until = new Date();
+      const fmt = (d) => d.toISOString().slice(0, 10);
+      sinceInsightsPromise = metaApi.getAccountInsights(accountId, {
+        timeRange: { since: fmt(since), until: fmt(until) },
+      }).catch(() => null);
+    }
+    const [today, yesterday, week, sinceRaw] = await Promise.all([...windows, sinceInsightsPromise]);
 
     const summary = derive(today);
+    const sinceLast = derive(sinceRaw);
     const y = derive(yesterday);
     const w = derive(week);
     const comparison = {
@@ -67,9 +79,10 @@ export class AccountReportService {
       accountId: String(accountId).replace(/^act_/, ''),
       accountName,
       generatedAt: new Date().toISOString(),
-      windows: { today: 'since midnight', yesterday: 'full day', avg7d: 'last 7 days / 7' },
+      windows: { today: 'since midnight', yesterday: 'full day', avg7d: 'last 7 days / 7', ...(sinceDate ? { sinceLast: `since ${sinceDate}` } : {}) },
       summary,
       comparison,
+      ...(sinceDate ? { sinceLastReport: sinceLast } : {}),
       ai,
     };
   }

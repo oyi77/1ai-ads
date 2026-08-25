@@ -63,7 +63,7 @@ export function handleAds(deps) {
           '• /settings → Connect Meta Account\n\n' +
           'Your token is encrypted and scoped to you only.',
         {
-          parse_mode: 'Markdown',
+          parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [[{ text: '📘 Connect Meta', callback_data: 'connect:meta' }]],
           },
@@ -115,7 +115,7 @@ async function replyAccountList(ctx, accounts, page) {
   const lines = slice
     .map(
       (a, i) =>
-        `${start + i + 1}. ${escMd(a.name)} (` + (a.id.startsWith('act_') ? a.id : `act_${a.id}`) +
+        `${start + i + 1}. ${escHtml(a.name)} (` + (a.id.startsWith('act_') ? a.id : `act_${a.id}`) +
         `) — ${a.status === 'active' ? '✅ active' : a.status === 'disabled' ? '⏸ disabled' : a.status}`
     )
     .join('\n');
@@ -123,7 +123,7 @@ async function replyAccountList(ctx, accounts, page) {
     `📣 *Your Meta Ad Accounts* (${accounts.length})\n\n${lines}\n\n` +
       'Tap an account to manage it.',
     {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
           ...slice.map((a) => [
@@ -184,13 +184,13 @@ export function handleAdsSelect(deps) {
 async function replyCampaignList(ctx, accountId, campaigns, page) {
   const { slice, pages, p } = pageSlice(campaigns, page, CAMPAIGNS_PER_PAGE);
   const lines = slice
-    .map((c) => `• ${escMd(c.name)} — ${c.status === 'active' ? '✅ ON' : c.status === 'paused' ? '⏸ OFF' : c.status}`)
+    .map((c) => `• ${escHtml(c.name)} — ${c.status === 'active' ? '✅ ON' : c.status === 'paused' ? '⏸ OFF' : c.status}`)
     .join('\n');
   return ctx.reply(
-    `⚙️ *Campaigns (${campaigns.length}) — ${accountId}*\n\n${lines}\n\n` +
+    `⚙️ <b>Campaigns (${campaigns.length}) — ${escHtml(accountId)}</b>\n\n${lines}\n\n` +
       'Tap to toggle on/off:',
     {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
           ...slice.map((c) => [
@@ -237,7 +237,7 @@ export function handleAdsToggle(deps) {
         `✅ Campaign *${mode === 'pause' ? 'paused' : 'resumed'}*.\n\n` +
           `Open it in the dashboard: ${BACKEND}/campaigns`,
         {
-          parse_mode: 'Markdown',
+          parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [[{ text: '⚙️ Back to campaigns', callback_data: `ads:select:${accountId}` }]],
           },
@@ -291,7 +291,7 @@ export function handleAdsReport(deps) {
         `Impressions: ${(ins.impressions || 0).toLocaleString('id-ID')}`;
 
       return ctx.reply(body, {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [[{ text: '🔄 Refresh', callback_data: `menu:reports:${accountId}` }]],
         },
@@ -325,7 +325,7 @@ export function handleAdsReport(deps) {
         totalClicks += ins.clicks || 0;
         totalImpr += ins.impressions || 0;
         perAcct.push(
-          `• ${escMd(acct.name)}: ${fmtCurrency(ins.spend)} spend · ${money(ins.revenue)} rev · ${ins.clicks || 0} clicks`
+          `• ${escHtml(acct.name)}: ${fmtCurrency(ins.spend)} spend · ${money(ins.revenue)} rev · ${ins.clicks || 0} clicks`
         );
       } catch (err) {
         log.warn('ads report acct failed', { accountId: acct.id, error: err?.message });
@@ -343,7 +343,7 @@ export function handleAdsReport(deps) {
       (perAcct.length ? `*Per account:*\n${perAcct.join('\n')}` : 'No insight data returned.');
 
     return ctx.reply(body, {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [[{ text: '🔄 Refresh', callback_data: 'ads:report' }]],
       },
@@ -377,7 +377,7 @@ export function handleAdsManage(deps) {
     await ctx.reply(
       `⚙️ *Manage Meta Connections*\n\n${lines}\n\nTap a connection to disconnect it.`,
       {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
             ...rows.map((r) => [
@@ -414,7 +414,7 @@ export function handleAdsDisconnectConfirm(deps, id) {
     const names = remaining.map((r) => `• ${r.account_name}`).join('\n');
     await ctx.reply(
       `🗑 Disconnected *${row.account_name}*.\n\nRemaining active Meta connections:\n${names}`,
-      { parse_mode: 'Markdown' }
+      { parse_mode: 'HTML' }
     );
   };
 }
@@ -426,9 +426,13 @@ export function handleFbAds(deps) {
 
 
 // ── Per-account detailed report + AI recommendation ─────────
-/** Escape Telegram-Markdown special chars in user/platform-controlled strings. */
-function escMd(s) {
-  return String(s ?? '').replace(/([_*`\[\]])/g, '\\$1');
+/**
+ * HTML parse-mode helpers. Telegram's legacy Markdown breaks on any _ * `
+ * appearing in platform-controlled strings (campaign names, LLM output) —
+ * HTML only needs < > & escaped and gives us real <b>/<i> tags.
+ */
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function fmtRoas(v) { return v === null || v === undefined ? '—' : `${Number(v).toFixed(2)}x`; }
@@ -454,28 +458,28 @@ export function handleAdsAccountReport(deps) {
       const avg = report.comparison.avg7d;
       const ai = report.ai;
       const body =
-        `📊 *LAPORAN AKUN — ${escMd(report.accountName)}*
+        `📊 <b>LAPORAN AKUN — ${escHtml(report.accountName)}</b>
 ` +
         `🗓 Hari ini sampai sekarang (WIB)\n\n` +
-        `💰 *Belanja:* ${fmtCurrency(s.spend)}\n` +
+        `💰 <b>Belanja:</b> ${fmtCurrency(s.spend)}\n` +
         `👁 Tayangan: ${(s.impressions).toLocaleString('id-ID')}\n` +
         `🔗 Klik link: ${(s.linkClicks).toLocaleString('id-ID')} · CTR ${Number(s.ctr).toFixed(2)}%\n` +
         `🛒 Purchase: ${(s.purchases).toLocaleString('id-ID')}\n` +
         `💵 CPR: ${fmtCpr(s.cpr)} · CPC ${fmtCurrency(s.cpc)}\n` +
-        `📈 *ROAS:* ${fmtRoas(s.roas)}\n\n` +
-        `⚖️ *PERBANDINGAN*\n` +
+        `📈 <b>ROAS:</b> ${fmtRoas(s.roas)}\n\n` +
+        `⚖️ <b>PERBANDINGAN</b>\n` +
         `• Hari ini: ${fmtCurrency(s.spend)} · ROAS ${fmtRoas(s.roas)}\n` +
         `• Kemarin: ${fmtCurrency(y.spend)} · ROAS ${fmtRoas(y.roas)}\n` +
         `• Rata-rata 7 hari: ${fmtCurrency(avg.spend)} · ROAS ${fmtRoas(avg.roas)}\n\n` +
-        `🤖 *ANALISIS & REKOMENDASI AI*\n` +
-        `✅ Kekuatan: ${escMd(ai.strengths)}\n` +
-        `⚠️ Kelemahan: ${escMd(ai.weaknesses)}\n` +
-        `📈 Peluang: ${escMd(ai.opportunities)}\n` +
-        `🔧 Tindakan: ${escMd(ai.actions)}\n` +
-        `🚨 Risiko: ${escMd(ai.risk)}\n\n` +
-        `_Read-only • Tidak ada iklan yang diubah._`;
+        `🤖 <b>ANALISIS &amp; REKOMENDASI AI</b>\n` +
+        `✅ Kekuatan: ${escHtml(ai.strengths)}\n` +
+        `⚠️ Kelemahan: ${escHtml(ai.weaknesses)}\n` +
+        `📈 Peluang: ${escHtml(ai.opportunities)}\n` +
+        `🔧 Tindakan: ${escHtml(ai.actions)}\n` +
+        `🚨 Risiko: ${escHtml(ai.risk)}\n\n` +
+        `<i>Read-only • Tidak ada iklan yang diubah.</i>`;
       return ctx.reply(body, {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
             [{ text: '🔄 Refresh', callback_data: `ads:repacc:${accountId}` }],

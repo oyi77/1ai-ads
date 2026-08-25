@@ -192,11 +192,17 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     return fanout;
   }
 
-  async getAccountInsights(accountId, { datePreset = 'last_30d' } = {}) {
-    const data = await this._get(`/${accountId}/insights`, {
+  async getAccountInsights(accountId, { datePreset = 'last_30d', timeRange = null } = {}) {
+    const params = {
       fields: 'spend,impressions,clicks,ctr,cpc,actions,action_values,cost_per_action_type',
-      date_preset: datePreset,
-    });
+    };
+    if (timeRange) {
+      // Meta custom window: { since: 'YYYY-MM-DD', until: 'YYYY-MM-DD' }
+      params.time_range = JSON.stringify(timeRange);
+    } else {
+      params.date_preset = datePreset;
+    }
+    const data = await this._get(`/${accountId}/insights`, params);
     return this._parseInsights(data.data?.[0]);
   }
 

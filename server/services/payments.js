@@ -302,9 +302,10 @@ export class PaymentService {
 
     if (metadata.planName) {
       const planName = metadata.planName.toLowerCase();
+      // SECURITY: paying customers get plan features only — never operator
+      // privileges. requireAdmin gates the approval/admin surface and must
+      // stay reserved for real operators, not purchased plans.
       const userUpdateData = { plan: planName };
-      if (planName === 'enterprise') userUpdateData.role = 'admin';
-
       const updatedUser = this.usersRepo.update(payment.user_id, userUpdateData);
       if (updatedUser) {
         log.info('User plan upgraded', { userId: payment.user_id, plan: planName, role: updatedUser.role });

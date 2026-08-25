@@ -26,7 +26,7 @@ import {
   handlePutSetting,
 } from './_handlers/settings-handlers.js';
 
-export function createSettingsRouter(settingsRepo, llmClient, db, metaApi, _dailySpendGuard, nangoAuth) {
+export function createSettingsRouter(settingsRepo, llmClient, db, metaApi, nangoAuth) {
   const router = Router();
 
   // General settings

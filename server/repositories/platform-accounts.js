@@ -198,4 +198,16 @@ export class PlatformAccountsRepository {
       WHERE pa.is_active = 1
     `).all();
   }
+
+  getDistinctUserPlatforms(platform) {
+    return this.db.prepare(
+      'SELECT user_id, platform FROM platform_accounts WHERE platform = ? AND is_active = 1 GROUP BY user_id'
+    ).all(platform);
+  }
+
+  updateHealthByPlatform(userId, platform, healthStatus, lastError = null) {
+    this.db.prepare(
+      'UPDATE platform_accounts SET health_status = ?, last_error = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ? AND platform = ?'
+    ).run(healthStatus, lastError, userId, platform);
+  }
 }

@@ -21,7 +21,7 @@ export function handleSettings(deps) {
 
     const body = platformRows.map(r => `• ${r.label}: ${r.status}`).join('\n');
 
-    ctx.reply(
+    return ctx.reply(
       '🔧 *Settings*\n\n' +
       `${body}\n\n` +
       'Pilih platform untuk terhubung lewat web, atau kelola akun:',
