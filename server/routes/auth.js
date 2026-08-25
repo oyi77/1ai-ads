@@ -11,6 +11,7 @@ import {
   handleLogout, handleConnectMetaToken,
   handleVerifyEmail, handleResendVerification,
   handleForgotPassword, handleResetPassword,
+  handleTelegramWebapp,
 } from './_handlers/auth-handlers.js';
 import { requireAuth } from '../middleware/auth.js';
 import { generateToken, verifyToken } from '../lib/auth.js';
@@ -100,6 +101,8 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
   router.post('/resend-verification', handleResendVerification(usersRepo));
   router.post('/forgot-password', handleForgotPassword(usersRepo));
   router.post('/reset-password', handleResetPassword(usersRepo, refreshTokensRepo));
+  // Telegram Mini App SSO (initData validated against the bot token)
+  router.post('/telegram-webapp', handleTelegramWebapp(usersRepo, refreshTokensRepo, config.telegramBotToken));
 
   // Meta compliance
   router.get('/facebook/deauthorize', (_req, res) => {

@@ -131,6 +131,19 @@ export const api = {
     return data;
   },
 
+  // Telegram Mini App SSO — exchanges validated initData for our JWT
+  telegramLogin: async (initData: string) => {
+    const data = await request<{
+      accessToken: string;
+      refreshToken: string;
+      user: { id: string; username: string; email: string; role: string; plan: string };
+    }>('POST', '/auth/telegram-webapp', { initData });
+
+    setTokens(data.accessToken, data.refreshToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+    return data;
+  },
+
   logout: () => {
     clearAuth();
     window.location.href = '/login';

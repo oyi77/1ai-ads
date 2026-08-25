@@ -10,6 +10,7 @@ import {
   sendVerificationEmail, sendPasswordResetEmail,
   generateToken as generateEmailToken, hashToken, mailerEnabled,
 } from '../../lib/mailer.js';
+import crypto from 'crypto';
 import { v4 as uuid } from 'uuid';
 
 const log = createLogger('auth-handlers');
@@ -295,6 +296,89 @@ export function handleResetPassword(usersRepo, refreshTokensRepo) {
       log.info('Password reset completed', { userId: user.id });
       res.json({ success: true, message: 'Password updated. Sign in with your new password.' });
     } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  };
+}
+
+/**
+ * POST /telegram-webapp — Telegram Mini App single sign-on.
+ * Validates initData per the Telegram spec (HMAC-SHA256 keyed with
+ * HMAC("WebAppData", botToken)), then mints a JWT for the linked local user.
+ */
+export function handleTelegramWebapp(usersRepo, refreshTokensRepo, botToken) {
+  return async (req, res) => {
+    try {
+      const { initData } = req.body || {};
+      if (!initData || !botToken) {
+        return res.status(400).json({ success: false, error: 'initData is required' });
+      }
+
+      const params = new URLSearchParams(initData);
+      const hash = params.get('hash');
+      if (!hash) return res.status(401).json({ success: false, error: 'Missing hash' });
+
+      // data_check_string: every field except hash, sorted alphabetically
+      const pairs = [...params.entries()]
+        .filter(([k]) => k !== 'hash')
+        .sort(([a], [b]) => (a < b ? -1 : 1))
+        .map(([k, v]) => `${k}=${v}`);
+      const dataCheckString = pairs.join('\n');
+
+      const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
+      const computed = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+      const valid =
+        computed.length === hash.length &&
+        crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(hash));
+      if (!valid) {
+        return res.status(401).json({ success: false, error: 'Invalid initData signature' });
+      }
+
+      // Auth date freshness — reject replays older than 24h
+      const authDate = parseInt(params.get('auth_date') || '0', 10) * 1000;
+      if (!authDate || Date.now() - authDate > 24 * 3600 * 1000) {
+        return res.status(401).json({ success: false, error: 'initData expired' });
+      }
+
+      let tgUser;
+      try {
+        tgUser = JSON.parse(params.get('user') || '{}');
+      } catch {
+        return res.status(400).json({ success: false, error: 'Invalid user payload' });
+      }
+      const tgId = String(tgUser.id || '');
+      if (!tgId) return res.status(400).json({ success: false, error: 'Missing user id' });
+
+      let user = usersRepo.findByTelegramId(tgId);
+      if (!user) {
+        // First Mini App contact — same auto-bind contract as the bot identify middleware
+        const username = `tg_${tgId}`;
+        const id = usersRepo.create({
+          username,
+          email: `${username}@telegram.local`,
+          password_hash: hashPassword(generateEmailToken()),
+          confirmed: 1,
+          telegram_id: tgId,
+        });
+        user = usersRepo.findById(id);
+        log.info({ telegramId: tgId }, 'auto-created telegram customer via mini app');
+      }
+      if (user.is_active === 0) {
+        return res.status(403).json({ success: false, error: 'Account disabled' });
+      }
+
+      const accessToken = generateToken({ id: user.id, username: user.username, role: user.role || 'user', plan: user.plan || 'free' });
+      const refreshToken = generateRefreshToken({ id: user.id, username: user.username });
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+      refreshTokensRepo.upsert(user.id, refreshToken, expiresAt.toISOString());
+
+      res.json({
+        success: true,
+        data: { user: { id: user.id, username: user.username, email: user.email, role: user.role || 'user', plan: user.plan || 'free' }, accessToken, refreshToken },
+      });
+    } catch (err) {
+      log.error('telegram webapp login failed', { error: err.message });
       res.status(500).json({ success: false, error: err.message });
     }
   };

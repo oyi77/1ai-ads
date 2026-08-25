@@ -134,7 +134,12 @@ async function replyAccountList(ctx, accounts, page) {
             ...(p === pages || pages > 1 ? [{ text: '📈 All Accounts Report', callback_data: 'ads:report' }] : []),
             ...(p === pages ? [{ text: '🔌 Disconnect', callback_data: 'ads:disconnect' }] : []),
           ],
-          ...(p === pages ? [[{ text: '⚙️ Manage Connections', callback_data: 'ads:manage' }]] : []),
+          ...(p === pages
+            ? [
+                [{ text: '⚙️ Manage Connections', callback_data: 'ads:manage' }],
+                [{ text: '📱 Buka AdForge Mini App', web_app: { url: `${BACKEND}/reports` } }],
+              ]
+            : []),
         ],
       },
     }
@@ -467,10 +472,10 @@ export function handleAdsAccountReport(deps) {
       return ctx.reply(body, {
         parse_mode: 'Markdown',
         reply_markup: {
-          inline_keyboard: [[
-            { text: '🔄 Refresh', callback_data: `ads:repacc:${accountId}` },
-            { text: '🌐 Buka Dashboard', url: `${BACKEND}/reporting` },
-          ]],
+          inline_keyboard: [
+            [{ text: '🔄 Refresh', callback_data: `ads:repacc:${accountId}` }],
+            [{ text: '📱 Lihat di AdForge Mini App', web_app: { url: `${BACKEND}/reports` } }],
+          ],
         },
       });
     } catch (err) {

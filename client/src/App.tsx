@@ -5,6 +5,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequireAuth } from './components/RequireAuth';
 import { RequirePro } from './components/RequirePro';
 import { CookieConsent } from './components/CookieConsent';
+import { initTelegramWebApp } from './lib/telegram';
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import('./pages/login').then(m => ({ default: m.LoginPage })));
@@ -54,7 +55,15 @@ function Loading() {
   );
 }
 
+let telegramBootstrapped = false;
+
 export function App() {
+  // Inside Telegram? exchange initData for a session once.
+  if (!telegramBootstrapped) {
+    telegramBootstrapped = true;
+    initTelegramWebApp();
+  }
+
   return (
     <ErrorBoundary>
       <Suspense fallback={<Loading />}>
