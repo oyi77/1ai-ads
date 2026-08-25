@@ -6,10 +6,13 @@
 import { hashPassword, verifyPassword, generateToken, generateRefreshToken, verifyToken } from '../../lib/auth.js';
 import { createLogger } from '../../lib/logger.js';
 import config from '../../config/index.js';
+import {
+  sendVerificationEmail, sendPasswordResetEmail,
+  generateToken as generateEmailToken, hashToken, mailerEnabled,
+} from '../../lib/mailer.js';
 import { v4 as uuid } from 'uuid';
 
 const log = createLogger('auth-handlers');
-
 /**
  * POST /register
  */
@@ -30,14 +33,28 @@ export function handleRegister(usersRepo, refreshTokensRepo) {
         return res.status(409).json({ success: false, error: 'Email already registered' });
       }
 
-      const userId = usersRepo.create({ username, email, password_hash: hashPassword(password), confirmed: 1 });
+      // Email verification enforced only when a mail provider is configured;
+      // otherwise accounts start confirmed (dev/test/legacy parity).
+      const needsVerification = mailerEnabled();
+      const userId = usersRepo.create({ username, email, password_hash: hashPassword(password), confirmed: needsVerification ? 0 : 1 });
+
+      let verificationSent = false;
+      if (needsVerification) {
+        const token = generateEmailToken();
+        usersRepo.setEmailVerificationToken(userId, {
+          hash: hashToken(token),
+          expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+        });
+        verificationSent = await sendVerificationEmail(email, username, token);
+      }
+
       const accessToken = generateToken({ id: userId, username, role: 'user', plan: 'free' });
       const refreshToken = generateRefreshToken({ id: userId, username });
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
       refreshTokensRepo.upsert(userId, refreshToken, expiresAt.toISOString());
 
-      res.json({ success: true, data: { user: { id: userId, username, email, role: 'user', plan: 'free' }, accessToken, refreshToken } });
+      res.json({ success: true, data: { user: { id: userId, username, email, role: 'user', plan: 'free', email_verified: !needsVerification }, accessToken, refreshToken, verificationSent } });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -58,6 +75,10 @@ export function handleLogin(usersRepo, refreshTokensRepo) {
 
       if (user.is_active === 0) {
         return res.status(401).json({ success: false, error: 'Account disabled' });
+      }
+
+      if (user.confirmed === 0 && user.email_verification_hash) {
+        return res.status(403).json({ success: false, error: 'Please verify your email before signing in. Check your inbox for the verification link.', code: 'EMAIL_NOT_VERIFIED' });
       }
       refreshTokensRepo.deleteByUserId(user.id);
       const accessToken = generateToken({ id: user.id, username: user.username, role: user.role || 'user', plan: user.plan || 'free' });
@@ -177,6 +198,102 @@ export function handleConnectMetaToken(settingsRepo) {
       }
 
       res.json({ success: true, message: `Connected as ${meData.name}! Found ${adAccounts.length} ad accounts, ${connectedCount} new connected.`, data: { id: mainId, user_name: meData.name, user_id: meData.id, ad_accounts_count: adAccounts.length, new_connected: connectedCount, ad_accounts: adAccounts } });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  };
+}
+
+/**
+ * POST /verify-email — confirm an email verification token.
+ */
+export function handleVerifyEmail(usersRepo) {
+  return async (req, res) => {
+    try {
+      const { token } = req.body;
+      if (!token) return res.status(400).json({ success: false, error: 'token is required' });
+      const user = usersRepo.findByVerificationTokenHash(hashToken(token));
+      if (!user || !user.email_verification_expires || new Date(user.email_verification_expires) < new Date()) {
+        return res.status(400).json({ success: false, error: 'Invalid or expired verification link' });
+      }
+      usersRepo.markEmailVerified(user.id);
+      res.json({ success: true, data: { username: user.username } });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  };
+}
+
+/**
+ * POST /resend-verification — re-send the verification email for an unverified account.
+ */
+export function handleResendVerification(usersRepo) {
+  return async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ success: false, error: 'email is required' });
+      const user = usersRepo.findByEmail(email);
+      // Anti-enumeration: same response whether or not the account exists.
+      if (!user || user.confirmed === 1 || !mailerEnabled()) {
+        return res.json({ success: true, message: 'If the account exists and is unverified, a new verification email has been sent.' });
+      }
+      const token = generateEmailToken();
+      usersRepo.setEmailVerificationToken(user.id, {
+        hash: hashToken(token),
+        expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+      });
+      await sendVerificationEmail(user.email, user.username, token);
+      res.json({ success: true, message: 'If the account exists and is unverified, a new verification email has been sent.' });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  };
+}
+
+/**
+ * POST /forgot-password — issue a password reset link (anti-enumeration response).
+ */
+export function handleForgotPassword(usersRepo) {
+  return async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ success: false, error: 'email is required' });
+      const user = usersRepo.findByEmail(email);
+      if (user && mailerEnabled()) {
+        const token = generateEmailToken();
+        usersRepo.setPasswordResetToken(user.id, {
+          hash: hashToken(token),
+          expiresAt: new Date(Date.now() + 3600 * 1000).toISOString(),
+        });
+        await sendPasswordResetEmail(user.email, user.username, token);
+      }
+      res.json({ success: true, message: 'If that email is registered, a reset link has been sent.' });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  };
+}
+
+/**
+ * POST /reset-password — consume a reset token and set a new password.
+ */
+export function handleResetPassword(usersRepo, refreshTokensRepo) {
+  return async (req, res) => {
+    try {
+      const { token, password } = req.body;
+      if (!token || !password) return res.status(400).json({ success: false, error: 'token and password are required' });
+      if (String(password).length < 6) return res.status(400).json({ success: false, error: 'Password must be at least 6 characters' });
+
+      const user = usersRepo.findByPasswordResetTokenHash(hashToken(token));
+      if (!user || !user.password_reset_expires || new Date(user.password_reset_expires) < new Date()) {
+        return res.status(400).json({ success: false, error: 'Invalid or expired reset link' });
+      }
+
+      usersRepo.update(user.id, { password_hash: hashPassword(String(password)) });
+      usersRepo.clearPasswordResetToken(user.id);
+      refreshTokensRepo.deleteByUserId(user.id); // revoke existing sessions
+      log.info('Password reset completed', { userId: user.id });
+      res.json({ success: true, message: 'Password updated. Sign in with your new password.' });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }

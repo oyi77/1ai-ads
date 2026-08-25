@@ -37,6 +37,10 @@ const AdsetsPage = lazy(() => import('./pages/adsets').then(m => ({ default: m.A
 const AudiencesPage = lazy(() => import('./pages/audiences').then(m => ({ default: m.AudiencesPage })));
 const TargetingPage = lazy(() => import('./pages/targeting').then(m => ({ default: m.TargetingPage })));
 const AuditTrailPage = lazy(() => import('./pages/audit-trail').then(m => ({ default: m.AuditTrailPage })));
+const BillingPage = lazy(() => import('./pages/billing').then(m => ({ default: m.BillingPage })));
+const VerifyEmailPage = lazy(() => import('./pages/verify-email').then(m => ({ default: m.VerifyEmailPage })));
+const ResetPasswordPage = lazy(() => import('./pages/reset-password').then(m => ({ default: m.ResetPasswordPage })));
+const AccountReportsPage = lazy(() => import('./pages/account-reports').then(m => ({ default: m.AccountReportsPage })));
 
 function Loading() {
   return (
@@ -57,6 +61,8 @@ export function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/onboarding" element={<RequireAuth><OnboardingPage /></RequireAuth>} />
@@ -85,6 +91,8 @@ export function App() {
             <Route path="/audit" element={<AuditTrailPage />} />
             <Route path="/drafts" element={<DraftsPage />} />
             <Route path="/platforms" element={<PlatformsPage />} />
+            <Route path="/billing" element={<BillingPage />} />
+            <Route path="/reports" element={<AccountReportsPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

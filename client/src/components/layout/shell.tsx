@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Megaphone, Settings, LogOut, Menu,
   Library, Activity, FlaskConical, BarChart3, Zap, Eye, GitBranch, LayoutGrid,
-  TrendingUp, Bot, FileText, Globe, Users, Link2, FileEdit, Layers, Shield, Boxes, Receipt, Bookmark, Target,
+  TrendingUp, Bot, FileText, Globe, Users, Link2, FileEdit, Layers, Shield, Boxes, Receipt, Bookmark, Target, FileBarChart, CreditCard,
 } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { useState, useEffect, useCallback } from 'react';
@@ -19,6 +19,7 @@ const navItems = [
   { to: '/creative-fatigue', label: 'Creative Fatigue', icon: Activity },
   { to: '/ab-tests', label: 'A/B Tests', icon: FlaskConical },
   { to: '/reporting', label: 'Reporting', icon: BarChart3 },
+  { to: '/reports', label: 'Account Reports', icon: FileBarChart },
   { to: '/automation', label: 'Automation', icon: Zap },
   { to: '/competitors', label: 'Competitors', icon: Eye },
   { to: '/trending', label: 'Trending Ads', icon: TrendingUp },
@@ -32,6 +33,7 @@ const navItems = [
   { to: '/invoices', label: 'Invoices', icon: Receipt },
   { to: '/saved-audiences', label: 'Saved Audiences', icon: Bookmark },
   { to: '/targeting', label: 'Advanced Targeting', icon: Target },
+  { to: '/billing', label: 'Billing', icon: CreditCard },
 ];
 
 const MOBILE_BREAKPOINT = 768;

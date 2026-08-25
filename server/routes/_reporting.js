@@ -16,6 +16,28 @@ export function createReportingGroupRouter({ repos, services }) {
   router.use('/analytics', requireAuth, createAnalyticsRouter(repos.campaignsRepo));
   router.use('/attribution', requireAuth, requirePlan('pro'), createAttributionRouter(services.attributionService, repos.attributionRepo));
   router.use('/realtime', requireAuth, createRealtimeRouter(services.realtimeService));
+
+  // Detailed per-account report with AI recommendations (per-user scoped token)
+  router.get('/reporting/accounts/:accountId/report', requireAuth, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      const acct = repos.platformAccountsRepo.getByPlatform(userId, 'meta');
+      if (!acct?.access_token) {
+        return res.status(400).json({ success: false, error: 'Meta account is not connected. Connect it in Settings first.' });
+      }
+      const { MetaAdsAPI } = await import('../services/meta/index.js');
+      const api = MetaAdsAPI.withToken(acct.access_token);
+      // Verify the account actually belongs to this token (tenant isolation)
+      const accounts = await api.getAdAccounts();
+      const owned = accounts.find(a => String(a.id).replace(/^act_/, '') === String(req.params.accountId).replace(/^act_/, ''));
+      if (!owned) return res.status(404).json({ success: false, error: 'Account not found for your Meta token' });
+      const report = await services.accountReportService.buildReport(api, owned.id, owned.name);
+      res.json({ success: true, data: report });
+    } catch (err) {
+      const status = err.status || 500;
+      res.status(status).json({ success: false, error: err.message });
+    }
+  });
   router.use('/competitor-spy', requireAuth, createCompetitorSpyRouter(repos.competitorsRepo, services.adIntelligenceService, services.competitorSpyService));
   router.use('/campaign-monitor', requireAuth, createCampaignMonitorRouter(services.campaignMonitorService, repos));
 

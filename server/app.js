@@ -126,6 +126,25 @@ export function createApp(params) {
     }
     try {
       const body = req.body || {};
+      // Primary path: normalized event forwarded by the 1ai-payment service
+      // (X-Payment-Signature = HMAC-SHA256 of raw body with our merchant webhook secret).
+      const forwarded = await services.paymentService.processPaymentCallback(
+        req.rawBody || Buffer.from(JSON.stringify(body)),
+        req.headers['x-payment-signature'],
+      );
+      if (forwarded) {
+        if (!forwarded.success && forwarded.status) {
+          return res.status(forwarded.status).json({ error: forwarded.error });
+        }
+        repos.webhookEventsRepo.create({
+          source: '1ai-payment',
+          eventType: body.event || body.status || 'payment',
+          payload: body,
+        });
+        return res.status(200).json({ ok: true });
+      }
+
+      // Legacy direct-Scalev callback (x-scalev-signature).
       const orderId = body.orderId || body.order_id;
       if (orderId) {
         const payment = repos.paymentsRepo.findByOrderId(orderId);
@@ -141,7 +160,7 @@ export function createApp(params) {
       });
       return res.status(200).json({ ok: true });
     } catch (err) {
-      log.error('Scalev notify error', { error: err.message });
+      log.error('Payment notify error', { error: err.message });
       return res.status(500).json({ error: 'Processing failed' });
     }
   });

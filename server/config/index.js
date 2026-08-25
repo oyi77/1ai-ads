@@ -87,6 +87,12 @@ const config = {
  get aiPipelineDefaultModel() { return process.env.AI_PIPELINE_DEFAULT_MODEL || ''; },
  get nangoSecretKey() { return process.env.NANGO_SECRET_KEY || ''; },
  get approvalRequired() { return process.env.APPROVAL_REQUIRED === 'true' || process.env.APPROVAL_REQUIRED === '1'; },
+ get publicBaseUrl() { return process.env.PUBLIC_BASE_URL || 'https://adforge.aitradepulse.com'; },
+ get paymentGateway() { return process.env.PAYMENT_GATEWAY || 'midtrans'; },
+ // Env var name starts with a digit — bracket access required.
+ get oneAiPaymentWebhookSecret() { return process.env['1AI_PAYMENT_WEBHOOK_SECRET'] || ''; },
+ get resendApiKey() { return process.env.RESEND_API_KEY || ''; },
+ get mailFrom() { return process.env.MAIL_FROM || 'AdForge <noreply@berkahkarya.org>'; },
 };
 
 export function validateConfig() {

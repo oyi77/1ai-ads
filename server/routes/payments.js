@@ -23,6 +23,15 @@ function getStatusDisplayText(status) {
 export function createPaymentsRouter(paymentService) {
   const router = Router();
 
+  // Plan catalog with self-serve pricing
+  router.get('/plans', async (_req, res) => {
+    try {
+      res.json({ success: true, data: paymentService.listPlans() });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // Get recent payments for current user
   router.get('/', async (req, res) => {
     try {

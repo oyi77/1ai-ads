@@ -1,14 +1,20 @@
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import { createLogger } from '../lib/logger.js';
+import { ConfigurationError } from '../lib/errors.js';
+import config from '../config/index.js';
 const log = createLogger('payments');
 
 export class PaymentService {
   constructor(paymentsRepo, usersRepo) {
     this.paymentsRepo = paymentsRepo;
     this.usersRepo = usersRepo;
+    // 1ai-payment merchant API base, e.g. http://172.17.0.1:3100/api/payments
     this.paymentApiUrl = process.env['1AI_PAYMENT_URL'] || 'http://localhost:3100/api/payments';
     this.paymentApiKey = process.env['1AI_PAYMENT_API_KEY'] || '';
+    this.paymentGateway = config.paymentGateway || 'midtrans';
+    this.webhookSecret = config.oneAiPaymentWebhookSecret || '';
+    this.callbackUrl = `${config.publicBaseUrl}/api/payments/notify`;
   }
 
   async initiatePayment({ userId, amount, currency, provider, metadata }) {
@@ -19,45 +25,15 @@ export class PaymentService {
     log.info('Payment initiated', { paymentId: payment.id, provider, amount });
 
     try {
-      const paymentResult = await this._create1aiPayment(payment, metadata);
+      const paymentResult = await this._create1aiOrder(
+        { amount: payment.amount, planName: metadata?.planName || 'Payment' },
+        { username: metadata?.customerName || 'customer', email: metadata?.customerEmail || '' },
+        payment.orderId,
+      );
       return { ...payment, ...paymentResult };
     } catch (err) {
       this.paymentsRepo.updateStatus(payment.id, 'failed');
       log.error('Payment creation failed', { paymentId: payment.id, error: err.message });
-      throw err;
-    }
-  }
-
-  async _create1aiPayment(payment, metadata) {
-    try {
-      const payload = {
-        order_id: payment.orderId,
-        amount: payment.amount,
-        currency: payment.currency,
-        description: metadata?.description || 'Payment',
-        metadata,
-      };
-
-      const response = await fetch(`${this.paymentApiUrl}/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': this.paymentApiKey,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Payment API error: ${error.message || response.statusText}`);
-      }
-
-      const result = await response.json();
-      this.paymentsRepo.updateStatus(payment.id, 'processing');
-      log.info('Payment created via 1ai-payment API', { orderId: payment.orderId, checkoutUrl: result.checkout_url });
-      return result;
-    } catch (err) {
-      log.error('Failed to create payment with 1ai-payment API', { orderId: payment.orderId, error: err.message });
       throw err;
     }
   }
@@ -68,6 +44,24 @@ export class PaymentService {
 
   listPayments(userId, { limit } = {}) {
     return this.paymentsRepo.findByUserId(userId, { limit });
+  }
+
+  listPlans() {
+    const plans = this.paymentsRepo.getAllPlans ? this.paymentsRepo.getAllPlans() : [];
+    return plans.map(p => {
+      const cfg = this.paymentsRepo.getPaymentConfig(p.name.toLowerCase());
+      return {
+        id: p.id,
+        name: p.name,
+        tier: p.tier,
+        maxAds: p.max_ads,
+        maxCampaigns: p.max_campaigns,
+        maxPlatformAccounts: p.max_platform_accounts,
+        features: typeof p.features === 'string' ? JSON.parse(p.features) : (p.features || []),
+        amount: cfg ? cfg.amount : null,
+        currency: 'IDR',
+      };
+    });
   }
 
   async _validatePaymentContext(userId, planId) {
@@ -90,8 +84,24 @@ export class PaymentService {
     const orderId = `order_${uuidv4().slice(0, 8)}`;
     const payment = this._createPaymentRecord(userId, plan, orderId, paymentConfig.amount);
     log.info('Payment record created', { paymentId: payment.id, orderId });
-    const order = await this._create1aiOrder(paymentConfig, user, orderId);
-    return { paymentId: payment.id, orderId, checkoutUrl: order.checkout_url, planName: plan.name, amount: paymentConfig.amount };
+    try {
+      const order = await this._create1aiOrder(paymentConfig, user, orderId);
+      if (order.providerOrderId) {
+        this.paymentsRepo.updateMetadata(payment.id, {
+          ...(typeof payment.metadata === 'string' ? JSON.parse(payment.metadata) : payment.metadata || {}),
+          providerOrderId: order.providerOrderId,
+          checkoutUrl: order.checkoutUrl,
+        });
+      }
+      return {
+        paymentId: payment.id, orderId,
+        checkoutUrl: order.checkoutUrl, providerOrderId: order.providerOrderId,
+        planName: plan.name, amount: paymentConfig.amount,
+      };
+    } catch (err) {
+      this.paymentsRepo.updateStatus(payment.id, 'failed');
+      throw err;
+    }
   }
 
   _createPaymentRecord(userId, plan, orderId, amount) {
@@ -101,34 +111,44 @@ export class PaymentService {
     });
   }
 
+  /**
+   * Create an order on the 1ai-payment service.
+   * Contract (POST /api/payments): gateway + amount(int IDR) + callback_url required;
+   * response { success, data: { id, status, payment_url, ... } }.
+   */
   async _create1aiOrder(paymentConfig, user, orderId) {
+    if (!this.paymentApiKey) {
+      throw new ConfigurationError('1AI_PAYMENT_API_KEY not configured');
+    }
     try {
       const payload = {
-        order_id: orderId,
-        amount: paymentConfig.amount,
+        gateway: this.paymentGateway,
+        amount: Math.round(paymentConfig.amount),
         currency: 'IDR',
-        customer_name: user.username,
-        customer_email: user.email,
+        callback_url: this.callbackUrl,
+        project_order_id: orderId,
+        idempotency_key: orderId,
+        customer: { name: user.username, email: user.email || undefined },
         metadata: { planName: paymentConfig.planName },
       };
 
-      const response = await fetch(`${this.paymentApiUrl}/create`, {
+      const response = await fetch(this.paymentApiUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'X-API-Key': this.paymentApiKey,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
       });
 
+      const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Payment API error: ${error.message || response.statusText}`);
+        throw new Error(`Payment API error ${response.status}: ${result?.error?.message || result?.error || response.statusText}`);
       }
 
-      const result = await response.json();
-      log.info('Order created via 1ai-payment API', { orderId, checkoutUrl: result.checkout_url });
-      return result;
+      const order = result.data || result;
+      log.info('Order created via 1ai-payment API', { orderId, providerId: order.id, payment_url: order.payment_url });
+      return { checkoutUrl: order.payment_url, providerOrderId: order.id, status: order.status };
     } catch (err) {
       log.error('Failed to create order with 1ai-payment API', { orderId, error: err.message });
       throw err;
@@ -136,7 +156,16 @@ export class PaymentService {
   }
 
   _mapPaymentStatus(apiStatus) {
-    const statusMap = { paid: 'paid', failed: 'failed', cancelled: 'cancelled', processing: 'processing' };
+    // 1ai-payment lifecycle: pending | success | failed | expired | cancelled | refunded
+    const statusMap = {
+      pending: 'processing',
+      success: 'paid',
+      paid: 'paid',
+      failed: 'failed',
+      expired: 'cancelled',
+      cancelled: 'cancelled',
+      refunded: 'refunded',
+    };
     return statusMap[apiStatus] || null;
   }
 
@@ -146,24 +175,29 @@ export class PaymentService {
     if (!payment) throw new Error('Payment not found');
     if (payment.status !== 'pending' && payment.status !== 'processing') return payment;
 
-    try {
-      const response = await fetch(`${this.paymentApiUrl}/status/${orderId}`, {
-        method: 'GET',
-        headers: {
-          'X-API-Key': this.paymentApiKey,
-        },
-      });
+    const meta = typeof payment.metadata === 'string' ? JSON.parse(payment.metadata) : payment.metadata || {};
+    const providerOrderId = meta.providerOrderId;
+    if (!providerOrderId || !this.paymentApiKey) return payment;
 
+    try {
+      const response = await fetch(`${this.paymentApiUrl}/${providerOrderId}`, {
+        method: 'GET',
+        headers: { 'X-API-Key': this.paymentApiKey },
+      });
       if (!response.ok) {
         log.error('Failed to check payment status', { orderId, status: response.status });
         return payment;
       }
-
       const result = await response.json();
-      const newStatus = this._mapPaymentStatus(result.status);
+      const order = result.data || result;
+      const newStatus = this._mapPaymentStatus(order.status);
       if (newStatus && newStatus !== payment.status) {
         const updated = this.paymentsRepo.updateStatus(payment.id, newStatus);
         log.info('Payment status updated from 1ai-payment API', { orderId, oldStatus: payment.status, newStatus });
+        if (newStatus === 'paid') {
+          await this._handleOrderPaid(updated, meta);
+          return this.paymentsRepo.findByOrderId(orderId);
+        }
         return updated;
       }
     } catch (err) {
@@ -178,29 +212,69 @@ export class PaymentService {
       log.warn('Webhook event missing eventType or type', { event });
       return { error: { success: false, error: 'Missing event type' } };
     }
-    if (!eventType.startsWith('order.')) return { notOrder: true };
-    const orderId = event.order_id || event.payload?.order_id;
+    const orderId = event.project_order_id || event.order_id || event.payload?.order_id;
     if (!orderId) return { error: { success: false, error: 'Missing order_id' } };
     const payment = this.paymentsRepo.findByOrderId(orderId);
-    if (!payment) return { error: { success: false, error: 'Payment not found' } };
+    if (!payment) return { error: { success: false, error: `Unknown order: ${orderId}` } };
     return { eventType, orderId, payment };
+  }
+
+  /**
+   * Verify and process a callback forwarded by the 1ai-payment service.
+   * Signature: X-Payment-Signature = HMAC-SHA256(rawBody, merchant webhook_secret).
+   * Returns null when the request is not a 1ai-payment forwarded event (caller may
+   * fall back to a legacy handler).
+   */
+  async processPaymentCallback(rawBody, signatureHeader) {
+    if (!signatureHeader || !this.webhookSecret) return null;
+
+    const expected = crypto.createHmac('sha256', this.webhookSecret).update(rawBody).digest('hex');
+    const provided = String(signatureHeader).replace(/^sha256=/, '');
+    const valid = expected.length === provided.length &&
+      crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(provided));
+    if (!valid) {
+      return { success: false, status: 401, error: 'Invalid signature' };
+    }
+
+    let body;
+    try {
+      body = JSON.parse(rawBody.toString('utf8'));
+    } catch {
+      return { success: false, status: 400, error: 'Invalid JSON' };
+    }
+
+    const status = String(body.status || '').toLowerCase();
+    const resolved = this._resolvePaymentFromEvent({ ...body, eventType: `order.${status}` });
+    if (resolved.error) return { success: false, status: 200, ...resolved.error };
+
+    const { payment } = resolved;
+    const metadata = typeof payment.metadata === 'string' ? JSON.parse(payment.metadata) : payment.metadata || {};
+
+    switch (status) {
+      case 'success':
+        await this._handleOrderPaid(payment, metadata);
+        break;
+      case 'failed':
+        await this._handleOrderFailed(payment, metadata, body);
+        break;
+      case 'cancelled':
+      case 'expired':
+        await this._handleOrderCancelled(payment);
+        break;
+      default:
+        log.info('Ignoring forwarded payment status', { status, orderId: payment.order_id });
+    }
+    return { success: true };
   }
 
   async processWebhookEvent(event) {
     try {
-      // Verify webhook signature
-      if (!this._verify1aiWebhookSignature(event)) {
-        log.warn('Invalid webhook signature', { event });
-        return { success: false, error: 'Invalid signature' };
-      }
-
       const resolved = this._resolvePaymentFromEvent(event);
       if (resolved.error) return resolved.error;
       if (resolved.notOrder) return { success: false, error: 'Unsupported event type' };
 
       const { eventType, orderId, payment } = resolved;
       log.info('Processing webhook event', { eventType, event });
-      log.info('Found payment for webhook', { paymentId: payment.id, orderId, currentStatus: payment.status });
 
       const metadata = typeof payment.metadata === 'string' ? JSON.parse(payment.metadata) : payment.metadata || {};
       const handlers = {
@@ -222,38 +296,7 @@ export class PaymentService {
     }
   }
 
-  _verify1aiWebhookSignature(event) {
-    try {
-      const signature = event.signature || event.headers?.['x-1ai-payment-signature'];
-      if (!signature) {
-        log.warn('Missing webhook signature');
-        return false;
-      }
-
-      const orderId = event.order_id || event.payload?.order_id;
-      const secret = orderId; // Using order_id as secret per contract
-      const hmac = crypto.createHmac('sha256', secret);
-      const payload = JSON.stringify(event.payload || event);
-      hmac.update(payload);
-      const computed = hmac.digest('hex');
-
-      // Constant-time comparison to avoid timing side-channels (mirrors app.js Scalev check).
-      const expectedBuf = Buffer.from(computed);
-      const providedBuf = Buffer.from(signature);
-      const isValid =
-        expectedBuf.length === providedBuf.length &&
-        crypto.timingSafeEqual(expectedBuf, providedBuf);
-      if (!isValid) {
-        log.warn('Webhook signature verification failed', { orderId });
-      }
-      return isValid;
-    } catch (err) {
-      log.error('Error verifying webhook signature', { error: err.message });
-      return false;
-    }
-  }
-
-  _handleOrderPaid(payment, metadata) {
+  async _handleOrderPaid(payment, metadata) {
     this.paymentsRepo.updateStatus(payment.id, 'paid');
     log.info('Payment status updated to paid', { paymentId: payment.id });
 
@@ -278,7 +321,6 @@ export class PaymentService {
 
   _handleOrderShipped(payment) {
     this.paymentsRepo.updateStatus(payment.id, 'shipped');
-    log.info('Payment status updated to shipped', { paymentId: payment.id });
     log.info('Order shipped notification', { paymentId: payment.id, userId: payment.user_id });
     return { success: true };
   }

@@ -9,6 +9,8 @@ import config from '../config/index.js';
 import {
   handleRegister, handleLogin, handleRefreshToken,
   handleLogout, handleConnectMetaToken,
+  handleVerifyEmail, handleResendVerification,
+  handleForgotPassword, handleResetPassword,
 } from './_handlers/auth-handlers.js';
 import { requireAuth } from '../middleware/auth.js';
 import { generateToken, verifyToken } from '../lib/auth.js';
@@ -93,6 +95,11 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
   router.post('/login', handleLogin(usersRepo, refreshTokensRepo));
   router.post('/refresh-token', handleRefreshToken(usersRepo, refreshTokensRepo));
   router.post('/logout', handleLogout(refreshTokensRepo));
+  // Email verification + password reset (public; limiter applies via router.use)
+  router.post('/verify-email', handleVerifyEmail(usersRepo));
+  router.post('/resend-verification', handleResendVerification(usersRepo));
+  router.post('/forgot-password', handleForgotPassword(usersRepo));
+  router.post('/reset-password', handleResetPassword(usersRepo, refreshTokensRepo));
 
   // Meta compliance
   router.get('/facebook/deauthorize', (_req, res) => {

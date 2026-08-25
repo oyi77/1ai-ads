@@ -49,6 +49,7 @@ import { BoostApprovalService } from '../services/boost-approval.js';
 import { TargetingService } from '../services/targeting.js';
 import { CreativeLibraryRepository } from '../repositories/creative-library.js';
 import { DashboardWidgetsRepository } from '../repositories/dashboard-widgets.js';
+import { AccountReportService } from '../services/account-report-service.js';
 
 export function createServices({ db, repos, params }) {
   const llmClient = (params && params.llmClient) || new LLMClient({
@@ -149,6 +150,7 @@ export function createServices({ db, repos, params }) {
   const targeting = new TargetingService(repos.targetingSuggestionsRepo, repos.boostRecommendationsRepo);
   const creativeLibraryRepo = new CreativeLibraryRepository(db);
   const dashboardWidgetsRepo = new DashboardWidgetsRepository(db);
+  const accountReportService = new AccountReportService({ llmClient });
 
   return {
     llmClient, mcpClient, adspirerClient, trendingService, paymentService,
@@ -162,5 +164,6 @@ export function createServices({ db, repos, params }) {
     abTestService, fatigueDetector, unifiedReporter, bulkOperations,
     imageGenerator, audienceIntelligence, creativeScorer, whiteLabelService,
     boostApproval, targeting, creativeLibraryRepo, dashboardWidgetsRepo,
+    accountReportService,
   };
 }

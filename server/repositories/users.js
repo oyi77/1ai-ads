@@ -54,6 +54,35 @@ export class UsersRepository {
     return this.findById(id);
   }
 
+  setEmailVerificationToken(id, { hash, expiresAt }) {
+    this.db.prepare('UPDATE users SET email_verification_hash = ?, email_verification_expires = ? WHERE id = ?')
+      .run(hash, expiresAt, id);
+  }
+
+  findByVerificationTokenHash(hash) {
+    return this.db.prepare('SELECT * FROM users WHERE email_verification_hash = ?').get(hash) || null;
+  }
+
+  markEmailVerified(id) {
+    this.db.prepare("UPDATE users SET confirmed = 1, email_verification_hash = NULL, email_verification_expires = NULL WHERE id = ?")
+      .run(id);
+    return this.findById(id);
+  }
+
+  setPasswordResetToken(id, { hash, expiresAt }) {
+    this.db.prepare('UPDATE users SET password_reset_hash = ?, password_reset_expires = ? WHERE id = ?')
+      .run(hash, expiresAt, id);
+  }
+
+  findByPasswordResetTokenHash(hash) {
+    return this.db.prepare('SELECT * FROM users WHERE password_reset_hash = ?').get(hash) || null;
+  }
+
+  clearPasswordResetToken(id) {
+    this.db.prepare('UPDATE users SET password_reset_hash = NULL, password_reset_expires = NULL WHERE id = ?')
+      .run(id);
+  }
+
   delete(id) {
     this.db.prepare('DELETE FROM users WHERE id = ?').run(id);
   }

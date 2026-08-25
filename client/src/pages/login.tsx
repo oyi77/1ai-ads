@@ -3,10 +3,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 
 export function LoginPage() {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -44,7 +45,13 @@ export function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setNotice('');
     try {
+      if (mode === 'forgot') {
+        const res = await api.post<{ message: string }>('/auth/forgot-password', { email });
+        setNotice(res?.message || 'If that email is registered, a reset link has been sent.');
+        return;
+      }
       if (mode === 'register') {
         await api.register(username, password, email);
       } else {
@@ -71,46 +78,67 @@ export function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'flex', gap: 4, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 4, marginBottom: 20 }}>
-            {(['login', 'register'] as const).map(m => (
-              <button key={m} type="button" onClick={() => { setMode(m); setError(''); }}
-                style={{ flex: 1, padding: '7px 0', border: 'none', borderRadius: 6, cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '0.78rem', fontWeight: 700,
-                  background: mode === m ? 'var(--accent-soft)' : 'transparent', color: mode === m ? 'var(--accent)' : 'var(--text-secondary)' }}>
-                {m === 'login' ? 'Sign In' : 'Create Account'}
-              </button>
-            ))}
-          </div>
-
-          {error && <div role="alert" style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', color: 'var(--red)', padding: '10px 14px', borderRadius: 6, fontSize: '0.8rem', marginBottom: 16 }}>{error}</div>}
-
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Username</label>
-            <input type="text" value={username} onChange={e => setUsername(e.target.value)} required minLength={3}
-              style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 6, color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '0.85rem', outline: 'none' }} />
-          </div>
-
-          {mode === 'register' && (
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
-                style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 6, color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '0.85rem', outline: 'none' }} />
+          {mode !== 'forgot' && (
+            <div style={{ display: 'flex', gap: 4, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 4, marginBottom: 20 }}>
+              {(['login', 'register'] as const).map(m => (
+                <button key={m} type="button" onClick={() => { setMode(m); setError(''); }}
+                  style={{ flex: 1, padding: '7px 0', border: 'none', borderRadius: 6, cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '0.78rem', fontWeight: 700,
+                    background: mode === m ? 'var(--accent-soft)' : 'transparent', color: mode === m ? 'var(--accent)' : 'var(--text-secondary)' }}>
+                  {m === 'login' ? 'Sign In' : 'Create Account'}
+                </button>
+              ))}
             </div>
           )}
 
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
-              style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 6, color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '0.85rem', outline: 'none' }} />
-          </div>
+          {notice && <div style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', color: 'var(--green)', padding: '10px 14px', borderRadius: 6, fontSize: '0.8rem', marginBottom: 16 }}>{notice}</div>}
+          {error && <div role="alert" style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', color: 'var(--red)', padding: '10px 14px', borderRadius: 6, fontSize: '0.8rem', marginBottom: 16 }}>{error}</div>}
+
+          {mode === 'forgot' ? (
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Account email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+                style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 6, color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '0.85rem', outline: 'none' }} />
+            </div>
+          ) : (
+            <>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Username</label>
+                <input type="text" value={username} onChange={e => setUsername(e.target.value)} required minLength={3}
+                  style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 6, color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '0.85rem', outline: 'none' }} />
+              </div>
+
+              {mode === 'register' && (
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Email</label>
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+                    style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 6, color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '0.85rem', outline: 'none' }} />
+                </div>
+              )}
+
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Password</label>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
+                  style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 6, color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '0.85rem', outline: 'none' }} />
+              </div>
+            </>
+          )}
 
           <button type="submit" disabled={loading}
             style={{ width: '100%', padding: 11, background: 'var(--accent)', color: 'var(--bg-deep)', border: 'none', borderRadius: 6, fontFamily: 'var(--font)', fontSize: '0.85rem', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
-            {loading ? (mode === 'register' ? 'Creating account...' : 'Signing in...') : (mode === 'register' ? 'Create Account' : 'Sign In')}
+            {loading ? 'Please wait...' : (mode === 'register' ? 'Create Account' : mode === 'forgot' ? 'Send Reset Link' : 'Sign In')}
           </button>
         </form>
-        <p style={{ textAlign: 'center', marginTop: 16, fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
-          {mode === 'login' ? "Don't have an account? Switch to Create Account." : 'Free plan included — upgrade anytime.'}
-        </p>
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          {mode === 'forgot' ? (
+            <button type="button" onClick={() => setMode('login')} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '0.75rem', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+              ← Back to sign in
+            </button>
+          ) : (
+            <button type="button" onClick={() => { setMode('forgot'); setError(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '0.72rem', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+              Forgot password?
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

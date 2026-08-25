@@ -12,12 +12,15 @@ describe('PaymentService', () => {
       findById: vi.fn(),
       findByOrderId: vi.fn(),
       updateStatus: vi.fn(),
+      updateMetadata: vi.fn(),
       findPlanById: vi.fn(),
       getPaymentConfig: vi.fn(),
+      getAllPlans: vi.fn(() => []),
     };
 
     mockUsersRepo = {
       findById: vi.fn(),
+      update: vi.fn(),
     };
 
     vi.stubGlobal('fetch', vi.fn());
@@ -35,9 +38,10 @@ describe('PaymentService', () => {
   describe('createPayment', () => {
     const defaultPlan = { id: 'plan_pro', name: 'Pro' };
     const defaultUser = { id: 'user1', username: 'tester', email: 't@test.com', plan: 'free' };
-    const defaultPaymentConfig = { storeUniqueId: 'store_pro', amount: 499000 };
-    const defaultPaymentRecord = { id: 'pay1', order_id: 'order_abc', status: 'pending' };
-    const defaultApiResponse = { checkout_url: 'https://checkout.test/order_abc' };
+    const defaultPaymentConfig = { amount: 499000, planName: 'Pro' };
+    const defaultPaymentRecord = { id: 'pay1', order_id: 'order_abc', status: 'pending', metadata: JSON.stringify({ planId: 'plan_pro', planName: 'Pro', userId: 'user1' }) };
+    // 1ai-payment contract: { success, data: { id, status, payment_url } }
+    const defaultApiResponse = { success: true, data: { id: 'pay_ext1', status: 'pending', payment_url: 'https://checkout.test/order_abc' } };
 
     it('creates payment and returns checkout URL', async () => {
       mockPaymentsRepo.findPlanById.mockReturnValue(defaultPlan);
@@ -59,9 +63,16 @@ describe('PaymentService', () => {
         metadata: { planId: 'plan_pro', planName: 'Pro', userId: 'user1' },
       });
       expect(fetch).toHaveBeenCalledTimes(1);
+      // POSTs to the collection root — NOT a legacy /create subpath
+      expect(fetch.mock.calls[0][0]).toBe('http://test-payment/api/payments');
+      const body = JSON.parse(fetch.mock.calls[0][1].body);
+      expect(body.gateway).toBeTruthy();
+      expect(body.callback_url).toContain('/api/payments/notify');
+      expect(body.idempotency_key).toBe(body.project_order_id);
       expect(result).toMatchObject({
         paymentId: 'pay1',
         checkoutUrl: 'https://checkout.test/order_abc',
+        providerOrderId: 'pay_ext1',
         planName: 'Pro',
         amount: 499000,
       });
@@ -104,16 +115,19 @@ describe('PaymentService', () => {
       vi.mocked(fetch).mockResolvedValue({
         ok: false,
         statusText: 'Bad Request',
-        json: async () => ({ message: 'Invalid amount' }),
+        json: async () => ({ error: { message: 'Invalid amount' } }),
       });
 
-      await expect(service.createPayment('user1', 'plan_pro')).rejects.toThrow('Payment API error: Invalid amount');
+      await expect(service.createPayment('user1', 'plan_pro')).rejects.toThrow(/Payment API error/);
     });
   });
 
   describe('checkPaymentStatusWithProvider', () => {
     it('returns payment when status is not pending/processing', async () => {
-      mockPaymentsRepo.findByOrderId.mockReturnValue({ id: 'pay1', order_id: 'ord1', status: 'paid' });
+      mockPaymentsRepo.findByOrderId.mockReturnValue({
+        id: 'pay1', order_id: 'ord1', status: 'paid',
+        metadata: JSON.stringify({ providerOrderId: 'pay_ext1' }),
+      });
 
       const result = await service.checkPaymentStatusWithProvider('ord1');
 
@@ -121,24 +135,38 @@ describe('PaymentService', () => {
       expect(result).toMatchObject({ status: 'paid' });
     });
 
-    it('checks provider and updates when status changed', async () => {
-      const pending = { id: 'pay1', order_id: 'ord1', status: 'pending' };
+    it('checks provider and updates when status changed to success (maps to paid)', async () => {
+      const pending = {
+        id: 'pay1', order_id: 'ord1', status: 'pending', user_id: 'user1',
+        metadata: JSON.stringify({ planId: 'plan_pro', planName: 'Pro', userId: 'user1', providerOrderId: 'pay_ext1' }),
+      };
       const updated = { id: 'pay1', order_id: 'ord1', status: 'paid' };
-      mockPaymentsRepo.findByOrderId.mockReturnValue(pending);
+      // 1st call: initial lookup; 2nd call: refetch after plan upgrade
+      mockPaymentsRepo.findByOrderId
+        .mockReturnValueOnce(pending)
+        .mockReturnValueOnce(updated);
       vi.mocked(fetch).mockResolvedValue({
         ok: true,
-        json: async () => ({ status: 'paid' }),
+        json: async () => ({ success: true, data: { id: 'pay_ext1', status: 'success' } }),
       });
-      mockPaymentsRepo.updateStatus.mockReturnValue(updated);
+      mockPaymentsRepo.updateStatus
+        .mockReturnValueOnce(updated)   // paid
+        .mockReturnValueOnce(updated);  // completed
 
       const result = await service.checkPaymentStatusWithProvider('ord1');
 
+      // GET /api/payments/:providerOrderId (from metadata)
+      expect(fetch.mock.calls[0][0]).toBe('http://test-payment/api/payments/pay_ext1');
+      expect(fetch.mock.calls[0][1].headers['X-API-Key']).toBe('test-key');
       expect(mockPaymentsRepo.updateStatus).toHaveBeenCalledWith('pay1', 'paid');
       expect(result).toMatchObject(updated);
     });
 
     it('returns existing payment on network error', async () => {
-      const pending = { id: 'pay1', order_id: 'ord1', status: 'pending' };
+      const pending = {
+        id: 'pay1', order_id: 'ord1', status: 'pending',
+        metadata: JSON.stringify({ providerOrderId: 'pay_ext1' }),
+      };
       mockPaymentsRepo.findByOrderId.mockReturnValue(pending);
       vi.mocked(fetch).mockRejectedValue(new Error('network'));
 

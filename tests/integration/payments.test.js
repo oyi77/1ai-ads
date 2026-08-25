@@ -29,27 +29,22 @@ describe('Payments API Integration', () => {
 
     // Plans are already seeded by schema.sql, no need to insert again
 
-    // Seed settings for payment plan configuration
-    db.prepare(`
-      INSERT INTO settings (key, value)
-      VALUES (?, ?)
-    `).run('payment_plan_pro', JSON.stringify({
-      storeUniqueId: 'store_pro_test',
-      amount: 499000
-    }));
+    // Seed/override payment plan configuration (migration 031 may already seed these)
+    const upsertSetting = db.prepare(`
+      INSERT INTO settings (key, value, updated_at)
+      VALUES (?, ?, datetime('now'))
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+    `);
+    upsertSetting.run('payment_plan_pro', JSON.stringify({ storeUniqueId: 'store_pro_test', amount: 499000 }));
+    upsertSetting.run('payment_plan_enterprise', JSON.stringify({ storeUniqueId: 'store_ent_test', amount: 1499000 }));
 
-    db.prepare(`
-      INSERT INTO settings (key, value)
-      VALUES (?, ?)
-    `).run('payment_plan_enterprise', JSON.stringify({
-      storeUniqueId: 'store_ent_test',
-      amount: 1499000
-    }));
+    // The service refuses to create orders without an API key (fail-closed)
+    process.env['1AI_PAYMENT_API_KEY'] = 'test-merchant-key';
 
-    // Mock the external payment API
+    // Mock the 1ai-payment API (contract: { success, data: { id, status, payment_url } })
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ checkout_url: 'https://checkout.payment.test/mock-checkout-url' }),
+      json: async () => ({ success: true, data: { id: 'pay_ext1', status: 'pending', payment_url: 'https://checkout.payment.test/mock-checkout-url' } }),
     });
 
     app = createApp({ db });
@@ -123,10 +118,14 @@ describe('Payments API Integration', () => {
       expect(res.status).toBe(200);
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const callUrl = mockFetch.mock.calls[0][0];
-      expect(callUrl).toContain('/create');
+      // 1ai-payment contract: POST to the /api/payments collection root
+      expect(callUrl).toMatch(/\/api\/payments$/);
       const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(callBody.gateway).toBe('midtrans');
+      expect(callBody.callback_url).toContain('/api/payments/notify');
       expect(callBody.amount).toBe(499000);
-      expect(callBody.order_id).toMatch(/^order_/);
+      expect(callBody.idempotency_key).toBe(callBody.project_order_id);
+      expect(callBody.project_order_id).toMatch(/^order_/);
     });
 
     it('creates payment record with pending status', async () => {

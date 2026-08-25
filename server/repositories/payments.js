@@ -49,4 +49,8 @@ export class PaymentsRepository {
     const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(`payment_plan_${planName}`);
     return row ? JSON.parse(row.value) : null;
   }
+
+  getAllPlans() {
+    return this.db.prepare('SELECT * FROM plans ORDER BY tier').all();
+  }
 }

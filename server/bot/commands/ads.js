@@ -135,13 +135,16 @@ export function handleAdsSelect(deps) {
         {
           parse_mode: 'Markdown',
           reply_markup: {
-            inline_keyboard: campaigns.map((c) => [
-              {
-                text:
-                  (c.status === 'active' ? '⏸ Pause ' : '▶️ Resume ') + c.name,
-                callback_data: `ads:toggle:${accountId}:${c.id}:${c.status === 'active' ? 'pause' : 'resume'}`,
-              },
-            ]),
+            inline_keyboard: [
+              ...campaigns.map((c) => [
+                {
+                  text:
+                    (c.status === 'active' ? '⏸ Pause ' : '▶️ Resume ') + c.name,
+                  callback_data: `ads:toggle:${accountId}:${c.id}:${c.status === 'active' ? 'pause' : 'resume'}`,
+                },
+              ]),
+              [{ text: '📊 Laporan Akun + Analisis AI', callback_data: `ads:repacc:${accountId}` }],
+            ],
           },
         }
       );
@@ -349,4 +352,62 @@ export function handleAdsDisconnectConfirm(deps, id) {
 // ── Drop-in replacement for old global fbads (kept as alias) ─
 export function handleFbAds(deps) {
   return handleAds(deps);
+}
+
+
+// ── Per-account detailed report + AI recommendation ─────────
+function fmtRoas(v) { return v === null || v === undefined ? '—' : `${Number(v).toFixed(2)}x`; }
+function fmtCpr(v) { return v === null || v === undefined ? '—' : fmtCurrency(v); }
+
+export function handleAdsAccountReport(deps) {
+  return async (ctx, accountId) => {
+    const { api, acct } = makeApi(ctx, deps);
+    if (!api) return ctx.reply('🔌 Connect a Meta account first via /start.');
+    const reportService = deps?.services?.accountReportService;
+    if (!reportService) return ctx.reply('⚠️ Report service belum tersedia.');
+    await ctx.reply(`🔄 Menyusun laporan ${acct?.name || accountId} + analisis AI…`);
+    try {
+      const report = await reportService.buildReport(api, accountId, acct?.name || accountId);
+      const s = report.summary;
+      const y = report.comparison.yesterdayFullDay;
+      const avg = report.comparison.avg7d;
+      const ai = report.ai;
+      const body =
+        `📊 *LAPORAN AKUN — ${report.accountName}*
+` +
+        `🗓 Hari ini sampai sekarang (WIB)\n\n` +
+        `💰 *Belanja:* ${fmtCurrency(s.spend)}\n` +
+        `👁 Tayangan: ${(s.impressions).toLocaleString('id-ID')}\n` +
+        `🔗 Klik link: ${(s.linkClicks).toLocaleString('id-ID')} · CTR ${Number(s.ctr).toFixed(2)}%\n` +
+        `🛒 Purchase: ${(s.purchases).toLocaleString('id-ID')}\n` +
+        `💵 CPR: ${fmtCpr(s.cpr)} · CPC ${fmtCurrency(s.cpc)}\n` +
+        `📈 *ROAS:* ${fmtRoas(s.roas)}\n\n` +
+        `⚖️ *PERBANDINGAN*\n` +
+        `• Hari ini: ${fmtCurrency(s.spend)} · ROAS ${fmtRoas(s.roas)}\n` +
+        `• Kemarin: ${fmtCurrency(y.spend)} · ROAS ${fmtRoas(y.roas)}\n` +
+        `• Rata-rata 7 hari: ${fmtCurrency(avg.spend)} · ROAS ${fmtRoas(avg.roas)}\n\n` +
+        `🤖 *ANALISIS & REKOMENDASI AI*\n` +
+        `✅ Kekuatan: ${ai.strengths}\n` +
+        `⚠️ Kelemahan: ${ai.weaknesses}\n` +
+        `📈 Peluang: ${ai.opportunities}\n` +
+        `🔧 Tindakan: ${ai.actions}\n` +
+        `🚨 Risiko: ${ai.risk}\n\n` +
+        `_Read-only • Tidak ada iklan yang diubah._`;
+      return ctx.reply(body, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [[
+            { text: '🔄 Refresh', callback_data: `ads:repacc:${accountId}` },
+            { text: '🌐 Buka Dashboard', url: `${BACKEND}/reporting` },
+          ]],
+        },
+      });
+    } catch (err) {
+      log.error('account report failed', { userId: ctx.userId, accountId, error: err?.message });
+      if (isExpiredToken(err)) {
+        return ctx.reply('🔑 Sesi Meta kamu kedaluwarsa. Hubungkan ulang via /settings.');
+      }
+      return ctx.reply('⚠️ Gagal menyusun laporan akun ini. Coba lagi nanti.');
+    }
+  };
 }
