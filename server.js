@@ -22,6 +22,14 @@ const { default: config, validateConfig } = await import('./server/config/index.
 // Validate required configuration before starting
 validateConfig();
 
+// ── Production credential guard ─────────────────────────────
+// Fail loudly (and refuse weak defaults) when the seeded admin still uses the
+// well-known bootstrap password in production.
+const adminPasswordIsDefault = (process.env.ADMIN_PASSWORD || 'admin123') === 'admin123';
+if (config.nodeEnv === 'production' && adminPasswordIsDefault) {
+  log.warn('SECURITY: ADMIN_PASSWORD is unset — the seeded admin/admin123 account is active in production. Set ADMIN_PASSWORD and rotate the live row.');
+}
+
 // ── Process-level safety net ─────────────────────────────────
 // A single floating rejected promise (e.g. a sync bot handler calling
 // ctx.reply() without returning it) must NEVER take the whole server —

@@ -76,3 +76,4 @@ data/vilona_trakpro_alerts.jsonl
 coverage/
 # TypeScript build cache
 *.tsbuildinfo
+ADMIN-CREDENTIALS.txt

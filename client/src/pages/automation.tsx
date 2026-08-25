@@ -8,8 +8,8 @@ interface Rule {
   id: string;
   name: string;
   type: string;
-  condition: string;
-  action: string;
+  condition: unknown;
+  action: unknown;
   is_active: number | boolean;
   last_triggered: string | null;
   created_at: string;
@@ -39,6 +39,14 @@ export function AutomationPage() {
   });
 
   const ruleList: Rule[] = Array.isArray(automationData?.rules) ? automationData.rules : [];
+
+  // API returns condition/action as structured objects ({type, operator, value});
+  // rendering an object as a React child crashes the whole page.
+  const describeField = (v: unknown): string => {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'string') return v;
+    try { return JSON.stringify(v); } catch { return String(v); }
+  };
   const optimizerRules = Array.isArray(optimizerData?.data) ? optimizerData.data : [];
   const autonomousEnabled = !!autonomousData?.service;
 
@@ -131,7 +139,7 @@ export function AutomationPage() {
                   }}>{rule.type || 'rule'}</span>
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-                  {rule.condition || 'No condition set'}
+                  {describeField(rule.condition) || 'No condition set'}
                   {rule.last_triggered ? ` · Last triggered: ${new Date(rule.last_triggered).toLocaleDateString()}` : ''}
                 </div>
               </div>
