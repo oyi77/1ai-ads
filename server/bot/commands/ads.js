@@ -78,40 +78,80 @@ export function handleAds(deps) {
       if (!accounts.length) {
         return ctx.reply('✅ Connected, but no ad accounts were found for this token. Add an ad account in Meta Business Manager and retry.');
       }
-      const lines = accounts
-        .map(
-          (a) =>
-            `• ${a.name} (` + (a.id.startsWith('act_') ? a.id : `act_${a.id}`) +
-            `) — ${a.status === 'active' ? '✅ active' : a.status === 'disabled' ? '⏸ disabled' : a.status}`
-        )
-        .join('\n');
-      return ctx.reply(
-        `📣 *Your Meta Ad Accounts*\n\n${lines}\n\n` +
-          'Pick an action below. Tap an account to manage it.',
-        {
-          parse_mode: 'Markdown',
-          reply_markup: {
-            inline_keyboard: [
-              ...accounts.map((a) => [
-                { text: `⚙️ ${a.name}`, callback_data: `ads:select:${a.id}` },
-              ]),
-              [
-                { text: '📈 All Accounts Report', callback_data: 'ads:report' },
-                { text: '🔌 Disconnect', callback_data: 'ads:disconnect' },
-              ],
-              [
-                { text: '⚙️ Manage Connections', callback_data: 'ads:manage' },
-              ],
-            ],
-          },
-        }
-      );
+      await replyAccountList(ctx, accounts, 1);
     } catch (err) {
       log.error('ads list failed', { userId: ctx.userId, error: err?.message });
       if (isExpiredToken(err)) {
         return ctx.reply('🔑 Your Meta token has expired. Reconnect via /settings → Connect Meta Account.');
       }
       return ctx.reply('⚠️ Could not load your ad accounts. The token may lack ads_read permission or network failed.');
+    }
+  };
+}
+
+// ── Pagination helpers ──────────────────────────────────────
+const ACCOUNTS_PER_PAGE = 6;
+const CAMPAIGNS_PER_PAGE = 8;
+
+function pageSlice(items, page, perPage) {
+  const pages = Math.max(1, Math.ceil(items.length / perPage));
+  const p = Math.min(Math.max(1, page), pages);
+  return { slice: items.slice((p - 1) * perPage, p * perPage), pages, p };
+}
+
+function pagerRow(prefix, p, pages) {
+  if (pages <= 1) return [];
+  return [
+    { text: '◀️ Prev', callback_data: `${prefix}:${Math.max(1, p - 1)}` },
+    { text: `Halaman ${p}/${pages}`, callback_data: 'ads:nop' },
+    { text: 'Next ▶️', callback_data: `${prefix}:${Math.min(pages, p + 1)}` },
+  ];
+}
+
+/** Render the paginated account list (page = 1-based). */
+async function replyAccountList(ctx, accounts, page) {
+  const { slice, pages, p } = pageSlice(accounts, page, ACCOUNTS_PER_PAGE);
+  const start = (p - 1) * ACCOUNTS_PER_PAGE;
+  const lines = slice
+    .map(
+      (a, i) =>
+        `${start + i + 1}. ${a.name} (` + (a.id.startsWith('act_') ? a.id : `act_${a.id}`) +
+        `) — ${a.status === 'active' ? '✅ active' : a.status === 'disabled' ? '⏸ disabled' : a.status}`
+    )
+    .join('\n');
+  return ctx.reply(
+    `📣 *Your Meta Ad Accounts* (${accounts.length})\n\n${lines}\n\n` +
+      'Tap an account to manage it.',
+    {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          ...slice.map((a) => [
+            { text: `⚙️ ${a.name}`, callback_data: `ads:select:${a.id}` },
+          ]),
+          pagerRow('ads:accts', p, pages),
+          [
+            ...(p === pages || pages > 1 ? [{ text: '📈 All Accounts Report', callback_data: 'ads:report' }] : []),
+            ...(p === pages ? [{ text: '🔌 Disconnect', callback_data: 'ads:disconnect' }] : []),
+          ],
+          ...(p === pages ? [[{ text: '⚙️ Manage Connections', callback_data: 'ads:manage' }]] : []),
+        ],
+      },
+    }
+  );
+}
+
+/** Pager callback: re-render the account list at a given page (no refetch). */
+export function handleAdsAccountsPage(deps) {
+  return async (ctx, pageStr) => {
+    const { api } = makeApi(ctx, deps);
+    if (!api) return ctx.reply('🔌 Connect a Meta account first via /start.');
+    try {
+      const accounts = await api.getAdAccounts();
+      await replyAccountList(ctx, accounts, parseInt(pageStr, 10) || 1);
+    } catch (err) {
+      log.error('ads accounts pager failed', { userId: ctx.userId, error: err?.message });
+      return ctx.reply('⚠️ Could not load your ad accounts.');
     }
   };
 }
@@ -127,30 +167,55 @@ export function handleAdsSelect(deps) {
       if (!campaigns.length) {
         return ctx.reply(`📭 No campaigns in ${accountId} yet. Create one in the dashboard: ${BACKEND}/campaigns`);
       }
-      const lines = campaigns
-        .map((c) => `• ${c.name} (${c.id}) — ${c.status === 'active' ? '✅ ON' : c.status === 'paused' ? '⏸ OFF' : c.status}`)
-        .join('\n');
-      return ctx.reply(
-        `⚙️ *Campaigns in ${accountId}*\n\n${lines}\n\nTap to toggle on/off:`,
-        {
-          parse_mode: 'Markdown',
-          reply_markup: {
-            inline_keyboard: [
-              ...campaigns.map((c) => [
-                {
-                  text:
-                    (c.status === 'active' ? '⏸ Pause ' : '▶️ Resume ') + c.name,
-                  callback_data: `ads:toggle:${accountId}:${c.id}:${c.status === 'active' ? 'pause' : 'resume'}`,
-                },
-              ]),
-              [{ text: '📊 Laporan Akun + Analisis AI', callback_data: `ads:repacc:${accountId}` }],
-            ],
-          },
-        }
-      );
+      await replyCampaignList(ctx, accountId, campaigns, 1);
     } catch (err) {
       log.error('ads select failed', { userId: ctx.userId, accountId, error: err?.message });
       return ctx.reply('⚠️ Could not load campaigns for this account.');
+    }
+  };
+}
+
+/** Render the paginated campaign list for an account (page = 1-based). */
+async function replyCampaignList(ctx, accountId, campaigns, page) {
+  const { slice, pages, p } = pageSlice(campaigns, page, CAMPAIGNS_PER_PAGE);
+  const lines = slice
+    .map((c) => `• ${c.name} — ${c.status === 'active' ? '✅ ON' : c.status === 'paused' ? '⏸ OFF' : c.status}`)
+    .join('\n');
+  return ctx.reply(
+    `⚙️ *Campaigns (${campaigns.length}) — ${accountId}*\n\n${lines}\n\n` +
+      'Tap to toggle on/off:',
+    {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          ...slice.map((c) => [
+            {
+              text:
+                (c.status === 'active' ? '⏸ Pause ' : '▶️ Resume ') + c.name,
+              callback_data: `ads:toggle:${accountId}:${c.id}:${c.status === 'active' ? 'pause' : 'resume'}`,
+            },
+          ]),
+          pagerRow(`ads:camps:${accountId}`, p, pages),
+          [{ text: '📊 Laporan Akun + Analisis AI', callback_data: `ads:repacc:${accountId}` }],
+          [{ text: '◀️ Kembali ke daftar akun', callback_data: 'ads' }],
+        ],
+      },
+    }
+  );
+}
+
+/** Pager callback: re-render the campaign list at a given page (no refetch). */
+export function handleAdsCampaignsPage(deps) {
+  return async (ctx, accountId, pageStr) => {
+    const { api } = makeApi(ctx, deps);
+    if (!api) return ctx.reply('🔌 Connect a Meta account first via /start.');
+    try {
+      const campaigns = await api.getCampaigns(accountId);
+      if (!campaigns.length) return ctx.reply(`📭 No campaigns in ${accountId}.`);
+      await replyCampaignList(ctx, accountId, campaigns, parseInt(pageStr, 10) || 1);
+    } catch (err) {
+      log.error('campaigns pager failed', { userId: ctx.userId, accountId, error: err?.message });
+      return ctx.reply('⚠️ Could not load campaigns.');
     }
   };
 }
@@ -361,13 +426,19 @@ function fmtCpr(v) { return v === null || v === undefined ? '—' : fmtCurrency(
 
 export function handleAdsAccountReport(deps) {
   return async (ctx, accountId) => {
-    const { api, acct } = makeApi(ctx, deps);
+    const { api } = makeApi(ctx, deps);
     if (!api) return ctx.reply('🔌 Connect a Meta account first via /start.');
     const reportService = deps?.services?.accountReportService;
     if (!reportService) return ctx.reply('⚠️ Report service belum tersedia.');
-    await ctx.reply(`🔄 Menyusun laporan ${acct?.name || accountId} + analisis AI…`);
+    await ctx.reply('🔄 Menyusun laporan + analisis AI…');
     try {
-      const report = await reportService.buildReport(api, accountId, acct?.name || accountId);
+      // Resolve the friendly display name from the token's own account list
+      let displayName = accountId;
+      try {
+        const owned = (await api.getAdAccounts()).find(a => String(a.id).replace(/^act_/, '') === String(accountId).replace(/^act_/, ''));
+        if (owned?.name) displayName = owned.name;
+      } catch { /* name lookup is best-effort */ }
+      const report = await reportService.buildReport(api, accountId, displayName);
       const s = report.summary;
       const y = report.comparison.yesterdayFullDay;
       const avg = report.comparison.avg7d;

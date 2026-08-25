@@ -20,7 +20,7 @@ import { handleHelp } from './commands/help.js';
 import { handleSettings, handleSettingsCallback } from './commands/settings.js';
 import { handleMonitor, handleMonitorCallback } from './commands/monitor.js';
 import { handleAdminStats, handleAdminUsers, handleAdminBroadcast } from './commands/admin.js';
-import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm, handleAdsAccountReport } from './commands/ads.js';
+import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm, handleAdsAccountReport, handleAdsAccountsPage, handleAdsCampaignsPage } from './commands/ads.js';
 import { handleApprovalApprove, handleApprovalReject } from './commands/approvals.js';
 import { handleFbAds } from './commands/fbads.js';
 import { initScheduler } from './scheduler.js';
@@ -82,6 +82,9 @@ export function initBot(app, deps) {
   bot.action(/^ads:toggle:(.+):(.+):(.+)$/, async (ctx) => { await ctx.answerCbQuery(); const [, acct, camp, mode] = ctx.match; await handleAdsToggle(deps)(ctx, acct, camp, mode); });
   bot.action(/^ads:report$/, async (ctx) => { await ctx.answerCbQuery(); await handleAdsReport(deps)(ctx); });
   bot.action(/^ads:repacc:(.+)$/, async (ctx) => { await ctx.answerCbQuery(); await handleAdsAccountReport(deps)(ctx, ctx.match[1]); });
+  bot.action(/^ads:nop$/, (ctx) => ctx.answerCbQuery());
+  bot.action(/^ads:accts:(\d+)$/, async (ctx) => { await ctx.answerCbQuery(); await handleAdsAccountsPage(deps)(ctx, ctx.match[1]); });
+  bot.action(/^ads:camps:(.+):(\d+)$/, async (ctx) => { await ctx.answerCbQuery(); const [, acct, page] = ctx.match; await handleAdsCampaignsPage(deps)(ctx, acct, page); });
 bot.action(/^ads:disconnect(?::(.+))?$/, async (ctx) => {
     await ctx.answerCbQuery();
     const id = ctx.match?.[1];
