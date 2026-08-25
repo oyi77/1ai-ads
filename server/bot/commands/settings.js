@@ -14,8 +14,8 @@ export function handleSettings(deps) {
         ? `✅ Connected (${active.account_name})`
         : '— Belum terhubung';
       const button = key === 'meta'
-        ? { text: '🔑 Hubungkan via Token', callback_data: 'settings:connect_meta' }
-        : { text: '🔗 Connect', url: `https://adforge.aitradepulse.com/platforms?platform=${key}` };
+        ? { text: active ? `🔑 Meta Token — ${active.account_name}` : '🔑 Hubungkan Meta via Token', callback_data: 'settings:connect_meta' }
+        : { text: `${active ? '✅' : '🔗'} ${label}`, url: `https://adforge.aitradepulse.com/platforms?platform=${key}` };
       return { label, status, button };
     });
 

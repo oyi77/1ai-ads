@@ -56,10 +56,11 @@ describe('settings — per-platform Connect rows (P4)', () => {
     platformKeys.forEach((key, i) => {
       expect(kb[i]).toHaveLength(1);
       if (key === 'meta') {
-        expect(kb[i][0]).toEqual({ text: '🔑 Hubungkan via Token', callback_data: 'settings:connect_meta' });
+        expect(kb[i][0]).toEqual({ text: '🔑 Hubungkan Meta via Token', callback_data: 'settings:connect_meta' });
         expect(kb[i][0].url).toBeUndefined();
       } else {
         expect(kb[i][0].url).toBe(`${URL_BASE}${key}`);
+        expect(kb[i][0].text).toContain(PLATFORM_NAMES[key]);
         expect(kb[i][0].callback_data).toBeUndefined();
       }
     });

@@ -3,44 +3,54 @@ import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 
 export function LoginPage() {
+  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  async function postAuthRedirect() {
+    // Skip onboarding if user already has data or previously completed it
+    const onboarded = localStorage.getItem('adforge_onboarded');
+    if (onboarded) {
+      navigate('/app');
+      return;
+    }
+    // Check if user already has connected accounts or campaigns
+    try {
+      const [accounts, campaigns] = await Promise.all([
+        api.get('/settings/accounts'),
+        api.get('/campaigns'),
+      ]);
+      const hasAccounts = Array.isArray(accounts) && accounts.length > 0;
+      const hasCampaigns = campaigns && typeof campaigns === 'object' && 'data' in campaigns
+        ? (campaigns as { data: unknown[] }).data.length > 0
+        : Array.isArray(campaigns) && campaigns.length > 0;
+      if (hasAccounts || hasCampaigns) {
+        localStorage.setItem('adforge_onboarded', 'true');
+        navigate('/app');
+      } else {
+        navigate('/onboarding');
+      }
+    } catch {
+      // If check fails, go to onboarding
+      navigate('/onboarding');
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      await api.login(username, password);
-      // Skip onboarding if user already has data or previously completed it
-      const onboarded = localStorage.getItem('adforge_onboarded');
-      if (onboarded) {
-        navigate('/app');
+      if (mode === 'register') {
+        await api.register(username, password, email);
       } else {
-        // Check if user already has connected accounts or campaigns
-        try {
-          const [accounts, campaigns] = await Promise.all([
-            api.get('/settings/accounts'),
-            api.get('/campaigns'),
-          ]);
-          const hasAccounts = Array.isArray(accounts) && accounts.length > 0;
-          const hasCampaigns = campaigns && typeof campaigns === 'object' && 'data' in campaigns
-            ? (campaigns as { data: unknown[] }).data.length > 0
-            : Array.isArray(campaigns) && campaigns.length > 0;
-          if (hasAccounts || hasCampaigns) {
-            localStorage.setItem('adforge_onboarded', 'true');
-            navigate('/app');
-          } else {
-            navigate('/onboarding');
-          }
-        } catch {
-          // If check fails, go to onboarding
-          navigate('/onboarding');
-        }
+        await api.login(username, password);
       }
+      await postAuthRedirect();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Connection error');
     } finally {
@@ -60,24 +70,47 @@ export function LoginPage() {
           <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>Ad<span style={{ color: 'var(--accent)' }}>Forge</span></div>
         </div>
 
-        {error && <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', color: 'var(--red)', padding: '10px 14px', borderRadius: 6, fontSize: '0.8rem', marginBottom: 16 }}>{error}</div>}
-
         <form onSubmit={handleSubmit}>
+          <div style={{ display: 'flex', gap: 4, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 4, marginBottom: 20 }}>
+            {(['login', 'register'] as const).map(m => (
+              <button key={m} type="button" onClick={() => { setMode(m); setError(''); }}
+                style={{ flex: 1, padding: '7px 0', border: 'none', borderRadius: 6, cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '0.78rem', fontWeight: 700,
+                  background: mode === m ? 'var(--accent-soft)' : 'transparent', color: mode === m ? 'var(--accent)' : 'var(--text-secondary)' }}>
+                {m === 'login' ? 'Sign In' : 'Create Account'}
+              </button>
+            ))}
+          </div>
+
+          {error && <div role="alert" style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', color: 'var(--red)', padding: '10px 14px', borderRadius: 6, fontSize: '0.8rem', marginBottom: 16 }}>{error}</div>}
+
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Username</label>
-            <input type="text" value={username} onChange={e => setUsername(e.target.value)} required
+            <input type="text" value={username} onChange={e => setUsername(e.target.value)} required minLength={3}
               style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 6, color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '0.85rem', outline: 'none' }} />
           </div>
+
+          {mode === 'register' && (
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+                style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 6, color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '0.85rem', outline: 'none' }} />
+            </div>
+          )}
+
           <div style={{ marginBottom: 24 }}>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
               style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 6, color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '0.85rem', outline: 'none' }} />
           </div>
+
           <button type="submit" disabled={loading}
             style={{ width: '100%', padding: 11, background: 'var(--accent)', color: 'var(--bg-deep)', border: 'none', borderRadius: 6, fontFamily: 'var(--font)', fontSize: '0.85rem', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? (mode === 'register' ? 'Creating account...' : 'Signing in...') : (mode === 'register' ? 'Create Account' : 'Sign In')}
           </button>
         </form>
+        <p style={{ textAlign: 'center', marginTop: 16, fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
+          {mode === 'login' ? "Don't have an account? Switch to Create Account." : 'Free plan included — upgrade anytime.'}
+        </p>
       </div>
     </div>
   );

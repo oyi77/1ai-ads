@@ -17,7 +17,8 @@ export class DraftService {
     return this;
   }
 
-  async listDrafts(status = 'pending', { page = 1, limit = 50 } = {}) {
+  async listDrafts(status = 'pending', { page = 1, limit = 50, userId = null } = {}) {
+    if (userId) return this.draftsRepo.findByUser(userId, { status, page, limit });
     return this.draftsRepo.findAll({ status, page, limit });
   }
 

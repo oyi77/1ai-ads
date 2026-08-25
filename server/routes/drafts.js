@@ -8,7 +8,13 @@ export function createDraftRouter(draftService) {
   router.get('/', async (req, res) => {
     try {
       const { status: filterStatus, page = 1, limit = 50 } = req.query;
-      const result = await draftService.listDrafts(filterStatus || 'pending', { page: +page, limit: +limit });
+      // Multi-tenant: non-admin users see ONLY their own drafts.
+      const isAdmin = req.user?.role === 'admin';
+      const result = await draftService.listDrafts(filterStatus || 'pending', {
+        page: +page,
+        limit: +limit,
+        ...(isAdmin ? {} : { userId: req.user?.id }),
+      });
       const data = result.data.map(d => ({
         id: d.id,
         name: d.summary,
@@ -29,7 +35,7 @@ export function createDraftRouter(draftService) {
   router.post('/', async (req, res) => {
     try {
       const { type, summary, details, proposedBy } = req.body;
-      const draft = await draftService.createDraft({ type, summary, details, proposedBy });
+      const draft = await draftService.createDraft({ type, summary, details, proposedBy, userId: req.user?.id || null });
       res.status(201).json({ success: true, data: draft });
     } catch (err) {
       res.status(err.status || 500).json({ success: false, error: err.message });

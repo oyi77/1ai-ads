@@ -55,15 +55,16 @@ export class DraftsRepository {
   findById(id) {
     return this.db.prepare('SELECT * FROM approval_drafts WHERE id = ?').get(id) || null;
   }
-  findByUser(userId, { status } = {}) {
+  findByUser(userId, { status, page = 1, limit = 50 } = {}) {
     const params = [userId];
     let where = 'user_id = ?';
     if (status) { where += ' AND status = ?'; params.push(status); }
     const total = this.db.prepare(`SELECT COUNT(*) as count FROM approval_drafts WHERE ${where}`).get(...params).count;
+    const offset = (page - 1) * limit;
     const data = this.db.prepare(
-      `SELECT * FROM approval_drafts WHERE ${where} ORDER BY created_at DESC`
-    ).all(...params);
-    return { data, total };
+      `SELECT * FROM approval_drafts WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    ).all(...params, limit, offset);
+    return { data, total, page, limit };
   }
 
   create({ type, summary, details, proposedBy = 'ai', userId = null, campaignId, approvalRequestId = null }) {
