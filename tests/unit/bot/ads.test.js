@@ -87,7 +87,7 @@ describe('per-user ads handlers (disable/enable scoped to user token)', () => {
     const ctx = makeCtx();
     await handleAdsSelect(makeDeps('USER_TOKEN'))(ctx, 'act_1181078009580337');
     const text = ctx._replies[1];
-    expect(text).toContain('Campaigns in act_1181078009580337');
+    expect(text).toContain('Campaigns (2) — act_1181078009580337');
     expect(text).toContain('Camp A');
     expect(mockGetCampaigns).toHaveBeenCalledWith('act_1181078009580337');
   });
