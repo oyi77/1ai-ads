@@ -145,44 +145,60 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     }
   });
 
-  // GET /performance — ad-level creative performance for the first page of
-  // live ads across all accounts owned by this token. Powers the Library
-  // "Performance" tab (competitor parity: creative-level insights).
+  // GET /performance — ad-level creative performance across owned accounts.
+  // ONE batched account-level call per account (level=ad) instead of
+  // per-ad fan-out — hundreds of sequential Meta calls would time out.
   router.get('/performance', async (req, res) => {
     try {
       const api = resolveUserMetaApi(req);
       const accounts = await api.getAdAccounts();
-      const limitPerAccount = Math.min(parseInt(req.query.limit, 10) || 20, 50);
-      const out = [];
-      for (const account of accounts.slice(0, 10)) {
+      const maxAccounts = Math.min(parseInt(req.query.accounts, 10) || 6, 12);
+      const results = [];
+      const errors = [];
+
+      await Promise.allSettled(accounts.slice(0, maxAccounts).map(async (account) => {
         try {
-          const ads = await api.getAds(account.id, { limit: limitPerAccount });
-          for (const ad of ads) {
-            let insights = null;
-            try { insights = await api.getCampaignInsights(ad.id); } catch { /* ad without data */ }
-            if (!insights || insights.spend === undefined) continue;
-            out.push({
-              id: ad.id,
-              name: ad.name,
+          const [adsRes, insRes] = await Promise.all([
+            api._get(`/${account.id}/ads`, { fields: 'id,name,status', limit: '50' }).catch(() => ({ data: [] })),
+            api._get(`/${account.id}/insights`, {
+              level: 'ad',
+              // ad_id must be explicit at level=ad or rows come back anonymous
+              fields: 'ad_id,spend,impressions,clicks,ctr,cpc,actions,action_values',
+              date_preset: String(req.query.preset || 'last_30d'),
+              limit: '100',
+            }).catch(() => ({ data: [] })),
+          ]);
+          const names = new Map((adsRes.data || []).map(a => [a.id, { name: a.name, status: (a.status || '').toLowerCase() }]));
+          for (const row of (insRes.data || [])) {
+            const metaInfo = names.get(row.ad_id) || {};
+            const spend = parseFloat(row.spend || 0);
+            const actions = {};
+            for (const a of (row.actions || [])) actions[a.action_type] = parseInt(a.value);
+            const values = {};
+            for (const v of (row.action_values || [])) values[v.action_type] = parseFloat(v.value);
+            const revenue = values.purchase || 0;
+            results.push({
+              id: row.ad_id,
+              name: metaInfo.name || `Ad ${row.ad_id ?? 'unknown'}`,
               accountId: account.id,
               accountName: account.name,
-              status: ad.status,
-              creative: ad.creative || null,
-              spend: insights.spend,
-              revenue: insights.revenue,
-              roas: insights.spend > 0 ? insights.revenue / insights.spend : null,
-              ctr: insights.ctr,
-              cpc: insights.cpc,
-              linkClicks: insights.linkClicks,
-              purchases: insights.conversions,
+              status: metaInfo.status || 'unknown',
+              spend,
+              revenue,
+              roas: spend > 0 ? revenue / spend : null,
+              ctr: parseFloat(row.ctr || 0),
+              cpc: parseFloat(row.cpc || 0),
+              linkClicks: actions.link_click || 0,
+              purchases: actions.purchase || 0,
             });
           }
         } catch (err) {
-          log.warn('performance scan failed for account', { accountId: account.id, error: err.message });
+          errors.push({ accountId: account.id, error: err.message });
         }
-      }
-      out.sort((a, b) => b.spend - a.spend);
-      res.json({ success: true, data: out, total: out.length });
+      }));
+
+      results.sort((a, b) => b.spend - a.spend);
+      res.json({ success: true, data: results, total: results.length, ...(errors.length ? { warnings: errors } : {}) });
     } catch (err) {
       res.status(err.status || 500).json({ success: false, error: err.message });
     }
