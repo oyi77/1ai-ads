@@ -97,7 +97,7 @@ export function DashboardPage() {
         </div>
       )}
 
-      {!localStorage.getItem('adforge_guide_dismissed') && <GettingStarted />}
+      {campaigns.length === 0 && !localStorage.getItem('adforge_guide_dismissed') && <GettingStarted />}
 
       {/* Metric Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
