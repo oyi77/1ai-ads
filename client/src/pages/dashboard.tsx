@@ -76,7 +76,7 @@ export function DashboardPage() {
     { label: 'ROAS', value: `${avgRoas}x`, icon: Activity, color: 'var(--purple)' },
     { label: 'Active Campaigns', value: String(active), icon: Megaphone, color: 'var(--amber)' },
   ];
-
+  const [showGuide, setShowGuide] = useState(false);
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
@@ -97,7 +97,22 @@ export function DashboardPage() {
         </div>
       )}
 
-      {campaigns.length === 0 && !localStorage.getItem('adforge_guide_dismissed') && <GettingStarted />}
+      {(showGuide || (campaigns.length === 0 && !localStorage.getItem('adforge_guide_dismissed'))) && <GettingStarted />}
+
+      {/* Tutorial button — always visible so users can re-access guidance */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: -16 }}>
+        <button
+          onClick={() => setShowGuide(true)}
+          style={{
+            background: 'transparent', border: 'none', color: 'var(--text-tertiary)',
+            fontSize: '0.65rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
+            fontFamily: 'var(--font)',
+          }}
+          title="Tampilkan panduan memulai"
+        >
+          📖 Panduan Memulai
+        </button>
+      </div>
 
       {/* Metric Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
