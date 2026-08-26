@@ -338,6 +338,7 @@ export function initScheduler(bot, deps) {
               lines.push(`↩️ Sejak digest lalu (${sinceDate}): ${fmtRp(sl.spend)} · ROAS ${fmtRoas2(sl.roas)} · Purchase ${sl.purchases}`);
             }
             if (report.ai?.actions) lines.push(`🔧 ${esc(report.ai.actions)}`);
+            if (report.anomalies?.length) lines.push(...report.anomalies.map(a => `🚨 ${esc(a)}`));
             await bot.telegram.sendMessage(user.telegram_id, lines.join('\n'), { parse_mode: 'HTML' });
             sent++;
           }
@@ -353,12 +354,84 @@ export function initScheduler(bot, deps) {
   });
 
   // ────────────────────────────────────────────────────────────
+  // 5c. Hourly Anomaly Push — top of every hour
+  //     Per active meta account: build compact report, detect anomalies,
+  //     push to the owner's Telegram. Dedup: max 1 alert per account/day.
+  // ────────────────────────────────────────────────────────────
+  cron.schedule('0 * * * *', async () => {
+    try {
+      const repo = deps.repos?.platformAccountsRepo;
+      const settingsRepo = deps.repos?.settingsRepo;
+      const usersRepo = deps.repos?.usersRepo;
+      if (!repo || !settingsRepo || !usersRepo) return;
+
+      const accounts = repo.getDistinctUserPlatforms('meta');
+      const { AccountReportService } = await import('../services/account-report-service.js');
+      const { MetaAdsAPI } = await import('../services/meta/index.js');
+      const svc = new AccountReportService({ llmClient: deps.services?.llmClient });
+      const today = new Date().toISOString().slice(0, 10);
+      let pushed = 0;
+
+      for (const row of accounts) {
+        try {
+          const pa = repo.getByPlatform(row.user_id, 'meta');
+          if (!pa?.access_token) continue;
+          const user = usersRepo.findById(row.user_id);
+          if (!user?.telegram_id) continue;
+
+          // dedup per account per day
+          const dedupKey = `anomaly_alerted_${pa.id}_${today}`;
+          if (settingsRepo.get(dedupKey)) continue;
+
+          const api = MetaAdsAPI.withToken(pa.access_token);
+          const report = await svc.buildReport(api, pa.account_id || pa.account_name, pa.account_name);
+          if (!report.anomalies?.length) continue;
+
+          const lines = [
+            `🚨 <b>Anomali Terdeteksi — ${esc(report.accountName)}</b>`,
+            `💰 Spend hari ini: ${fmtRp(report.summary.spend)} · ROAS ${fmtRoas2(report.summary.roas)}`,
+            ...report.anomalies.map(a => `⚠️ ${esc(a)}`),
+            '',
+            `<i>Cek /reports di Mini App untuk detail.</i>`,
+          ];
+          await bot.telegram.sendMessage(user.telegram_id, lines.join('\n'), { parse_mode: 'HTML' });
+          settingsRepo.set(dedupKey, new Date().toISOString());
+          pushed++;
+        } catch (err) {
+          log.warn('Anomaly push failed', { userId: row.user_id, error: err.message });
+        }
+      }
+      if (pushed) log.info('Anomaly push complete', { alertsSent: pushed });
+    } catch (err) {
+      log.error('Hourly anomaly check failed', { error: err.message });
+    }
+  });
+
+  // ────────────────────────────────────────────────────────────
   // 6. Subscription Check — 09:00 WIB (02:00 UTC)
   //    Find payments expiring within 7 days.
   // ────────────────────────────────────────────────────────────
   cron.schedule('0 2 * * *', async () => {
     log.info('Running subscription check');
     try {
+      // Expire lapsed paid plans: downgrade + push a renewal checkout link.
+      const expired = deps.repos?.usersRepo?.findExpiredPaidPlans?.() || [];
+      for (const u of expired) {
+        try {
+          deps.repos?.usersRepo?.update(u.id, { plan: 'free', plan_expires_at: null });
+          if (u.telegram_id && bot.telegram) {
+            await bot.telegram.sendMessage(
+              u.telegram_id,
+              `⏰ Paket *${u.plan}* kamu sudah berakhir.\n\nPerpanjang untuk mempertahankan fitur Pro:\n👉 ${process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com'}/billing`,
+              { parse_mode: 'Markdown' }
+            ).catch(() => {});
+          }
+          log.info('Plan downgraded after expiry', { userId: u.id, plan: u.plan });
+        } catch (err) {
+          log.warn('Plan expiry downgrade failed', { userId: u.id, error: err.message });
+        }
+      }
+
       const payments = deps.repos?.paymentsRepo?.findAll?.() || [];
       const now = new Date();
       const EXPIRY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;

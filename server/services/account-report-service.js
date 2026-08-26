@@ -41,11 +41,12 @@ export class AccountReportService {
     this.llmClient = llmClient || null;
   }
 
-  async buildReport(metaApi, accountId, accountName = accountId, { sinceDate = null } = {}) {
+  async buildReport(metaApi, accountId, accountName = accountId, { sinceDate = null, attributionWindows = null } = {}) {
+    const awOpts = attributionWindows ? { attributionWindows } : {};
     const windows = [
-      metaApi.getAccountInsights(accountId, { datePreset: 'today' }).catch(() => null),
-      metaApi.getAccountInsights(accountId, { datePreset: 'yesterday' }).catch(() => null),
-      metaApi.getAccountInsights(accountId, { datePreset: 'last_7d' }).catch(() => null),
+      metaApi.getAccountInsights(accountId, { datePreset: 'today', ...awOpts }).catch(() => null),
+      metaApi.getAccountInsights(accountId, { datePreset: 'yesterday', ...awOpts }).catch(() => null),
+      metaApi.getAccountInsights(accountId, { datePreset: 'last_7d', ...awOpts }).catch(() => null),
     ];
     // "Since last report" — Meta custom time_range from the stored report date to today
     let sinceInsightsPromise = Promise.resolve(null);
@@ -82,7 +83,9 @@ export class AccountReportService {
       windows: { today: 'since midnight', yesterday: 'full day', avg7d: 'last 7 days / 7', ...(sinceDate ? { sinceLast: `since ${sinceDate}` } : {}) },
       summary,
       comparison,
+      ...(attributionWindows ? { attributionWindows } : {}),
       ...(sinceDate ? { sinceLastReport: sinceLast } : {}),
+      anomalies: detectAnomalies({ summary, comparison }),
       ai,
     };
   }
@@ -120,6 +123,30 @@ export class AccountReportService {
       return { source: 'rules', ...fallback };
     }
   }
+}
+
+/**
+ * Anomaly detection shared by the web banner, bot push alerts and the daily
+ * digest. Returns Indonesian-language anomaly descriptions; empty = healthy.
+ */
+export function detectAnomalies(report) {
+  const out = [];
+  const s = report.summary;
+  const w = report.comparison.avg7d;
+  if (s.spend > 0 && w.spend > 0 && s.spend > w.spend * 3) {
+    out.push(`Spend hari ini ${fmtIDR2(s.spend)} — ${Math.round((s.spend / w.spend - 1) * 100)}% di atas rata-rata 7 hari. Verifikasi ini bukan salah konfigurasi budget.`);
+  }
+  if (s.roas !== null && s.roas !== undefined && w.roas !== null && w.roas !== undefined && w.roas >= 1 && s.roas < w.roas * 0.5 && s.spend > 0) {
+    out.push(`ROAS ${Number(s.roas).toFixed(2)}x jatuh lebih dari 50% di bawah rata-rata 7 hari (${Number(w.roas).toFixed(2)}x).`);
+  }
+  if (s.purchases === 0 && s.spend > 0 && w.spend > 0 && s.spend > w.spend * 0.5) {
+    out.push('Belum ada purchase meski spend sudah berjalan — pantau pixel/CAPI dan jangan scale.');
+  }
+  return out;
+}
+
+function fmtIDR2(n) {
+  return `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
 }
 
 /** Deterministic analyst — always available, no external dependency. */

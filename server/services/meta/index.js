@@ -246,7 +246,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       .sort((a, b) => a.hour - b.hour);
   }
 
-  async getAccountInsights(accountId, { datePreset = 'last_30d', timeRange = null } = {}) {
+  async getAccountInsights(accountId, { datePreset = 'last_30d', timeRange = null, attributionWindows = null } = {}) {
     const params = {
       fields: 'spend,impressions,clicks,ctr,cpc,actions,action_values,cost_per_action_type',
     };
@@ -255,6 +255,10 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       params.time_range = JSON.stringify(timeRange);
     } else {
       params.date_preset = datePreset;
+    }
+    if (attributionWindows?.length) {
+      // e.g. ['7d_click','1d_view'] — switches the attribution model
+      params.attribution_window = JSON.stringify(attributionWindows);
     }
     const data = await this._get(`/${accountId}/insights`, params);
     return this._parseInsights(data.data?.[0]);
