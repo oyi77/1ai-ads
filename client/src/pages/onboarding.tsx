@@ -227,6 +227,28 @@ export function OnboardingPage() {
               <CheckItem text="Campaign data synced" done={!!syncResult} />
               <CheckItem text="AI configured" done={!!aiUrl} />
             </div>
+
+            {/* Next steps guide */}
+            <div style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text-tertiary)', marginBottom: 10 }}>
+                Next Steps
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.78rem' }}>
+                  <span style={{ color: 'var(--accent)', fontWeight: 700, flexShrink: 0 }}>1.</span>
+                  <span>Create your first campaign from the <strong>Campaigns</strong> page</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.78rem' }}>
+                  <span style={{ color: 'var(--accent)', fontWeight: 700, flexShrink: 0 }}>2.</span>
+                  <span>Chat with our <strong>Telegram Bot</strong> for on-the-go management</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.78rem' }}>
+                  <span style={{ color: 'var(--accent)', fontWeight: 700, flexShrink: 0 }}>3.</span>
+                  <span>Check <strong>Account Reports</strong> for AI-powered insights</span>
+                </div>
+              </div>
+            </div>
+
             <button onClick={completeOnboarding} style={primaryBtnStyle}>
               Go to Dashboard →
             </button>
