@@ -25,11 +25,24 @@ export class CampaignOrchestrator {
   }
 
   async _stepCreative(accountId, pageId, product, bestAd, landingUrl, objective, result, meta = this.meta) {
+    // Upload a generic placeholder image to get an image_hash — avoids
+    // page-post creation which fails when the Meta app is in dev mode.
+    let imageHash;
+    try {
+      const imgData = await this.meta._post(`/${accountId}/adimages`, {
+        url: `https://placehold.co/1080x1080/6366f1/ffffff?text=${encodeURIComponent((bestAd.hook || product).slice(0, 25))}`,
+      });
+      const imgs = imgData.images || {};
+      const firstKey = Object.keys(imgs)[0];
+      if (firstKey) imageHash = imgs[firstKey].hash;
+    } catch { /* non-fatal — try without hash */ }
+
     return this._runAndAssign(result.steps, 'create_creative', result, 'creativeId',
       () => meta.createAdCreative(accountId, {
         name: `${product} Creative`, pageId,
         message: `${bestAd.hook}\n\n${bestAd.body}`, headline: bestAd.cta || product,
         description: product, linkUrl: landingUrl || 'https://example.com',
+        imageHash,
         ctaType: this._objectiveToCTA(objective),
       }));
   }
@@ -38,7 +51,7 @@ export class CampaignOrchestrator {
     const steps = result.steps;
     const campaignName = `${product} - ${objective} - ${new Date().toISOString().split('T')[0]}`;
     const campaign = await this._runAndAssign(steps, 'create_campaign', result, 'campaignId',
-      () => meta.createCampaign(accountId, { name: campaignName, objective, status: 'PAUSED', dailyBudget }),
+      () => meta.createCampaign(accountId, { name: campaignName, objective, status: 'PAUSED' }),
       { name: campaignName });
 
     const adsetName = `${product} - ${bestAd.hook || product}`;
@@ -80,7 +93,20 @@ export class CampaignOrchestrator {
     const result = { campaignId: null, adsetId: null, creativeId: null, adId: null, steps };
 
     try {
-      const { aiResult, bestAd } = await this._generateCreative(product, target, keunggulan, platform, format, steps);
+      let aiResult, bestAd;
+      try {
+        ({ aiResult, bestAd } = await this._generateCreative(product, target, keunggulan, platform, format, steps));
+      } catch (creativeErr) {
+        log.warn('AI creative failed — using template fallback', { error: creativeErr.message });
+        bestAd = {
+          hook: product + ' — ' + (keunggulan || target || 'Penawaran terbaik!'),
+          body: product + '. ' + (keunggulan || 'Kualitas terjamin.') + ' Kunjungi sekarang!',
+          cta: 'Belanja Sekarang',
+          model_name: 'template_fallback',
+        };
+        aiResult = { copies: [bestAd], imageDirections: [] };
+        steps.push({ step: 'ai_creative', status: 'done', data: { model: 'template_fallback' } });
+      }
       await this._createCampaignStep(accountId, pageId, product, objective, dailyBudget, landingUrl, aiResult, bestAd, result, meta);
       result.status = 'created';
       result.message = 'Campaign created as PAUSED. Activate when ready.';

@@ -310,7 +310,9 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       daily_budget: Math.round(dailyBudget * 100),
       billing_event: billingEvent,
       optimization_goal: optimizationGoal,
-      targeting,
+      bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+      // v22 requires explicit advantage_audience toggle
+      targeting: { ...(targeting || { geo_locations: { countries: ['ID'] }, age_min: 18 }), targeting_automation: { advantage_audience: 0 } },
       status: 'PAUSED',
     };
     if (startTime) body.start_time = startTime;

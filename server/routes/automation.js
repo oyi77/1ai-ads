@@ -24,12 +24,21 @@ export function createAutomationRouter({ rulesRepo }) {
     try {
       const { name, type, condition, action } = req.body;
       if (!name) return res.status(400).json({ success: false, error: 'Name required' });
+      // Guard against pre-stringified objects — repo handles both but must receive raw values
+      let cond = condition;
+      if (typeof cond === 'string') {
+        try { cond = JSON.parse(cond); } catch { /* keep as-is */ }
+      }
+      let act = action;
+      if (typeof act === 'string') {
+        try { act = JSON.parse(act); } catch { /* keep as-is */ }
+      }
       const uid = (req.user && req.user.id) ? req.user.id : 'system';
       const insertId = rulesRepo.create({
         user_id: uid,
         name,
-        condition: String(condition || ''),
-        action: String(action || ''),
+        condition: cond ?? {},
+        action: act ?? { type: 'pause' },
         priority: 1,
         enabled: true,
       });
