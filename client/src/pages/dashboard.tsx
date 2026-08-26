@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState, useCallback } from 'react';
 import type { CSSProperties } from 'react';
-import { DollarSign, TrendingUp, Activity, Megaphone, Wifi, WifiOff } from 'lucide-react';
+import { DollarSign, TrendingUp, Activity, Megaphone, Wifi, WifiOff, Rocket } from 'lucide-react';
 import { api } from '../lib/api';
+import { GettingStarted } from '../components/GettingStarted';
 import { useRealtime } from '../hooks/useRealtime';
 import { ScrollableTable, StickyTh, HoverTr } from '../components/ScrollableTable';
 
@@ -95,6 +96,8 @@ export function DashboardPage() {
           Failed to load data. Please try again.
         </div>
       )}
+
+      {!localStorage.getItem('adforge_guide_dismissed') && <GettingStarted />}
 
       {/* Metric Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
