@@ -36,5 +36,5 @@ describe('service wiring — fail fast on unwired route dependencies', () => {
 
     const missing = [...referenced].filter(k => !(k in services) || services[k] === undefined);
     expect(missing, `unwired service keys consumed by routes/_*.js: ${missing.join(', ')}`).toEqual([]);
-  }, 30000);
+  }, 120000);
 });

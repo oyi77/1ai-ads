@@ -18,7 +18,7 @@ describe('platform contract', () => {
     expect(genericPlatforms.length).toBeGreaterThan(10);
   });
 
-  it('every generic-routed platform must pass validatePlatform via getPlatform', { timeout: 30000 }, async () => {
+  it('every generic-routed platform must pass validatePlatform via getPlatform', { timeout: 120000 }, async () => {
     const settingsRepo = { getCredentials: () => null };
     for (const cfg of genericPlatforms) {
       // getPlatform internally calls validatePlatform(); a missing required

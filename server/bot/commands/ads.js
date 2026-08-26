@@ -202,6 +202,11 @@ async function replyCampaignList(ctx, accountId, campaigns, page) {
           ]),
           pagerRow(`ads:camps:${accountId}`, p, pages),
           [{ text: '📊 Laporan Akun + Analisis AI', callback_data: `ads:repacc:${accountId}` }],
+          [
+            { text: '➕20%', callback_data: `ads:budget:${accountId}:pct:1.2` },
+            { text: '➖20%', callback_data: `ads:budget:${accountId}:pct:0.8333` },
+            { text: '🚀 /create baru', callback_data: 'ccreate:noop' },
+          ],
           [{ text: '◀️ Kembali ke daftar akun', callback_data: 'ads' }],
         ],
       },
@@ -493,6 +498,43 @@ export function handleAdsAccountReport(deps) {
         return ctx.reply('🔑 Sesi Meta kamu kedaluwarsa. Hubungkan ulang via /settings.');
       }
       return ctx.reply('⚠️ Gagal menyusun laporan akun ini. Coba lagi nanti.');
+    }
+  };
+}
+
+
+// ── Quick budget scale: ±% applied to ACTIVE campaigns of one account ──
+export function handleAdsBudgetScale(deps) {
+  return async (ctx, accountId, pctStr, multStr) => {
+    await ctx.answerCbQuery();
+    const { api } = makeApi(ctx, deps);
+    if (!api) return ctx.reply('🔌 Hubungkan akun Meta dulu via /start.');
+    const mult = parseFloat(multStr);
+    if (!Number.isFinite(mult) || mult <= 0.2 || mult >= 5) {
+      return ctx.reply('⚠️ Multiplier tidak valid.');
+    }
+    await ctx.reply(`🔄 Menyesuaikan budget ${Math.round((mult - 1) * 100)}% untuk campaign AKTIF di akun ini…`);
+    try {
+      const campaigns = await api.getCampaigns(accountId, { limit: 50 });
+      const active = campaigns.filter(c => c.status === 'active');
+      let done = 0;
+      for (const c of active) {
+        try {
+          const current = c.dailyBudget || 0;
+          if (current <= 0) continue;
+          const next = Math.max(10000, Math.round(current * mult * 100) / 100);
+          await api.updateCampaign(c.id, { dailyBudget: next });
+          done++;
+        } catch (e) {
+          log.warn('budget scale failed per campaign', { campaignId: c.id, error: e.message });
+        }
+      }
+      return ctx.reply(
+        `✅ Budget ${done} campaign aktif disesuaikan (${Math.round((mult - 1) * 100) > 0 ? '+' : ''}${Math.round((mult - 1) * 100)}%).\n\nLihat hasil: /ads`
+      );
+    } catch (err) {
+      log.error('budget scale failed', { userId: ctx.userId, accountId, error: err.message });
+      return ctx.reply('⚠️ Gagal menyesuaikan budget.');
     }
   };
 }

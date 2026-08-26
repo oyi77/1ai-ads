@@ -20,7 +20,7 @@ import { handleHelp } from './commands/help.js';
 import { handleSettings, handleSettingsCallback } from './commands/settings.js';
 import { handleMonitor, handleMonitorCallback } from './commands/monitor.js';
 import { handleAdminStats, handleAdminUsers, handleAdminBroadcast } from './commands/admin.js';
-import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm, handleAdsAccountReport, handleAdsAccountsPage, handleAdsCampaignsPage } from './commands/ads.js';
+import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm, handleAdsAccountReport, handleAdsAccountsPage, handleAdsCampaignsPage, handleAdsBudgetScale } from './commands/ads.js';
 import { handleApprovalApprove, handleApprovalReject } from './commands/approvals.js';
 import { handleFbAds } from './commands/fbads.js';
 import { initScheduler } from './scheduler.js';
@@ -28,6 +28,7 @@ import { errorHandler } from './middleware/error-handler.js';
 import { identify } from './middleware/identify.js';
 import { connectScene } from './scenes/connect-account.js';
 import { manageMetaAppScene } from './scenes/manage-meta-app.js';
+import { createCampaignScene } from './scenes/create-campaign.js';
 
 const log = createLogger('bot');
 
@@ -57,7 +58,7 @@ export function initBot(app, deps) {
   bot.use(identify(deps));
   // Session + Stage middleware — REQUIRED for WizardScene (connect + meta-app flows)
   bot.use(session());
-  const stage = new Scenes.Stage([connectScene, manageMetaAppScene]);
+  const stage = new Scenes.Stage([connectScene, manageMetaAppScene, createCampaignScene]);
   bot.use(stage);
 
   // ── Commands ─────────────────────────────────────────────
@@ -75,6 +76,12 @@ export function initBot(app, deps) {
   bot.command('ads', handleAds(deps));
   bot.command('monitor', handleMonitor(deps));
   bot.command('metaapp', (ctx) => ctx.scene.enter('manage-meta-app'));
+  bot.command('create', (ctx) => ctx.scene.enter('create-campaign'));
+  bot.action(/^ads:budget:(.+):pct:([\d.]+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const [, acct, mult] = ctx.match;
+    await handleAdsBudgetScale(deps)(ctx, acct, 'pct', mult);
+  });
   // ── Callback queries (inline buttons) ────────────────────
   bot.action(/^menu:(.+)$/, handleMenuButton(deps));
   bot.action(/^settings:(.+)$/, handleSettingsCallback(deps));

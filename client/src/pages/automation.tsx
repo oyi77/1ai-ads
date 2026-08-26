@@ -19,6 +19,19 @@ export function AutomationPage() {
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [newRule, setNewRule] = useState({ name: '', type: 'auto_pause', condition: '', action: '' });
+  const [matchMode, setMatchMode] = useState<'all' | 'any'>('all');
+  const [condRows, setCondRows] = useState<Array<{ metric: string; operator: string; value: string }>>([
+    { metric: 'roas', operator: '<', value: '1' },
+  ]);
+
+  const addCondRow = () => setCondRows(rows => [...rows, { metric: 'spend', operator: '>', value: '' }]);
+  const removeCondRow = (i: number) => setCondRows(rows => (rows.length > 1 ? rows.filter((_, j) => j !== i) : rows));
+  const buildCompound = () => {
+    const leaves = condRows
+      .filter(r => r.value !== '')
+      .map(r => ({ type: r.metric, operator: r.operator, value: isNaN(Number(r.value)) ? r.value : Number(r.value) }));
+    return leaves.length === 1 ? leaves[0] : { [matchMode]: leaves };
+  };
 
   // GET /api/automation returns { success, rules: [...] }
   const { data: automationData, isLoading } = useQuery({
@@ -51,7 +64,8 @@ export function AutomationPage() {
   const autonomousEnabled = !!autonomousData?.service;
 
   const createMutation = useMutation({
-    mutationFn: (rule: typeof newRule) => api.post('/automation/create', rule),
+    mutationFn: (vars: { name: string; type: string; action: string; compound: unknown }) =>
+      api.post('/automation/create', { name: vars.name, type: vars.type, action: vars.action, condition: vars.compound }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['automation'] });
       setShowCreate(false);
@@ -104,10 +118,41 @@ export function AutomationPage() {
               <option value="bid_adjust">Bid Adjustment</option>
               <option value="fatigue_alert">Fatigue Alert</option>
             </select>
-            <input placeholder="Condition (e.g. roas &lt; 1)" value={newRule.condition} onChange={e => setNewRule({ ...newRule, condition: e.target.value })} style={inputStyle} />
+            <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)' }}>MATCH</span>
+                {(['all', 'any'] as const).map(m => (
+                  <button key={m} type="button" onClick={() => setMatchMode(m)}
+                    style={{ padding: '3px 12px', borderRadius: 5, border: 'none', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700,
+                      background: matchMode === m ? 'var(--accent-soft)' : 'transparent', color: matchMode === m ? 'var(--accent)' : 'var(--text-tertiary)' }}>
+                    {m === 'all' ? 'ALL (AND)' : 'ANY (OR)'}
+                  </button>
+                ))}
+              </div>
+              {condRows.map((row, i) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.9fr 1fr auto', gap: 6, marginBottom: 6 }}>
+                  <select value={row.metric} onChange={e => setCondRows(rows => rows.map((r, j) => j === i ? { ...r, metric: e.target.value } : r))} style={selectStyle}>
+                    {['roas', 'spend', 'cpm', 'ctr', 'clicks', 'impressions', 'frequency', 'purchases', 'cpc'].map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <select value={row.operator} onChange={e => setCondRows(rows => rows.map((r, j) => j === i ? { ...r, operator: e.target.value } : r))} style={selectStyle}>
+                    {['<', '<=', '>', '>=', '==', '!='].map(op => <option key={op} value={op}>{op}</option>)}
+                  </select>
+                  <input placeholder="value" value={row.value} onChange={e => setCondRows(rows => rows.map((r, j) => j === i ? { ...r, value: e.target.value } : r))} style={inputStyle} />
+                  <button type="button" onClick={() => removeCondRow(i)} disabled={condRows.length <= 1}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: condRows.length <= 1 ? 'default' : 'pointer', fontSize: '0.9rem' }}>✕</button>
+                </div>
+              ))}
+              <button type="button" onClick={addCondRow} style={{ background: 'transparent', border: '1px dashed var(--border-strong)', borderRadius: 6, color: 'var(--accent)', fontSize: '0.72rem', padding: '5px 12px', cursor: 'pointer' }}>
+                + Add condition
+              </button>
+            </div>
             <input placeholder="Action (e.g. pause_adset)" value={newRule.action} onChange={e => setNewRule({ ...newRule, action: e.target.value })} style={inputStyle} />
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => createMutation.mutate(newRule)} disabled={createMutation.isPending || !newRule.name} style={btnStyle}>
+              <button onClick={() => {
+                  const missing = condRows.some(r => r.value === '');
+                  if (missing) return;
+                  createMutation.mutate({ ...newRule, compound: buildCompound() });
+                }} disabled={createMutation.isPending || !newRule.name || condRows.some(r => r.value === '')} style={btnStyle}>
                 {createMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : null} Create Rule
               </button>
               <button onClick={() => setShowCreate(false)} style={{ ...btnStyle, background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>Cancel</button>

@@ -384,7 +384,11 @@ export function initScheduler(bot, deps) {
           if (settingsRepo.get(dedupKey)) continue;
 
           const api = MetaAdsAPI.withToken(pa.access_token);
-          const report = await svc.buildReport(api, pa.account_id || pa.account_name, pa.account_name);
+          // resolve REAL ad-account id from the token — account_name is not a Graph ID
+          const ownedAccounts = await api.getAdAccounts();
+          if (!ownedAccounts.length) continue;
+          const acc0 = ownedAccounts[0];
+          const report = await svc.buildReport(api, acc0.id, acc0.name);
           if (!report.anomalies?.length) continue;
 
           const lines = [

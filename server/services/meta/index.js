@@ -368,6 +368,43 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     return { success: true, id: campaignId };
   }
 
+  async updateAd(adId, updates = {}) {
+    const body = {};
+    if (updates.status) body.status = updates.status;
+    if (Object.keys(body).length === 0) throw new Error('No valid fields to update');
+    return this._post(`/${adId}`, body);
+  }
+
+  async duplicateCampaign(accountId, campaignId, { suffix = ' (Copy)' } = {}) {
+    // Large campaigns exceed Meta's deep-copy object limit ("terlalu besar");
+    // fall back to a shallow copy (campaign shell only) so the action still
+    // succeeds — user re-imports adsets/ads via Sync afterwards.
+    const attempt = async (deepCopy) => this._post(`/${campaignId}/copies`, {
+      deep_copy: deepCopy,
+      status_option: 'PAUSED',
+      rename_options: { rename_suffix: suffix },
+    });
+    let shallow = false;
+    let data;
+    try {
+      data = await attempt(true);
+    } catch (deepErr) {
+      // _post throws only 'meta API returned {status}' — the rich Meta message
+      // (e.g. subcode 1885194 'copy request too large') is logged upstream.
+      // Any deep-copy failure retries once as a shallow copy.
+      this.log.warn('Deep copy failed — retrying as shallow copy', { campaignId, error: String(deepErr?.message || deepErr).slice(0, 120) });
+      shallow = true;
+      try {
+        data = await attempt(false);
+      } catch (shallowErr) {
+        throw shallowErr;
+      }
+    }
+    const newId = data.copied_campaign_id;
+    this.log.info('Campaign duplicated', { campaignId, newId, shallow });
+    return { originalId: campaignId, newCampaignId: newId, shallow };
+  }
+
   async updateAdSet(adsetId, updates = {}) {
     const body = {};
     if (updates.status) body.status = updates.status;

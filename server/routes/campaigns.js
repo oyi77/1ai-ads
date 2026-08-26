@@ -118,6 +118,46 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       res.status(err.status || 500).json({ success: false, error: err.message });
     }
   });
+  // PATCH /ads/:id/status — pause/resume a single ad (ad-level control)
+  router.patch('/ads/:id/status', async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!['ACTIVE', 'PAUSED'].includes(status)) {
+        return res.status(400).json({ success: false, error: "status must be ACTIVE or PAUSED" });
+      }
+      await resolveUserMetaApi(req).updateAd(req.params.id, { status });
+      res.json({ success: true, data: { id: req.params.id, status } });
+    } catch (err) {
+      res.status(err.status || 500).json({ success: false, error: err.message });
+    }
+  });
+
+  // POST /:id/duplicate — deep-copy a campaign as PAUSED (zero-Ads-Manager scaling)
+  router.post('/:id/duplicate', async (req, res) => {
+    try {
+      let accountId = String(req.query.accountId || req.body?.accountId || '');
+      const api = resolveUserMetaApi(req);
+      // Auto-locate owning account: match against each account's own campaign
+      // list (read-only, always permitted) — direct GET /{campaign} returns
+      // permission error #10 for BM-owned ads.
+      if (!accountId) {
+        const accounts = await api.getAdAccounts();
+        const target = String(req.params.id);
+        for (const acc of accounts.slice(0, 12)) {
+          try {
+            const list = await api._get(`/${acc.id}/campaigns`, { fields: 'id', limit: '1000' });
+            if ((list.data || []).some(c => c.id === target)) { accountId = acc.id; break; }
+          } catch { /* skip account */ }
+        }
+      }
+      const suffix = (req.body && req.body.suffix) || ' (Copy)';
+      const result = await api.duplicateCampaign(accountId, req.params.id, { suffix });
+      res.status(201).json({ success: true, data: result });
+    } catch (err) {
+      res.status(err.status || 500).json({ success: false, error: err.message });
+    }
+  });
+
 
   // Search targeting interests — must be before GET /:id to avoid route shadowing
   router.get('/targeting/search', async (req, res) => {

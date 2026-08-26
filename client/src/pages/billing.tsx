@@ -28,6 +28,15 @@ export function BillingPage() {
 
   const currentUser = api.getUser() || { plan: 'free' };
   const currentPlan = (currentUser.plan || 'free').toLowerCase();
+  const expiresRaw = (currentUser as { plan_expires_at?: string | null }).plan_expires_at || null;
+  // plan_expires_at rides on the user record; api.getUser returns the stored copy —
+  // refresh via /auth/me equivalent is unnecessary for display purposes here.
+  const expiryDate = expiresRaw ? new Date(String(expiresRaw)) : null;
+  const daysLeft = expiryDate ? Math.ceil((expiryDate.getTime() - Date.now()) / 86400000) : null;
+  const expirySoon = daysLeft !== null && daysLeft <= 7;
+  const expiryText = daysLeft !== null && daysLeft >= 0
+    ? `berlaku sampai ${expiryDate?.toLocaleDateString('id-ID')} (${daysLeft} hari lagi)`
+    : daysLeft !== null ? 'segera berakhir' : '';
 
   const { data: plans } = useQuery({
     queryKey: ['plans'],
@@ -61,6 +70,7 @@ export function BillingPage() {
         <h1 style={{ fontSize: '1.4rem', fontWeight: 700 }}>Billing</h1>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 4 }}>
           You are on the <strong style={{ color: 'var(--accent)' }}>{currentPlan}</strong> plan.
+          {expiryText && <span style={{ color: expirySoon ? '#fb923c' : 'var(--text-tertiary)' }}> · {expiryText}</span>}
         </p>
       </div>
 
