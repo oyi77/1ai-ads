@@ -16,6 +16,7 @@ import { resolveScaleDefault } from '../lib/scale-defaults.js';
 const log = createLogger('rule-evaluator');
 
 export class RuleEvaluator {
+  MAX_COMPOUND_DEPTH = 3;
   constructor(settingsRepo, campaignsRepo, rulesRepo, llmClient, { metaAdsAPI, googleAdsAPI, tiktokAdsAPI, platformAccountsRepo } = {}, draftService = null) {
     this.settingsRepo = settingsRepo;
     this.campaignsRepo = campaignsRepo;
@@ -87,7 +88,26 @@ export class RuleEvaluator {
     return null;
   }
 
-  _evaluateCondition(condition, campaign) {
+  /**
+   * Evaluate a condition leaf or a compound group.
+   * Leaf:  { type, operator?, value }          — legacy single-condition form
+   * Group: { all: [cond|group, ...] }           — logical AND
+   *        { any: [cond|group, ...] }           — logical OR
+   * Groups nest up to MAX_COMPOUND_DEPTH to keep evaluation bounded.
+   */
+  _evaluateCondition(condition, campaign, depth = 0) {
+    if (!condition || typeof condition !== 'object') return false;
+
+    if (Array.isArray(condition.all)) {
+      if (depth >= this.MAX_COMPOUND_DEPTH || !condition.all.length) return false;
+      return condition.all.every(c => this._evaluateCondition(c, campaign, depth + 1));
+    }
+    if (Array.isArray(condition.any)) {
+      if (depth >= this.MAX_COMPOUND_DEPTH || !condition.any.length) return false;
+      return condition.any.some(c => this._evaluateCondition(c, campaign, depth + 1));
+    }
+    if (condition.all || condition.any) return false; // empty group — treat as non-match
+
     if (condition.type === 'status') {
       return campaign.status === condition.value;
     }
@@ -96,6 +116,12 @@ export class RuleEvaluator {
       roas: (c) => c.stats?.roas || 0,
       spend: (c) => c.stats?.spend || 0,
       cpm: (c) => c.stats?.cpm || 0,
+      ctr: (c) => c.stats?.ctr || 0,
+      clicks: (c) => c.stats?.clicks || 0,
+      impressions: (c) => c.stats?.impressions || 0,
+      frequency: (c) => c.stats?.frequency || 0,
+      purchases: (c) => c.stats?.purchases || 0,
+      cpc: (c) => c.stats?.cpc || 0,
     };
 
     const getMetric = CONDITION_METRICS[condition.type];
