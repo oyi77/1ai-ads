@@ -23,10 +23,11 @@ import { handleAdminStats, handleAdminUsers, handleAdminBroadcast } from './comm
 import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm, handleAdsAccountReport, handleAdsAccountsPage, handleAdsCampaignsPage, handleAdsBudgetScale } from './commands/ads.js';
 import { handleApprovalApprove, handleApprovalReject } from './commands/approvals.js';
 import { handleFbAds } from './commands/fbads.js';
+import { handlePricing } from './commands/pricing.js';
 import { initScheduler } from './scheduler.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { identify } from './middleware/identify.js';
-import { connectScene } from './scenes/connect-account.js';
+import { connectScene, handleSceneCancel } from './scenes/connect-account.js';
 import { manageMetaAppScene } from './scenes/manage-meta-app.js';
 import { createCampaignScene } from './scenes/create-campaign.js';
 
@@ -123,6 +124,9 @@ bot.action(/^ads:disconnect(?::(.+))?$/, async (ctx) => {
   bot.action(/^approval:reject:(.+)$/, async (ctx) => { await ctx.answerCbQuery(); await handleApprovalReject(deps)(ctx, ctx.match[1]); });
   bot.action(/^monitor:(.+)$/, handleMonitorCallback(deps));
   bot.action(/^rule:(.+)$/, handleMonitorCallback(deps));
+  // Scene-cancel buttons must beat their generic enter-regexes below.
+  bot.action(/^connect:cancel$/, handleSceneCancel('❌ Koneksi dibatalkan.'));
+  bot.action(/^metaapp:cancel$/, handleSceneCancel('❌ Konfigurasi Meta App dibatalkan.'));
   bot.action(/^quick:menu$/, handleMenu());
   // ── Connect wizard (per-customer platform connection) ────
   bot.action(/^connect:(.+)$/, async (ctx) => {
@@ -142,12 +146,55 @@ bot.action(/^ads:disconnect(?::(.+))?$/, async (ctx) => {
   const webhookPath = '/webhook/telegram';
   app.use(bot.webhookCallback(webhookPath));
 
-  // Set webhook (async, non-blocking)
+  // Set webhook (async, non-blocking, retried — Telegram API calls can fail
+  // transiently right after container boot before DNS/network settles).
   const host = process.env.TELEGRAM_WEBHOOK_HOST || 'adforge.aitradepulse.com';
   const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-  bot.telegram.setWebhook(`${protocol}://${host}${webhookPath}`)
-    .then(() => log.info('Telegram webhook set', { url: `${protocol}://${host}${webhookPath}` }))
-    .catch(err => log.warn('Failed to set webhook', { error: err.message }));
+  const retrySync = (label, fn) => {
+    let attempt = 0;
+    const run = async () => {
+      for (; attempt < 3; attempt++) {
+        try {
+          await fn();
+          log.info(label);
+          return;
+        } catch (err) {
+          if (attempt === 2) log.warn(`${label} failed after retries`, { error: err.message });
+          else await new Promise(r => setTimeout(r, 3000 * (attempt + 1)));
+        }
+      }
+    };
+    run();
+  };
+  retrySync('Telegram webhook set', () =>
+    bot.telegram.setWebhook(`${protocol}://${host}${webhookPath}`));
+
+  // ── Sync the "/" command picker & chat menu button with reality ──
+  // The BotFather-side list was stale from a previous product; keep it
+  // authoritative from code so commands and buttons never drift apart.
+  const MY_COMMANDS = [
+    { command: 'start', description: '🚀 Mulai / menu utama' },
+    { command: 'menu', description: '📋 Semua fitur' },
+    { command: 'status', description: '📊 Ringkasan kampanye & ROAS' },
+    { command: 'ads', description: '📣 Kelola akun Meta Ads' },
+    { command: 'create', description: '🎯 Buat kampanye (wizard)' },
+    { command: 'monitor', description: '⚡ Aturan otomatis & alert' },
+    { command: 'metaapp', description: '🔧 Kredensial Meta App' },
+    { command: 'settings', description: '⚙️ Token & koneksi akun' },
+    { command: 'pricing', description: '💰 Paket & harga' },
+    { command: 'cancel', description: '❌ Batalkan wizard/flow aktif' },
+    { command: 'help', description: '❓ Bantuan' },
+  ];
+  bot.telegram.setMyCommands(MY_COMMANDS)
+    .then(() => log.info('Bot command list synced', { count: MY_COMMANDS.length }))
+    .catch(err => log.warn('Failed to set MyCommands', { error: err.message }));
+
+  const webAppUrl = process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com';
+  bot.telegram.setChatMenuButton({
+    menu_button: { type: 'web_app', text: '📱 AdForge', web_app: { url: webAppUrl } },
+  })
+    .then(() => log.info('Chat menu button set to Mini App', { url: webAppUrl }))
+    .catch(err => log.warn('Failed to set chat menu button (register the domain in @BotFather to enable)', { error: err.message }));
 
   // ── Start scheduled jobs ─────────────────────────────────
   initScheduler(bot, deps);
@@ -165,24 +212,7 @@ export function getBot() {
 
 // ── Default handlers ─────────────────────────────────────────
 
-function handlePricing() {
-  return async (ctx) => {
-    const plan = ctx.user?.plan || 'free';
-    const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
-    // NOTE: underscore in the support handle must be escaped under Markdown,
-    // or Telegram rejects the entity parse (400) — and a sync handler without
-    // `return` turns that rejection into an unhandledRejection process crash.
-    await ctx.reply(
-      `💰 *AdForge Pricing*\n\n` +
-      `Your plan: *${planLabel}*\n\n` +
-      '🆓 *Free* — 3 campaigns, basic analytics\n' +
-      '💎 *Pro* — Unlimited campaigns, AI optimization, priority support\n' +
-      '🏢 *Enterprise* — Custom limits, dedicated support, white-label\n\n' +
-      'Use /menu → Connect Account to add integrations. Contact @adforge\\_support for upgrades.',
-      { parse_mode: 'Markdown' }
-    );
-  };
-}
+
 
 function handleTextMessage(_deps) {
   return (ctx) => {

@@ -48,10 +48,10 @@ describe('settings — per-platform Connect rows (P4)', () => {
     expect(msg).toContain('Pilih platform untuk terhubung lewat web, atau kelola akun:');
   });
 
-  it('renders 8 platform rows + sync + accounts rows (10 total) with url buttons for non-meta', async () => {
+  it('renders 8 platform rows + sync + accounts + menu rows (11 total) with url buttons for non-meta', async () => {
     await handleSettings(deps)(ctx);
     const kb = ctx._replies[0].opts.reply_markup.inline_keyboard;
-    expect(kb).toHaveLength(10);
+    expect(kb).toHaveLength(11);
     const platformKeys = Object.keys(PLATFORM_NAMES);
     platformKeys.forEach((key, i) => {
       expect(kb[i]).toHaveLength(1);
@@ -66,6 +66,7 @@ describe('settings — per-platform Connect rows (P4)', () => {
     });
     expect(kb[8]).toEqual([{ text: '🔄 Sync Campaigns', callback_data: 'settings:sync' }]);
     expect(kb[9]).toEqual([{ text: '📊 View Accounts', callback_data: 'settings:accounts' }]);
+    expect(kb[10]).toEqual([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
   });
 
   it('shows ✅ Connected (account_name) for active platform only', async () => {

@@ -20,6 +20,19 @@ export const PLATFORM_NAMES = {
 };
 
 const platformLabel = (p) => PLATFORM_NAMES[p] || p || 'Ad Platform';
+export const CANCEL_ROW = [{ text: '❌ Batal', callback_data: 'connect:cancel' }];
+
+/** Shared scene-cancel callback — usable from any wizard via its own prefix. */
+export function handleSceneCancel(msg = '❌ Dibatalkan.') {
+  return async (ctx) => {
+    try { await ctx.answerCbQuery(); } catch { /* stale button */ }
+    try {
+      ctx.wizard.state = {};
+      await ctx.scene.leave();
+    } catch { /* no active scene */ }
+    await ctx.reply(msg, { reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] } });
+  };
+}
 
 export const connectScene = new Scenes.WizardScene(
   'connect-account',
@@ -34,7 +47,7 @@ export const connectScene = new Scenes.WizardScene(
     await ctx.reply(
       `🔌 *Connecting ${platformLabel(platform)}*\n\n` +
         'What would you like to name this connection? (e.g. "Main Google Ads")',
-      { parse_mode: 'Markdown' }
+      { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
   },
@@ -50,7 +63,7 @@ export const connectScene = new Scenes.WizardScene(
       `Got it — *${text}*.\n\n` +
         'Now paste the access token / API key for this account. ' +
         'It is encrypted at rest and scoped to your Telegram user only.',
-      { parse_mode: 'Markdown' }
+      { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
   },
@@ -93,5 +106,7 @@ export const connectScene = new Scenes.WizardScene(
     return ctx.scene.leave();
   }
 );
+
+connectScene.action(/^connect:cancel$/, handleSceneCancel('❌ Koneksi dibatalkan.'));
 
 export default connectScene;

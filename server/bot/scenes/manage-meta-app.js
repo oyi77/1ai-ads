@@ -13,6 +13,9 @@
 import { Scenes } from 'telegraf';
 import { createLogger } from '../../lib/logger.js';
 import { subscribeUserWebhook } from '../../lib/meta-subscribe.js';
+import { handleSceneCancel } from './connect-account.js';
+
+const CANCEL_ROW = [{ text: '❌ Batal', callback_data: 'metaapp:cancel' }];
 
 const log = createLogger('bot:scene:metaapp');
 
@@ -30,7 +33,7 @@ export const manageMetaAppScene = new Scenes.WizardScene(
         'All values are encrypted at rest and scoped to your Telegram user only.' +
         note +
         '\n\nFirst — give this App a short label (e.g. "My PixelAD App"):',
-      { parse_mode: 'Markdown' }
+      { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
   },
@@ -46,7 +49,7 @@ export const manageMetaAppScene = new Scenes.WizardScene(
       `Got it — *${text}*.\n\n` +
         'Paste your Meta *System User Access Token* (long-lived).\n' +
         'It is encrypted at rest and never shown back in full.',
-      { parse_mode: 'Markdown' }
+      { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
   },
@@ -60,7 +63,7 @@ export const manageMetaAppScene = new Scenes.WizardScene(
     ctx.wizard.state.systemToken = text;
     await ctx.reply(
       'Now paste your Meta *App ID* (numeric, e.g. 1234567890).',
-      { parse_mode: 'Markdown' }
+      { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
   },
@@ -72,10 +75,7 @@ export const manageMetaAppScene = new Scenes.WizardScene(
       return;
     }
     ctx.wizard.state.appId = text;
-    await ctx.reply(
-      'Now paste your Meta *App Secret*.',
-      { parse_mode: 'Markdown' }
-    );
+    await ctx.reply('Now paste your Meta *App Secret*.', { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
     return ctx.wizard.next();
   },
   // Step 4 — Threads (optional) → persist
@@ -90,7 +90,7 @@ export const manageMetaAppScene = new Scenes.WizardScene(
       'Finally — your *Threads App ID* and *Threads App Secret* (optional).\n' +
         'Send them as `THREADS_ID THREADS_SECRET` (space-separated, no quotes),\n' +
         'or send `/skip` to finish without Threads.',
-      { parse_mode: 'Markdown' }
+      { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
   },
@@ -144,6 +144,8 @@ export const manageMetaAppScene = new Scenes.WizardScene(
     return ctx.scene.leave();
   }
 );
+
+manageMetaAppScene.action(/^metaapp:cancel$/, handleSceneCancel('❌ Konfigurasi Meta App dibatalkan.'));
 
 // Allow /skip on the final Threads step so the user can finish without Threads.
 manageMetaAppScene.command('skip', async (ctx) => {

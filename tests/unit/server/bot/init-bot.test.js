@@ -10,7 +10,11 @@ const fakeBot = new Proxy(
     on: vi.fn(),
     catch: vi.fn(),
     webhookCallback: vi.fn(() => () => (req, res) => res.sendStatus(200)),
-    telegram: { setWebhook: vi.fn(() => Promise.resolve(true)) },
+    telegram: {
+      setWebhook: vi.fn(() => Promise.resolve(true)),
+      setMyCommands: vi.fn(() => Promise.resolve(true)),
+      setChatMenuButton: vi.fn(() => Promise.resolve(true)),
+    },
     context: {},
   },
   {
@@ -26,7 +30,7 @@ vi.mock('telegraf', () => ({
   Telegraf: class { constructor() { return fakeBot; } },
   Scenes: {
     Stage: class { constructor() {} use() {} },
-    WizardScene: class { constructor() {} command() { return this; } },
+    WizardScene: class { constructor() {} command() { return this; } action() { return this; } },
   },
 }));
 vi.mock('telegraf/session', () => ({ session: () => () => (next) => next() }));

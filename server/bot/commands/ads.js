@@ -140,6 +140,7 @@ async function replyAccountList(ctx, accounts, page) {
                 [{ text: '📱 Buka AdForge Mini App', web_app: { url: `${BACKEND}/reports` } }],
               ]
             : []),
+          [{ text: '📋 Menu', callback_data: 'quick:menu' }],
         ],
       },
     }
@@ -205,7 +206,7 @@ async function replyCampaignList(ctx, accountId, campaigns, page) {
           [
             { text: '➕20%', callback_data: `ads:budget:${accountId}:pct:1.2` },
             { text: '➖20%', callback_data: `ads:budget:${accountId}:pct:0.8333` },
-            { text: '🚀 /create baru', callback_data: 'ccreate:noop' },
+            { text: '🚀 Buat Kampanye', callback_data: 'menu:create' },
           ],
           [{ text: '◀️ Kembali ke daftar akun', callback_data: 'ads' }],
         ],

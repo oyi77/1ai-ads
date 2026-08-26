@@ -2,25 +2,40 @@
  * /menu command — Main menu with inline buttons
  * Ported from asisten-jualan/bot/handlers/quick_start.py
  */
+import { handlePricing } from './pricing.js';
+import { handleHelp } from './help.js';
 import { handleAds, handleAdsReport, getUserMetaAccount, makeApi, isExpiredToken } from './ads.js';
 import { handleSettings } from './settings.js';
 import { PLATFORM_NAMES } from '../scenes/connect-account.js';
 import { resolveScaleDefault } from '../../lib/scale-defaults.js';
 
+const WEB_APP_URL = process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com';
+
+/**
+ * Single source of truth for the main menu grid — used by /start AND /menu so
+ * both surfaces always offer identical access to every feature.
+ */
+export function mainMenuKeyboard() {
+  return {
+    inline_keyboard: [
+      [{ text: '📊 Dashboard', callback_data: 'menu:status' }, { text: '🎯 Buat Kampanye', callback_data: 'menu:create' }],
+      [{ text: '📈 Monitor', callback_data: 'menu:monitor' }, { text: '🤖 AI Optimize', callback_data: 'menu:optimize' }],
+      [{ text: '📣 My Meta Ads', callback_data: 'menu:ads' }, { text: '🔧 Setting', callback_data: 'menu:settings' }],
+      [{ text: '🔗 Connect Account', callback_data: 'menu:connect' }, { text: '💰 Pricing', callback_data: 'menu:pricing' }],
+      [{ text: '❓ Bantuan', callback_data: 'menu:help' }],
+      [{ text: '📱 AdForge Mini App', web_app: { url: WEB_APP_URL } }],
+      [{ text: '🌐 Buka di Browser', url: WEB_APP_URL }],
+    ],
+  };
+}
+
 export function handleMenu() {
   return async (ctx) => {
     await ctx.reply(
-      '📋 *AdForge Menu*\n\nChoose an option:',
+      '📋 *AdForge Menu*\n\nPilih fitur:',
       {
         parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '📊 Campaign Status', callback_data: 'menu:status' }, { text: '📈 Reports', callback_data: 'menu:reports' }],
-            [{ text: '🎯 Create Campaign', callback_data: 'menu:create' }, { text: '🤖 AI Optimize', callback_data: 'menu:optimize' }],
-            [{ text: '⚡ Monitor Rules', callback_data: 'menu:monitor' }, { text: '🔧 Settings', callback_data: 'menu:settings' }],
-            [{ text: '📣 My Meta Ads', callback_data: 'menu:ads' }, { text: '🔗 Connect Account', callback_data: 'menu:connect' }],
-          ],
-        },
+        reply_markup: mainMenuKeyboard(),
       }
     );
   };
@@ -38,7 +53,7 @@ export function handleMenuButton(deps) {
       case 'reports':
         return scope ? handleAdsReport(deps)(ctx, scope) : handleReportsAction(ctx, deps);
       case 'create':
-        return handleCreateAction(ctx);
+        return ctx.scene.enter('create-campaign');
       case 'connect':
         return sendPlatformChoice(ctx);
       case 'optimize':
@@ -50,9 +65,9 @@ export function handleMenuButton(deps) {
       case 'fbads':
         return handleAds(deps)(ctx);
       case 'pricing':
-        return ctx.reply('💰 See /pricing for plan details.');
+        return handlePricing()(ctx);
       case 'help':
-        return ctx.reply('❓ Use /help for guidance on all features.');
+        return handleHelp()(ctx);
       default:
         return ctx.reply('Unknown option. Use /menu to see available options.');
     }
@@ -69,6 +84,7 @@ async function sendPlatformChoice(ctx) {
     }));
     inline_keyboard.push(row);
   }
+  inline_keyboard.push([{ text: '⬅️ Menu', callback_data: 'quick:menu' }]);
   await ctx.reply(
     '🔗 *Connect an Ad Account*\n\nChoose a platform to connect:',
     {
@@ -102,16 +118,6 @@ async function handleStatusAction(ctx, deps) {
 async function handleReportsAction(ctx, deps) {
   if (deps) return handleAdsReport(deps)(ctx);
   return ctx.reply('📈 Reports feature — use the dashboard at /app for detailed analytics.');
-}
-
-async function handleCreateAction(ctx) {
-  ctx.reply(
-    '🎯 *Create Campaign*\n\n' +
-    'Use the web dashboard for full campaign creation:\n' +
-    '👉 /app → Campaigns → New Campaign\n\n' +
-    'Or connect your Meta account first via /settings.',
-    { parse_mode: 'Markdown' }
-  );
 }
 
 async function handleOptimizeAction(ctx, deps, scope) {

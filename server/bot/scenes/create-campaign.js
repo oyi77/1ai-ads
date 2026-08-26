@@ -24,6 +24,7 @@ function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 const fmtRp = n => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
+const CANCEL_ROW = [{ text: '❌ Batal', callback_data: 'create:cancel' }];
 
 export const createCampaignScene = new Scenes.WizardScene(
   'create-campaign',
@@ -35,7 +36,7 @@ export const createCampaignScene = new Scenes.WizardScene(
       {
         parse_mode: 'HTML',
         reply_markup: {
-          inline_keyboard: OBJECTIVES.map(o => [{ text: o.label, callback_data: `create:obj:${o.id}` }]),
+          inline_keyboard: [...OBJECTIVES.map(o => [{ text: o.label, callback_data: `create:obj:${o.id}` }]), CANCEL_ROW],
         },
       }
     );
@@ -48,7 +49,7 @@ export const createCampaignScene = new Scenes.WizardScene(
       await ctx.reply('⚠️ Pilih tujuan dulu lewat tombol di atas.');
       return;
     }
-    await ctx.reply('📝 Nama campaign? (contoh: Promo Lebaran Hijab)');
+    await ctx.reply('📝 Nama campaign? (contoh: Promo Lebaran Hijab)', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
     return ctx.wizard.next();
   },
   // step 2 — name → budget
@@ -59,7 +60,7 @@ export const createCampaignScene = new Scenes.WizardScene(
       return;
     }
     ctx.wizard.state.data.name = text;
-    await ctx.reply('💰 Budget harian? (dalam Rupiah, contoh: 50000)\n<i>Minimal Rp 10.000</i>', { parse_mode: 'HTML' });
+    await ctx.reply('💰 Budget harian? (dalam Rupiah, contoh: 50000)\n<i>Minimal Rp 10.000</i>', { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
     return ctx.wizard.next();
   },
   // step 3 — budget → landing URL
@@ -70,7 +71,7 @@ export const createCampaignScene = new Scenes.WizardScene(
       return;
     }
     ctx.wizard.state.data.dailyBudget = budget;
-    await ctx.reply('🔗 URL landing page?\n(contoh: https://toko.com/produk)', { parse_mode: 'HTML' });
+    await ctx.reply('🔗 URL landing page?\n(contoh: https://toko.com/produk)', { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
     return ctx.wizard.next();
   },
   // step 4 — URL → target audience → confirm summary
@@ -81,12 +82,15 @@ export const createCampaignScene = new Scenes.WizardScene(
       return;
     }
     ctx.wizard.state.data.landingUrl = url;
-    await ctx.reply('🎯 Target audiens dalam satu kalimat?\n(contoh: wanita 20-35, suka skincare). Ketik /skip jika lewati.', { parse_mode: 'HTML' });
+    await ctx.reply('🎯 Target audiens dalam satu kalimat?\n(contoh: wanita 20-35, suka skincare). Ketik /skip jika lewati.', { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
     return ctx.wizard.next();
   },
-  // step 5 — target → confirm
   async (ctx) => {
     const cmd = ctx.message?.text || '';
+    // Stay on this step until the user taps Buat/Batal — leaving here would
+    // destroy wizard state before the confirm callbacks can run.
+    if (ctx.wizard.state.confirmShown) return;
+    ctx.wizard.state.confirmShown = true;
     ctx.wizard.state.data.target = cmd === '/skip' ? '' : cmd.trim();
     const d = ctx.wizard.state.data;
     const summary =
@@ -106,9 +110,15 @@ export const createCampaignScene = new Scenes.WizardScene(
         ]],
       },
     });
-    return ctx.wizard.leave();
   }
 );
+
+// Wire the wizard's own callback buttons (previously exported but never
+// registered — objective taps were silently dropped and /create was dead).
+const sceneDeps = (ctx) => ({ repos: ctx.repos, services: ctx.services });
+createCampaignScene.action(/^create:obj:(.+)$/, handleCreateObjective());
+createCampaignScene.action(/^create:go$/, (ctx) => handleCreateGo(sceneDeps(ctx))(ctx));
+createCampaignScene.action(/^create:cancel$/, handleCreateCancel());
 
 export function handleCreateObjective() {
   return async (ctx) => {
@@ -117,10 +127,10 @@ export function handleCreateObjective() {
     ctx.wizard.state.data = { ...(ctx.wizard.state.data || {}), objective: obj };
     const label = OBJECTIVES.find(o => o.id === obj)?.label || obj;
     await ctx.reply(`✅ Tujuan: <b>${esc(label)}</b>`);
-    await ctx.reply('📝 Nama campaign? (contoh: Promo Lebaran Hijab)');
-    // keep wizard on the name step: re-enter next manually is complex — instead
-    // we store and let the scene's step-1 handler proceed when user sends text.
-    return ctx.scene.enter('create-campaign', { ...ctx.wizard.state.data, objective: obj }, true);
+    await ctx.reply('📝 Nama campaign? (contoh: Promo Lebaran Hijab)', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
+    // Park on the name-consuming step without re-running step 0 (which wipes
+    // state) — scene.enter would reset the cursor to 0.
+    ctx.wizard.selectStep(2);
   };
 }
 

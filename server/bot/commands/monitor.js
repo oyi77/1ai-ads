@@ -21,6 +21,7 @@ const MONITOR_FOOTER = [
   [{ text: '➕ Add Spend Rule', callback_data: 'rule:set:spend:global' }],
   [{ text: '➕ Add ROAS Rule', callback_data: 'rule:set:roas:global' }],
   [{ text: '🔄 Sync Now', callback_data: 'monitor:sync' }],
+  [{ text: '📋 Menu', callback_data: 'quick:menu' }],
 ];
 
 function metaAccounts(deps, userId) {
