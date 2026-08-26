@@ -192,6 +192,60 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     return fanout;
   }
 
+  /**
+   * Hour-of-day performance breakdown (dayparting insight).
+   * Uses the Marketing API `breakdowns=time_of_day` (values 0-23, account tz),
+   * aggregated across the requested window — the data behind competitor
+   * dayparting heatmaps (Madgicx/Revealbot tier).
+   */
+  async getAccountInsightsByHour(accountId, { datePreset = 'last_7d' } = {}) {
+    const params = {
+      fields: 'spend,impressions,clicks,actions,action_values',
+      // v22 removed time_of_day; advertiser-timezone hourly is the supported dayparting breakdown
+      breakdowns: 'hourly_stats_aggregated_by_advertiser_time_zone',
+      date_preset: datePreset,
+      limit: '100',
+    };
+    const data = await this._get(`/${accountId}/insights`, params);
+    const buckets = {};
+    for (const row of (data.data || [])) {
+      // hourly_stats_aggregated_by_* rows carry the window in
+      // hourly_stats_aggregated_by_*_time_zone: "HH:00:00 - HH:59:59".
+      // Legacy time_of_day carried it as a plain number.
+      let hour = parseInt(row.time_of_day ?? NaN, 10);
+      if (!Number.isFinite(hour)) {
+        const tzKey = Object.keys(row).find(k => k.startsWith('hourly_stats_aggregated_by'));
+        const win = tzKey ? String(row[tzKey]) : '';
+        const hm = win.match(/^(\d{1,2}):/);
+        if (hm) hour = parseInt(hm[1], 10);
+      }
+      if (!Number.isFinite(hour)) hour = parseInt(row.hour ?? 0, 10) % 24;
+      if (!Number.isFinite(hour)) hour = 0;
+      if (!buckets[hour]) {
+        buckets[hour] = { hour, spend: 0, impressions: 0, clicks: 0, linkClicks: 0, purchases: 0, revenue: 0 };
+      }
+      const b = buckets[hour];
+      b.spend += parseFloat(row.spend || 0);
+      b.impressions += parseInt(row.impressions || 0);
+      b.clicks += parseInt(row.clicks || 0);
+      let parsed;
+      try { parsed = this._parseInsights(row); } catch { parsed = null; }
+      if (parsed) {
+        b.linkClicks += parsed.linkClicks || 0;
+        b.purchases += parsed.conversions || 0;
+        b.revenue += parsed.revenue || 0;
+      }
+    }
+    return Object.values(buckets)
+      .map(b => ({
+        ...b,
+        ctr: b.impressions > 0 ? (b.clicks / b.impressions) * 100 : 0,
+        cpc: b.clicks > 0 ? b.spend / b.clicks : null,
+        roas: b.spend > 0 ? b.revenue / b.spend : null,
+      }))
+      .sort((a, b) => a.hour - b.hour);
+  }
+
   async getAccountInsights(accountId, { datePreset = 'last_30d', timeRange = null } = {}) {
     const params = {
       fields: 'spend,impressions,clicks,ctr,cpc,actions,action_values,cost_per_action_type',
