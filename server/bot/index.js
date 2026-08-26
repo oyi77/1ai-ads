@@ -59,6 +59,19 @@ export function initBot(app, deps) {
   // Session + Stage middleware — REQUIRED for WizardScene (connect + meta-app flows)
   bot.use(session());
   const stage = new Scenes.Stage([connectScene, manageMetaAppScene, createCampaignScene]);
+
+  // Escape hatch: any /command while inside a wizard clears the scene state
+  // from the session BEFORE stage sees it, so an abandoned wizard can never
+  // eat subsequent commands (/start, /pricing etc still work normally).
+  bot.use(async (ctx, next) => {
+    const text = ctx.message?.text || '';
+    if (ctx.session?.__scenes && text.startsWith('/') && text !== '/skip') {
+      delete ctx.session.__scenes;
+      ctx.session.__scenes = undefined;
+    }
+    return next();
+  });
+
   bot.use(stage);
 
   // ── Commands ─────────────────────────────────────────────
