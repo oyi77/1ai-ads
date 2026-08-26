@@ -306,6 +306,14 @@ export class PaymentService {
       // privileges. requireAdmin gates the approval/admin surface and must
       // stay reserved for real operators, not purchased plans.
       const userUpdateData = { plan: planName };
+      // Paid plans expire; the daily subscription cron handles downgrade +
+      // renewal nudge. Free has no expiry.
+      if (planName !== 'free') {
+        const expires = new Date(Date.now() + 30 * 24 * 3600 * 1000);
+        userUpdateData.plan_expires_at = expires.toISOString();
+      } else {
+        userUpdateData.plan_expires_at = null;
+      }
       const updatedUser = this.usersRepo.update(payment.user_id, userUpdateData);
       if (updatedUser) {
         log.info('User plan upgraded', { userId: payment.user_id, plan: planName, role: updatedUser.role });

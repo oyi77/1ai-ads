@@ -59,6 +59,31 @@ export function AudiencesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<SavedAudience | null>(null);
   const [form, setForm] = useState({ name: '', description: '', platform: 'meta' });
+  const [interestQuery, setInterestQuery] = useState('');
+  const [interestResults, setInterestResults] = useState<Array<{ id: string; name: string }>>([]);
+  const [stackedInterests, setStackedInterests] = useState<Array<{ id: string; name: string }>>([]);
+  const [searching, setSearching] = useState(false);
+
+  const searchInterests = useCallback(async (q: string) => {
+    if (q.trim().length < 3) { setInterestResults([]); return; }
+    setSearching(true);
+    try {
+      const res = await api.get<Array<{ id: string; name: string }>>(`/campaigns/targeting/search?q=${encodeURIComponent(q)}&type=interest`);
+      setInterestResults(Array.isArray(res) ? res : []);
+    } catch { setInterestResults([]); }
+    finally { setSearching(false); }
+  }, []);
+
+  const onInterestQueryChange = (q: string) => {
+    setInterestQuery(q);
+    window.setTimeout(() => { searchInterests(q); }, 400);
+  };
+
+  const stackInterest = (i: { id: string; name: string }) => {
+    if (!stackedInterests.some(s => s.id === i.id)) setStackedInterests(s => [...s, i]);
+    setInterestResults([]);
+    setInterestQuery('');
+  };
 
   const { data, isLoading, error } = useQuery<SavedAudiencesResponse>({
     queryKey: ['saved-audiences'],
@@ -68,7 +93,7 @@ export function AudiencesPage() {
   const rawAudiences: SavedAudience[] = Array.isArray(data) ? data as SavedAudience[] : (data?.data || []);
 
   const saveMutation = useMutation({
-    mutationFn: (payload: { name: string; description?: string; platform: string }) => {
+    mutationFn: (payload: { name: string; description?: string; platform: string; targeting?: { interests: Array<{ id: string; name: string }> } }) => {
       if (editing) return api.put<SavedAudience>(`/audiences/saved/${editing.id}`, payload);
       return api.post<SavedAudience>('/audiences/saved', payload);
     },
@@ -83,12 +108,18 @@ export function AudiencesPage() {
   const closeForm = useCallback(() => {
     setShowForm(false); setEditing(null);
     setForm({ name: '', description: '', platform: 'meta' });
+    setStackedInterests([]); setInterestQuery(''); setInterestResults([]);
   }, []);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name) return;
-    saveMutation.mutate({ name: form.name, description: form.description || undefined, platform: form.platform });
+    saveMutation.mutate({
+      name: form.name,
+      description: form.description || undefined,
+      platform: form.platform,
+      ...(stackedInterests.length ? { targeting: { interests: stackedInterests } } : {}),
+    });
   };
 
   const columns: Column<SavedAudience>[] = [
@@ -149,6 +180,33 @@ export function AudiencesPage() {
               Description
               <input style={inputStyle} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Optional note" />
             </label>
+            <label style={{ ...labelStyle, display: 'block' }}>
+              Interest Stack (cari & tumpuk minat audiens)
+              <input style={inputStyle} value={interestQuery} onChange={(e) => onInterestQueryChange(e.target.value)} placeholder="Ketik min 3 huruf — mis. fitness, skincare…" />
+            </label>
+            {searching && <p style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', margin: '-4px 0 6px' }}>Searching…</p>}
+            {interestResults.length > 0 && (
+              <div style={{ border: '1px solid var(--border)', borderRadius: 8, maxHeight: 140, overflowY: 'auto', marginBottom: 8 }}>
+                {interestResults.map(i => (
+                  <button key={i.id} type="button" onClick={() => stackInterest(i)}
+                    style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: '0.75rem', cursor: 'pointer' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-surface)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                    {i.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {stackedInterests.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                {stackedInterests.map(i => (
+                  <span key={i.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 99, background: 'var(--accent-soft)', color: 'var(--accent)', fontSize: '0.7rem', fontWeight: 600 }}>
+                    {i.name}
+                    <X size={11} style={{ cursor: 'pointer' }} onClick={() => setStackedInterests(s => s.filter(x => x.id !== i.id))} />
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           {saveMutation.isError && (
             <div style={{ marginTop: 12, color: 'var(--red)', fontSize: '0.8rem' }}>{(saveMutation.error as Error).message}</div>

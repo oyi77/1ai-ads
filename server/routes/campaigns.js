@@ -145,6 +145,49 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     }
   });
 
+  // GET /performance — ad-level creative performance for the first page of
+  // live ads across all accounts owned by this token. Powers the Library
+  // "Performance" tab (competitor parity: creative-level insights).
+  router.get('/performance', async (req, res) => {
+    try {
+      const api = resolveUserMetaApi(req);
+      const accounts = await api.getAdAccounts();
+      const limitPerAccount = Math.min(parseInt(req.query.limit, 10) || 20, 50);
+      const out = [];
+      for (const account of accounts.slice(0, 10)) {
+        try {
+          const ads = await api.getAds(account.id, { limit: limitPerAccount });
+          for (const ad of ads) {
+            let insights = null;
+            try { insights = await api.getCampaignInsights(ad.id); } catch { /* ad without data */ }
+            if (!insights || insights.spend === undefined) continue;
+            out.push({
+              id: ad.id,
+              name: ad.name,
+              accountId: account.id,
+              accountName: account.name,
+              status: ad.status,
+              creative: ad.creative || null,
+              spend: insights.spend,
+              revenue: insights.revenue,
+              roas: insights.spend > 0 ? insights.revenue / insights.spend : null,
+              ctr: insights.ctr,
+              cpc: insights.cpc,
+              linkClicks: insights.linkClicks,
+              purchases: insights.conversions,
+            });
+          }
+        } catch (err) {
+          log.warn('performance scan failed for account', { accountId: account.id, error: err.message });
+        }
+      }
+      out.sort((a, b) => b.spend - a.spend);
+      res.json({ success: true, data: out, total: out.length });
+    } catch (err) {
+      res.status(err.status || 500).json({ success: false, error: err.message });
+    }
+  });
+
   // GET /accounts — list Meta ad accounts
   router.get('/accounts', async (req, res) => {
     try {

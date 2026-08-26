@@ -38,7 +38,7 @@ export class UsersRepository {
 
     const fields = [];
     const params = [];
-    const updatable = ['username', 'email', 'password_hash', 'role', 'plan', 'confirmed', 'is_active', 'last_login', 'telegram_id'];
+    const updatable = ['username', 'email', 'password_hash', 'role', 'plan', 'confirmed', 'is_active', 'last_login', 'telegram_id', 'plan_expires_at'];
 
     for (const field of updatable) {
       if (data[field] !== undefined) {
@@ -85,5 +85,11 @@ export class UsersRepository {
 
   delete(id) {
     this.db.prepare('DELETE FROM users WHERE id = ?').run(id);
+  }
+
+  findExpiredPaidPlans() {
+    return this.db.prepare(
+      "SELECT id, username, plan, telegram_id FROM users WHERE plan != 'free' AND plan_expires_at IS NOT NULL AND plan_expires_at < datetime('now')"
+    ).all();
   }
 }

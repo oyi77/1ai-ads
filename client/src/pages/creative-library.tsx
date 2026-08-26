@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Tag } from 'lucide-react';
+import { Plus, Search, Tag, BarChart3, Download } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface Creative {
@@ -11,6 +11,20 @@ interface Creative {
   tags: string[];
   type: string;
   created_at: string;
+}
+
+interface CreativePerf {
+  id: string;
+  name: string;
+  accountName: string;
+  status: string;
+  spend: number;
+  revenue: number;
+  roas: number | null;
+  ctr: number;
+  cpc: number;
+  linkClicks: number;
+  purchases: number;
 }
 
 export function CreativeLibraryPage() {
@@ -40,6 +54,27 @@ export function CreativeLibraryPage() {
     : creatives;
 
   const types = [...new Set(creatives.map(c => c.type).filter(Boolean))];
+
+  const [tab, setTab] = useState<'library' | 'performance'>('library');
+  const perfQuery = useQuery({
+    queryKey: ['creative-performance'],
+    queryFn: () => api.get<CreativePerf[]>('/campaigns/performance'),
+    enabled: tab === 'performance',
+  });
+  const perfList = Array.isArray(perfQuery.data) ? perfQuery.data : [];
+
+  const tabsUi = (
+    <div style={{ display: 'flex', gap: 4, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 4, width: 'fit-content' }}>
+      {(['library', 'performance'] as const).map(v => (
+        <button key={v} onClick={() => setTab(v)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', border: 'none', borderRadius: 6, cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '0.78rem', fontWeight: 700,
+            background: tab === v ? 'var(--accent-soft)' : 'transparent', color: tab === v ? 'var(--accent)' : 'var(--text-secondary)' }}>
+          {v === 'library' ? <>Library</> : <><BarChart3 size={12} /> Performance</>}
+        </button>
+      ))}
+    </div>
+  );
+
 
   return (
     <div>
@@ -143,6 +178,54 @@ export function CreativeLibraryPage() {
         ))}
       </div>
 
+      {tab === 'performance' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              Ad-level performance langsung dari Meta — urut berdasarkan spend.
+            </p>
+            <button onClick={() => perfQuery.refetch()} disabled={perfQuery.isFetching}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 6, border: '1px solid var(--border-strong)', background: 'transparent', color: 'var(--text-secondary)', fontSize: '0.72rem', cursor: 'pointer' }}>
+              <Download size={11} /> Refresh
+            </button>
+          </div>
+          {perfQuery.isLoading && <p style={{ color: 'var(--text-tertiary)', padding: 24, textAlign: 'center' }}>Loading live ad performance…</p>}
+          {!perfQuery.isLoading && perfList.length === 0 && (
+            <p style={{ color: 'var(--text-tertiary)', padding: 24, textAlign: 'center', fontSize: '0.82rem' }}>Tidak ada data performa. Pastikan akun memiliki iklan aktif dengan data insight.</p>
+          )}
+          {perfList.length > 0 && (
+            <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                <thead>
+                  <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                    {['Ad', 'Account', 'Status', 'Spend', 'ROAS', 'CTR', 'Clicks', 'Purchases'].map(h => (
+                      <th key={h} style={{ padding: '10px 14px', color: 'var(--text-tertiary)', fontWeight: 600 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {perfList.map(ad => (
+                    <tr key={ad.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '9px 14px', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ad.name}</td>
+                      <td style={{ padding: '9px 14px', color: 'var(--text-secondary)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ad.accountName}</td>
+                      <td style={{ padding: '9px 14px' }}>{ad.status === 'active' ? '✅' : ad.status === 'paused' ? '⏸' : ad.status}</td>
+                      <td style={{ padding: '9px 14px' }}>{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(ad.spend || 0)}</td>
+                      <td style={{ padding: '9px 14px', color: (ad.roas ?? 0) >= 1 ? 'var(--green)' : '#ef4444' }}>{ad.roas === null ? '—' : ad.roas.toFixed(2) + 'x'}</td>
+                      <td style={{ padding: '9px 14px' }}>{(ad.ctr || 0).toFixed(2)}%</td>
+                      <td style={{ padding: '9px 14px' }}>{(ad.linkClicks || 0).toLocaleString('id-ID')}</td>
+                      <td style={{ padding: '9px 14px' }}>{(ad.purchases || 0).toLocaleString('id-ID')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'library' && (
+      <>
+      {/* LIBRARY TAB CONTENT */}
       {error && (
         <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid var(--red)', borderRadius: 8, padding: 16, marginBottom: 16, color: 'var(--red)', fontSize: '0.85rem' }}>
           Failed to load creative library
@@ -174,6 +257,8 @@ export function CreativeLibraryPage() {
             </div>
           ))}
         </div>
+      )}
+      </>
       )}
     </div>
   );
