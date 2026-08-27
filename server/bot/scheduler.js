@@ -209,25 +209,58 @@ export function initScheduler(bot, deps) {
   cron.schedule('15 */6 * * *', async () => {
     log.info('Running token health check');
     try {
-      const accounts = deps.repos?.platformAccountsRepo?.getAccounts?.()?.filter(a => a.is_active !== 0) || [];
+      const platformAccountsRepo = deps.repos?.platformAccountsRepo;
+      const settingsRepo = deps.repos?.settingsRepo;
+      if (!platformAccountsRepo || !settingsRepo) return;
+
+      // Fan out per-user / per-platform using the OWNER's bound token
+      // (SaaS isolation) — never read stored creds or a system metaApi.
+      const { listPlatformKeys, getPlatformSync } = await import('../platforms/index.js');
+
+      let checked = 0;
       let expired = 0;
-      for (const account of accounts) {
-        if (account.platform === 'meta' && account.credentials?.access_token) {
+
+      for (const platform of listPlatformKeys()) {
+        const accounts = platformAccountsRepo.getDistinctUserPlatforms
+          ? platformAccountsRepo.getDistinctUserPlatforms(platform)
+          : [];
+        if (!accounts.length) continue;
+
+        for (const account of accounts) {
           try {
-            const metaApi = deps.services?.metaApi;
-            if (!metaApi) continue;
-            await metaApi.getMe?.(account.credentials.access_token);
+            const token = resolveOwnerPlatformToken(platform, account.user_id, {
+              platformAccountsRepo,
+              settingsRepo,
+            });
+            if (!token || token.startsWith('demo-')) {
+              log.debug('Placeholder token — skipping health check', { platform, account: account.user_id });
+              continue;
+            }
+            const PlatformClass = getPlatformSync(platform, settingsRepo);
+            const api = new PlatformClass();
+            api.setActiveAccount(null, token, true);
+
+            // Feature-detect a token-verify method. Only Meta exposes getMe().
+            // Platforms without one are skipped — never fabricate validity.
+            const verify = api.getMe || api.verifyToken;
+            if (typeof verify !== 'function') {
+              log.debug('No token-verify method for platform — skipping', { platform });
+              continue;
+            }
+            checked++;
+            await verify.call(api);
           } catch {
             expired++;
-            log.warn('Token expired', { account: account.account_name });
-            await safeSend(bot, `🔴 Token expired for *${account.account_name}*`, { parse_mode: 'Markdown' });
+            const label = account.account_name || account.user_id;
+            log.warn('Token expired', { platform, account: label });
+            await safeSend(bot, `🔴 Token expired for *${label}*`, { parse_mode: 'Markdown' });
             try {
-              deps.repos?.platformAccountsRepo?.update?.(account.id, { health_status: 'expired' });
+              platformAccountsRepo.update?.(account.id, { health_status: 'expired' });
             } catch { /* best-effort DB update */ }
           }
         }
       }
-      log.info('Token health check complete', { checked: accounts.length, expired });
+      log.info('Token health check complete', { checked, expired });
     } catch (err) {
       log.error('Token health check failed', { error: err.message });
     }
