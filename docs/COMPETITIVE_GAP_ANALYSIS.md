@@ -1,229 +1,92 @@
-# Competitive Gap Analysis — 1ai-ads vs Top Ad Management Platforms
+# Competitive Gap Analysis — 1ai-ads (AdForge) vs Top Ad Management Platforms
 
-Generated: 2026-06-27
+**Refreshed:** 2026-08-27 (prev: 2026-06-27 — STALE, over-stated gaps)
+**Method:** Live web research (2026) + code audit with file:line receipts. Every "shipped" claim below is verified in the current tree, not assumed.
 
-## Competitors Analyzed
+---
 
-| Tier | Platform | Strength |
+## 1. 2026 Competitive Landscape (what changed since June)
+
+The bar moved. In June the differentiator was "rules + recommendations." In Aug 2026 the category split into three tiers:
+
+| Tier | Players (2026) | What they claim |
 |---|---|---|
-| Enterprise | Smartly.io | Cross-platform automation, creative rotation, 24/7 AI bidding |
-| Enterprise | Hyper (HyperFX) | Autonomous AI optimization, predictive ROAS |
-| Mid-Market | Birch | Cross-account dashboards, compound automation rules |
-| Mid-Market | Wevion | AI-driven cross-platform management |
-| Mid-Market | AdManage.ai | AI-powered ad management |
-| Creative | Creatify | AI creative production, fatigue detection |
-| Reporting | Improvado | Cross-channel attribution, unified reporting |
-| MCP | Soku.ai | MCP server integration for AI agents |
+| **Autonomous execution** | **Ryze AI**, **Hyper (HyperFX)**, Adzooma (agent mode) | Actually *execute* bid/budget/creative changes 24/7 across 7–8 networks. Ryze: "executes, not recommends." Hyper ranks 9.4/10 running Meta+Google+TikTok+LinkedIn+**Amazon** from one agent. |
+| **Rules you write** | Revealbot, Madgicx (rule layer), Optmyzr | You author rules; platform runs them. Madgicx also *recommends* (insights), does not auto-execute by default. |
+| **Creative AI** | Creatify, AdCreative.ai, Motion | AI creative production + fatigue. |
+
+**New category — Ad MCP servers:** Ryze, **PaidSync** (MCP with *write access across 8 networks*), Synter, Segwise now ship MCP. **AdForge's MCP is no longer unique** — it must stay ahead on breadth + write access + agent ecosystem.
+
+**Retail media is now table-stakes for "best in class":** $128–200B channel in 2026 (Amazon ~69% share, Walmart Connect, Instacart, Criteo). Hyper covers Amazon. AdForge has an Amazon adapter (see §3).
+
+**Implication for "be the best":** AdForge already executes autonomously (verified), so it sits in Tier 1 on capability — but is **invisible** vs Ryze/Hyper on mindshare. The win path is *lean into the lane competitors can't copy* (Telegram-native, SEA/Shopee, approval-first, MCP ecosystem) while closing the 3 real capability gaps (CSRF, video-gen, retail-media breadth).
 
 ---
 
-## Feature Comparison Matrix
+## 2. Verified Current State (2026-08-27)
 
-### 1. Platform Integration
+| Capability | Status | Receipt |
+|---|---|---|
+| Platform adapters | ✅ 22 adapter dirs (meta, google, tiktok, linkedin, twitter, snapchat, pinterest, microsoft, amazon, apple, baidu, criteo, kakao, line, reddit, spotify, taboola, thetradedesk, whatsapp, yandex, shopee, +) | `ls server/services/*/` = 22 |
+| Autonomous execution (pause/budget) | ✅ REAL mutations | `auto-optimizer.js:147` pause, `:173` budget realloc |
+| Autonomous mode (orchestrated) | ✅ | `autonomous-agent.js:64 runAutonomousMode()`, `app.js:253` |
+| Compound rules (AND/OR nested) | ✅ | `rule-evaluator.js` `{all}/{any}` |
+| Audit logging | ✅ (was falsely marked GAP in June) | `repositories/audit-log.js`, `middleware/audit.js` mounted `app.js:110` |
+| Dayparting engine | ✅ (was falsely marked GAP) | `domain/optimization.js:223 evaluateDayparting`, `meta/index.js:196` hourly |
+| Realtime WebSocket | ✅ wired (was "wire it") | `realtime-service.js`, `server.js:111` attach |
+| AI image generation | ✅ wired (was "wire it") | `image-generator.js`, `app/services.js:132` |
+| Creative auto-rotation | ✅ (was GAP) | `fatigue-detector.js:385 autoRefreshCreative` → A/B test |
+| Telegram bot + 11 cron jobs | ✅ (was "10 placeholders") | `bot/scheduler.js` 11 jobs, real execution |
+| MCP server | ✅ (now contested) | `mcp-server.js` |
+| Self-serve payments + OAuth | ✅ (newest) | commit `238da0b` |
+| Multi-platform intel fan-out | ✅ | commit `7019794` |
 
-| Feature | Smartly | Hyper | 1ai-ads | Gap |
+**Net:** The June doc over-stated gaps. Most "🔴 CRITICAL" items are already shipped. Remaining real gaps are listed in §3.
+
+---
+
+## 3. TRUE Remaining Gaps (ranked for "best in industry")
+
+| # | Gap | Why it matters for "best" | Effort | Task |
 |---|---|---|---|---|
-| Meta/Facebook Ads | ✅ Full | ✅ Full | ✅ Full | — |
-| Google Ads | ✅ Full | ✅ Full | ✅ Full | — |
-| TikTok Ads | ✅ Full | ✅ Full | ✅ Full | — |
-| LinkedIn Ads | ✅ | ✅ | ✅ | — |
-| Twitter/X Ads | ✅ | ✅ | ✅ | — |
-| Snapchat Ads | ✅ | ❌ | ✅ | — |
-| Pinterest Ads | ✅ | ❌ | ✅ | — |
-| Microsoft/Bing Ads | ✅ | ❌ | ✅ | — |
-| **Retail Media (Amazon, Walmart)** | ✅ | ❌ | ❌ | 🔴 GAP |
-| **Pinterest Shopping Ads** | ✅ | ❌ | ❌ | 🟡 Minor |
-
-**Verdict:** 1ai-ads has strong platform coverage (8 platforms). Missing retail media networks (Amazon, Walmart) which is an emerging channel.
+| G1 | **CSRF protection** on own API | Security vulnerability; enterprise buyers block on this | 0.5d | **T1** |
+| G2 | **Retail-media breadth** (Walmart/Instacart; audit Amazon depth) | $128–200B channel; Hyper has Amazon; AdForge Amazon adapter unverified for CRUD | 3–5d | **T2** |
+| G3 | **Tiered autonomy** (trust tier = set-and-forget for proven accounts; approval-first default) | Ryze/Hyper win on "zero day-to-day involvement"; AdForge only has approval-first | 2d | **T3** |
+| G4 | **Bid-level + cross-network reallocation** (beyond pause/budget) | "Best" does 24/7 bid + cross-platform shift, not just pause/scale | 2–3d | **T4** |
+| G5 | **MCP differentiation** (write-access breadth, agent marketplace, more platforms) | MCP no longer unique; PaidSync has write-access 8 networks | 3–5d | **T5** |
+| G6 | **AI video generation** (generate, not just upload) | Creative pipeline missing video vs Smartly/Creatify | 2–3d | **T6** |
+| G7 | **GTM / brand / mindshare** | Invisible vs Ryze/Madgicx; "best" needs market to know it | ongoing | **T7** |
+| G8 | **Meta App Review** gate | Multi-account scale blocker | tracked | META_APP_REVIEW.md |
+| G9 | **CI/CD pipeline** | No automated deploy; competitor has | 1d | **T9** |
+| G10 | **Web onboarding wizard** beyond Telegram /start | Competitors have web onboarding | 1d | **T10** |
 
 ---
 
-### 2. Autonomous Optimization
+## 4. Moat Reassessment
 
-| Feature | Smartly | Hyper | 1ai-ads | Gap |
-|---|---|---|---|---|
-| Rule-based automation | ✅ | ✅ | ✅ | — |
-| AI-driven bidding 24/7 | ✅ | ✅ | ❌ Placeholder | 🔴 CRITICAL |
-| Predictive ROAS | ✅ | ✅ | ❌ | 🔴 CRITICAL |
-| Anomaly detection | ✅ | ✅ | ⚠️ Basic (domain/optimization.js) | 🟡 Needs ML |
-| Budget auto-reallocation | ✅ | ✅ | ⚠️ Ladder only (domain/optimization.js) | 🟡 Needs AI |
-| Dayparting (time-aware rules) | ✅ | ✅ | ❌ | 🔴 GAP |
-| Platform-aware spend shifting | ✅ | ✅ | ❌ | 🔴 GAP |
-| Creative-aware optimization | ✅ | ✅ | ⚠️ Fatigue detection only | 🟡 Partial |
+| Moat | Unique? | Threat |
+|---|---|---|
+| Telegram-native + Mini App | ✅ unique vs ALL | low (no western competitor building this) |
+| Approval-first automation | ✅ unique | low |
+| Shopee / SEA + BerkahKarya framework | ✅ unique | none (west can't copy) |
+| Multi-model LLM routing | ✅ unique | low |
+| MCP server | ⚠️ **contested** (Ryze/PaidSync/Synter) | HIGH — must differentiate (T5) |
+| Autonomous execution | ⚠️ parity (Ryze/Hyper) | medium — keep ahead on SEA + approval-first |
 
-**Verdict:** 1ai-ads has the DOMAIN LOGIC for optimization (stoploss, scale, profitability) but the scheduler jobs are PLACEHOLDER. Need to wire domain/optimization.js into the cron jobs and add ML-based prediction.
+**Strategy:** Don't chase Madgicx's full checklist. Win the lane: Telegram-native autonomous ads for SEA SMBs + agencies, with approval-first trust as the differentiator, and an MCP ecosystem others can build on.
 
 ---
 
-### 3. Creative Intelligence
+## 5. Actionable Tasks (cross-ref to GAP-RESOLUTION-PLAN.md)
 
-| Feature | Smartly | Creatify | 1ai-ads | Gap |
-|---|---|---|---|---|
-| AI ad copy generation | ✅ | ✅ | ✅ BerkahKarya 4-model | — |
-| Creative fatigue detection | ✅ | ✅ | ✅ domain/creative.js | — |
-| Creative scoring | ✅ | ✅ | ✅ domain/creative.js | — |
-| AI image generation | ✅ | ✅ | ⚠️ service exists, not wired | 🟡 Wire image-generator.js |
-| AI video generation | ✅ | ✅ | ❌ | 🔴 GAP |
-| Creative rotation (auto-refresh) | ✅ | ✅ | ❌ | 🔴 GAP |
-| Multi-variant testing | ✅ | ✅ | ⚠️ AB test service exists | 🟡 Wire ab-test-service.js |
-| Hook/body/CTA analysis | ✅ | ✅ | ❌ | 🟡 Can add to domain/creative.js |
+- **T1** CSRF middleware — `server/middleware/csrf.js` + mount in `app.js`. Verify: CSRF token required on state-changing routes; attack curl blocked.
+- **T2** Retail media — audit `server/services/amazon/index.js` (does it do campaign CRUD or read-only?); add Walmart/Instacart adapter stub→working. Verify: create campaign on Amazon + Walmart sandbox.
+- **T3** Tiered autonomy — add `autonomy_tier` user setting (`approval_first` | `trust`). Trust tier auto-executes pause/budget/bid without owner approval after N successful actions. Verify: trust account executes without approval; new account still prompts.
+- **T4** Bid + cross-network — extend `auto-optimizer.js` with bid adjustment + `shiftSpend(sourceAccount, destAccount, pct)` across platforms. Verify: simulation reallocates spend cross-network.
+- **T5** MCP edge — expose write tools for all 22 adapters via `mcp-server.js`; add agent-registry endpoint. Verify: external agent executes campaign change via MCP.
+- **T6** Video gen — wire `meta-video-service.js` to a generation backend (ComfyUI/Runway/MovieGen); produce ad video from prompt. Verify: prompt → video asset in library.
+- **T7** GTM — case studies, SEA landing pages, ProductHunt/AppSumo, comparison pages vs Ryze/Madgicx. (Non-code; owner-led.)
+- **T9** CI/CD — GitHub Actions: lint + vitest + build + docker push. Verify: push triggers green pipeline.
+- **T10** Web onboarding — multi-step wizard in client (connect platform → first campaign → bot link). Verify: new user reaches first campaign without /start.
 
-**Verdict:** Creative intelligence is a strength (BerkahKarya framework + scoring + fatigue). Missing: AI image/video generation integration, creative rotation.
-
----
-
-### 4. Reporting & Attribution
-
-| Feature | Improvado | Smartly | 1ai-ads | Gap |
-|---|---|---|---|---|
-| Cross-platform unified reporting | ✅ | ✅ | ✅ domain/reporting.js | — |
-| Cross-channel attribution | ✅ | ✅ | ⚠️ Basic (domain/attribution.js) | 🟡 Needs first-party data |
-| Custom dashboards | ✅ | ✅ | ⚠️ Dashboard widgets exist | 🟡 Wire dashboard-widgets.js |
-| Scheduled reports (email/Telegram) | ✅ | ✅ | ⚠️ Telegram bot has daily-dashboard job | 🟡 Wire to real data |
-| Real-time spend monitoring | ✅ | ✅ | ⚠️ Spend guard placeholder | 🟡 Wire to Meta API |
-| ROAS by creative/campaign/adset | ✅ | ✅ | ✅ domain/reporting.js | — |
-| Export to CSV/PDF | ✅ | ✅ | ❌ | 🟡 Can add |
-| BigQuery/data warehouse export | ✅ | ❌ | ⚠️ bigquery-export.js archived | 🟡 Re-integrate if needed |
-
-**Verdict:** Reporting domain module is solid. Missing: real-time monitoring wiring, export capabilities.
-
----
-
-### 5. User Experience
-
-| Feature | Smartly | Hyper | 1ai-ads | Gap |
-|---|---|---|---|---|
-| Web dashboard | ✅ | ✅ | ✅ React + shadcn/ui | — |
-| Mobile app | ✅ | ✅ | ❌ | 🟡 Future |
-| Telegram bot | ❌ | ❌ | ✅ 7 commands + 10 cron jobs | ✅ ADVANTAGE |
-| Multi-user/RBAC | ✅ | ✅ | ⚠️ Basic (admin/user roles) | 🟡 Add team features |
-| Onboarding wizard | ✅ | ✅ | ⚠️ Telegram /start only | 🟡 Add web onboarding |
-| Dark theme | ✅ | ✅ | ✅ Dark industrial | — |
-| Real-time collaboration | ✅ | ❌ | ❌ | 🟡 Future |
-
-**Verdict:** Telegram bot is a UNIQUE ADVANTAGE over all competitors. Web dashboard needs more pages (only 4 React pages vs 42 vanilla JS views).
-
----
-
-### 6. AI & Intelligence
-
-| Feature | Smartly | Hyper | 1ai-ads | Gap |
-|---|---|---|---|---|
-| AI agent for ad management | ✅ | ✅ | ✅ ai-agent service | — |
-| LLM-powered insights | ✅ | ✅ | ✅ llm-client.js | — |
-| Multi-model routing | ❌ | ❌ | ✅ (from hermes/engine.py concept) | ✅ ADVANTAGE |
-| Competitor intelligence | ✅ | ✅ | ✅ competitor-spy service | — |
-| Trending ad analysis | ✅ | ❌ | ✅ trending service | ✅ ADVANTAGE |
-| MCP server for AI agents | ❌ | ❌ | ✅ mcp-server.js | ✅ ADVANTAGE |
-| AI-powered audience expansion | ✅ | ✅ | ⚠️ audience-intelligence exists | 🟡 Wire it |
-
-**Verdict:** AI capabilities are strong. MCP server and multi-model routing are unique advantages.
-
----
-
-### 7. Security & Compliance
-
-| Feature | Smartly | Hyper | 1ai-ads | Gap |
-|---|---|---|---|---|
-| AES-256-GCM credential encryption | ✅ | ✅ | ✅ server/lib/crypto.js | — |
-| OAuth2 for ad platforms | ✅ | ✅ | ✅ Facebook OAuth | — |
-| RBAC (Role-Based Access Control) | ✅ | ✅ | ⚠️ Basic (admin/user) | 🟡 Add roles |
-| Audit logging | ✅ | ✅ | ❌ | 🔴 GAP |
-| SSO/SAML | ✅ | ✅ | ❌ | 🟡 Future |
-| Rate limiting | ✅ | ✅ | ✅ | — |
-| CSRF protection | ✅ | ✅ | ❌ | 🔴 GAP |
-| Input validation | ✅ | ✅ | ✅ validate.js | — |
-
-**Verdict:** Security basics are covered. Missing: audit logging, CSRF protection.
-
----
-
-### 8. Infrastructure
-
-| Feature | Smartly | Hyper | 1ai-ads | Gap |
-|---|---|---|---|---|
-| Single service architecture | ✅ | ✅ | ✅ Express :5000 | — |
-| SQLite (embedded DB) | ❌ | ❌ | ✅ | ✅ Simplicity advantage |
-| PostgreSQL support | ✅ | ✅ | ❌ | 🟡 Scale path |
-| Redis caching | ✅ | ✅ | ❌ | 🟡 Add for performance |
-| WebSocket real-time | ✅ | ✅ | ⚠️ realtime-service exists | 🟡 Wire it |
-| Health checks | ✅ | ✅ | ✅ /health endpoint | — |
-| PM2 process management | ✅ | ✅ | ✅ ecosystem.config.cjs | — |
-| Docker support | ✅ | ✅ | ✅ docker-compose.yml | — |
-| CI/CD pipeline | ✅ | ✅ | ❌ | 🔴 GAP |
-| Automated testing | ✅ | ✅ | ✅ 1118 tests pass | — |
-
-**Verdict:** Infrastructure is solid for current scale. Missing: Redis, CI/CD, WebSocket wiring.
-
----
-
-## Priority Gaps (Ranked by Business Impact)
-
-### 🔴 CRITICAL (Competitive disadvantage)
-
-| # | Gap | Impact | Effort |
-|---|---|---|---|
-| 1 | **Wire scheduler jobs to real data** | 10 cron jobs are placeholders — no actual optimization running | 2-3 days |
-| 2 | **Audit logging** | Can't track who did what — compliance risk | 1 day |
-| 3 | **CSRF protection** | Security vulnerability | 0.5 day |
-| 4 | **Dayparting (time-aware rules)** | Competitors optimize by hour-of-day | 1 day |
-
-### 🟡 IMPORTANT (Feature parity)
-
-| # | Gap | Impact | Effort |
-|---|---|---|---|
-| 5 | **Wire image-generator.js** | AI image generation exists but not connected | 0.5 day |
-| 6 | **Wire ab-test-service.js** | A/B testing exists but not connected | 0.5 day |
-| 7 | **Wire dashboard-widgets.js** | Custom dashboard exists but not connected | 0.5 day |
-| 8 | **Wire audience-intelligence.js** | Audience expansion exists but not connected | 0.5 day |
-| 9 | **Add more React pages** | Only 4 pages vs 42 vanilla JS views | 2-3 days |
-| 10 | **Export CSV/PDF** | Reporting can't export | 1 day |
-| 11 | **RBAC (team roles)** | Only admin/user, no team features | 1 day |
-| 12 | **Web onboarding wizard** | Only Telegram /start | 1 day |
-
-### 🟢 NICE TO HAVE (Differentiation)
-
-| # | Gap | Impact | Effort |
-|---|---|---|---|
-| 13 | **AI video generation** | Creative pipeline missing video | 2-3 days |
-| 14 | **Creative rotation (auto-refresh)** | Fatigue detected but no auto-fix | 1 day |
-| 15 | **Redis caching** | Performance at scale | 1 day |
-| 16 | **WebSocket real-time** | Live dashboard updates | 1 day |
-| 17 | **CI/CD pipeline** | Automated deployment | 1 day |
-| 18 | **Retail media (Amazon)** | Emerging ad channel | 3-5 days |
-
----
-
-## Unique Advantages (1ai-ads vs ALL competitors)
-
-| Advantage | Why it matters |
-|---|---|
-| **Telegram bot** | No competitor has native Telegram integration. Users manage ads from chat. |
-| **MCP server** | AI agents can directly interact with ad platform via Model Context Protocol. Industry first. |
-| **Multi-model LLM routing** | Routes tasks to best AI model (DeepSeek for reasoning, Gemini for creative, Groq for speed). |
-| **Shopee integration** | Southeast Asian e-commerce. No Western competitor has this. |
-| **BerkahKarya framework** | Proprietary 4-model ad copy framework tailored for Indonesian market. |
-| **SQLite simplicity** | Zero-config database. Competitors require PostgreSQL + Redis + Elasticsearch. |
-| **Single service** | One Express process. Competitors need 5-10 microservices. |
-
----
-
-## Recommended Next Steps
-
-### Sprint 1 (1 week) — Wire existing code
-1. Wire all 10 scheduler jobs to real data (domain/optimization.js → cron)
-2. Wire image-generator, ab-test-service, dashboard-widgets, audience-intelligence
-3. Add CSRF protection middleware
-4. Add audit logging
-
-### Sprint 2 (1 week) — Fill feature gaps
-5. Add dayparting to domain/optimization.js
-6. Add more React pages (creative, reporting, automation, settings)
-7. Add CSV/PDF export to reporting
-8. Add web onboarding wizard
-
-### Sprint 3 (1 week) — Differentiate
-9. Wire creative rotation (fatigue → auto-refresh)
-10. Add AI video generation integration
-11. Add Redis caching layer
-12. Add WebSocket real-time updates
+**Priority order for "best in industry":** T1 (security, prereq for enterprise) → T3 (differentiator vs Ryze) → T5 (defend moat) → T2 (channel breadth) → T4/T6 (depth) → T9/T10 (polish) → T7 (GTM).

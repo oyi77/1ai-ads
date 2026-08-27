@@ -1,164 +1,105 @@
 # 1ai-ads Production Runbook
 
+> **Refreshed:** 2026-08-27. Corrects missing mandatory env (`ENCRYPTION_KEY`), wrong DB path, stale contacts, and adds CSRF + multi-tenant notes. AdForge is a **hosted multi-tenant SaaS** (`adforge.aitradepulse.com`), not single-instance.
+
 ## Quick Start
-
 ```bash
 npm install
-npm run build
-npm start
+npm run build      # vite build → dist/
+npm start          # node server.js  (port from PORT, default 5000)
 ```
 
-## Environment Variables
+## Environment Variables (verified from `.env` + `config/index.js`)
+> Values are secrets — never commit. Listed names only.
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `PORT` | No | `5000` | Server port |
-| `DB_PATH` | No | `./db/adforge.db` | SQLite database path |
-| `JWT_SECRET` | **YES** | — | Secret for JWT signing. Generate: `openssl rand -hex 32` |
-| `CORS_ORIGIN` | No | `http://localhost:5173` | Allowed CORS origin |
-| `NODE_ENV` | No | `development` | Set to `production` for prod |
-| `META_ACCESS_TOKEN` | No | — | Meta/Facebook Ads API token |
-| `GOOGLE_ADS_DEVELOPER_TOKEN` | No | — | Google Ads API developer token |
-| `GOOGLE_ADS_OAUTH_TOKEN` | No | — | Google Ads OAuth access token |
-| `TIKTOK_ACCESS_TOKEN` | No | — | TikTok Ads API token |
-| `OMNIROUTE_URL` | No | `http://localhost:20128/v1/chat/completions` | LLM endpoint |
-| `OMNIROUTE_MODEL` | No | `auto/pro-fast` | LLM model |
-| `OMNIROUTE_API_KEY` | No | — | LLM API key |
+### 🔴 MANDATORY (server refuses to start without these)
+| Var | Notes |
+|-----|-------|
+| `JWT_SECRET` | 64+ char hex. `openssl rand -hex 32` |
+| `ENCRYPTION_KEY` | **64-char hex (32 bytes)**. `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Token encryption throws if unset |
+| `FB_APP_ID` / `FB_APP_SECRET` | Meta OAuth app 704618995979962 |
+| `PAYMENT_GATEWAY` | `midtrans` (default) or `duitku` — plus gateway-specific keys |
 
-## Deployment Steps
+### Required per integration (set what you connect)
+| Var | For |
+|-----|-----|
+| `META_ACCESS_TOKEN`, `META_BUSINESS_ID`, `FB_SYSTEM_TOKEN`, `FB_WHATSAPP_TOKEN` | Meta/WhatsApp |
+| `GOOGLE_ADS_DEVELOPER_TOKEN` (+ OAuth) | Google Ads |
+| `TIKTOK_ACCESS_TOKEN` | TikTok |
+| Gateway keys (`DUITKU_*`, `MIDTRANS_*`) | Payments (per `PAYMENT_GATEWAY`) |
 
-### 1. Build
+### Optional / infra
+| Var | Default | Notes |
+|-----|---------|-------|
+| `PORT` | `5000` | Server port |
+| `DB_PATH` | `./1ai-ads.db` | SQLite path (schema has 24 tables) |
+| `NODE_ENV` | `development` | set `production` |
+| `CORS_ORIGIN` | `http://localhost:5173` | **restrict to prod domain** |
+| `PUBLIC_BASE_URL` | `https://adforge.aitradepulse.com` | used in links/callbacks |
+| `WEB_APP_URL` | same | Mini App URL |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_HOST`, `TELEGRAM_CHAT_ID` | — | Telegram bot + alerts |
+| `OMNIROUTE_URL` / `OMNIROUTE_MODEL` / `OMNIROUTE_API_KEY` | `http://localhost:20128/v1` | LLM router |
+| `RESEND_API_KEY`, `SMTP_*` | — | Email alerts (verify berkahkarya.org domain) |
+| `WEBHOOK_VERIFY_TOKEN`, `SOCIAL_SCORING_URL`, `LOG_LEVEL`, `ADMIN_PASSWORD` | — | misc |
+
+## Deployment
 ```bash
-npm install
-npm run build
-```
-
-### 2. Verify Build
-```bash
-ls -la dist/
-# Should contain index.html and assets/
-```
-
-### 3. Database
-```bash
-# Database auto-creates on first run
-# Verify: ls -la db/adforge.db
-```
-
-### 4. Start Server
-```bash
-# Development
-npm start
-
-# Production (with PM2)
+npm install && npm run build
+# PM2
 pm2 start ecosystem.config.cjs
-
-# Production (with systemd)
+# systemd
 sudo systemctl start 1ai-ads
 ```
+Verify build: `ls dist/` (index.html + assets/).
 
-### 5. Health Check
+## Health
 ```bash
-curl http://localhost:5000/health
-# Expected: {"status":"ok","timestamp":"..."}
+curl http://localhost:5000/health          # {"status":"ok",...}
+curl http://localhost:5000/api/cf-health   # Cloudflare check
 ```
 
-## Rollback Procedure
-
-### Quick Rollback
+## Rollback
 ```bash
-# 1. Stop server
 pm2 stop 1ai-ads
-
-# 2. Restore database backup
-cp backups/adforge.db.backup db/adforge.db
-
-# 3. Restore previous code
-git checkout HEAD~1
-npm install
-npm run build
-
-# 4. Restart
+git stash || git checkout <last-good-tag>
+npm install && npm run build
+# DB backup/restore
+cp backups/1ai-ads.db.<timestamp>.backup "$DB_PATH"
 pm2 start 1ai-ads
 ```
+> Tip: tag releases (`git tag -a vX.Y -m ...`) so rollback targets a known-good commit, not blind `HEAD~1`.
 
-### Database Backup
-```bash
-# Before deploy
-cp db/adforge.db backups/adforge.db.$(date +%Y%m%d_%H%M%S).backup
-
-# Restore
-cp backups/adforge.db.YYYYMMDD_HHMMSS.backup db/adforge.db
-```
+## Database
+- Auto-creates on first run (24 tables in `db/schema.sql`).
+- Backup before deploy: `cp "$DB_PATH" backups/1ai-ads.db.$(date +%Y%m%d_%H%M%S).backup`
+- Integrity: `sqlite3 "$DB_PATH" "PRAGMA integrity_check;"`
 
 ## Common Issues
-
-### Server won't start
-- Check `JWT_SECRET` is set
-- Check port is not in use: `lsof -i :5000`
-- Check database file permissions: `ls -la db/`
-
-### API returns 500
-- Check logs: `pm2 logs 1ai-ads` or `tail -f logs/`
-- Check database is not corrupted: `sqlite3 db/adforge.db "PRAGMA integrity_check;"`
-
-### Meta/Google/TikTok API errors
-- Check credentials in Settings page
-- Verify API tokens are not expired
-- Check rate limits (Meta: ~200/hr, Google: varies, TikTok: 1500/hr)
-
-### Frontend not loading
-- Run `npm run build` to rebuild
-- Check `dist/` directory exists
-- Verify `CORS_ORIGIN` matches your domain
+- **Won't start** → `JWT_SECRET` / `ENCRYPTION_KEY` unset (config throws FATAL). Check `lsof -i :5000`.
+- **500s** → `pm2 logs 1ai-ads`; check DB not corrupted.
+- **Platform API errors** → verify tokens in Settings; check rate limits (Meta 5/s, Google 8/s in `platform-client.js`).
+- **Frontend blank** → `npm run build`; verify `dist/`; `CORS_ORIGIN` matches domain.
 
 ## Monitoring
-
-### Health Endpoints
-- `GET /health` — Server health
-- `GET /api/cf-health` — Cloudflare health check
-
-### Key Metrics
-- Response time: Check logs for slow queries
-- Error rate: Monitor 5xx responses
-- Database size: `ls -lh db/adforge.db`
-
-### Logs
-```bash
-# PM2 logs
-pm2 logs 1ai-ads --lines 100
-
-# Application logs
-tail -f logs/*.log
-
-# Error logs
-grep -i error logs/*.log | tail -20
-```
+- Logs: `pm2 logs 1ai-ads --lines 100` · `tail -f logs/*.log` · `grep -i error logs/*.log`
+- Metrics: 5xx rate, slow queries, DB size (`ls -lh "$DB_PATH"`).
+- 11 Telegram bot cron jobs emit digest/alerts to owner chat.
 
 ## Security Checklist
-
-- [ ] `JWT_SECRET` is set and secure (64+ chars)
-- [ ] `NODE_ENV=production` in production
-- [ ] HTTPS enabled (reverse proxy or load balancer)
-- [ ] Security headers verified (X-Content-Type-Options, X-Frame-Options, HSTS)
-- [ ] CORS origin restricted to production domain
-- [ ] Database file permissions restricted (600)
-- [ ] API tokens stored securely (not in code)
+- [ ] `JWT_SECRET` + `ENCRYPTION_KEY` set (64+ char)
+- [ ] `NODE_ENV=production`
+- [ ] HTTPS (reverse proxy / Cloudflare)
+- [ ] Security headers (CSP set in `app.js`; verify HSTS/X-Frame-Options)
+- [ ] CORS restricted to prod domain
+- [ ] DB file perms `600`
+- [ ] **CSRF middleware live (T1)** — POST without token → 403
+- [ ] Tokens in env only, never in code
 
 ## Scaling
-
-### Vertical Scaling
-- Increase server RAM/CPU
-- SQLite handles concurrent reads well
-- For write-heavy workloads, consider PostgreSQL migration
-
-### Horizontal Scaling
-- Use PM2 cluster mode: `pm2 start ecosystem.config.cjs -i max`
-- Share database via network filesystem or migrate to PostgreSQL
-- Use Redis for session/cache sharing
+- Vertical: more RAM/CPU; SQLite fine for reads.
+- Horizontal: `pm2 start ecosystem.config.cjs -i max`; for write-heavy, migrate PostgreSQL (`MIGRATION-POSTGRES.md`); Redis for cache/sessions (planned T5).
 
 ## Contacts
-
-- **DevOps**: [Your team]
-- **On-call**: [Your rotation]
-- **Escalation**: [Your escalation path]
+- **Owner / DevOps:** @codergaboets (Telegram)
+- **Repo:** https://github.com/oyi77/1ai-ads
+- **Escalation:** owner chat → Vilona autonomous operator (cron alerts to admin group)

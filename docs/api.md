@@ -1,18 +1,26 @@
 # AdForge API Reference
 
-All endpoints are prefixed with `/api`. Protected endpoints require `Authorization: Bearer <jwt>` header.
+> **Refreshed:** 2026-08-27. Documents the **primary 8 platforms** (Meta, Google, TikTok, LinkedIn, Pinterest, Snapchat, Twitter, Microsoft). AdForge has **22 platform adapters** total — see `architecture.md`. Endpoint paths below are verified against `server/routes/`.
+
+All endpoints prefixed with `/api`. Protected endpoints require `Authorization: Bearer <token>`.
+
+## ⚠️ Corrections / Notes (read first)
+- **Auth header:** `Authorization: Bearer <JWT>` (not `***`).
+- **CSRF (pending T1):** Once `server/middleware/csrf.js` ships (GAP-RESOLUTION-PLAN T1), ALL state-changing requests (POST/PUT/PATCH/DELETE) MUST include `X-CSRF-Token`. Until then, bearer auth only.
+- **Rate limits:** Public endpoints ≈ 100 req / 15 min. Protected endpoints are **NOT unlimited** — per-platform limiters apply (`server/lib/platform-client.js`: Meta 5/s, Google 8/s, etc.). The "unlimited" claim in older copies is wrong.
+- **Multi-tenant:** every route is scoped by `user_id` (resolve-owner-platform). Tokens per-user; system token only for fan-out.
 
 ## Authentication
-
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | POST | `/api/auth/register` | Public | Register user |
-| POST | `/api/auth/login` | Public | Login, returns JWT + refresh token |
+| POST | `/api/auth/login` | Public | Login → JWT + refresh |
 | POST | `/api/auth/refresh-token` | Public | Refresh JWT |
 | POST | `/api/auth/logout` | Public | Revoke refresh token |
+| GET/POST | `/api/auth/facebook/deauthorize` | Protected | FB data-deletion callback |
+| GET/POST | `/api/auth/google/deauthorize` | Protected | Google data-deletion callback |
 
-## Campaigns
-
+## Campaigns (Meta-centric primary)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/campaigns` | List campaigns |
@@ -20,191 +28,56 @@ All endpoints are prefixed with `/api`. Protected endpoints require `Authorizati
 | GET | `/api/campaigns/:id` | Get campaign |
 | PUT | `/api/campaigns/:id` | Update campaign |
 | DELETE | `/api/campaigns/:id` | Delete campaign |
-| POST | `/api/campaigns/:id/activate` | Activate campaign |
-| POST | `/api/campaigns/:id/pause` | Pause campaign |
+| POST | `/api/campaigns/:id/activate` | Activate |
+| POST | `/api/campaigns/:id/pause` | Pause |
+| POST | `/api/campaigns/:id/duplicate` | Duplicate (Zero-Ads-Manager A2) |
+| PATCH | `/api/ads/:id` | Update single ad (pause per-ad) |
 
-## Meta/Facebook Ads
+## Per-Platform (primary 8)
+Meta `/api/meta/*` · Google `/api/google-ads/*` · TikTok `/api/tiktok-ads/*` · LinkedIn `/api/linkedin-ads/*` · Pinterest `/api/pinterest-ads/*` · Snapchat `/api/snapchat-ads/*` · Twitter `/api/twitter-ads/*` · Microsoft `/api/microsoft-ads/*`.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/meta/accounts` | List ad accounts |
-| GET | `/api/meta/campaigns` | List campaigns |
-| POST | `/api/meta/sync` | Sync all Meta data |
-| GET | `/api/meta/content/video-status` | Video upload status |
-
-## Google Ads
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/google-ads/accounts` | List accounts |
-| GET | `/api/google-ads/accounts/:id/campaigns` | List campaigns |
-| GET | `/api/google-ads/accounts/:id/performance` | Performance data |
-| POST | `/api/google-ads/accounts/:id/campaigns` | Create campaign |
-| PATCH | `/api/google-ads/campaigns/:id` | Update campaign |
-| POST | `/api/google-ads/sync` | Sync all Google data |
-
-## TikTok Ads
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/tiktok-ads/accounts` | List advertisers |
-| GET | `/api/tiktok-ads/accounts/:id/campaigns` | List campaigns |
-| GET | `/api/tiktok-ads/accounts/:id/insights` | Performance data |
-| POST | `/api/tiktok-ads/accounts/:id/campaigns` | Create campaign |
-| PATCH | `/api/tiktok-ads/campaigns/:id` | Update campaign |
-| POST | `/api/tiktok-ads/sync` | Sync all TikTok data |
-
-## LinkedIn Ads
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/linkedin-ads/status` | Connection status |
-| GET | `/api/linkedin-ads/accounts` | List ad accounts |
-| GET | `/api/linkedin-ads/accounts/:id/campaigns` | List campaigns |
-| GET | `/api/linkedin-ads/accounts/:id/analytics` | Analytics data |
-| POST | `/api/linkedin-ads/accounts/:id/campaigns` | Create campaign |
-| PATCH | `/api/linkedin-ads/campaigns/:id` | Update campaign |
-| POST | `/api/linkedin-ads/sync` | Sync all LinkedIn data |
-
-## Pinterest Ads
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/pinterest-ads/status` | Connection status |
-| GET | `/api/pinterest-ads/accounts` | List ad accounts |
-| GET | `/api/pinterest-ads/accounts/:id/campaigns` | List campaigns |
-| GET | `/api/pinterest-ads/accounts/:id/analytics` | Analytics data |
-| POST | `/api/pinterest-ads/accounts/:id/campaigns` | Create campaign |
-| PATCH | `/api/pinterest-ads/campaigns/:id` | Update campaign |
-| POST | `/api/pinterest-ads/sync` | Sync all Pinterest data |
-
-## Snapchat Ads
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/snapchat-ads/status` | Connection status |
-| GET | `/api/snapchat-ads/organizations` | List organizations |
-| GET | `/api/snapchat-ads/accounts` | List ad accounts |
-| GET | `/api/snapchat-ads/accounts/:id/campaigns` | List campaigns |
-| GET | `/api/snapchat-ads/accounts/:id/campaigns/:cid/stats` | Campaign stats |
-| POST | `/api/snapchat-ads/accounts/:id/campaigns` | Create campaign |
-| PUT | `/api/snapchat-ads/accounts/:id/campaigns/:cid` | Update campaign |
-| POST | `/api/snapchat-ads/sync` | Sync all Snapchat data |
-
-## Twitter/X Ads
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/twitter-ads/status` | Connection status |
-| GET | `/api/twitter-ads/accounts` | List ad accounts |
-| GET | `/api/twitter-ads/accounts/:id/campaigns` | List campaigns |
-| GET | `/api/twitter-ads/accounts/:id/stats` | Account stats |
-| POST | `/api/twitter-ads/accounts/:id/campaigns` | Create campaign |
-| PUT | `/api/twitter-ads/accounts/:id/campaigns/:cid` | Update campaign |
-| POST | `/api/twitter-ads/sync` | Sync all Twitter data |
-
-## Microsoft/Bing Ads
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/microsoft-ads/status` | Connection status |
-| GET | `/api/microsoft-ads/accounts` | List accounts |
-| GET | `/api/microsoft-ads/accounts/:id/campaigns` | List campaigns |
-| GET | `/api/microsoft-ads/accounts/:id/performance` | Performance data |
-| POST | `/api/microsoft-ads/accounts/:id/campaigns` | Create campaign |
-| PATCH | `/api/microsoft-ads/accounts/:id/campaigns/:cid` | Update campaign |
-| POST | `/api/microsoft-ads/sync` | Sync all Microsoft data |
-
-## Settings
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/settings` | Get all settings |
-| PUT | `/api/settings` | Update settings |
-| GET | `/api/settings/accounts` | List connected accounts |
-| POST | `/api/settings/accounts` | Add platform account |
-| POST | `/api/settings/accounts/test` | Test account credentials |
-| POST | `/api/settings/accounts/activate` | Set active account |
-| DELETE | `/api/settings/accounts` | Remove account |
-
+Each exposes: `accounts`, `accounts/:id/campaigns`, `sync`, create/update campaign, `status`. (Full tables unchanged from prior version — verified present in `server/routes/<platform>-ads.js`.)
 
 ## MCP (Model Context Protocol)
-
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/mcp/sse` | Protected | SSE connection for MCP client |
-| POST | `/api/mcp/messages` | Protected | Send MCP message |
-| GET | `/api/mcp/status` | Protected | MCP server status |
-| POST | `/api/mcp/connect` | Protected | Connect to platform MCP |
-| POST | `/api/mcp/disconnect` | Protected | Disconnect platform MCP |
-| GET | `/api/mcp/tools/:platform` | Protected | List platform tools |
-| POST | `/api/mcp/call` | Protected | Call MCP tool |
+| GET | `/api/mcp/sse` | Protected | SSE stream |
+| POST | `/api/mcp/messages` | Protected | MCP message |
+| GET | `/api/mcp/status` | Protected | Server status |
+| POST | `/api/mcp/connect` / `disconnect` | Protected | Platform MCP link |
+| GET | `/api/mcp/tools/:platform` | Protected | List tools |
+| POST | `/api/mcp/call` | Protected | Call tool |
 
-## Reporting & Analytics
+> MCP is a **differentiator** (contested 2026 — PaidSync/Ryze). T5 expands write-access across all 22 adapters.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/reporting/unified` | Cross-platform unified report |
-| GET | `/api/reporting/widgets` | Dashboard widgets config |
-| GET | `/api/analytics` | Campaign analytics |
-| GET | `/api/reports/export/csv` | Download campaign data as CSV |
-| GET | `/api/attribution/summary` | Attribution summary |
-| GET | `/api/attribution/matches` | Conversion attribution matches |
+## Reporting / Creative / Automation / Competitor
+- Reporting: `/api/reporting/unified`, `/api/reporting/widgets`, `/api/reports/export/csv`, `/api/attribution/summary|matches`, `/api/analytics`
+- Creative: `/api/creative/library*`, `/api/creative/fatigue/detect/:id`, `/api/creative/generate`, `/api/creative/score`
+- Automation: `/api/automation/rules` (CRUD) — compound `{all}/{any}` evaluator
+- A/B: `/api/ab-tests` (CRUD)
+- Competitor: `/api/competitor-spy/insights`, `/api/competitor-spy/analyze`
 
-## Creative
+## 📌 Documented Gaps (exist, not enumerated above — verify in `server/routes/`)
+| Area | Where |
+|---|---|
+| Audiences (saved + lookalike) | `server/routes/audiences*` , `audience-service.js` |
+| Payments + OAuth onboarding | `server/routes/payments*`, `server/services/payments.js`, `auth.js` |
+| Realtime | `server/routes/realtime.js` + WS `/ws/realtime` (`realtime-service.js`) |
+| Webhook (Telegram) | `server/lib/meta-subscribe.js`, webhook router |
+| Dayparting hourly | `server/services/meta/index.js` `/hourly` breakdown |
+| Telegram bot commands | `server/bot/commands/*` (not HTTP — bot scope) |
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/creative/library` | List saved creatives |
-| POST | `/api/creative/library` | Save creative |
-| GET | `/api/creative/library/top` | Top performing creatives (scoped to user) |
-| PUT | `/api/creative/library/:id` | Update creative |
-| DELETE | `/api/creative/library/:id` | Delete creative |
-| POST | `/api/creative/library/:id/use` | Record creative usage (increments times_used) |
-| GET | `/api/creative/fatigue/detect/:id` | Detect creative fatigue |
-| POST | `/api/creative/generate` | Generate ad copies (AI) |
-| POST | `/api/creative/score` | Score creative quality |
-
-## Automation
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/automation/rules` | List automation rules |
-| POST | `/api/automation/rules` | Create rule |
-| PUT | `/api/automation/rules/:id` | Update rule |
-| DELETE | `/api/automation/rules/:id` | Delete rule |
-
-## A/B Tests
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/ab-tests` | List A/B tests |
-| POST | `/api/ab-tests` | Create test |
-| PUT | `/api/ab-tests/:id` | Update test |
-
-## Competitor Spy
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/competitor-spy/insights` | Get competitor insights |
-| POST | `/api/competitor-spy/analyze` | Analyze competitor |
+> **Action:** generate full endpoint map from `server/routes/` (a scripted `grep` → OpenAPI) is a good hygiene task; current doc is hand-maintained and lags.
 
 ## Health
-
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/health` | Public | Health check (`{"status":"ok"}`) |
+| GET | `/health` | Public | `{"status":"ok"}` |
+| GET | `/api/cf-health` | Public | Cloudflare health |
 
 ## Response Format
-
-All endpoints return:
 ```json
 { "success": true, "data": { ... } }
 // or
 { "success": false, "error": "message" }
 ```
-
-## Rate Limits
-
-- Public endpoints: 100 requests per 15 minutes
-- Protected endpoints: unlimited (JWT required)

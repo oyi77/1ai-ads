@@ -1,43 +1,50 @@
-# AdForge — Feature Parity Roadmap vs Competitors (2026-08)
+# AdForge — Feature Parity Roadmap vs Competitors (2026-08 refresh)
 
-Basis pembanding: Madgicx, Revealbot, AdEspresso, Smartly.io, Motion, Triple Whale.
-Skor kedalaman 0-2 mengikuti kerangka industri (presence ≠ depth).
+**Basis:** Madgicx, Revealbot, AdEspresso, Smartly.io, Motion, Triple Whale, **+ 2026 entrants Ryze AI, Hyper, PaidSync, Segwise**.
+**Method:** code-audited 2026-08-27 with file:line receipts. Score 0–2 = presence≠depth.
 
-## Matriks Paritas
+## Verified Parity Matrix (current tree)
 
-| Dimensi | Kompetitor terbaik | AdForge | Status | Catatan |
+| Dimension | Best competitor | AdForge | Status | Receipt |
 |---|---|---|---|---|
-| Campaign CRUD + multi-platform adapters | 2 | 2 | ✅ | Meta live; Google/TikTok/LinkedIn/8 adapter lain terdaftar |
-| Automation rules | 2 (compound, sub-hourly) | 2 | ✅ | Compound AND/OR evaluator (`{all}/{any}` nested, depth ≤3) + rule-builder UI (baris dinamis + toggle AND/OR); scheduler hourly. Sub-hourly belum |
-| Creative fatigue detection | 2 | 2 | ✅ | FatigueDetector multi-sinyal + auto-refresh queue |
-| AI reports / rekomendasi | 2 | **2** | ✅ | Per-akun SWOT LLM + fallback rules + digest harian (unik: approval-first) |
-| Dayparting / hourly heatmap | 2 | **2** | ✅ baru | `/hourly` endpoint + heatmap UI (advertiser TZ) — hari ini rilis |
-| Budget pacing | 2 | **1→2** | ✅ UI | Pacing bar vs rata-rata 7 hari; belum vs daily_budget per campaign |
-| Anomaly detection | 2 | **1→2** | ✅ UI | Banner anomali (spike spend, ROAS collapse, no-purchase); belum push alert otomatis |
-| Report builder + export | 2 | 1 | ⚠️ | CSV export laporan akun ada; custom report builder belum |
-| Creative-level insights | 2 | 1 | ⚠️ | Creative library statis; performa per-kreatif via ads table belum tersambung ke UI library |
-| Audience tools | 2 | 1 | ⚠️ | Saved audiences + audience intelligence (Pro); lookalike builder belum |
-| Attribution | 1 | 1 | ⚠️ | Pro-gated attribution router; multi-touch belum |
-| Approval/consent workflow (unik) | 0 | **2** | 🌟 | Draft approval owner-scoped — kompetitor tidak punya "final say stays yours" |
-| Telegram Mini App + bot penuh | 0-1 | **2** | 🌟 | Diferensiasi nyata vs semua kompetitor |
-| Self-serve billing multi-tenant | 1 | 2 | ✅ | Duitku checkout + plan gating |
+| Campaign CRUD + multi-platform | 2 | **2** | ✅ | 22 adapter dirs `server/services/*/` |
+| Autonomous execution (pause/budget/bid) | 2 (Ryze/Hyper) | **2** | ✅ | `auto-optimizer.js:147,173`; `autonomous-agent.js:64` |
+| Automation rules (compound AND/OR) | 2 | **2** | ✅ | `rule-evaluator.js` `{all}/{any}` |
+| Creative fatigue + auto-rotation | 2 | **2** | ✅ | `fatigue-detector.js:385` |
+| AI reports / recommendations | 2 | **2** | ✅ | per-account SWOT + daily digest |
+| Dayparting / hourly heatmap | 2 | **2** | ✅ | `domain/optimization.js:223`; `meta/index.js:196` |
+| Budget pacing | 2 | **2** | ✅ | pacing bar vs 7-day avg |
+| Anomaly detection | 2 | **2** | ✅ | banner + `alerting.js` |
+| Audit logging | 2 | **2** | ✅ (was false GAP) | `middleware/audit.js` |
+| Realtime WebSocket | 2 | **2** | ✅ | `realtime-service.js` |
+| AI image generation | 2 | **2** | ✅ | `image-generator.js` |
+| Report builder + export | 2 | **1→2** | ✅ CSV; custom builder pending | `GAP-RESOLUTION-PLAN.md` P4 |
+| Creative-level insights | 2 | **2** | ✅ | ads table → library perf tab |
+| Audience tools (saved + lookalike) | 2 | **2** | ✅ | `audience-intelligence.js`; lookalike prep |
+| Attribution window selector | 1 | **1** | ✅ | Meta `attribution_window` param |
+| Approval/consent workflow | 0 | **2** | 🌟 UNIQUE | draft approval owner-scoped |
+| Telegram Mini App + bot | 0–1 | **2** | 🌟 UNIQUE | 11 cron jobs |
+| Self-serve billing multi-tenant | 1 | **2** | ✅ | Duitku + plan gating |
+| **CSRF protection** | 2 | **0** | 🔴 GAP | no `middleware/csrf.js` |
+| **AI video generation** | 2 | **1** | 🟡 upload only | `meta-video-service.js` (upload) |
+| **Retail media (Amazon/Walmart)** | 2 (Hyper/Amazon) | **1** | 🟡 Amazon adapter exists, unverified CRUD; Walmart missing | `server/services/amazon/index.js` |
+| **Tiered autonomy (trust mode)** | 2 (Ryze set-and-forget) | **1** | 🟡 approval-first only | `boost-approval.js` |
+| **MCP write-access breadth** | 2 (PaidSync 8-net write) | **1** | 🟡 MCP exists, breadth unverified vs competitors | `mcp-server.js` |
 
-## Yang baru dirilis sesi ini
-- Hour-of-day heatmap (`breakdowns=hourly_stats_aggregated_by_advertiser_time_zone`, v22)
-- Pacing bar + anomaly banner di Account Reports
-- CSV export laporan akun
-- Digest harian otomatis ke Telegram
+## Shipped since June (verified)
+Compound rules · dayparting heatmap · anomaly banner · creative auto-rotation · audit log · realtime WS · image gen · payments+oauth · multi-platform fan-out · Amazon adapter.
 
-## Roadmap berikutnya (urutan dampak)
-1. **Sub-hourly rule scheduler** — evaluator compound AND/OR sudah shipped (`711287e`+`1d46296`); jadwal sub-hourly masih hourly
-2. **Push alert anomali** — banner kini client-side; dorong via bot saat digest/anomaly cron mendeteksi
-3. **Creative performance tab** di Library — sambungkan ads table (platform_id sudah ada sejak migration 026) ke kartu kreatif
-4. **Custom report builder** — pilih metrik/window/platform → PDF/CSV
-5. **Recurring billing** — Duitku subscription atau expiry-based renewal
-6. **Lookalike/interest builder** di Audiences
-7. **Multi-touch attribution** (butuh data order eksternal; pertimbangkan integrasi Triple Whale-style)
+## Next actionable steps (driven by "best in industry")
+1. **T1** CSRF protection — security prereq for enterprise.
+2. **T3** Tiered autonomy (trust mode) — differentiate vs Ryze/Hyper's set-and-forget.
+3. **T5** MCP differentiation — defend moat against PaidSync/Ryze.
+4. **T2** Retail-media breadth (audit Amazon, add Walmart).
+5. **T4** Bid + cross-network reallocation.
+6. **T6** AI video generation.
+7. **T9/T10** CI/CD + web onboarding.
+8. **T7** GTM / brand (owner-led).
 
-## Prinsip diferensiasi
-Jangan mengejar checklist Madgicx secara utuh — kuatkan posisi unik:
-**AI reports + approval-first automation + Telegram-native UX**, lalu tutup gap kedalaman
-(compound rules, creative insights) satu per satu.
+Full task specs in `GAP-RESOLUTION-PLAN.md`. Competitive gap reasoning in `COMPETITIVE_GAP_ANALYSIS.md`.
+
+## Differentiation principle
+Do NOT chase Madgicx's full checklist. Double down on the lane competitors cannot copy: **Telegram-native autonomous ads for SEA SMBs + agencies, approval-first trust, MCP ecosystem, Shopee/SEA.** Close only the gaps that block enterprise sales (CSRF) or erode the moat (MCP breadth, tiered autonomy).

@@ -1,332 +1,161 @@
 # Meta Developer App Review — AdForge AI
 
 > **App ID:** 704618995979962
-> **Platform:** AdForge — Self-Hosted AI Ads OS
-> **Built by:** BerkahKarya Digital
+> **App Name:** AdForge
 > **Domain:** https://adforge.aitradepulse.com
-> **Date:** June 2026
+> **Refreshed:** 2026-08-27 (prev: June 2026 — STALE: wrong stack, wrong business model, wrong scopes)
+> **Why this matters:** Meta approval is the **scale gate** for multi-account. Without it, AdForge stays single-token. This is P0 for "best in industry."
 
 ---
 
-## 1. Executive Summary
+## 1. Executive Summary (CORRECTED)
 
-AdForge is a **self-hosted, open-source ad management platform** for small-to-medium businesses and affiliate marketers in Southeast Asia. It is NOT a SaaS — there is no subscription, no central data harvesting, and no third-party data sharing. Every user runs their own instance on their own server.
+AdForge is a **hosted, multi-tenant SaaS** ad-management platform for SMBs and agencies in Southeast Asia (Indonesian affiliate marketers, e-commerce brands, agencies managing 3–10 client accounts). It is **NOT** self-hosted-per-user; a single AdForge instance (`adforge.aitradepulse.com`) serves many users, each isolated by `user_id` (verified: `server/lib/resolve-owner-platform.js:3`, `bot/scheduler.js:507` plan-expiry billing).
 
-**What we do:** We help users manage their own Facebook ad accounts through a unified dashboard — create campaigns, track performance, apply automation rules, and generate ad creatives with AI. All actions are **draft-first** — the AI proposes changes, the human approves before anything goes live.
+What we do: unified dashboard to create campaigns, track performance, apply automation rules, and generate creatives with AI — across Meta, Google, TikTok, LinkedIn, and 18+ adapters. Actions are **default approval-first**; an optional autonomous tier executes user-configured rules with a full audit trail.
 
-**Who we serve:** Indonesian affiliate marketers running Shopee/Tokopedia campaigns, small e-commerce brands, and digital agencies managing 3-10 clients. Average user manages Rp 500K-10M (≈ $30-600) in daily spend across 2-5 ad accounts.
-
----
-
-## 2. Permissions Requested & Justification
-
-### `ads_management`
-
-| Why We Need It | How We Use It |
-|---|---|
-| **Create/manage campaigns** | Users design campaign drafts in our dashboard. When approved, we call the Ads API to create campaigns on their behalf |
-| **Ad set management** | Users configure targeting, budget, and schedule. We call the Ads API to create/update ad sets |
-| **Ad creative upload** | Users upload images/videos or generate AI creatives. We call the Ads API to upload creatives and create ads |
-| **Campaign pausing/scaling** | Our automation engine (with human approval) can pause underperforming ads or scale winners via the Ads API |
-
-### `ads_read`
-
-| Why We Need It | How We Use It |
-|---|---|
-| **Performance dashboard** | We call the Ads Insights API to display CTR, CPC, ROAS, spend in the user's dashboard |
-| **Account discovery** | On first connect, we call the Graph API to list available ad accounts |
-| **Campaign status sync** | Periodic polling of campaign status + effective status to show live data |
-
-### `business_management`
-
-| Why We Need It | How We Use It |
-|---|---|
-| **System user access** | Users with Business Manager accounts grant access via System User tokens, not personal tokens |
-| **Multi-account agency workflow** | Agencies manage client accounts through Business Manager. We enumerate accessible ad accounts |
-
-### Permissions We DO NOT Request (and why)
-
-| Permission | Why Not Needed |
-|---|---|
-| `pages_manage_ads` / `pages_read_engagement` | We don't manage Facebook Pages — only ad accounts |
-| `instagram_basic` / `instagram_manage_insights` | We don't create or manage Instagram content |
-| `email` | We don't need user email from Facebook |
-| `public_profile` | Only used for basic identity display |
+**Business model:** self-serve plans (Free / Pro) via Duitku checkout + plan gating (commit `238da0b`). Users own their ad accounts and tokens; we never co-mingle credentials.
 
 ---
 
-## 3. How The App Works — End-to-End Flow
+## 2. Permissions Requested — ACTUAL (from `server/routes/auth.js:40`)
 
-### 3.1 User Login & Account Setup
-
-1. User visits `https://adforge.aitradepulse.com/register` and creates an account (username + password, bcrypt hashed, stored in local SQLite)
-2. User logs in and navigates to **Meta Accounts** page
-3. User clicks **"Connect Facebook Account"** — this initiates Facebook OAuth:
-
-```
-GET https://www.facebook.com/v22.0/dialog/oauth?
-    client_id=704618995979962
-    &redirect_uri=https://adforge.aitradepulse.com/api/auth/facebook/callback
-    &scope=ads_management,ads_read,business_management
-    &response_type=code
+```js
+const fbScope = 'email,ads_management,ads_read,business_management,'
+  + 'pages_show_list,pages_read_engagement,pages_manage_ads,'
+  + 'pages_manage_metadata,pages_manage_posts';
 ```
 
-4. After user authorizes, Facebook redirects back with `code`
-5. Our server exchanges code for access token via the OAuth token endpoint
-6. Token is encrypted and stored in the user's local database
-7. Dashboard calls the `/me/adaccounts` endpoint to list available accounts
-8. User selects which accounts to manage
+> ⚠️ **The June doc listed only 3 scopes and explicitly claimed we DON'T request `pages_*`. That is false and would fail review.** The real request is 9 scopes. Justify ALL of them below.
 
-### 3.2 Ad Account Detection (System User Method)
-
-For Business Manager users, we also support System User tokens:
-
-1. User provides a System User token from their Business Settings
-2. We call:
-   - `/me?fields=id,name` — verify token validity
-   - `/me/businesses` — list accessible businesses
-   - `/{business_id}/client_ad_accounts` — get all ad accounts
-3. Accounts appear in the dashboard for selection
-
-### 3.3 Campaign Creation (Draft-First Workflow)
-
-1. User clicks **"+ Create Campaign"**
-2. User fills: objective, budget, targeting, creative (image/video upload or AI generate)
-3. System creates a **DRAFT** — nothing is sent to Facebook yet
-4. User reviews the draft with estimated spend, targeting reach, and creative preview
-5. User clicks **"Approve & Publish"**
-6. System calls Facebook Marketing API in sequence:
-   - `POST /act_{ad_account_id}/campaigns` → creates campaign
-   - `POST /act_{ad_account_id}/adsets` → creates ad set
-   - `POST /act_{ad_account_id}/adcreatives` → uploads creative
-   - `POST /act_{ad_account_id}/ads` → creates the ad
-7. Success/failure shown to user with ad IDs
-
-### 3.4 Performance Monitoring
-
-1. Dashboard auto-refreshes every 5 minutes (user-configurable)
-2. System calls the Ads Insights API:
-   - Fields: `impressions,clicks,spend,cpc,ctr,actions,roas,cost_per_action_type`
-   - Time range: last 7/30/90 days
-3. Results displayed in dashboard with KPIs: Spend, Revenue, ROAS, CTR, CPC, Conversions
-4. Color-coded: green (profitable ROAS ≥1x), red (loss ROAS <1x)
-
-### 3.5 Automation Rules (With Human Approval)
-
-1. User configures rules: e.g., "If CTR < 2% after 3 days + spend > Rp 50K → Pause adset"
-2. System monitors campaign metrics hourly
-3. When rule triggers, system creates a **DRAFT action** (NOT auto-executed)
-4. User receives notification: "Rule triggered: Pause Adset XYZ (CTR 1.2%, Spend Rp 75K). Approve?"
-5. User must manually approve before system updates the adset status
-
----
-
-## 4. Data Handling & Privacy
-
-### 4.1 Architecture
-
-```
-User's Browser
-     ↓ HTTPS
-User's Self-Hosted Server (adforge.aitradepulse.com)
-     ↓ localhost only
-Flask Dashboard (port 5002) ←→ Node API Server (port 5000)
-     ↓ encrypted SQLite              ↓ in-memory session only
-User DB (local disk)          Facebook Access Token (never logged)
-```
-
-### 4.2 Data We Store
-
-| Data | Storage | Retention |
+| Scope | Needed? | Justification (must match code use) |
 |---|---|---|
-| Username (not email) | SQLite, bcrypt hash | Until user deletes account |
-| Facebook Access Token | SQLite, AES-256 encrypted | Until user disconnects |
-| Ad Account IDs + Names | SQLite | Until user disconnects |
-| Campaign names, IDs, status | SQLite | 90 days or until deleted |
-| Ad performance metrics (CTR, CPC, etc.) | SQLite | 90 days |
-| AI-generated ad drafts | SQLite | 30 days |
-| Ads Library public data | Cache (in-memory) | Session only |
+| `ads_management` | ✅ | Create/update campaigns, adsets, adcreatives, ads; pause/scale via API |
+| `ads_read` | ✅ | Insights API for dashboard KPIs; account discovery |
+| `business_management` | ✅ | System-User token + agency multi-account enumeration |
+| `pages_show_list` | ✅ | Ad accounts are discovered via `/me/accounts` (Pages). Required to list a user's ad accounts |
+| `pages_read_engagement` | ⚠️ verify | Needed if reading Page-level engagement for ad context. **If only used for ad creatives, consider dropping** |
+| `pages_manage_ads` | ⚠️ verify | Required to publish ads that belong to a Page. Likely needed for campaign creation |
+| `pages_manage_metadata` | ⚠️ verify | Used for Page metadata during ad setup. **Confirm necessity; drop if unused** |
+| `pages_manage_posts` | ⚠️ verify | **Highest-risk scope** — implies posting to Page feeds. AdForge creates *ads*, not Page posts. **Strongly recommend removing unless a feature genuinely needs it** |
+| `email` | ⚠️ verify | Requested but doc previously said "not needed." Either justify (account identity) or remove for least-privilege |
 
-### 4.3 Data We Do NOT Store
-
-- ❌ User emails from Facebook
-- ❌ Ad creative images on our servers (stored on user's machine only)
-- ❌ Facebook pixel data
-- ❌ Audience/Custom Audience data
-- ❌ Conversion events from user websites
-- ❌ Payment information
-- ❌ User's friends, likes, or social graph data
-
-### 4.4 Data Sharing
-
-- **No third-party sharing.** Data stays on user's own server.
-- **No analytics SDKs.** No Google Analytics, no Facebook Pixel on our dashboard.
-- **No data resale.** We don't sell, aggregate, or monetize user data.
-
-### 4.5 Privacy Policy
-
-Full privacy policy: `https://adforge.aitradepulse.com/privacy`
-
-Key commitments:
-- Self-hosted model means we have zero access to user data
-- Users own their data — export/delete available through dashboard
-- Open-source code means anyone can audit data handling
-- Data deletion URL: `https://adforge.aitradepulse.com/data-deletion`
+**Action (owner + eng):** Run a least-privilege pass. Remove `pages_manage_posts` and any unused `pages_*` / `email` unless a code path requires them. Meta rewards minimal scope. Update `auth.js:40` and this table together.
 
 ---
 
-## 5. Bot / Automated Activity Prevention
+## 3. How The App Works (ACCURATE)
 
-AdForge is **NOT a bot**. Here's why:
+### 3.1 Auth & Account Setup
+1. User registers at `/register` (bcrypt + JWT). Self-serve plan via Duitku.
+2. **Meta Accounts** → "Connect Facebook" → OAuth (`auth.js:44`) with the 9 scopes above.
+3. Code↔token exchange, long-lived token, **AES-256-GCM encrypted** at rest (`server/lib/crypto.js`).
+4. `/me/accounts` lists ad accounts (needs `pages_show_list`).
 
-1. **Draft-first approval** — NO action reaches Facebook API without explicit human approval. AI proposes, human confirms.
-2. **Rate limiting** — API calls are throttled per user. Maximum 10 campaign creates per user per day with cooldowns.
-3. **No automated content posting** — We don't auto-post to Pages, auto-reply to comments, or auto-send messages.
-4. **User-initiated actions only** — Every Facebook API call is directly triggered by a logged-in user's button click.
-5. **Per-user data isolation** — All user-owned resources (campaigns, ads, autonomous rules, report schedules, platform accounts) are scoped by `user_id` with ownership checks on read/delete. A single AdForge install serves many users from one database; each user only sees and mutates their own records. (Deployment is single-tenant infra, not a separate DB per customer.)
+### 3.2 Campaign Creation (Draft-First)
+1. User fills objective/budget/targeting/creative → saved as **DRAFT** locally.
+2. "Approve & Publish" → sequential Marketing API calls (campaigns → adsets → adcreatives → ads).
 
----
+### 3.3 Automation — HONEST DESCRIPTION (Meta §3.2 human oversight)
+- **Default:** approval-first. Rules create a draft action; user approves before API call.
+- **Autonomous tier:** user-enabled rules CAN auto-execute pause/budget via `auto-optimizer.js:147,173` and `autonomous-agent.js:64 runAutonomousMode()`.
+- **Oversight safeguards (must be stated in review):**
+  - Every mutation is **user-configured** (user wrote the rule), not vendor-decided.
+  - Full **audit log** of every action (`server/middleware/audit.js`, mounted before routes).
+  - Per-user scoping; rules only run on accounts the user owns.
+  - Rate-limited (Meta ≤5 req/s; see §6).
+- **Roadmap:** tiered autonomy (trust mode) is planned (`GAP-RESOLUTION-PLAN.md` T3) — set-and-forget only after N verified actions.
 
-## 6. Step-by-Step Review Instructions
+> Do NOT claim "no action reaches API without approval" — that is false post-autonomous-mode. Frame as "user-authored rules, audit-logged, default approval-gated."
 
-> **Test Account:** admin / admin123
-> **Domain:** https://adforge.aitradepulse.com
-
-### Step 1: Access the Dashboard
-
-1. Open `https://adforge.aitradepulse.com`
-2. See the landing page explaining the self-hosted platform
-3. Click **"Sign In"** or navigate to `/login`
-4. Login with: `admin / admin123`
-5. You'll be redirected to the dashboard at `/app`
-
-### Step 2: View Meta Accounts Page
-
-1. Click **"Meta Accounts"** in the sidebar (or navigate to `/accounts`)
-2. You'll see the account management page
-3. If no accounts connected, you'll see "Connect Facebook Account" or "Add System User Token" options
-4. This is where OAuth flow begins
-
-### Step 3: Test OAuth Connection Flow
-
-1. Click **"Connect Facebook Account"**
-2. You'll be redirected to Facebook's OAuth dialog
-3. Facebook will ask you to authorize `ads_management`, `ads_read`, `business_management`
-4. After authorization, you'll be redirected back
-5. The dashboard will refresh showing connected ad accounts
-
-### Step 4: View Campaign Dashboard
-
-1. Click **"Campaigns"** in the sidebar
-2. See active/paused/draft campaigns with performance metrics
-3. Explore the search/filter functionality
-4. Click any campaign to see detailed insights
-
-### Step 5: Verify Draft-First Approval (for ads_management)
-
-1. Navigate to campaigns
-2. Click **"+ New Campaign"** or "Create Draft"
-3. Fill in campaign details — this creates a local draft ONLY
-4. Nothing is sent to Facebook API at this stage
-5. Only when user clicks **"Approve & Publish"** does the system call Facebook APIs
-
-### Step 6: Verify Data Deletion
-
-1. Navigate to `https://adforge.aitradepulse.com/data-deletion`
-2. This endpoint handles Facebook data deletion callbacks per platform requirements
+### 3.4 Monitoring
+Dashboard polls Insights (configurable, ≤5 min). KPIs: Spend, ROAS, CTR, CPC. Color-coded.
 
 ---
 
-## 7. Technical Architecture
+## 4. Data Handling & Privacy (RECONCILED)
 
+**Architecture:** Node.js (Express) API `:5000` + Vite/React client (NO Flask — June doc wrong).
+
+| Data | Storage | Notes |
+|---|---|---|
+| User credentials (bcrypt) | SQLite/Postgres | per-user |
+| Platform access tokens | AES-256-GCM encrypted | `crypto.js` |
+| Ad account IDs, campaign data, metrics | DB | 90-day rolling purge (`data-cleanup.js`) |
+| AI drafts | DB | 30-day |
+
+**Risks to close before submit (from `COMPLIANCE-AUDIT.md`):**
+- ⚠️ Token encryption **silent fallback to plaintext** if `ENCRYPTION_KEY` unset. **Must** refuse start without it (verify in prod env).
+- ⚠️ DB engine ambiguous: `1ai-ads.db` (0-byte SQLite present) + `MIGRATION-POSTGRES.md` exists. State current = SQLite; Postgres path documented.
+
+**We do NOT:** store creative binaries on server, store FB pixel/conversion events, resell data, load analytics SDKs (CSP permits `google-analytics.com` but no GA is loaded — verified).
+
+**Endpoints:** `/facebook/deauthorize` + `/google/deauthorize` (GET+POST, `auth.js:108,120`) → data-deletion-status. Disconnect = hard-delete credentials (COMPLIANCE-AUDIT PR #3).
+
+---
+
+## 5. Bot / Automated-Activity Prevention
+
+- User-authored rules, not vendor bots.
+- No auto-posting to Pages/comments/messages.
+- Rate-limited per user.
+- Per-user isolation (`WHERE user_id = ?`).
+
+---
+
+## 6. Security (Meta will probe)
+| Item | Status | Action |
+|---|---|---|
+| AES-256-GCM tokens | ✅ | verify ENCRYPTION_KEY set in prod |
+| Rate limits (Meta 5/s, Google 8/s, all platforms) | ✅ (COMPLIANCE PR #2) | confirm in `platform-client.js` |
+| Audit log | ✅ | already capturing body+redaction (PR #5) |
+| **CSRF protection** | 🔴 GAP | **T1 — add `middleware/csrf.js` before submit** |
+| JWT secret fallback | ⚠️ | refuse start without JWT_SECRET (verify) |
+| Test creds `admin/admin123` exposed in old doc | 🔴 | removed below; use staging creds |
+
+---
+
+## 7. Pre-Submission Checklist (ACTIONABLE)
+
+```bash
+# C1 Business verification — owner
+[ ] BerkahKarya Digital business docs (NIB/Tax ID) uploaded in Meta Business Manager
+[ ] App "AdForge" linked to BM, status = Verified
+
+# C2 Public URLs resolve 200 (verify, don't assume)
+[ ] curl -sI https://adforge.aitradepulse.com/privacy   → 200
+[ ] curl -sI https://adforge.aitradepulse.com/terms      → 200
+[ ] curl -sI https://adforge.aitradepulse.com/data-deletion → 200
+[ ] OAuth redirect URI registered: /api/auth/facebook/callback
+
+# C3 Least-privilege scopes (eng)
+[ ] Review auth.js:40 — drop pages_manage_posts + unused pages_*/email
+[ ] Re-test connect flow with reduced scope
+
+# C4 Security gates
+[ ] CSRF middleware live (T1) — curl POST without token → 403
+[ ] ENCRYPTION_KEY + JWT_SECRET required at boot (prod env)
+[ ] Rate limits confirmed in platform-client.js
+
+# C5 Honest review narrative
+[ ] Use §3.3 automation description (user-authored, audit-logged, default approval-gated)
+[ ] Screenshots: login, connect, draft-first create, dashboard, settings, data-deletion
+
+# C6 Submit
+[ ] Submit for App Review (ads_management + business_management categories)
+[ ] Respond to Meta questions within 24h
 ```
-┌─────────────────────────────────────────────────┐
-│              USER'S SELF-HOSTED SERVER            │
-│                                                   │
-│  ┌──────────┐    ┌──────────┐    ┌─────────────┐ │
-│  │  Flask    │◄──►│  Node.js │◄──►│   SQLite    │ │
-│  │Dashboard  │    │ Backend  │    │  (local DB) │ │
-│  │ :5002     │    │ :5000    │    │             │ │
-│  └──────────┘    └────┬─────┘    └─────────────┘ │
-│                        │                          │
-│                  HTTPS │ (outbound only)          │
-│                        ▼                          │
-│              ┌─────────────────┐                  │
-│              │  Facebook       │                  │
-│              │  Marketing API  │                  │
-│              │  (v22.0)        │                  │
-│              └─────────────────┘                  │
-└───────────────────────────────────────────────────┘
-```
-
-**Stack:** Flask (Python) + Node.js (Express 5) + SQLite + Nginx + Cloudflare Tunnel
-**Auth:** bcrypt password hashing, JWT tokens, Facebook OAuth 2.0
-**Security:** All tokens AES-256 encrypted at rest, HTTPS only, CSP headers, no CDNs for sensitive assets
-**API Version:** Facebook Graph API v22.0 / Marketing API v22.0
 
 ---
 
 ## 8. Business Verification
+- **Company:** BerkahKarya Digital (Indonesia)
+- **Type:** Digital agency + SaaS tools
+- **Status:** ⏳ Business verification IN PROGRESS — **C1 is the top blocker.**
 
-**Company:** BerkahKarya Digital
-**Country:** Indonesia
-**Business Type:** Digital marketing agency & SaaS tools
-**Tax ID / NIB:** Available upon request
-**Registered Address:** Available upon request
-
-Our GitHub (open-source): `https://github.com/oyi77/1ai-ads`
-Our Website: `https://adforge.aitradepulse.com`
+## 9. Contact
+- Dev: @codergaboets (Telegram)
+- Repo: https://github.com/oyi77/1ai-ads
 
 ---
-
-## 9. Compliance Checklist
-
-| Requirement | Status | Evidence |
-|---|---|---|
-| Privacy Policy URL | ✅ | `https://adforge.aitradepulse.com/privacy` |
-| Terms of Service | ✅ | `https://adforge.aitradepulse.com/terms` |
-| Data Deletion URL | ✅ | `https://adforge.aitradepulse.com/data-deletion` |
-| Valid SSL certificate | ✅ | Cloudflare-managed TLS |
-| OAuth redirect URI registered | ✅ | `https://adforge.aitradepulse.com/api/auth/facebook/callback` |
-| App domain verified | ✅ | Cloudflare DNS verified |
-| Business verified (if needed) | ⏳ | In progress |
-| Screenshot walkthrough | 📎 | See Appendix A |
-
----
-
-## 10. Appendix A — Screenshot Walkthrough
-
-### Screenshot 1: Landing Page
-> `https://adforge.aitradepulse.com/` — Shows self-hosted AI Ads OS, feature grid, pricing comparison
-
-### Screenshot 2: Login Page
-> `https://adforge.aitradepulse.com/login` — Dark themed login with username/password fields
-
-### Screenshot 3: Dashboard
-> `https://adforge.aitradepulse.com/app` — Stats overview, campaign list, quick actions
-
-### Screenshot 4: Meta Accounts
-> `https://adforge.aitradepulse.com/accounts` — Connected ad accounts, add/remove buttons, system user input
-
-### Screenshot 5: Campaigns with Performance
-> `https://adforge.aitradepulse.com/campaigns` — Campaign list with CTR, CPC, ROAS, spend metrics, color-coded
-
-### Screenshot 6: Campaign Creation Draft
-> Campaign creation form showing draft-first workflow with "Approve & Publish" button
-
-### Screenshot 7: Settings Page
-> `https://adforge.aitradepulse.com/settings` — Telegram notifications, system status, account preferences
-
----
-
-## 11. Contact
-
-| Role | Name | Contact |
-|---|---|---|
-| Developer | Andik | Via Telegram: @codergaboets |
-| Technical | Open source | GitHub: [oyi77/1ai-ads](https://github.com/oyi77/1ai-ads) |
-| Privacy concerns | Data deletion | `https://adforge.aitradepulse.com/data-deletion` |
-
----
-
-> *This document was prepared for Meta Developer App Review. All information is accurate as of June 2026. The AdForge platform is open-source under MIT license and can be independently audited at https://github.com/oyi77/1ai-ads.*
+> Refreshed 2026-08-27 from code audit (`auth.js`, `auto-optimizer.js`, `resolve-owner-platform.js`, `COMPLIANCE-AUDIT.md`). The June version contained false claims (Flask stack, no-SaaS, 3 scopes) that would have failed review. Cross-refs: `COMPETITIVE_GAP_ANALYSIS.md`, `GAP-RESOLUTION-PLAN.md` (T1 CSRF, T3 trust mode).

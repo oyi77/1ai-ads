@@ -1,89 +1,71 @@
 # AdForge Architecture
 
-## Overview
+> **Refreshed:** 2026-08-27. Verified against `server/`, `client/`, `db/`. Corrects stale claims (vanilla-JS frontend, 8 platforms, Scalev.id, `meta-api.js` filenames, 17 tables).
 
-AdForge is a full-stack ad management platform built with Express 5 (backend) and Vite/vanilla JS (frontend). It integrates with 8 advertising platforms through a unified architecture.
-
-## Stack
-
+## Stack (CORRECTED)
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Vite 8 + vanilla JS SPA, hash-based routing |
-| Backend | Express 5, ESM |
-| Database | SQLite via better-sqlite3 |
-| Auth | JWT + bcrypt + refresh tokens |
-| AI/LLM | OmniRoute proxy (configurable provider) |
-| Payments | Scalev.id integration |
-| Realtime | WebSocket (ws) |
+| Frontend | **React 18 + TypeScript + Vite**, `react-router-dom`, `@tanstack/react-query`, `lucide-react` (NOT vanilla JS / hash routing) |
+| Backend | Express 5 (ESM), Node.js |
+| Database | SQLite (better-sqlite3) current; PostgreSQL migration path documented (`MIGRATION-POSTGRES.md`) |
+| Auth | JWT + bcrypt + refresh tokens; **ENCRYPTION_KEY + JWT_SECRET required at boot** (throws if unset) |
+| AI/LLM | OmniRoute proxy (multi-model routing) |
+| Payments | Configurable gateway — **midtrans default**, duitku supported (`server/services/payments.js:27`) |
+| Realtime | WebSocket (`ws`) — `realtime-service.js` |
+| Bot | Telegram (`node-telegram-bot-api` / grammy) — `server/bot/` |
 
-## Integrated Ad Platforms
+## Integrated Platforms — 22 adapters (NOT 8)
+`server/services/` contains **22 platform adapter directories** (meta, google, tiktok, linkedin, twitter, snapchat, pinterest, microsoft, **amazon**, apple, baidu, criteo, kakao, line, reddit, spotify, taboola, thetradedesk, whatsapp, yandex, shopee, +). Amazon adapter (`amazon/index.js`, `AmazonAdsAPI`) provides **partial retail-media** coverage.
 
-| Platform | Service | API Version | Auth |
-|----------|---------|-------------|------|
-| Meta/Facebook | `meta-api.js` | Graph API v22.0 | Access token (query param) |
-| Google Ads | `google-ads-api.js` | REST API v18 | OAuth 2.0 + developer token |
-| TikTok Ads | `tiktok-api.js` | Business API v1.3 | Access token (header) |
-| LinkedIn Ads | `linkedin-ads-api.js` | Marketing REST API | OAuth 2.0 Bearer + version headers |
-| Pinterest Ads | `pinterest-ads-api.js` | Marketing API v5 | OAuth 2.0 Bearer |
-| Snapchat Ads | `snapchat-ads-api.js` | Marketing API v1 | OAuth 2.0 Bearer |
-| Twitter/X Ads | `twitter-ads-api.js` | Ads API v12 | OAuth 2.0 Bearer |
-| Microsoft/Bing Ads | `microsoft-ads-api.js` | Advertising API v13 | OAuth 2.0 + developer token |
-
-## Layered Architecture
-
-```
-client/src/views/  →  HTTP calls  →  server/routes/  →  server/services/  →  server/repositories/  →  db/
-```
-
-- **Routes** (`server/routes/`): Express router factories. Input validation, response formatting.
-- **Services** (`server/services/`): Business logic. Platform API clients, AI integration, automation.
-- **Repositories** (`server/repositories/`): SQLite data access layer.
-- **Lib** (`server/lib/`): Shared utilities — base platform API, error types, logger, rate limiter, auth.
-
-## Platform Integration Pattern
-
-All platform API clients extend `BasePlatformApiClient` (`server/lib/base-platform-api.js`):
-
-```javascript
-class MyPlatformAPI extends BasePlatformApiClient {
-  constructor(settingsRepo) {
-    super('platformName', settingsRepo, { baseUrl: '...' });
-  }
-  _getToken() { /* resolve from settingsRepo or throw ConfigurationError */ }
-  async getCampaigns(accountId, opts) { /* ... */ }
-  async createCampaign(accountId, params) { /* ... */ }
-  async syncAllAccounts() { /* returns standardized { account, campaigns, insights, syncedAt } */ }
+Each adapter follows the **BasePlatformApiClient** pattern:
+```js
+class XAdsAPI extends BasePlatformApiClient {
+  constructor(settingsRepo) { super('platform', settingsRepo, { baseUrl }); }
+  _getToken() { /* resolve per-user token or throw ConfigurationError */ }
+  async getCampaigns(accountId, opts) { ... }
+  async createCampaign(accountId, params) { ... }
+  async syncAllAccounts() { /* → standardized {account, campaigns, insights, syncedAt} */ }
 }
 ```
+**Filename convention (CORRECTED):** `server/services/<platform>/index.js` + `manifest.js` (e.g. `server/services/meta/index.js`, `server/services/google/index.js`) — NOT `meta-api.js`.
 
-Each platform has:
-1. **Service** (`server/services/<platform>-api.js`) — API client extending BasePlatformApiClient
-2. **Route** (`server/routes/<platform>-ads.js`) — Express router factory
-3. **Tests** (`tests/unit/services/<platform>-api.test.js`) — Vitest unit tests
+## Layered Architecture (CORRECTED)
+```
+client/src/ (React SPA)
+   ↓ HTTP (api.ts, X-CSRF-Token pending T1)
+server.js → app.js
+   → server/routes/        Express routers (validation, formatting, ownership 404)
+   → server/services/      Business logic + 22 platform clients + AI/automation
+   → server/domain/        Pure decision logic (optimization.js, creative.js) ← was omitted
+   → server/repositories/  SQLite/PG data access
+   → server/lib/           base-platform-api, rate-limiter, auth, crypto, validate
+   → server/middleware/    auth, audit (✅), rbac  ← CSRF missing (T1)
+   → server/bot/           Telegram commands + 11 cron jobs ← was omitted
+```
+
+- **Routes** (`server/routes/`): routers + validation + per-user ownership checks.
+- **Services** (`server/services/`): 83 services; platform clients, AI, automation, reporting.
+- **Domain** (`server/domain/`): framework-agnostic rules — Dayparting engine (`optimization.js:223`), creative fatigue/scoring. Unit-testable, no I/O.
+- **Bot** (`server/bot/`): Telegram-native UX — unique differentiator. 11 cron jobs (scheduler.js).
+- **Lib** (`server/lib/`): shared — `base-platform-api.js`, `platform-client.js` (rate limiters), `crypto.js` (AES-256-GCM), `validate.js`.
 
 ## Wiring
+- `server.js` — entry; attaches `realtime-service`, starts server.
+- `server/app.js` — mounts middleware (audit BEFORE routes), routers, services, CSP.
+- `server/app/services.js` — instantiates services (incl. `ImageGenerator`).
+- `server/app/routers.js` — mounts route handlers.
 
-- `server/app/services.js` — instantiates all service classes
-- `server/app/routers.js` — mounts all route handlers
-- `server/app/repositories.js` — creates all repository instances
+## Database — 24 tables (NOT 17)
+`db/schema.sql` defines **24 tables** (users, campaigns, ads, platform_accounts, automation_rules, autonomous_rules, audit_log, performance_history, payments, webhook_events, creative_library, audiences, …). Migrations in `db/migrations/`. Current default DB file: `1ai-ads.db` (root); path via `DB_PATH`.
 
-## Frontend
+## Security (CORRECTED)
+- JWT + refresh tokens; **boot refuses without `JWT_SECRET` + `ENCRYPTION_KEY`**.
+- **AES-256-GCM** credential encryption at rest (`crypto.js`).
+- **Audit log** — every mutation logged with request body + redaction (`middleware/audit.js`, mounted before routes).
+- Rate limiting — per-platform (`platform-client.js`).
+- Input validation — `validate.js`.
+- ⚠️ **CSRF protection MISSING** — `middleware/` has no `csrf.js`. Tracked as **T1** (must ship before Meta review).
+- ⚠️ CORS — restrict `CORS_ORIGIN` to production domain.
 
-- `client/src/app.js` — SPA router, route registration, nav
-- `client/src/views/` — view renderers (one per page)
-- `client/src/lib/` — shared utilities (api client, router, store, escape)
-- `client/src/components/` — reusable UI components
-
-Key views: Dashboard, Campaigns, Ads, Landing Pages, Analytics, Settings (with per-platform account management), Platforms Hub, Research, Optimizer, Trending, Competitor Spy, AI Suggestions.
-
-## Database
-
-17 tables in `db/schema.sql` with migrations in `db/migrations/`. Key tables: users, campaigns, ads, platform_accounts, automation_rules, performance_history, payments, webhook_events.
-
-## Security
-
-- JWT authentication with refresh tokens
-- Rate limiting on public endpoints
-- CORS configuration
-- Input validation via `server/lib/validate.js`
-- Password hashing via bcryptjs
+## Multi-Tenant SaaS
+Single AdForge instance serves many users; all resources scoped by `user_id` (`server/lib/resolve-owner-platform.js`, `resolve-user-platform.js`). System/global token only for fan-out sync, never to read stored creds.
