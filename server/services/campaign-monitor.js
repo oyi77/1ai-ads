@@ -1,6 +1,7 @@
 import { createLogger } from '../lib/logger.js';
 import { MetaAdsAPI } from './meta/index.js';
 import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
+import { getPlatformSync } from '../platforms/index.js';
 
 const log = createLogger('campaign-monitor');
 
@@ -27,28 +28,41 @@ export class CampaignMonitorService {
   }
 
   /**
-   * Resolve a Meta API client bound to the account owner (multi-tenant).
-   * If userId is provided and the owner has a bound token, use that token.
-   * Falls back to the system metaApi for legacy/system-owned accounts.
+   * Resolve a platform API client bound to the account owner (multi-tenant).
+   * For 'meta' the legacy system metaApi is the fallback when no owner token.
+   * For other platforms only a bound owner token yields a usable client;
+   * otherwise returns null and the caller returns an unsupported/empty shape.
    */
-  _ownerApi(accountId, userId) {
+  _ownerApi(accountId, userId, platform = 'meta') {
     if (userId && this.platformAccountsRepo) {
-      const token = resolveOwnerPlatformToken('meta', userId, {
+      const token = resolveOwnerPlatformToken(platform, userId, {
         platformAccountsRepo: this.platformAccountsRepo,
         settingsRepo: this.settingsRepo,
       });
-      if (token) return MetaAdsAPI.withToken(token);
+      if (token) {
+        if (platform === 'meta') return MetaAdsAPI.withToken(token);
+        const PlatformClass = getPlatformSync(platform, this.settingsRepo);
+        if (PlatformClass) {
+          const api = new PlatformClass();
+          api.setActiveAccount(null, token, true);
+          return api;
+        }
+      }
     }
-    return this.metaApi || null;
+    // Legacy/system-owned fallback: Meta only.
+    if (platform === 'meta') return this.metaApi || null;
+    return null;
   }
 
   /**
    * Fetch current campaign status for an ad account.
    */
-  async getAccountStatus(accountId, userId = null) {
+  async getAccountStatus(accountId, userId = null, platform = 'meta') {
     try {
-      const api = this._ownerApi(accountId, userId);
-      if (!api) return this._emptyStatus(accountId);
+      const api = this._ownerApi(accountId, userId, platform);
+      // Account-level insights exist only on Meta today. Without it, return the
+      // structured empty status (no fake data).
+      if (!api || typeof api.getAccountInsights !== 'function') return this._emptyStatus(accountId, platform);
       const campaigns = await api.getCampaigns(accountId);
       const active = campaigns.filter(c => c.status === 'active');
       const paused = campaigns.filter(c => c.status === 'paused');
@@ -63,6 +77,7 @@ export class CampaignMonitorService {
 
       return {
         accountId,
+        platform,
         activeCampaigns: active.length,
         pausedCampaigns: paused.length,
         totalCampaigns: campaigns.length,
@@ -75,18 +90,20 @@ export class CampaignMonitorService {
         fetchedAt: new Date().toISOString(),
       };
     } catch (err) {
-      log.warn('getAccountStatus failed, returning empty', { accountId, error: err.message });
-      return this._emptyStatus(accountId);
+      log.warn('getAccountStatus failed, returning empty', { accountId, platform, error: err.message });
+      return this._emptyStatus(accountId, platform);
     }
   }
 
   /**
    * Return health score (0-100) based on multiple signals.
    */
-  async getAccountHealth(accountId, userId = null) {
+  async getAccountHealth(accountId, userId = null, platform = 'meta') {
     try {
-      const api = this._ownerApi(accountId, userId);
-      if (!api) return { accountId, score: 0, grade: 'N/A', factors: [{ name: 'API unavailable', impact: 0, detail: 'Meta API not configured' }], fetchedAt: new Date().toISOString() };
+      const api = this._ownerApi(accountId, userId, platform);
+      if (!api || typeof api.getAccountInsights !== 'function') {
+        return { accountId, platform, score: 0, grade: 'N/A', factors: [{ name: 'API unavailable', impact: 0, detail: 'Platform account insights not supported' }], fetchedAt: new Date().toISOString() };
+      }
       const [campaigns, todayInsights, weekInsights] = await Promise.all([
         api.getCampaigns(accountId),
         api.getAccountInsights(accountId, { datePreset: 'today' }).catch(() => null),
@@ -156,24 +173,28 @@ export class CampaignMonitorService {
 
       return {
         accountId,
+        platform,
         score,
         grade: score >= 80 ? 'A' : score >= 60 ? 'B' : score >= 40 ? 'C' : 'D',
         factors,
         fetchedAt: new Date().toISOString(),
       };
     } catch (err) {
-      log.warn('getAccountHealth failed', { accountId, error: err.message });
-      return { accountId, score: 0, grade: 'N/A', factors: [{ name: 'API unavailable', impact: 0, detail: err.message }], fetchedAt: new Date().toISOString() };
+      log.warn('getAccountHealth failed', { accountId, platform, error: err.message });
+      return { accountId, platform, score: 0, grade: 'N/A', factors: [{ name: 'API unavailable', impact: 0, detail: err.message }], fetchedAt: new Date().toISOString() };
     }
   }
 
   /**
    * Check for campaigns that need attention.
    */
-  async getAlerts(accountId, userId = null) {
+  async getAlerts(accountId, userId = null, platform = 'meta') {
     try {
-      const api = this._ownerApi(accountId, userId);
-      if (!api) return { accountId, alerts: [], count: 0, error: 'Meta API not configured', fetchedAt: new Date().toISOString() };
+      const api = this._ownerApi(accountId, userId, platform);
+      // Campaign-level insights exist only on Meta today.
+      if (!api || typeof api.getCampaignInsights !== 'function') {
+        return { accountId, platform, alerts: [], count: 0, error: 'Platform campaign insights not supported', fetchedAt: new Date().toISOString() };
+      }
       const campaigns = await api.getCampaigns(accountId);
       const alerts = [];
 
@@ -250,21 +271,24 @@ export class CampaignMonitorService {
         }
       }
 
-      return { accountId, alerts, count: alerts.length, fetchedAt: new Date().toISOString() };
+      return { accountId, platform, alerts, count: alerts.length, fetchedAt: new Date().toISOString() };
     } catch (err) {
-      log.warn('getAlerts failed', { accountId, error: err.message });
-      return { accountId, alerts: [], count: 0, error: err.message, fetchedAt: new Date().toISOString() };
+      log.warn('getAlerts failed', { accountId, platform, error: err.message });
+      return { accountId, platform, alerts: [], count: 0, error: err.message, fetchedAt: new Date().toISOString() };
     }
   }
 
   /**
    * Daily performance trend for the last N days.
    */
-  async getPerformanceTrend(accountId, days = 7, userId = null) {
+  async getPerformanceTrend(accountId, days = 7, userId = null, platform = 'meta') {
     try {
-      // Meta insights with time_increment gives daily breakdown
-      const api = this._ownerApi(accountId, userId);
-      if (!api) return { accountId, days, daily: [], error: 'Meta API not configured', fetchedAt: new Date().toISOString() };
+      // Meta insights with time_increment gives daily breakdown. Other platforms
+      // do not expose this raw endpoint; return an unsupported shape.
+      const api = this._ownerApi(accountId, userId, platform);
+      if (!api || typeof api._get !== 'function') {
+        return { accountId, platform, days, daily: [], error: 'Platform performance trend not supported', fetchedAt: new Date().toISOString() };
+      }
       const data = await api._get(`/${accountId}/insights`, {
         fields: 'spend,impressions,clicks,ctr,cpc,actions,cost_per_action_type',
         time_increment: '1',
@@ -288,10 +312,10 @@ export class CampaignMonitorService {
         };
       });
 
-      return { accountId, days, daily, fetchedAt: new Date().toISOString() };
+      return { accountId, platform, days, daily, fetchedAt: new Date().toISOString() };
     } catch (err) {
-      log.warn('getPerformanceTrend failed', { accountId, error: err.message });
-      return { accountId, days, daily: [], error: err.message, fetchedAt: new Date().toISOString() };
+      log.warn('getPerformanceTrend failed', { accountId, platform, error: err.message });
+      return { accountId, platform, days, daily: [], error: err.message, fetchedAt: new Date().toISOString() };
     }
   }
 
@@ -299,10 +323,12 @@ export class CampaignMonitorService {
    * Check if any campaigns should be auto-paused:
    * spend > 2x daily budget with 0 conversions.
    */
-  async autoPauseCheck(accountId, userId = null) {
+  async autoPauseCheck(accountId, userId = null, platform = 'meta') {
     try {
-      const api = this._ownerApi(accountId, userId);
-      if (!api) return { accountId, shouldPause: false, campaigns: [], count: 0, error: 'Meta API not configured', fetchedAt: new Date().toISOString() };
+      const api = this._ownerApi(accountId, userId, platform);
+      if (!api || typeof api.getCampaignInsights !== 'function') {
+        return { accountId, platform, shouldPause: false, campaigns: [], count: 0, error: 'Platform campaign insights not supported', fetchedAt: new Date().toISOString() };
+      }
       const campaigns = await api.getCampaigns(accountId);
       const toPause = [];
 
@@ -334,14 +360,15 @@ export class CampaignMonitorService {
 
       return {
         accountId,
+        platform,
         shouldPause: toPause.length > 0,
         campaigns: toPause,
         count: toPause.length,
         fetchedAt: new Date().toISOString(),
       };
     } catch (err) {
-      log.warn('autoPauseCheck failed', { accountId, error: err.message });
-      return { accountId, shouldPause: false, campaigns: [], count: 0, error: err.message, fetchedAt: new Date().toISOString() };
+      log.warn('autoPauseCheck failed', { accountId, platform, error: err.message });
+      return { accountId, platform, shouldPause: false, campaigns: [], count: 0, error: err.message, fetchedAt: new Date().toISOString() };
     }
   }
 
@@ -354,9 +381,10 @@ export class CampaignMonitorService {
     return alerts;
   }
 
-  _emptyStatus(accountId) {
+  _emptyStatus(accountId, platform = 'meta') {
     return {
       accountId,
+      platform,
       activeCampaigns: 0,
       pausedCampaigns: 0,
       totalCampaigns: 0,
@@ -365,7 +393,7 @@ export class CampaignMonitorService {
       spendThisWeek: 0,
       impressionsToday: 0,
       clicksToday: 0,
-      alerts: [{ severity: 'info', type: 'api_unavailable', message: 'Meta API not configured or unavailable' }],
+      alerts: [{ severity: 'info', type: 'api_unavailable', message: 'Platform API not configured or unavailable' }],
       fetchedAt: new Date().toISOString(),
     };
   }

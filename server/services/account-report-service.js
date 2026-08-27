@@ -9,6 +9,7 @@
  *  - avg 7d     : last_7d totals ÷ 7
  */
 import { createLogger } from '../lib/logger.js';
+import { getPlatformSync } from '../platforms/index.js';
 
 const log = createLogger('account-report');
 
@@ -40,21 +41,42 @@ export class AccountReportService {
   constructor({ llmClient } = {}) {
     this.llmClient = llmClient || null;
   }
+  async buildReport(metaApi, accountId, accountName = accountId, { sinceDate = null, attributionWindows = null, platform = 'meta' } = {}) {
+    // Resolve the platform API client. For 'meta' the caller may pass the
+    // already-token-bound MetaAdsAPI instance. For other platforms, if the
+    // passed api already implements getAccountInsights, use it directly
+    // (duck-typing for tests and callers that bind their own client).
+    // Otherwise, resolve via getPlatformSync and bind the owner token.
+    let api = metaApi;
+    if (platform !== 'meta' && typeof api.getAccountInsights !== 'function') {
+      const PlatformClass = getPlatformSync(platform);
+      if (!PlatformClass) {
+        return this._unsupportedReport(accountId, accountName, platform, 'unknown platform');
+      }
+      api = new PlatformClass();
+    }
 
-  async buildReport(metaApi, accountId, accountName = accountId, { sinceDate = null, attributionWindows = null } = {}) {
+    // Feature-detect account-level insights. Only Meta implements
+    // getAccountInsights today; other adapters expose campaign-level
+    // insights with different signatures. When absent, return a clearly
+    // structured unsupported report — never crash, never fabricate zeros.
+    if (typeof api.getAccountInsights !== 'function') {
+      return this._unsupportedReport(accountId, accountName, platform, 'getAccountInsights not implemented');
+    }
+
     const awOpts = attributionWindows ? { attributionWindows } : {};
     const windows = [
-      metaApi.getAccountInsights(accountId, { datePreset: 'today', ...awOpts }).catch(() => null),
-      metaApi.getAccountInsights(accountId, { datePreset: 'yesterday', ...awOpts }).catch(() => null),
-      metaApi.getAccountInsights(accountId, { datePreset: 'last_7d', ...awOpts }).catch(() => null),
+      api.getAccountInsights(accountId, { datePreset: 'today', ...awOpts }).catch(() => null),
+      api.getAccountInsights(accountId, { datePreset: 'yesterday', ...awOpts }).catch(() => null),
+      api.getAccountInsights(accountId, { datePreset: 'last_7d', ...awOpts }).catch(() => null),
     ];
-    // "Since last report" — Meta custom time_range from the stored report date to today
+    // "Since last report" — custom time_range from the stored report date to today
     let sinceInsightsPromise = Promise.resolve(null);
     if (sinceDate) {
       const since = new Date(sinceDate);
       const until = new Date();
       const fmt = (d) => d.toISOString().slice(0, 10);
-      sinceInsightsPromise = metaApi.getAccountInsights(accountId, {
+      sinceInsightsPromise = api.getAccountInsights(accountId, {
         timeRange: { since: fmt(since), until: fmt(until) },
       }).catch(() => null);
     }
@@ -79,6 +101,7 @@ export class AccountReportService {
     return {
       accountId: String(accountId).replace(/^act_/, ''),
       accountName,
+      platform,
       generatedAt: new Date().toISOString(),
       windows: { today: 'since midnight', yesterday: 'full day', avg7d: 'last 7 days / 7', ...(sinceDate ? { sinceLast: `since ${sinceDate}` } : {}) },
       summary,
@@ -87,6 +110,24 @@ export class AccountReportService {
       ...(sinceDate ? { sinceLastReport: sinceLast } : {}),
       anomalies: detectAnomalies({ summary, comparison }),
       ai,
+    };
+  }
+
+  _unsupportedReport(accountId, accountName, platform, reason) {
+    return {
+      accountId: String(accountId).replace(/^act_/, ''),
+      accountName,
+      platform,
+      supported: false,
+      reason,
+      generatedAt: new Date().toISOString(),
+      summary: derive(null),
+      comparison: {
+        yesterdayFullDay: derive(null),
+        avg7d: { spend: 0, purchases: 0, cpr: null, roas: null },
+      },
+      anomalies: [],
+      ai: null,
     };
   }
 

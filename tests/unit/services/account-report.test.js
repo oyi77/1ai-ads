@@ -4,6 +4,16 @@ vi.mock('../../../server/lib/logger.js', () => ({
   createLogger: () => ({ info: () => {}, error: () => {}, warn: () => {}, debug: () => {} }),
 }));
 
+vi.mock('../../../server/platforms/index.js', () => ({
+  getPlatformSync: vi.fn((platform) => {
+    return class MockPlatform {
+      constructor() {}
+      setActiveAccount() {}
+    };
+  }),
+  listPlatformKeys: vi.fn(() => ['meta', 'google', 'tiktok']),
+}));
+
 import { AccountReportService, deterministicRecommendations } from '../../../server/services/account-report-service.js';
 
 describe('AccountReportService', () => {
@@ -59,5 +69,39 @@ describe('AccountReportService', () => {
 
     const winning = deterministicRecommendations(summary, comparison);
     expect(winning.actions).toMatch(/Naikkan budget/i);
+  });
+  it('returns unsupported report when platform lacks getAccountInsights', async () => {
+    const api = {
+      // No getAccountInsights method - simulates Google/TikTok/LinkedIn/etc.
+      getCampaigns: vi.fn().mockResolvedValue([]),
+    };
+    const svc = new AccountReportService({ llmClient: null });
+    const report = await svc.buildReport(api, '12345', 'Test Account', { platform: 'google' });
+
+    expect(report.accountId).toBe('12345');
+    expect(report.platform).toBe('google');
+    expect(report.supported).toBe(false);
+    expect(report.reason).toBe('getAccountInsights not implemented');
+    expect(report.summary.spend).toBe(0);
+    expect(report.anomalies).toEqual([]);
+    expect(report.ai).toBeNull();
+  });
+
+  it('buildReport works with non-meta platform that implements getAccountInsights', async () => {
+    const api = {
+      getAccountInsights: vi.fn(async (_id, { datePreset }) => {
+        if (datePreset === 'today') return { spend: 50000, impressions: 20000, clicks: 500, linkClicks: 300, ctr: 2.0, cpc: 100, conversions: 2, revenue: 100000 };
+        if (datePreset === 'yesterday') return { spend: 40000, conversions: 2, revenue: 80000 };
+        return { spend: 300000, conversions: 10, revenue: 500000 };
+      }),
+    };
+    const svc = new AccountReportService({ llmClient: null });
+    const report = await svc.buildReport(api, '67890', 'TikTok Account', { platform: 'tiktok' });
+
+    expect(report.accountId).toBe('67890');
+    expect(report.platform).toBe('tiktok');
+    expect(report.supported).toBeUndefined(); // supported only set to false for unsupported
+    expect(report.summary.spend).toBe(50000);
+    expect(report.summary.roas).toBeCloseTo(2.0);
   });
 });

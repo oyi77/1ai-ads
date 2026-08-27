@@ -57,7 +57,8 @@ export function createAutonomousRouter(settingsRepo, platformAccountsRepo, campa
   // POST /api/autonomous/link-account - Link Facebook account to user
   router.post('/link-account', async (req, res) => {
     try {
-      const { userId, accountId, accountName, accessToken } = req.body;
+      const userId = req.user?.id;
+      const { accountId, accountName, accessToken } = req.body;
       if (!userId || !accountId || !accountName || !accessToken) {
         return res.status(400).json({ success: false, error: 'Missing required fields' });
       }
@@ -69,13 +70,12 @@ export function createAutonomousRouter(settingsRepo, platformAccountsRepo, campa
       res.status(500).json({ success: false, error: err.message });
     }
   });
-
   // POST /api/autonomous/check-campaigns - Trigger campaign check and rule evaluation
   router.post('/check-campaigns', async (req, res) => {
     try {
-      const { userId } = req.body;
+      const userId = req.user?.id;
       if (!userId) {
-        return res.status(400).json({ success: false, error: 'User ID is required' });
+        return res.status(400).json({ success: false, error: 'User ID required' });
       }
 
       const results = await autonomousAgent.checkCampaigns(userId);
@@ -93,7 +93,8 @@ export function createAutonomousRouter(settingsRepo, platformAccountsRepo, campa
   // POST /api/autonomous/rules - Create a new automation rule
   router.post('/rules', async (req, res) => {
     try {
-      const { userId, name, condition, action, priority } = req.body;
+      const userId = req.user?.id;
+      const { name, condition, action, priority } = req.body;
       if (!userId || !name || !condition || !action) {
         return res.status(400).json({ success: false, error: 'Missing required fields' });
       }

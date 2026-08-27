@@ -61,6 +61,14 @@ export function createApp(params) {
     next();
   });
 
+  // Correlation ID middleware — extract or generate X-Correlation-ID
+  app.use((req, res, next) => {
+    const corrId = req.headers['x-correlation-id'] || crypto.randomUUID();
+    req.correlationId = corrId;
+    res.setHeader('X-Correlation-ID', corrId);
+    next();
+  });
+
   app.use(cors({
     origin: config.corsOrigin,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -190,8 +198,9 @@ export function createApp(params) {
   createRouters({ app, repos, services });
 
   // Initialize Telegram bot (if TELEGRAM_BOT_TOKEN is set)
-  initBot(app, { repos, services });
-
+  const bot = initBot(app, { repos, services });
+  // Update _services with bot for alerting
+  app.locals._services.bot = bot;
   app.use((req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/assets') || req.path.startsWith('/t/') || req.path.startsWith('/favicon.ico')) {
       return next();
@@ -223,9 +232,11 @@ export function createApp(params) {
     dataCleanup: services.dataCleanup,
     fatigueDetector: services.fatigueDetector,
     capiMonitor: services.capiMonitor,
+    alertingService: services.alertingService,
     usersRepo: repos.usersRepo,
     platformAccountsRepo: repos.platformAccountsRepo,
     settingsRepo: repos.settingsRepo,
+    bot: null, // Will be set after bot init
   };
 
   return app;
@@ -233,7 +244,13 @@ export function createApp(params) {
 
 export function startServices(app) {
   const log = createLogger('app');
-  const { autonomousAgent, autoOptimizer, aiAgent, webhookProcessor, dataCleanup, fatigueDetector, capiMonitor, usersRepo, platformAccountsRepo, settingsRepo } = app.locals._services;
+  const { autonomousAgent, autoOptimizer, aiAgent, webhookProcessor, dataCleanup, fatigueDetector, capiMonitor, alertingService, usersRepo, platformAccountsRepo, settingsRepo, bot } = app.locals._services;
+
+  // Initialize alerting service with bot for notifications
+  if (alertingService && bot) {
+    alertingService.bot = bot;
+    log.info('Alerting service initialized with bot');
+  }
 
   autonomousAgent.runAutonomousMode();
   autoOptimizer.start();
@@ -247,11 +264,11 @@ export function startServices(app) {
   // Passing the internal UUID to the Graph API is what produced the repeated
   // `Object with ID '<uuid>' does not exist` 400s. Skip rows with no
   // ad_account_id and seeded demo rows (demo-meta-token-*) which aren't real
-  // Meta ad accounts.
+  // Meta accounts.
   capiMonitor.start(() => {
     const accounts = platformAccountsRepo.getAccounts('meta');
     return accounts
-      .filter(a => a.platform === 'meta' && a.user_id && a.credentials?.ad_account_id)
+      .filter(a => a.platform === 'meta' && a.user_id && a.is_active !== 0 && a.credentials?.ad_account_id)
       .map(a => {
         const raw = String(a.credentials.ad_account_id);
         const accountId = raw.startsWith('act_') ? raw : `act_${raw}`;

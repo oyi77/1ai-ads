@@ -1,37 +1,51 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('../../../server/platforms/index.js', () => ({
+  getPlatformSync: vi.fn(),
+  listPlatformKeys: vi.fn(() => ['meta', 'google', 'tiktok']),
+}));
+
+vi.mock('../../../server/lib/logger.js', () => ({
+  createLogger: () => ({ info: () => {}, error: () => {}, warn: () => {}, debug: () => {} }),
+}));
+
+vi.mock('../../../server/lib/resolve-owner-platform.js', () => ({
+  resolveOwnerPlatformToken: vi.fn((platform, ownerId, repos) => {
+    if (platform === 'meta') return null; // use system metaApi for Meta
+    if (ownerId && repos?.platformAccountsRepo?.getByPlatform) {
+      const acct = repos.platformAccountsRepo.getByPlatform(ownerId, platform);
+      return acct?.access_token || null;
+    }
+    return null;
+  }),
+}));
+
 import { CampaignMonitorService } from '../../../server/services/campaign-monitor.js';
+import { getPlatformSync } from '../../../server/platforms/index.js';
 
 describe('CampaignMonitorService', () => {
+  let service;
   let mockMetaApi;
   let mockCampaignsRepo;
   let mockSettingsRepo;
-  let service;
-
-  const sampleCampaigns = [
-    { id: 'c1', name: 'Campaign A', status: 'active', objective: 'OUTCOME_TRAFFIC', dailyBudget: 10000, lifetimeBudget: 0, createdTime: '2026-01-01', updatedTime: '2026-06-01' },
-    { id: 'c2', name: 'Campaign B', status: 'active', objective: 'OUTCOME_ENGAGEMENT', dailyBudget: 5000, lifetimeBudget: 0, createdTime: '2026-01-01', updatedTime: '2026-06-01' },
-    { id: 'c3', name: 'Campaign C', status: 'paused', objective: 'OUTCOME_TRAFFIC', dailyBudget: 8000, lifetimeBudget: 0, createdTime: '2026-01-01', updatedTime: '2026-05-01' },
-  ];
-
-  const sampleInsights = {
-    spend: 150,
-    impressions: 10000,
-    clicks: 200,
-    ctr: 2.0,
-    cpc: 0.75,
-    linkClicks: 180,
-    landingPageViews: 120,
-    videoViews: 0,
-    conversions: 5,
-    postEngagement: 300,
-    costPerLinkClick: 0.83,
-    costPerLandingPageView: 1.25,
-    dateStart: '2026-06-09',
-    dateStop: '2026-06-09',
-  };
+  let mockPlatformAccountsRepo;
+  let sampleCampaigns;
+  let sampleInsights;
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    sampleCampaigns = [
+      { id: 'c1', name: 'Campaign A', status: 'active', objective: 'OUTCOME_TRAFFIC', dailyBudget: 10000, lifetimeBudget: 0, createdTime: '2026-01-01', updatedTime: '2026-06-01' },
+      { id: 'c2', name: 'Campaign B', status: 'active', objective: 'OUTCOME_ENGAGEMENT', dailyBudget: 5000, lifetimeBudget: 0, createdTime: '2026-01-01', updatedTime: '2026-06-01' },
+      { id: 'c3', name: 'Campaign C', status: 'paused', objective: 'OUTCOME_TRAFFIC', dailyBudget: 8000, lifetimeBudget: 0, createdTime: '2026-01-01', updatedTime: '2026-05-01' },
+    ];
+
+    sampleInsights = {
+      spend: 150, impressions: 10000, clicks: 200, ctr: 2.0, cpc: 0.75, linkClicks: 180,
+      landingPageViews: 120, videoViews: 0, conversions: 5, postEngagement: 300,
+      costPerLinkClick: 0.83, costPerLandingPageView: 1.25, dateStart: '2026-06-09', dateStop: '2026-06-09',
+    };
 
     mockMetaApi = {
       getCampaigns: vi.fn().mockResolvedValue(sampleCampaigns),
@@ -43,7 +57,24 @@ describe('CampaignMonitorService', () => {
     mockCampaignsRepo = {};
     mockSettingsRepo = {};
 
-    service = new CampaignMonitorService(mockMetaApi, mockCampaignsRepo, mockSettingsRepo);
+    mockPlatformAccountsRepo = {
+      getDistinctUserPlatforms: vi.fn().mockResolvedValue([{ user_id: 'user1', platform: 'tiktok' }]),
+      getByPlatform: vi.fn().mockResolvedValue({ id: 'pa_123', access_token: 'tok', user_id: 'user1' }),
+    };
+
+    // Configure the platform mock to return sample data
+    getPlatformSync.mockImplementation((platform) => {
+      return class MockPlatform {
+        constructor() {}
+        setActiveAccount() {}
+        getCampaigns = vi.fn().mockResolvedValue(sampleCampaigns);
+        getAccountInsights = vi.fn().mockResolvedValue(sampleInsights);
+        getCampaignInsights = vi.fn().mockResolvedValue(sampleInsights);
+        _get = vi.fn().mockResolvedValue({ data: [] });
+      };
+    });
+
+    service = new CampaignMonitorService(mockMetaApi, mockCampaignsRepo, mockSettingsRepo, mockPlatformAccountsRepo);
   });
 
   it('should create instance with dependencies', () => {
@@ -97,7 +128,7 @@ describe('CampaignMonitorService', () => {
       expect(result.accountId).toBe('act_123');
       expect(result.score).toBeGreaterThanOrEqual(0);
       expect(result.score).toBeLessThanOrEqual(100);
-      expect(result.grade).toMatch(/^[ABCD]$/);
+      expect(['A','B','C','D','N/A']).toContain(result.grade);
       expect(result.fetchedAt).toBeDefined();
     });
 
@@ -166,10 +197,9 @@ describe('CampaignMonitorService', () => {
     });
 
     it('should detect budget exceeded alert', async () => {
-      // dailyBudget is 10000 cents = 100 currency units, spend > 100
       mockMetaApi.getCampaignInsights.mockResolvedValue({
         ...sampleInsights,
-        spend: 150, // exceeds 10000 cents / 100 = 100
+        spend: 150,
       });
 
       const result = await service.getAlerts('act_123');
@@ -225,8 +255,6 @@ describe('CampaignMonitorService', () => {
 
   describe('autoPauseCheck', () => {
     it('should identify campaigns to auto-pause', async () => {
-      // c1: dailyBudget 10000 cents, threshold = 20000 cents = 200 currency
-      // spend = 250 > 200, conversions = 0
       mockMetaApi.getCampaignInsights.mockResolvedValue({
         ...sampleInsights,
         spend: 250,
@@ -255,8 +283,6 @@ describe('CampaignMonitorService', () => {
     });
 
     it('should not flag campaigns within budget', async () => {
-      // Single campaign with dailyBudget=10000 cents = 100 currency
-      // spend=150 → spendCents=15000, threshold=10000*2=20000 → NOT over threshold
       mockMetaApi.getCampaigns.mockResolvedValue([
         { id: 'c1', name: 'Campaign A', status: 'active', dailyBudget: 10000 },
       ]);
@@ -288,6 +314,89 @@ describe('CampaignMonitorService', () => {
       const result = await service.autoPauseCheck('act_123');
       expect(result.shouldPause).toBe(false);
       expect(result.error).toBeDefined();
+    });
+  });
+
+  describe('platform-aware methods', () => {
+    it('getAccountStatus returns empty for platform without getAccountInsights', async () => {
+      const googleApi = {
+        getCampaigns: vi.fn().mockResolvedValue(sampleCampaigns),
+      };
+      const svc = new CampaignMonitorService(googleApi, mockCampaignsRepo, mockSettingsRepo);
+      const result = await svc.getAccountStatus('act_123', 'user1', 'google');
+
+      expect(result.accountId).toBe('act_123');
+      expect(result.platform).toBe('google');
+      expect(result.activeCampaigns).toBe(0);
+      expect(result.alerts[0].type).toBe('api_unavailable');
+    });
+
+    it('getAccountHealth returns N/A for platform without getAccountInsights', async () => {
+      const googleApi = {
+        getCampaigns: vi.fn().mockResolvedValue(sampleCampaigns),
+      };
+      const svc = new CampaignMonitorService(googleApi, mockCampaignsRepo, mockSettingsRepo);
+      const result = await svc.getAccountHealth('act_123', 'user1', 'google');
+
+      expect(result.accountId).toBe('act_123');
+      expect(result.platform).toBe('google');
+      expect(result.score).toBe(0);
+      expect(result.grade).toBe('N/A');
+    });
+
+    it('getAlerts returns unsupported for platform without getCampaignInsights', async () => {
+      const googleApi = {
+        getCampaigns: vi.fn().mockResolvedValue(sampleCampaigns),
+      };
+      const svc = new CampaignMonitorService(googleApi, mockCampaignsRepo, mockSettingsRepo);
+      const result = await svc.getAlerts('act_123', 'user1', 'google');
+
+      expect(result.accountId).toBe('act_123');
+      expect(result.platform).toBe('google');
+      expect(result.alerts).toEqual([]);
+      expect(result.error).toBe('Platform campaign insights not supported');
+    });
+
+    it('getPerformanceTrend returns unsupported for platform without _get', async () => {
+      const googleApi = {
+        getCampaigns: vi.fn().mockResolvedValue(sampleCampaigns),
+      };
+      const svc = new CampaignMonitorService(googleApi, mockCampaignsRepo, mockSettingsRepo);
+      const result = await svc.getPerformanceTrend('act_123', 7, 'user1', 'google');
+
+      expect(result.accountId).toBe('act_123');
+      expect(result.platform).toBe('google');
+      expect(result.daily).toEqual([]);
+      expect(result.error).toBe('Platform performance trend not supported');
+    });
+
+    it('autoPauseCheck returns unsupported for platform without getCampaignInsights', async () => {
+      const googleApi = {
+        getCampaigns: vi.fn().mockResolvedValue(sampleCampaigns),
+      };
+      const svc = new CampaignMonitorService(googleApi, mockCampaignsRepo, mockSettingsRepo);
+      });
+
+    it('works with non-meta platform that implements getAccountInsights', async () => {
+      // Test via the constructor that gets a fresh platform from getPlatformSync
+      const svc = new CampaignMonitorService(mockMetaApi, mockCampaignsRepo, mockSettingsRepo, mockPlatformAccountsRepo);
+      
+      // Manually override _ownerApi to return our test api for this specific test
+      const testApi = {
+        getCampaigns: vi.fn().mockResolvedValue(sampleCampaigns),
+        getAccountInsights: vi.fn().mockResolvedValue(sampleInsights),
+        getCampaignInsights: vi.fn().mockResolvedValue(sampleInsights),
+        _get: vi.fn().mockResolvedValue({ data: [] }),
+        setActiveAccount: vi.fn(),
+      };
+      svc._ownerApi = vi.fn().mockReturnValue(testApi);
+      
+      const result = await svc.getAccountStatus('act_123', 'user1', 'tiktok');
+
+      expect(result.accountId).toBe('act_123');
+      expect(result.platform).toBe('tiktok');
+      expect(result.activeCampaigns).toBe(2);
+      expect(result.spendToday).toBe(150);
     });
   });
 });

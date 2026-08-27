@@ -138,6 +138,7 @@ CREATE TABLE IF NOT EXISTS platform_accounts (
   is_active BOOLEAN DEFAULT 1,
   health_status TEXT DEFAULT 'ok',
   last_error TEXT,
+  last_sync DATETIME,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

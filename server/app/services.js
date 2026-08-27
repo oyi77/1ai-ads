@@ -51,6 +51,7 @@ import { CreativeLibraryRepository } from '../repositories/creative-library.js';
 import { DashboardWidgetsRepository } from '../repositories/dashboard-widgets.js';
 import { AccountReportService } from '../services/account-report-service.js';
 import { NangoAuthService } from '../services/nango-auth.js';
+import { AlertingService } from '../services/alerting.js';
 
 export function createServices({ db, repos, params }) {
   const llmClient = (params && params.llmClient) || new LLMClient({
@@ -84,7 +85,7 @@ export function createServices({ db, repos, params }) {
   const socialBridge = new SocialBridge(socialBridgeUrl, socialBridgeApiKey);
   const draftService = new DraftService(repos.draftsRepo, null);
 
-  const aiAgent = new AiAgent(repos.settingsRepo, repos.adsRepo, repos.campaignsRepo, llmClient, repos.suggestionsRepo, repos.landingRepo, draftService);
+  const aiAgent = new AiAgent(repos.settingsRepo, repos.adsRepo, repos.campaignsRepo, llmClient, repos.suggestionsRepo, repos.landingRepo, repos.draftsRepo, draftService);
 
   const shopeeAdapter = new ShopeeAdapter();
   const attributionService = new AttributionService(repos.attributionRepo, shopeeAdapter, repos.campaignsRepo, repos.adsRepo);
@@ -101,8 +102,6 @@ export function createServices({ db, repos, params }) {
     { metaAdsAPI: metaApi, googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI, platformAccountsRepo: repos.platformAccountsRepo },
     draftService
   );
-  // Close the approval loop: approveDraft replays the deferred rule action
-  // (details = {action, campaign}) via the same executor the live path uses.
   draftService.setExecutor((action, campaign) => _ruleEvaluator._applyAction(action, campaign));
   const autonomousAgent = new AutonomousAgent(
     repos.settingsRepo, repos.platformAccountsRepo, repos.campaignsRepo,
@@ -110,7 +109,6 @@ export function createServices({ db, repos, params }) {
     { metaAdsAPI: metaApi, googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI },
     draftService
   );
-  // Share the single RuleEvaluator instance so drafts replay through it.
   autonomousAgent.ruleEvaluator = _ruleEvaluator;
 
   const autoOptimizer = new AutoOptimizer(metaApi, repos.rulesRepo, repos.campaignsRepo, draftService, repos.platformAccountsRepo, repos.settingsRepo);
@@ -154,6 +152,9 @@ export function createServices({ db, repos, params }) {
   const accountReportService = new AccountReportService({ llmClient });
   const nangoAuth = new NangoAuthService();
 
+  // Alerting service
+  const alertingService = new AlertingService(null); // Bot will be set in app.js
+
   return {
     llmClient, mcpClient, adspirerClient, trendingService, paymentService,
     learningService, utmTagger, metaApi, creativeStudio, videoService,
@@ -165,7 +166,12 @@ export function createServices({ db, repos, params }) {
     draftService, facebookSystemUserService, campaignMonitorService,
     abTestService, fatigueDetector, unifiedReporter, bulkOperations,
     imageGenerator, audienceIntelligence, creativeScorer, whiteLabelService,
-    boostApproval, targeting, creativeLibraryRepo, dashboardWidgetsRepo,
-    accountReportService, nangoAuth,
+    capiMonitor, waIntelligence, autonomousAgent, autoOptimizer,
+    webhookProcessor, dataCleanup, adIntelligenceService, competitorSpyService,
+    draftService, facebookSystemUserService, campaignMonitorService,
+    abTestService, fatigueDetector, unifiedReporter, bulkOperations,
+    imageGenerator, audienceIntelligence, creativeScorer, whiteLabelService,
+    capiMonitor, waIntelligence, alertingService, boostApproval, targeting,
+    creativeLibraryRepo, dashboardWidgetsRepo, accountReportService, nangoAuth,
   };
 }

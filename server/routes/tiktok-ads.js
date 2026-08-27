@@ -27,7 +27,7 @@ function clientFor(req) {
     try {
       // Per-user: only the requesting user's own bound accounts (no cross-user leak).
       const rows = req.user?.id
-        ? platformAccountsRepo?.getAccounts?.('tiktok')?.filter(a => a.user_id === req.user.id) || []
+        ? platformAccountsRepo?.getAccounts?.('tiktok')?.filter(a => a.user_id === req.user.id && a.is_active !== 0) || []
         : [];
       const accounts = rows.map(a => ({
         id: a.account_name || a.id,
