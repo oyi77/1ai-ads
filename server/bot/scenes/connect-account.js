@@ -25,12 +25,9 @@ export const CANCEL_ROW = [{ text: '❌ Batal', callback_data: 'connect:cancel' 
 /** Shared scene-cancel callback — usable from any wizard via its own prefix. */
 export function handleSceneCancel(msg = '❌ Dibatalkan.') {
   return async (ctx) => {
-    try { await ctx.answerCbQuery(); } catch { /* stale button */ }
-    try {
-      ctx.wizard.state = {};
-      await ctx.scene.leave();
-    } catch { /* no active scene */ }
-    await ctx.reply(msg, { reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] } });
+    await ctx.answerCbQuery();
+    await ctx.reply(msg);
+    return ctx.scene.leave();
   };
 }
 
@@ -46,7 +43,7 @@ export const connectScene = new Scenes.WizardScene(
     ctx.wizard.state.platform = platform;
     await ctx.reply(
       `🔌 *Connecting ${platformLabel(platform)}*\n\n` +
-        'What would you like to name this connection? (e.g. "Main Google Ads")',
+      'What would you like to name this connection? (e.g. "Main Google Ads")',
       { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
@@ -61,8 +58,8 @@ export const connectScene = new Scenes.WizardScene(
     ctx.wizard.state.accountName = text;
     await ctx.reply(
       `Got it — *${text}*.\n\n` +
-        'Now paste the access token / API key for this account. ' +
-        'It is encrypted at rest and scoped to your Telegram user only.',
+      'Now paste the access token / API key for this account. ' +
+      'It is encrypted at rest and scoped to your Telegram user only.',
       { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
@@ -89,6 +86,10 @@ export const connectScene = new Scenes.WizardScene(
       });
       // Enforce single-active invariant: only the newly connected account stays active.
       repo.setActiveAccountForUser(platform, created.id, ctx.userId);
+      // Record first_sync milestone
+      if (repo.recordMilestone) {
+        repo.recordMilestone(ctx.userId, 'first_sync', { platform, accountId: created.id });
+      }
       log.info('Platform account connected via bot', {
         userId: ctx.userId,
         platform,
@@ -96,7 +97,7 @@ export const connectScene = new Scenes.WizardScene(
       });
       await ctx.reply(
         `✅ *${accountName}* connected for ${platformLabel(platform)}!\n\n` +
-          'You can manage this account from the web dashboard or /status.',
+        'You can manage this account from the web dashboard or /status.',
         { parse_mode: 'Markdown' }
       );
     } catch (err) {

@@ -3,7 +3,7 @@ import path from 'path';
 import config from '../config/index.js';
 import rateLimit from 'express-rate-limit';
 import { createTrackRouter } from '../routes/track.js';
-
+import { requireAuth } from '../middleware/auth.js';
 
 // ── Group Wrappers ──────────────────────────────────────────────
 import { createPagesGroupRouter } from '../routes/_pages.js';
@@ -16,13 +16,17 @@ import { createAiGroupRouter } from '../routes/_ai.js';
 import { createReportingGroupRouter } from '../routes/_reporting.js';
 import { createAutomationGroupRouter } from '../routes/_automation.js';
 import { createMcpGroupRouter } from '../routes/_mcp.js';
-import { createBoostRouter } from '../routes/boost.js';
+import { createPaymentsWebhookRouter } from '../routes/webhooks-payments.js';
 import { createWebhookRouter } from '../routes/webhooks.js';
 import { createUserWebhookRouter } from '../routes/webhooks-user.js';
-import { createWhatsappIntelligenceGroupRouter } from '../routes/_whatsapp-intelligence.js';
-import { createApprovalsRouter } from '../routes/approvals.js';
+import { createApiKeysRouter } from '../routes/api-keys.js';
 import { createMetaAppRouter } from '../routes/meta-app.js';
-
+import { createApprovalsRouter } from '../routes/approvals.js';
+import { createTeamRouter } from '../routes/team.js';
+import { createUsageRouter } from '../routes/usage.js';
+import { createOAuthRouter } from '../routes/oauth.js';
+import { createMilestonesRouter } from '../routes/milestones.js';
+import { createWhatsappIntelligenceGroupRouter } from '../routes/_whatsapp-intelligence.js';
 export function createRouters({ app, repos, services }) {
   const publicRateLimit = rateLimit({
     windowMs: config.rateLimitWindowMs,
@@ -32,7 +36,6 @@ export function createRouters({ app, repos, services }) {
     legacyHeaders: false,
     validate: { xForwardedForHeader: false },
   });
-
 
   const mcpClient = services.mcpClient;
 
@@ -74,13 +77,27 @@ export function createRouters({ app, repos, services }) {
   // ── Infrastructure ───────────────────────────────────────────
   app.use('/api', createMcpGroupRouter(deps));
 
-  // ── Boost Recommendations ────────────────────────────────────
-  app.use('/api/boost', createBoostRouter(deps));
+  // ── API Keys (customer self-serve) ────────────────────────
+  app.use('/api/api-keys', requireAuth, createApiKeysRouter(repos.paymentsRepo));
+  // ── Team (customer self-serve) ────────────────────────────
+  app.use('/api/team', requireAuth, createTeamRouter(repos.paymentsRepo, repos.usersRepo, services.mailer));
 
+  // ── OAuth (platform connections) ──────────────────────────
+  app.use('/api/oauth', requireAuth, createOAuthRouter(repos.settingsRepo, repos.platformAccountsRepo));
+
+  // ── Usage Meters (customer self-serve) ────────────────────
+  app.use('/api/usage', requireAuth, createUsageRouter(repos.paymentsRepo));
+
+  // ── Milestones (customer self-serve) ──────────────────────
+  app.use('/api/milestones', requireAuth, createMilestonesRouter(repos.paymentsRepo));
+
+  // ── Boost Recommendations ────────────────────────────────────
   // ── WhatsApp Intelligence ─────────────────────────────
   app.use('/', createWhatsappIntelligenceGroupRouter(deps));
   // ── Meta webhook (public, no auth) ───────────────────────
   app.use('/webhooks', createWebhookRouter(repos.webhookEventsRepo));
+  // ── Payment webhook (public, signature verified) ─────────
+  app.use('/api/payments/notify', createPaymentsWebhookRouter(services.paymentService));
   // ── Per-user Meta webhook (verify token = userId, signed w/ user app_secret) ──
   app.use('/webhooks/u', createUserWebhookRouter(repos.userMetaAppsRepo));
   // ── Per-user Meta App Creds (REST) ──────────────────────────
@@ -91,5 +108,4 @@ export function createRouters({ app, repos, services }) {
 
   // ── Approvals (API + server-rendered page; works even with SPA present) ──
   app.use('/', createApprovalsRouter({ repos, services }));
-
 }

@@ -472,7 +472,7 @@ export function handlePostCredentials(settingsRepo) {
     const credentials = req.body;
 
     const userId = req.user.id;
-    const accounts = settingsRepo.getAccounts(platform).filter(a => a.user_id === userId);
+    const accounts = settingsRepo.getAccounts(platform).filter(a => a.user_id === userId && a.is_active !== 0);
     const existingDefault = accounts.find(a => a.account_name === 'Default');
 
     if (existingDefault) {

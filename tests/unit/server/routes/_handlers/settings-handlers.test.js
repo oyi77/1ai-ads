@@ -4,7 +4,7 @@ vi.mock('../../../server/lib/logger.js', () => ({
   createLogger: () => ({ info: () => {}, error: () => {}, warn: () => {} }),
 }));
 
-import { handleListAccounts, handleGetCredentials, handleUpdateAccount, handleDeleteAccount } from '../../../../../server/routes/_handlers/settings-handlers.js';
+import { handleListAccounts, handleGetCredentials, handleUpdateAccount, handleDeleteAccount, handlePostCredentials } from '../../../../../server/routes/_handlers/settings-handlers.js';
 
 function makeRes() {
   return {
@@ -189,5 +189,25 @@ describe('settings-handlers — per-user account scoping', () => {
     handler(req, res);
 
     expect(res.body.data.configured).toBe(false);
+  });
+
+  it('handlePostCredentials excludes soft-deleted (is_active:0) accounts when resolving the existing Default', () => {
+    const repo = {
+      getAccounts: vi.fn(() => [
+        { id: 'a1', user_id: 'user-1', platform: 'meta', account_name: 'Default', is_active: 0, credentials: { access_token: 'OLD' } },
+        { id: 'a2', user_id: 'user-2', platform: 'meta', account_name: 'Default', is_active: 1, credentials: { access_token: 'OTHER' } },
+      ]),
+      updateAccount: vi.fn(),
+      addAccount: vi.fn(() => ({ id: 'a-new' })),
+    };
+    const handler = handlePostCredentials(repo);
+    const req = { params: { platform: 'meta' }, body: { access_token: 'NEW' }, user: { id: 'user-1' } };
+    const res = makeRes();
+
+    handler(req, res);
+
+    expect(repo.updateAccount).not.toHaveBeenCalled(); // soft-deleted a1 is filtered out → no resurrection
+    expect(repo.addAccount).toHaveBeenCalledTimes(1);   // fresh Default created for user-1 instead
+    expect(res.body.success).toBe(true);
   });
 });
