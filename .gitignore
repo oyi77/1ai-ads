@@ -26,6 +26,8 @@ data/**/*.csv
 data/**/*.txt
 data/**/*.md
 backups/
+# Customer PII export (phone/name/zip) — DO NOT COMMIT under any circumstance
+lookalike_ready/
 adforge.db
 .fb_token_0858
 

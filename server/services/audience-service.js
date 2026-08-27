@@ -29,6 +29,27 @@ export class AudienceService {
     });
   }
 
+  /**
+   * Ingest a customer contact list as a Meta Custom Audience.
+   * @param {string} actId - Meta ad account id (act_xxx)
+   * @param {{name:string, contacts:Array<string|{phone?:string}>}} opts
+   * @returns {Promise<{id:string}>} the created audience id (Meta shape)
+   */
+  async createCustomListAudience(actId, { name, contacts }) {
+    log.info('createCustomListAudience', { actId, name, count: contacts?.length });
+    const audience = await this.createAudience(actId, { name, subtype: 'CUSTOM' });
+    const id = audience?.id;
+    if (id && Array.isArray(contacts) && contacts.length) {
+      const users = contacts
+        .map(c => (typeof c === 'string' ? c : (c && (c.phone || c.Phone || c.PHONE))))
+        .filter(Boolean);
+      if (users.length) {
+        await this.addUsersToAudience(id, users, ['PHONE']);
+      }
+    }
+    return audience;
+  }
+
   async deleteAudience(audienceId) {
     log.info('deleteAudience', { audienceId });
     return this.meta._delete(`/${audienceId}`);

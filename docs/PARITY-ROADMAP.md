@@ -8,7 +8,7 @@ Skor kedalaman 0-2 mengikuti kerangka industri (presence ≠ depth).
 | Dimensi | Kompetitor terbaik | AdForge | Status | Catatan |
 |---|---|---|---|---|
 | Campaign CRUD + multi-platform adapters | 2 | 2 | ✅ | Meta live; Google/TikTok/LinkedIn/8 adapter lain terdaftar |
-| Automation rules | 2 (compound, sub-hourly) | 1 | ⚠️ | Rule engine single-condition + scheduler hourly. Compound AND/OR belum |
+| Automation rules | 2 (compound, sub-hourly) | 2 | ✅ | Compound AND/OR evaluator (`{all}/{any}` nested, depth ≤3) + rule-builder UI (baris dinamis + toggle AND/OR); scheduler hourly. Sub-hourly belum |
 | Creative fatigue detection | 2 | 2 | ✅ | FatigueDetector multi-sinyal + auto-refresh queue |
 | AI reports / rekomendasi | 2 | **2** | ✅ | Per-akun SWOT LLM + fallback rules + digest harian (unik: approval-first) |
 | Dayparting / hourly heatmap | 2 | **2** | ✅ baru | `/hourly` endpoint + heatmap UI (advertiser TZ) — hari ini rilis |
@@ -29,7 +29,7 @@ Skor kedalaman 0-2 mengikuti kerangka industri (presence ≠ depth).
 - Digest harian otomatis ke Telegram
 
 ## Roadmap berikutnya (urutan dampak)
-1. **Compound rules** — evaluator AND/OR + UI rule builder bertingkat (menutup gap terbesar vs Revealbot)
+1. **Sub-hourly rule scheduler** — evaluator compound AND/OR sudah shipped (`711287e`+`1d46296`); jadwal sub-hourly masih hourly
 2. **Push alert anomali** — banner kini client-side; dorong via bot saat digest/anomaly cron mendeteksi
 3. **Creative performance tab** di Library — sambungkan ads table (platform_id sudah ada sejak migration 026) ke kartu kreatif
 4. **Custom report builder** — pilih metrik/window/platform → PDF/CSV

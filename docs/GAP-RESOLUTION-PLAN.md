@@ -6,7 +6,7 @@ kerja implementasi nyata di codebase ini, bukan teori.
 
 ---
 
-## Fase 1 — Compound Rules (gap terbesar vs Revealbot) · ~2-3 hari
+## Fase 1 — Compound Rules (gap terbesar vs Revealbot) · ✅ SHIPPED (711287e + 1d46296)
 
 **Masalah**: `_evaluateCondition()` (rule-evaluator.js:90) hanya menerima satu
 condition object `{type, operator, value}`. Kompetitor menawarkan compound logic:
@@ -24,7 +24,7 @@ condition object `{type, operator, value}`. Kompetitor menawarkan compound logic
    tetap terbaca.
 
 **Verifikasi**: unit test evaluator (AND/OR/nested/back-compat); live: buat rule
-compound via UI → trigger → cek draft approval dibuat.
+**Status**: ✅ SHIPPED. Evaluator recursive `{all}/{any}` (depth ≤3, back-compat leaf) + UI rule builder bertingkat sudah live dan tercertifikasi (`9d355dd`). Lihat Phase berikutnya untuk sub-hourly scheduler.
 
 ---
 
