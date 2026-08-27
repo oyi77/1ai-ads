@@ -199,8 +199,6 @@ export function createApp(params) {
 
   // Initialize Telegram bot (if TELEGRAM_BOT_TOKEN is set)
   const bot = initBot(app, { repos, services });
-  // Update _services with bot for alerting
-  app.locals._services.bot = bot;
   app.use((req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/assets') || req.path.startsWith('/t/') || req.path.startsWith('/favicon.ico')) {
       return next();
@@ -236,7 +234,7 @@ export function createApp(params) {
     usersRepo: repos.usersRepo,
     platformAccountsRepo: repos.platformAccountsRepo,
     settingsRepo: repos.settingsRepo,
-    bot: null, // Will be set after bot init
+    bot,
   };
 
   return app;

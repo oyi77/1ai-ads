@@ -44,20 +44,18 @@ async function tryRefreshToken(): Promise<boolean> {
     if (!refreshToken) return false;
 
     try {
-      const res = await fetch(`${API_BASE}/auth/refresh-token`, {
+      const response = await fetch(`${API_BASE}/auth/refresh-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
       });
 
-      if (!res.ok) return false;
+      if (!response.ok) return false;
 
-      const data = await res.json();
-      if (data.success && data.data?.accessToken) {
-        setTokens(data.data.accessToken, data.data.refreshToken);
-        return true;
-      }
-      return false;
+      const data = await response.json();
+      setTokens(data.accessToken, data.refreshToken);
+      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      return true;
     } catch {
       return false;
     } finally {
@@ -71,47 +69,94 @@ async function tryRefreshToken(): Promise<boolean> {
 // ── Core request ──────────────────────────────────────────────
 
 async function request<T>(method: string, path: string, body?: unknown, retried = false): Promise<T> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const token = getToken();
-  if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const response = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  // 401 handling: try refresh once, then force login
-  if (res.status === 401 && !retried && !path.includes('/auth/')) {
+  if (response.status === 401 && !retried) {
     const refreshed = await tryRefreshToken();
-    if (refreshed) {
-      return request<T>(method, path, body, true);
-    }
+    if (refreshed) return request<T>(method, path, body, true);
     clearAuth();
     window.location.href = '/login';
-    throw new Error('Unauthorized');
+    throw new Error('Authentication required');
   }
 
-  const json = await res.json();
-  if (!json.success && json.error) throw new Error(json.error);
-  return (json.data ?? json) as T;
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || `HTTP ${response.status}`);
+  }
+
+  if (response.status === 204) return undefined as T;
+  return response.json();
 }
 
 // ── Public API ────────────────────────────────────────────────
 
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  plan: string;
+}
+
+interface AdminStats {
+  totalUsers: number;
+  activeUsers: number;
+  totalCampaigns: number;
+  totalSpend: number;
+}
+
+interface AdminUser {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  plan: string;
+  is_active: number;
+  created_at: string;
+}
+
+interface AdminUsersResponse {
+  data: AdminUser[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+interface ImpersonateResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: User;
+}
+
+interface BillingOverrideData {
+  plan?: string;
+  expiry?: string;
+}
+
 export const api = {
   // Generic CRUD
-  get: <T,>(path: string) => request<T>('GET', path),
-  post: <T,>(path: string, body?: unknown) => request<T>('POST', path, body),
-  put: <T,>(path: string, body?: unknown) => request<T>('PUT', path, body),
-  del: <T,>(path: string) => request<T>('DELETE', path),
+  get: <T>(path: string) => request<T>('GET', path),
+  post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
+  put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
+  del: <T>(path: string) => request<T>('DELETE', path),
 
   // Auth lifecycle
   login: async (username: string, password: string) => {
     const data = await request<{
       accessToken: string;
       refreshToken: string;
-      user: { id: string; username: string; email: string; role: string; plan: string };
+      user: User;
     }>('POST', '/auth/login', { username, password });
 
     setTokens(data.accessToken, data.refreshToken);
@@ -123,7 +168,7 @@ export const api = {
     const data = await request<{
       accessToken: string;
       refreshToken: string;
-      user: { id: string; username: string; email: string; role: string; plan: string };
+      user: User;
     }>('POST', '/auth/register', { username, password, email });
 
     setTokens(data.accessToken, data.refreshToken);
@@ -136,7 +181,7 @@ export const api = {
     const data = await request<{
       accessToken: string;
       refreshToken: string;
-      user: { id: string; username: string; email: string; role: string; plan: string };
+      user: User;
     }>('POST', '/auth/telegram-webapp', { initData });
 
     setTokens(data.accessToken, data.refreshToken);
@@ -151,7 +196,7 @@ export const api = {
 
   isAuthenticated: (): boolean => !!localStorage.getItem(TOKEN_KEY),
 
-  getUser: (): { id: string; username: string; email: string; role: string; plan: string } | null => {
+  getUser: (): User | null => {
     const raw = localStorage.getItem(USER_KEY);
     if (!raw) return null;
     try {
@@ -159,5 +204,19 @@ export const api = {
     } catch {
       return null;
     }
+  },
+
+  // Admin methods
+  admin: {
+    getStats: () => request<AdminStats>('GET', '/admin/stats'),
+    listUsers: (params?: { page?: number; limit?: number; search?: string }) =>
+      request<AdminUsersResponse>('GET', `/admin/users?${new URLSearchParams(params as Record<string, string>).toString()}`),
+    getUser: (id: string) => request<AdminUser>('GET', `/admin/users/${id}`),
+    updateUser: (id: string, data: { role?: string; is_active?: number; email?: string }) =>
+      request<AdminUser>('PUT', `/admin/users/${id}`, data),
+    deactivateUser: (id: string) => request<AdminUser>('DELETE', `/admin/users/${id}`),
+    impersonate: (userId: string) => request<ImpersonateResponse>('POST', `/admin/impersonate/${userId}`),
+    billingOverride: (userId: string, data: BillingOverrideData) =>
+      request<{ success: boolean; data: { plan: string; expiry: string } }>('POST', `/admin/billing/${userId}`, data),
   },
 };

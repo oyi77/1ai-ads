@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { requireRole } from '../middleware/rbac.js';
 import { createLogger } from '../lib/logger.js';
+import { generateToken, generateRefreshToken } from '../lib/auth.js';
 
 const log = createLogger('admin');
 
-export function createAdminRouter(usersRepo, _settingsRepo) {
+export function createAdminRouter(usersRepo, _refreshTokensRepo, _settingsRepo) {
   const router = Router();
   router.use(requireRole('admin'));
 
@@ -32,8 +33,21 @@ export function createAdminRouter(usersRepo, _settingsRepo) {
   // GET /api/admin/users — list all users
   router.get('/users', (req, res) => {
     try {
-      const users = usersRepo.findAll();
-      res.json({ success: true, data: users });
+      const { page = 1, limit = 50, search } = req.query;
+      let users = usersRepo.findAll();
+
+      if (search) {
+        const s = String(search).toLowerCase();
+        users = users.filter(u => u.username.toLowerCase().includes(s) || u.email.toLowerCase().includes(s));
+      }
+
+      const total = users.length;
+      const pageNum = Math.max(1, Number(page));
+      const limitNum = Math.min(100, Math.max(1, Number(limit)));
+      const start = (pageNum - 1) * limitNum;
+      const data = users.slice(start, start + limitNum);
+
+      res.json({ success: true, data, total, page: pageNum, limit: limitNum });
     } catch (err) {
       log.error('Failed to list users', { error: err.message });
       res.status(500).json({ success: false, error: 'Failed to list users' });
@@ -87,6 +101,53 @@ export function createAdminRouter(usersRepo, _settingsRepo) {
     } catch (err) {
       log.error('Failed to deactivate user', { error: err.message });
       res.status(500).json({ success: false, error: 'Failed to deactivate user' });
+    }
+  });
+
+  // POST /api/admin/impersonate/:id — generate tokens for impersonation
+  router.post('/impersonate/:id', async (req, res) => {
+    try {
+      const user = usersRepo.findById(req.params.id);
+      if (!user) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+      }
+      const accessToken = generateToken({ id: user.id, username: user.username, role: user.role, plan: user.plan });
+      const refreshToken = generateRefreshToken({ id: user.id, username: user.username });
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+
+      // Store refresh token
+      const { refreshTokensRepo } = await import('../app/repositories.js');
+      refreshTokensRepo.upsert(user.id, refreshToken, expiresAt.toISOString());
+
+      log.info('Admin impersonation', { adminId: req.user.id, targetId: user.id });
+      res.json({ success: true, data: { accessToken, refreshToken, user } });
+    } catch (err) {
+      log.error('Impersonation failed', { error: err.message });
+      res.status(500).json({ success: false, error: 'Impersonation failed' });
+    }
+  });
+
+  // POST /api/admin/billing/:id — override user billing
+  router.post('/billing/:id', async (req, res) => {
+    try {
+      const { plan, expiry } = req.body;
+      const user = usersRepo.findById(req.params.id);
+      if (!user) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+      }
+      const updates = {};
+      if (plan) updates.plan = plan;
+      if (expiry) updates.plan_expires_at = expiry;
+      const updated = usersRepo.update(req.params.id, updates);
+      if (!updated) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+      }
+      log.info('Admin billing override', { adminId: req.user.id, targetId: user.id, plan, expiry });
+      res.json({ success: true, data: { plan: updated.plan, expiry: updated.plan_expires_at } });
+    } catch (err) {
+      log.error('Billing override failed', { error: err.message });
+      res.status(500).json({ success: false, error: 'Billing override failed' });
     }
   });
 
