@@ -7,7 +7,8 @@ export function createScheduleRouter(db) {
 
   router.get('/', async (req, res) => {
     const { status, platform } = req.query;
-    const schedules = schedulesRepo.findAll({ status, platform });
+    const userId = req.user?.id || 'system';
+    const schedules = schedulesRepo.findAll({ status, platform, userId });
     res.json({ success: true, data: schedules });
   });
 
@@ -16,12 +17,16 @@ export function createScheduleRouter(db) {
     if (!name || !schedule_time || !platform) {
       return res.status(400).json({ success: false, error: 'name, schedule_time, and platform are required' });
     }
-    const id = schedulesRepo.create({ name, schedule_time, platform, content, media_url });
+    const id = schedulesRepo.create({
+      user_id: req.user?.id || 'system',
+      name, schedule_time, platform, content, media_url,
+    });
     res.json({ success: true, data: { id, status: 'scheduled' } });
   });
 
   router.delete('/:id', async (req, res) => {
-    const deleted = schedulesRepo.remove(req.params.id);
+    const userId = req.user?.id || 'system';
+    const deleted = schedulesRepo.remove(req.params.id, userId);
     if (!deleted) {
       return res.status(404).json({ success: false, error: 'Schedule not found' });
     }

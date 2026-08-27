@@ -296,6 +296,7 @@ CREATE INDEX IF NOT EXISTS idx_attributions_matched_at ON attributions(matched_a
 
 CREATE TABLE IF NOT EXISTS schedules (
   id TEXT PRIMARY KEY,
+  user_id TEXT DEFAULT 'system',
   name TEXT NOT NULL,
   schedule_time TEXT NOT NULL,
   platform TEXT NOT NULL,
@@ -306,6 +307,7 @@ CREATE TABLE IF NOT EXISTS schedules (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX IF NOT EXISTS idx_schedules_user ON schedules(user_id);
 CREATE INDEX IF NOT EXISTS idx_schedules_status ON schedules(status);
 CREATE INDEX IF NOT EXISTS idx_schedules_platform ON schedules(platform);
 CREATE INDEX IF NOT EXISTS idx_schedules_time ON schedules(schedule_time);

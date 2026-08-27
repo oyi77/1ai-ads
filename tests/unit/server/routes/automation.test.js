@@ -13,15 +13,12 @@ vi.mock('../../../../server/middleware/auth.js', () => ({
 import { createAutomationRouter } from '../../../../server/routes/automation.js';
 
 function createMockRulesRepo() {
+  const owned = { r1: { id: 'r1', user_id: 'test-user-1', name: 'Low CTR Alert', enabled: 1 }, r2: { id: 'r2', user_id: 'test-user-1', name: 'Budget Guard', enabled: 0 } };
+  const other = { r9: { id: 'r9', user_id: 'other-user', name: 'Someone elses rule', enabled: 1 } };
+  const all = { ...owned, ...other };
   return {
-    findAll: vi.fn(async () => [
-      { id: 'r1', name: 'Low CTR Alert', is_active: 1 },
-      { id: 'r2', name: 'Budget Guard', is_active: 0 },
-    ]),
-    findById: vi.fn(async (id) => {
-      const rules = { r1: { id: 'r1', name: 'Low CTR Alert', is_active: 1 }, r2: { id: 'r2', name: 'Budget Guard', is_active: 0 } };
-      return rules[id] || null;
-    }),
+    getAll: vi.fn((uid) => Object.values(all).filter((r) => r.user_id === uid)),
+    getById: vi.fn(async (id) => all[id] || null),
     create: vi.fn(() => 'new-rule-id'),
     update: vi.fn(async () => {}),
     delete: vi.fn(async () => {}),
@@ -47,31 +44,36 @@ describe('Automation Router', () => {
   // ─── GET / ─────────────────────────────────────────────────────────
 
   describe('GET /', () => {
-    it('returns all rules', async () => {
+    it('returns only the current users rules', async () => {
       const res = await request(app).get('/api/automation/');
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.rules).toHaveLength(2);
-      expect(rulesRepo.findAll).toHaveBeenCalled();
+      expect(res.body.rules.every((r) => r.user_id === 'test-user-1')).toBe(true);
+      expect(rulesRepo.getAll).toHaveBeenCalledWith('test-user-1');
     });
 
-    it('returns empty array when findAll is not available', async () => {
-      rulesRepo.findAll = undefined;
+    it('does not leak another users rules', async () => {
+      const res = await request(app).get('/api/automation/');
+      const ids = res.body.rules.map((r) => r.id);
+      expect(ids).not.toContain('r9');
+    });
+
+    it('returns empty array when getAll is not available', async () => {
+      rulesRepo.getAll = undefined;
       app = createApp(rulesRepo);
       const res = await request(app).get('/api/automation/');
       expect(res.status).toBe(200);
       expect(res.body.rules).toEqual([]);
     });
 
-    it('returns 500 when findAll throws', async () => {
-      rulesRepo.findAll.mockRejectedValue(new Error('db error'));
+    it('returns 500 when getAll throws', async () => {
+      rulesRepo.getAll.mockRejectedValue(new Error('db error'));
       const res = await request(app).get('/api/automation/');
       expect(res.status).toBe(500);
       expect(res.body.error).toBe('db error');
     });
   });
-
-  // ─── POST /create ──────────────────────────────────────────────────
 
   describe('POST /create', () => {
     it('creates a rule and returns it', async () => {
@@ -124,21 +126,19 @@ describe('Automation Router', () => {
     });
   });
 
-  // ─── POST /toggle/:id ──────────────────────────────────────────────
-
   describe('POST /toggle/:id', () => {
     it('toggles active rule to inactive', async () => {
       const res = await request(app).post('/api/automation/toggle/r1');
       expect(res.status).toBe(200);
       expect(res.body.is_active).toBe(0);
-      expect(rulesRepo.update).toHaveBeenCalledWith('r1', { is_active: 0 });
+      expect(rulesRepo.update).toHaveBeenCalledWith('r1', { enabled: 0 });
     });
 
     it('toggles inactive rule to active', async () => {
       const res = await request(app).post('/api/automation/toggle/r2');
       expect(res.status).toBe(200);
       expect(res.body.is_active).toBe(1);
-      expect(rulesRepo.update).toHaveBeenCalledWith('r2', { is_active: 1 });
+      expect(rulesRepo.update).toHaveBeenCalledWith('r2', { enabled: 1 });
     });
 
     it('returns 404 when rule not found', async () => {
@@ -147,8 +147,15 @@ describe('Automation Router', () => {
       expect(res.body.error).toBe('Rule not found');
     });
 
-    it('returns 500 when findById throws', async () => {
-      rulesRepo.findById.mockRejectedValue(new Error('db crash'));
+    it('returns 404 when rule belongs to another user', async () => {
+      const res = await request(app).post('/api/automation/toggle/r9');
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Rule not found');
+      expect(rulesRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('returns 500 when getById throws', async () => {
+      rulesRepo.getById.mockRejectedValue(new Error('db crash'));
       const res = await request(app).post('/api/automation/toggle/r1');
       expect(res.status).toBe(500);
       expect(res.body.error).toBe('db crash');
@@ -163,6 +170,13 @@ describe('Automation Router', () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(rulesRepo.delete).toHaveBeenCalledWith('r1');
+    });
+
+    it('returns 404 when rule belongs to another user', async () => {
+      const res = await request(app).post('/api/automation/delete/r9');
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Rule not found');
+      expect(rulesRepo.delete).not.toHaveBeenCalled();
     });
 
     it('returns 500 when delete throws', async () => {

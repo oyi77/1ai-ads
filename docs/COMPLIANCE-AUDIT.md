@@ -125,13 +125,9 @@ meta: new RateLimiter(5, 1000),
 
 ---
 
-### 8. `automation_rules` Tidak Punya `user_id`
+### 8. `automation_rules` / `autonomous_rules` — `user_id` ✅ RESOLVED (PR #3)
 
-**File:** `db/schema.sql`
-
-Table `automation_rules` tanpa `user_id` column. Melanggar tenant isolation.
-
-**Fix:** Tambah `user_id TEXT NOT NULL` ke schema.
+**Status:** Table `autonomous_rules` already carries `user_id TEXT NOT NULL` (see `server/repositories/rules.js` ensureTable + indexes). `RulesRepository.getAll(userId)` scopes every read by `user_id`; HTTP routes additionally enforce ownership 404 on toggle/delete. Listed here only for historical completeness — no schema change required.
 
 ---
 

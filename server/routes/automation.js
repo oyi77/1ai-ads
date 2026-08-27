@@ -9,10 +9,11 @@ export function createAutomationRouter({ rulesRepo }) {
 
   router.use(requireAuth);
 
-  /** GET / — list all rules */
+  /** GET / — list the current user's rules only */
   router.get('/', async (req, res) => {
     try {
-      const rules = rulesRepo.findAll ? await rulesRepo.findAll() : [];
+      const uid = (req.user && req.user.id) ? req.user.id : 'system';
+      const rules = rulesRepo.getAll ? await rulesRepo.getAll(uid) : [];
       res.json({ success: true, rules });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -48,22 +49,28 @@ export function createAutomationRouter({ rulesRepo }) {
     }
   });
 
-  /** POST /toggle/:id — toggle rule active state */
+  /** POST /toggle/:id — toggle rule active state (ownership-enforced) */
   router.post('/toggle/:id', async (req, res) => {
     try {
-      const rule = rulesRepo.findById ? await rulesRepo.findById(req.params.id) : null;
+      const rule = rulesRepo.getById ? await rulesRepo.getById(req.params.id) : null;
       if (!rule) return res.status(404).json({ success: false, error: 'Rule not found' });
-      const newActive = rule.is_active ? 0 : 1;
-      if (rulesRepo.update) await rulesRepo.update(req.params.id, { is_active: newActive });
-      res.json({ success: true, is_active: newActive });
+      const uid = (req.user && req.user.id) ? req.user.id : 'system';
+      if (rule.user_id !== uid) return res.status(404).json({ success: false, error: 'Rule not found' });
+      const newEnabled = rule.enabled === 1 ? 0 : 1;
+      if (rulesRepo.update) await rulesRepo.update(req.params.id, { enabled: newEnabled });
+      res.json({ success: true, is_active: newEnabled });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
   });
 
-  /** POST /delete/:id — delete a rule */
+  /** POST /delete/:id — delete a rule (ownership-enforced) */
   router.post('/delete/:id', async (req, res) => {
     try {
+      const rule = rulesRepo.getById ? await rulesRepo.getById(req.params.id) : null;
+      if (!rule) return res.status(404).json({ success: false, error: 'Rule not found' });
+      const uid = (req.user && req.user.id) ? req.user.id : 'system';
+      if (rule.user_id !== uid) return res.status(404).json({ success: false, error: 'Rule not found' });
       if (rulesRepo.delete) await rulesRepo.delete(req.params.id);
       res.json({ success: true });
     } catch (err) {

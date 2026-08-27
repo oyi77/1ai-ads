@@ -183,7 +183,7 @@ AdForge is **NOT a bot**. Here's why:
 2. **Rate limiting** — API calls are throttled per user. Maximum 10 campaign creates per user per day with cooldowns.
 3. **No automated content posting** — We don't auto-post to Pages, auto-reply to comments, or auto-send messages.
 4. **User-initiated actions only** — Every Facebook API call is directly triggered by a logged-in user's button click.
-5. **Single-user instances** — Each AdForge install serves one user/organization, not a multi-tenant SaaS.
+5. **Per-user data isolation** — All user-owned resources (campaigns, ads, autonomous rules, report schedules, platform accounts) are scoped by `user_id` with ownership checks on read/delete. A single AdForge install serves many users from one database; each user only sees and mutates their own records. (Deployment is single-tenant infra, not a separate DB per customer.)
 
 ---
 

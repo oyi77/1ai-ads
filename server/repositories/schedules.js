@@ -5,10 +5,11 @@ export class SchedulesRepository {
     this.db = db;
   }
 
-  findAll({ status, platform } = {}) {
+  findAll({ status, platform, userId } = {}) {
     const where = [];
     const params = [];
 
+    if (userId) { where.push('user_id = ?'); params.push(userId); }
     if (status) { where.push('status = ?'); params.push(status); }
     if (platform) { where.push('platform = ?'); params.push(platform); }
 
@@ -25,10 +26,11 @@ export class SchedulesRepository {
   create(data) {
     const id = data.id || uuid();
     this.db.prepare(`
-      INSERT INTO schedules (id, name, schedule_time, platform, content, media_url, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO schedules (id, user_id, name, schedule_time, platform, content, media_url, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
+      data.user_id || 'system',
       data.name,
       data.schedule_time,
       data.platform,
@@ -39,8 +41,12 @@ export class SchedulesRepository {
     return id;
   }
 
-  remove(id) {
-    const result = this.db.prepare('DELETE FROM schedules WHERE id = ?').run(id);
+  remove(id, userId) {
+    const params = userId ? [id, userId] : [id];
+    const sql = userId
+      ? 'DELETE FROM schedules WHERE id = ? AND user_id = ?'
+      : 'DELETE FROM schedules WHERE id = ?';
+    const result = this.db.prepare(sql).run(...params);
     return result.changes > 0;
   }
 
