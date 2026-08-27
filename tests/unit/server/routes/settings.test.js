@@ -280,7 +280,7 @@ describe('Settings Router', () => {
     it('deletes the account', async () => {
       const res = await request(app).delete('/api/settings/accounts/acc-1');
       expect(res.status).toBe(200);
-      expect(settingsRepo.deleteAccount).toHaveBeenCalledWith('acc-1');
+      expect(settingsRepo.updateAccount).toHaveBeenCalledWith('acc-1', { is_active: 0 });
     });
   });
 

@@ -133,7 +133,7 @@ export function handleListAccounts(settingsRepo) {
       const all = settingsRepo.getAccounts ? settingsRepo.getAccounts(platform) : [];
       // Scope to the requesting user (multi-tenant). platform_accounts rows carry user_id.
       const accounts = (Array.isArray(all) ? all : []).filter(
-        acc => acc.user_id === req.user.id
+        acc => acc.user_id === req.user.id && acc.is_active !== 0
       );
       const safe = accounts.map(acc => {
         const creds = acc.credentials || {};
@@ -211,7 +211,11 @@ export function handleDeleteAccount(settingsRepo) {
     if (!req.user || account.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Account not found' });
     }
-    settingsRepo.deleteAccount(req.params.id);
+    // Soft delete (deactivate) — keep the row so the user can reconnect
+    // without re-entering the token. Matches the Telegram bot
+    // handleAdsDisconnectConfirm semantics. The GDPR data-deletion path in
+    // auth.js intentionally uses the real hard delete and is untouched.
+    settingsRepo.updateAccount(req.params.id, { is_active: 0 });
     res.json({ success: true });
   };
 }
@@ -346,11 +350,12 @@ export function handleConnectToken(settingsRepo, metaApi, nangoAuth) {
           a.account_name === userName ||
           (a.credentials?.access_token === access_token)
         );
-
         let mainId;
+
         if (existing) {
           settingsRepo.updateAccount(existing.id, {
-            credentials: { access_token, user_name: meData.name, user_id: meData.id }
+            credentials: { access_token, user_name: meData.name, user_id: meData.id },
+            is_active: 1
           });
           mainId = existing.id;
         } else {
@@ -413,7 +418,7 @@ export function handleConnectToken(settingsRepo, metaApi, nangoAuth) {
         );
 
         if (existing) {
-          settingsRepo.updateAccount(existing.id, { credentials: { access_token } });
+          settingsRepo.updateAccount(existing.id, { credentials: { access_token }, is_active: 1 });
         } else {
           const id = uuid();
           settingsRepo.addAccount({
@@ -444,9 +449,9 @@ export function handleGetCredentials(settingsRepo) {
     const all = settingsRepo.getAccounts(req.params.platform);
     // Scope to the requesting user (multi-tenant). platform_accounts rows carry user_id.
     const userAccounts = (Array.isArray(all) ? all : []).filter(
-      a => a.user_id === req.user.id
+      a => a.user_id === req.user.id && a.is_active !== 0
     );
-    const acc = userAccounts.find(a => a.is_active) || userAccounts[0];
+    const acc = userAccounts.find(a => a.is_active);
 
     if (!acc) {
       return res.json({ success: true, data: { configured: false, platform: req.params.platform } });
