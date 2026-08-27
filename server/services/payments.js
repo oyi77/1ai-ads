@@ -5,6 +5,18 @@ import { ConfigurationError } from '../lib/errors.js';
 import config from '../config/index.js';
 const log = createLogger('payments');
 
+// In-memory idempotency store (for single-instance). For multi-instance, use Redis.
+const processedEvents = new Map(); // key: "orderId:eventType" -> timestamp
+const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+
+function isEventProcessed(orderId, eventType) {
+  const key = `${orderId}:${eventType}`;
+  const ts = processedEvents.get(key);
+  if (ts && Date.now() - ts < IDEMPOTENCY_TTL_MS) return true;
+  processedEvents.set(key, Date.now());
+  return false;
+}
+
 export class PaymentService {
   constructor(paymentsRepo, usersRepo) {
     this.paymentsRepo = paymentsRepo;
@@ -248,6 +260,14 @@ export class PaymentService {
     if (resolved.error) return { success: false, status: 200, ...resolved.error };
 
     const { payment } = resolved;
+    const eventType = `order.${status}`;
+
+    // Idempotency: skip if already processed
+    if (isEventProcessed(payment.order_id, eventType)) {
+      log.info('Payment webhook: duplicate event ignored', { orderId: payment.order_id, eventType });
+      return { success: true };
+    }
+
     const metadata = typeof payment.metadata === 'string' ? JSON.parse(payment.metadata) : payment.metadata || {};
 
     switch (status) {

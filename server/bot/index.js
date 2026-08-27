@@ -28,9 +28,9 @@ import { initScheduler } from './scheduler.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { identify } from './middleware/identify.js';
 import { connectScene, handleSceneCancel } from './scenes/connect-account.js';
+import { connectOAuthScene } from './scenes/connect-oauth.js';
 import { manageMetaAppScene } from './scenes/manage-meta-app.js';
 import { createCampaignScene } from './scenes/create-campaign.js';
-
 const log = createLogger('bot');
 
 let botInstance = null;
@@ -59,7 +59,7 @@ export function initBot(app, deps) {
   bot.use(identify(deps));
   // Session + Stage middleware — REQUIRED for WizardScene (connect + meta-app flows)
   bot.use(session());
-  const stage = new Scenes.Stage([connectScene, manageMetaAppScene, createCampaignScene]);
+  const stage = new Scenes.Stage([connectScene, connectOAuthScene, manageMetaAppScene, createCampaignScene]);
 
   // Escape hatch: any /command while inside a wizard clears the scene state
   // from the session BEFORE stage sees it, so an abandoned wizard can never
@@ -131,8 +131,13 @@ bot.action(/^ads:disconnect(?::(.+))?$/, async (ctx) => {
   // ── Connect wizard (per-customer platform connection) ────
   bot.action(/^connect:(.+)$/, async (ctx) => {
     const platform = ctx.match[1];
+    const oauthPlatforms = ['google', 'tiktok', 'linkedin'];
     await ctx.answerCbQuery();
-    await ctx.scene.enter('connect-account', { platform });
+    if (oauthPlatforms.includes(platform)) {
+      await ctx.scene.enter('connect-oauth', { platform });
+    } else {
+      await ctx.scene.enter('connect-account', { platform });
+    }
   });
 
   // ── Message router ───────────────────────────────────────
