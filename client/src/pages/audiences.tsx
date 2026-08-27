@@ -25,6 +25,14 @@ interface SavedAudiencesResponse {
   total: number;
 }
 
+interface MetaAccount {
+  id: string;
+  name: string;
+  status: number | string;
+  currency?: string;
+  businessName?: string;
+}
+
 const btnStyle: CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 6,
   padding: '8px 16px', background: 'var(--accent)', color: 'var(--bg-deep)',
@@ -50,6 +58,10 @@ const inputStyle: CSSProperties = {
   border: '1px solid var(--border-strong)', borderRadius: 6, fontSize: '0.85rem', outline: 'none',
 };
 
+const textareaStyle: CSSProperties = {
+  ...inputStyle, minHeight: 120, resize: 'vertical', fontFamily: 'monospace',
+};
+
 const labelStyle: CSSProperties = {
   display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--text-secondary)',
 };
@@ -63,6 +75,12 @@ export function AudiencesPage() {
   const [interestResults, setInterestResults] = useState<Array<{ id: string; name: string }>>([]);
   const [stackedInterests, setStackedInterests] = useState<Array<{ id: string; name: string }>>([]);
   const [searching, setSearching] = useState(false);
+
+  // Phase 6 — Customer List → Meta Custom Audience panel
+  const [customAccount, setCustomAccount] = useState('');
+  const [customName, setCustomName] = useState('');
+  const [customContacts, setCustomContacts] = useState('');
+  const [customMsg, setCustomMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   const searchInterests = useCallback(async (q: string) => {
     if (q.trim().length < 3) { setInterestResults([]); return; }
@@ -105,6 +123,22 @@ export function AudiencesPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['saved-audiences'] }),
   });
 
+  // Phase 6 — user's connected Meta ad accounts (for the account_id selector)
+  const metaAccounts = useQuery<{ accounts: MetaAccount[] }>({
+    queryKey: ['meta-accounts'],
+    queryFn: () => api.get<{ accounts: MetaAccount[] }>('/meta/accounts'),
+  });
+
+  const customListMutation = useMutation({
+    mutationFn: (payload: { account_id: string; name: string; contacts: string[] }) =>
+      api.post<{ id: string; name: string }>('/audiences/custom-list', payload),
+    onSuccess: (res) => {
+      setCustomMsg({ type: 'ok', text: `Custom audience created (Meta ID: ${res.id}). Contacts ingested.` });
+      setCustomContacts(''); setCustomName('');
+    },
+    onError: (e) => setCustomMsg({ type: 'err', text: (e as Error).message }),
+  });
+
   const closeForm = useCallback(() => {
     setShowForm(false); setEditing(null);
     setForm({ name: '', description: '', platform: 'meta' });
@@ -120,6 +154,14 @@ export function AudiencesPage() {
       platform: form.platform,
       ...(stackedInterests.length ? { targeting: { interests: stackedInterests } } : {}),
     });
+  };
+
+  const submitCustomList = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCustomMsg(null);
+    const contacts = customContacts.split('\n').map(s => s.trim()).filter(Boolean);
+    if (!customAccount || !customName || contacts.length === 0) return;
+    customListMutation.mutate({ account_id: customAccount, name: customName, contacts });
   };
 
   const columns: Column<SavedAudience>[] = [
@@ -237,6 +279,56 @@ export function AudiencesPage() {
         emptyMessage="No saved audiences found. Create one to get started."
         emptyIcon={<Bookmark size={32} style={{ color: 'var(--text-tertiary)' }} />}
       />
+
+      {/* Phase 6 — Customer List → Meta Custom Audience ingestion */}
+      <div style={{ ...cardStyle, marginTop: 24 }}>
+        <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: 4 }}>Customer List → Meta Custom Audience</h2>
+        <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 14 }}>
+          Upload your customer contacts (phone numbers, one per line) to create a Meta Custom Audience for
+          lookalike targeting. Each contact is matched by phone on Meta's side.
+        </p>
+        <form onSubmit={submitCustomList} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <label style={labelStyle}>
+            Meta Ad Account *
+            <select style={inputStyle} value={customAccount} onChange={(e) => setCustomAccount(e.target.value)}>
+              <option value="">— Select account —</option>
+              {(metaAccounts.data?.accounts || []).map(acc => (
+                <option key={acc.id} value={acc.id}>{acc.name} ({acc.id})</option>
+              ))}
+            </select>
+          </label>
+          <label style={labelStyle}>
+            Audience Name *
+            <input style={inputStyle} value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder="e.g. VIP Customers" />
+          </label>
+          <label style={{ ...labelStyle, gridColumn: '1 / -1' }}>
+            Contacts — one phone number per line *
+            <textarea style={textareaStyle} value={customContacts} onChange={(e) => setCustomContacts(e.target.value)} placeholder={'62812000111\n62812000222\n62812000333'} />
+          </label>
+          {customMsg && (
+            <div style={{
+              gridColumn: '1 / -1',
+              padding: 10, borderRadius: 8, fontSize: '0.8rem',
+              background: customMsg.type === 'ok' ? 'rgba(63,185,80,0.12)' : 'rgba(248,81,73,0.1)',
+              border: `1px solid ${customMsg.type === 'ok' ? 'rgba(63,185,80,0.3)' : 'rgba(248,81,73,0.3)'}`,
+              color: customMsg.type === 'ok' ? 'var(--green)' : 'var(--red)',
+            }}>
+              {customMsg.text}
+            </div>
+          )}
+          <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8, marginTop: 4 }}>
+            <button type="submit" disabled={customListMutation.isPending || metaAccounts.isLoading} style={btnStyle}>
+              {customListMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+              Ingest to Meta
+            </button>
+            {metaAccounts.isError && (
+              <span style={{ alignSelf: 'center', fontSize: '0.75rem', color: 'var(--red)' }}>
+                Could not load Meta accounts — connect your Meta account in Settings.
+              </span>
+            )}
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
