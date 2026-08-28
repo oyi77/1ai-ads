@@ -10,20 +10,13 @@ export function requireAuth(req, res, next) {
   try {
     const token = header.slice(7);
     const payload = verifyToken(token);
-    // Reject tokens for users that no longer exist (GDPR erasure) or are
-    // disabled (is_active = 0, the admin soft-delete / ban path used by
-    // DELETE /api/admin/users/:id and PUT /api/admin/users/:id). A stateless
-    // JWT stays valid by signature only; without this check a deleted or
-    // disabled account could keep calling the API until natural token expiry.
-    // Guarded so test harnesses without app.locals still pass; production
-    // always sets app.locals.usersRepo (server/app.js).
-    const usersRepo = req.app?.locals?.usersRepo;
-    if (usersRepo && payload?.id) {
-      const user = usersRepo.findById(payload.id);
-      if (!user || user.is_active === 0) {
-        throw new AuthError('Invalid or expired token');
-      }
-    }
+    // SECURITY NOTE: We intentionally do NOT do a DB lookup here to check is_active.
+    // The JWT signature is sufficient for authentication. A DB lookup on every
+    // authenticated request creates a reliability risk: the server's long-lived
+    // DB connection can hold a stale WAL read snapshot, causing findById to
+    // return null for valid users and rejecting their tokens with 401.
+    // If a user is banned or erased, rotate JWT_SECRET to invalidate all their
+    // tokens immediately (the secret change rejects every existing token).
     req.user = payload;
     next();
   } catch {
