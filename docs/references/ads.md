@@ -1,5 +1,7 @@
 # Ads Mode Reference
 
+> **Verified:** 2026-08-28 — platform-agnostic creative/budget/metrics reference. Cross-ref: AdForge implements these via `server/services/creative-studio.js` (AI copy), `fatigue-detector.js` (fatigue), `domain/optimization.js` (budget/scale), `campaign-orchestrator.js`. Specs (Meta 1080×1080, TikTok 9:16, etc.) align with current AdForge creative pipeline.
+
 ## Table of Contents
 1. [Campaign Planning](#campaign-planning)
 2. [Meta Ads (Facebook/Instagram)](#meta-ads)

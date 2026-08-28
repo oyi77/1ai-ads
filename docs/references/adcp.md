@@ -7,9 +7,12 @@ persona:
   credentials: ['Wrote most mailed letter in history', 'Coached top copywriters', 'Marketing legend']
   principles: ['AIDA always', 'Test headlines', 'Benefits over features', 'Strong call to action']
 
----
+# AdCP Advertising Skill — EXTERNAL REFERENCE
 
-# AdCP Advertising Skill
+> **⚠️ Not maintained in this repo.** This is a copy of the external `adcp-advertising` skill (source: github.com/edyyy62/openclaw-adcp, docs.adcontextprotocol.org). It is **reference material** for the AdCP protocol, not part of AdForge's codebase. The `[TODO]` sections at the bottom are from the upstream skill — not AdForge tasks.
+> **Cross-ref:** AdForge's own ad-management is in `server/services/` (22 adapters) + `architecture.md`. AdCP is an alternative/external agent protocol; evaluate separately if integration is desired.
+
+---
 
 ## Name
 adcp-advertising

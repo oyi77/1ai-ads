@@ -14,7 +14,7 @@
 
 ## 1. Product Overview
 
-**AdForge** is a self-hosted ad management platform that allows advertisers to manage campaigns across Meta, Google, TikTok, LinkedIn, Twitter, Snapchat, Microsoft, and Pinterest from a single dashboard.
+**AdForge** is a hosted, multi-tenant SaaS ad management platform that allows advertisers to manage campaigns across **22 ad platforms** (Meta, Google, TikTok, LinkedIn, Twitter, Snapchat, Microsoft, Pinterest, Amazon, + 13 more) from a single dashboard. See `architecture.md`.
 
 ### Core Features
 - **Multi-platform campaign management**: Create, read, update, pause, and activate campaigns across 8 ad platforms
@@ -84,7 +84,7 @@ We use the Google Ads API to provide our users with the ability to:
 ## 4. Rate Limiting & Quotas
 
 ### Our rate limiting strategy
-- **Client-side rate limiter**: Maximum 10 requests/second per Google Ads customer ID
+- **Client-side rate limiter**: Maximum **8 requests/second** per Google Ads customer ID (verified `server/lib/platform-client.js:8` = `RateLimiter(8,1000)`; 10/s is the dev-token hard limit, 8 gives safe margin)
 - **Exponential backoff**: Automatic retry with backoff on 429 responses
 - **Request batching**: Multiple GAQL queries batched where possible
 - **Caching**: 6-hour TTL on performance data to minimize API calls
@@ -103,8 +103,8 @@ We use the Google Ads API to provide our users with the ability to:
 
 ### Google Ads API Compliance
 - We comply with the [Google Ads API Terms of Service](https://developers.google.com/google-ads/api/terms)
-- We do not use the API for automated bidding or real-time bid adjustments
-- We do not scrape Google Ads data — we only access data through the official API
+- We **do** support user-authored automation (pause/budget/bid via `auto-optimizer.js`), approval-first by default with full audit trail — disclosed honestly per `COMPLIANCE-AUDIT.md` §3.3
+- We do not scrape Google Ads data — **except** `server/services/web-scraper/google-scraper.js` which currently hits the Ads Transparency Center; this is an **outstanding ToS item** tracked in `COMPLIANCE-AUDIT.md` (must disable or move to official Google Ads Library API before submission)
 - We respect rate limits and implement proper error handling
 
 ### User Consent

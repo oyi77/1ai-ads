@@ -1,6 +1,6 @@
 # SQLite → PostgreSQL Migration Guide
 
-**Status:** Documentation only — implement when multi-tenancy is needed.
+**Status:** Documentation only — implement when multi-tenancy is needed. **Verified:** 2026-08-28 — current DB is SQLite (`db/1ai-ads.db`, 24 tables). Repo is already multi-tenant via `user_id` scoping; Postgres needed only for write-concurrency/scale. Cross-ref: `architecture.md`, `COMPLIANCE-AUDIT.md`.
 
 ## When to Migrate
 
@@ -76,8 +76,8 @@ volumes:
 ## Step 5: Data Migration Script
 
 ```bash
-# Export SQLite data
-sqlite3 db/adforge.db ".dump" > dump.sql
+# Export SQLite data (default path is ./db/1ai-ads.db — see server/config/index.js)
+sqlite3 "${DB_PATH:-./db/1ai-ads.db}" ".dump" > dump.sql
 
 # Convert SQLite syntax to PostgreSQL
 # - Remove AUTOINCREMENT
