@@ -194,4 +194,11 @@ export class CampaignsRepository {
   create(data) {
     return this.upsert(data);
   }
+  ownsAccount(accountId, userId) {
+    if (userId === null || accountId === null) return false;
+    const row = this.db
+      .prepare('SELECT 1 FROM campaigns WHERE campaign_id = ? AND user_id = ? LIMIT 1')
+      .get(accountId, userId);
+    return !!row;
+  }
 }

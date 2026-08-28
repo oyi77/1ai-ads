@@ -1,5 +1,6 @@
 import { createLogger } from '../lib/logger.js';
 import { MetricsNormalizer } from './metrics-normalizer.js';
+import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
 
 const log = createLogger('unified-reporter');
 
@@ -13,11 +14,13 @@ export class UnifiedReporter {
    * @param {Object} platformApis - { meta, google, tiktok, linkedin, twitter, microsoft, snapchat, pinterest }
    * @param {Object} campaignsRepo
    * @param {Object} db - better-sqlite3 database instance
+   * @param {Object} [repos] - { platformAccountsRepo, settingsRepo } used to resolve owner-scoped tokens
    */
-  constructor(platformApis, campaignsRepo, db) {
+  constructor(platformApis, campaignsRepo, db, repos = null) {
     this.apis = platformApis;
     this.campaignsRepo = campaignsRepo;
     this.db = db;
+    this.repos = repos;
     this.normalizer = new MetricsNormalizer();
   }
 
@@ -25,12 +28,13 @@ export class UnifiedReporter {
 
   /**
    * Aggregated cross-platform dashboard.
+   * @param {string} [userId] - when provided, metrics are scoped to that user's performance_history rows
    */
   async getUnifiedDashboard(userId, { dateRange = 'last_7d' } = {}) {
     const days = DATE_RANGE_MAP[dateRange] || 7;
 
     // Use DB metrics directly — live API calls are too slow for dashboard
-    const dbMetrics = this._getDBMetrics(days);
+    const dbMetrics = this._getDBMetrics(days, userId);
 
     const totals = { spend: 0, revenue: 0, impressions: 0, clicks: 0, conversions: 0 };
     const byPlatform = [];
@@ -85,13 +89,14 @@ export class UnifiedReporter {
 
   /**
    * Compare campaigns across platforms, normalised to a common schema.
+   * @param {string} [userId] - when provided, each campaign is resolved only if owned by the user
    */
-  async compareCampaigns(campaignIds, { metric = 'roas' } = {}) {
+  async compareCampaigns(campaignIds, { metric = 'roas' } = {}, userId) {
     if (!campaignIds || !campaignIds.length) return [];
 
     const results = [];
     for (const id of campaignIds) {
-      const campaign = this.campaignsRepo?.findById?.(id);
+      const campaign = this.campaignsRepo?.findById?.(id, userId);
       if (!campaign) continue;
 
       try {
@@ -169,13 +174,14 @@ export class UnifiedReporter {
 
   /**
    * AI-driven budget allocation recommendation based on historical ROAS.
+   * @param {string} [userId] - when provided, only the user's performance_history is considered
    */
   async recommendBudgetAllocation(userId, totalBudget) {
     if (!totalBudget || totalBudget <= 0) {
       throw new Error('totalBudget must be a positive number');
     }
 
-    const platformResults = await this._fetchAllPlatformInsights(30);
+    const platformResults = await this._fetchAllPlatformInsights(30, userId);
 
     const platformROAS = platformResults.map(r => ({
       platform: r.platform,
@@ -232,8 +238,9 @@ export class UnifiedReporter {
 
   /**
    * Time-series data for charts.
+   * @param {string} [userId] - when provided, rows are scoped to that user's performance_history
    */
-  async getTimeSeries({ metric = 'spend', granularity: _granularity = 'daily', days = 30 } = {}) {
+  async getTimeSeries({ metric = 'spend', granularity: _granularity = 'daily', days = 30 } = {}, userId) {
     const validMetric = ['spend', 'revenue', 'impressions', 'clicks', 'conversions'].includes(metric)
       ? metric : 'spend';
 
@@ -245,9 +252,10 @@ export class UnifiedReporter {
           SUM(${validMetric}) AS value
         FROM performance_history
         WHERE created_at >= DATE('now', '-${days} days')
+        ${userId ? "AND user_id = ?" : ""}
         GROUP BY DATE(created_at), platform
         ORDER BY date ASC
-      `).all();
+      `).all(...(userId ? [userId] : []));
 
       return rows.map(r => ({ date: r.date, platform: r.platform, value: r.value || 0 }));
     } catch (err) {
@@ -258,11 +266,17 @@ export class UnifiedReporter {
 
   // ── Internal helpers ─────────────────────────────────────────
 
-  async _fetchAllPlatformInsights(days) {
+  async _fetchAllPlatformInsights(days, userId) {
     const datePreset = days <= 1 ? 'last_1d' : days <= 7 ? 'last_7d' : days <= 30 ? 'last_30d' : 'last_90d';
     const results = [];
 
-    for (const [platform, api] of Object.entries(this.apis)) {
+    // When a userId is supplied, resolve the owner-scoped meta API so live
+    // insights reflect only that user's connected account (never the system token).
+    const liveApis = (userId && this.repos)
+      ? { meta: resolveOwnerPlatformToken('meta', userId, this.repos) }
+      : this.apis;
+
+    for (const [platform, api] of Object.entries(liveApis)) {
       if (!api) continue;
       try {
         const insights = await this._fetchPlatformInsights(api, platform, days, datePreset);
@@ -396,8 +410,10 @@ export class UnifiedReporter {
 
   /**
    * Fetch aggregated metrics from the DB for platforms that may not be live-connected.
+   * @param {number} days
+   * @param {string} [userId] - when provided, only that user's performance_history rows are aggregated
    */
-  _getDBMetrics(days) {
+  _getDBMetrics(days, userId) {
     try {
       return this.db.prepare(`
         SELECT platform,
@@ -408,8 +424,9 @@ export class UnifiedReporter {
                SUM(conversions) AS conversions
         FROM performance_history
         WHERE created_at >= DATE('now', '-${days} days')
+        ${userId ? "AND user_id = ?" : ""}
         GROUP BY platform
-      `).all();
+      `).all(...(userId ? [userId] : []));
     } catch (err) {
       log.debug('_getDBMetrics: table may not exist', { error: err.message });
       return [];

@@ -19,11 +19,12 @@ export function createUnifiedReportingRouter(unifiedReporter) {
   router.get('/compare', async (req, res) => {
     try {
       const { campaignIds, metric } = req.query;
+      const userId = req.user?.id || req.userId;
       const ids = campaignIds ? campaignIds.split(',').map(s => s.trim()).filter(Boolean) : [];
       if (!ids.length) {
         return res.status(400).json({ success: false, error: 'campaignIds query parameter is required' });
       }
-      const result = await unifiedReporter.compareCampaigns(ids, { metric });
+      const result = await unifiedReporter.compareCampaigns(ids, { metric }, userId);
       res.json({ success: true, data: result });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -49,11 +50,12 @@ export function createUnifiedReportingRouter(unifiedReporter) {
   router.get('/timeseries', async (req, res) => {
     try {
       const { metric, granularity, days } = req.query;
+      const userId = req.user?.id || req.userId;
       const result = await unifiedReporter.getTimeSeries({
         metric,
         granularity,
         days: days ? parseInt(days, 10) : undefined,
-      });
+      }, userId);
       res.json({ success: true, data: result });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
