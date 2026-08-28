@@ -1,5 +1,7 @@
 # 1ai-ads (AdForge) Telegram Bot UX Roadmap
 
+> **Verified:** 2026-08-28 — Bot commands + 11 cron jobs confirmed in `server/bot/`. Cross-ref: `ZERO-ADSMANAGER-PLAN.md` (Zero-Ads-Manager shipped A–D), `architecture.md` (bot layer).
+
 > **Target spec source**: user-pasted Indonesian product flowchart (2026-08-23):
 > `/start` → MENU UTAMA `[Dashboard][Buat Kampanye][Monitor][AI Optimize][Setting]`;
 > Setting = OAuth 2.0 connect 8 platforms; Dashboard aggregates + normalizes all platforms;

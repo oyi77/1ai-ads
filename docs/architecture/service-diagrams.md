@@ -1,163 +1,112 @@
 # Service Architecture Diagrams (SDD)
 
-## 1. IKLAN_WORKFLOW — Full Campaign Lifecycle
+> **Refreshed:** 2026-08-28. Replaces stale diagrams that referenced a Python `scheduler/` + `config/satpam.py` (not in this repo) and `server/platforms/index.js` shapes that no longer match. Verified against `server/`, `client/`, `server/domain/`, `server/bot/`.
 
+---
+
+## 1. Request Flow (layered, current)
 ```
-User (OpenClaw)
-    │
-    ▼
-┌─────────────────────────────────────────────────────┐
-│                    MCP Server                        │
-│  selow_topup │ run_workflow │ check_profitability    │
-│  trigger_scale │ list_campaigns                     │
-└──────┬──────────────┬──────────────┬────────────────┘
-       │              │              │
-       ▼              ▼              ▼
-┌──────────┐  ┌──────────────┐  ┌──────────────┐
-│ SelowAPI │  │WorkflowEngine│  │ ScaleManager │
-│ (T1)     │  │ (T5)         │  │ (T4)         │
-└──────────┘  └──────┬───────┘  └──────┬───────┘
-                     │                  │
-         ┌───────────┼──────────┐       │
-         ▼           ▼          ▼       ▼
-┌─────────────┐ ┌─────────┐ ┌──────────────────────┐
-│Profitability│ │Stoploss │ │  MetaAdsAPI           │
-│Calculator   │ │Engine   │ │  (Campaign CRUD)      │
-│ (T2)        │ │ (T3)    │ │  + LLM (interests)    │
-└─────────────┘ └─────────┘ └──────────────────────┘
+Browser (React SPA) / Telegram Bot
+        │  HTTP (api.ts, X-CSRF-Token pending T1)
+        ▼
+server.js → app.js (CSP + audit middleware BEFORE routes)
+        │
+        ▼
+server/routes/<platform>-ads.js  (validation, ownership 404)
+        │
+        ▼
+server/services/  (83 services; e.g. meta/index.js, auto-optimizer.js)
+        │  ├─ resolve-owner-platform → per-user token
+        │  ├─ domain/optimization.js (pure decisions: dayparting, stoploss)
+        │  └─ lib/platform-client.js (rate limiter per platform)
+        ▼
+server/repositories/  →  db/ (SQLite, 24 tables)
+        ▼
+Platform APIs (22 adapters via BasePlatformApiClient)
 ```
 
-## 2. Workflow Engine — Daily Check Sequence
-
+## 2. Platform Registry (auto-discovery)
 ```
-OpenClaw ──POST /api/workflow──▶ WorkflowEngine.runDailyCheck(userId)
-                                    │
-                                    ├──▶ campaignsRepo.findActive(userId)
-                                    │
-                                    ├──▶ FOR EACH campaign:
-                                    │       ├──▶ metaApi.getCampaignInsights(id, last_3d)
-                                    │       ├──▶ profitabilityCalculator.evaluateROAS(commission, spend)
-                                    │       └──▶ profitabilityCalculator.getCampaignStatus(commission, spend)
-                                    │
-                                    └──▶ RETURN CampaignStatus[]
+server/platforms/index.js  (scans services/*/manifest.js)
+   ├─ getPlatform(platform, settingsRepo) → class bound to owner token
+   ├─ getAllPlatforms(settingsRepo)
+   └─ validatePlatform(instance)  ← enforces platform-interface.js (5 methods)
+        │
+        ▼  each manifest.js declares:
+server/services/<platform>/
+   ├─ index.js   (class extends BasePlatformApiClient)
+   └─ manifest.js (key, name, auth, capabilities)
 ```
+> 22 adapters: meta, google, tiktok, linkedin, twitter, snapchat, pinterest, microsoft, amazon, apple, baidu, criteo, kakao, line, reddit, spotify, taboola, thetradedesk, whatsapp, yandex, shopee, +.
 
-## 3. 3-Day Evaluation — Decision Flow
-
+## 3. Automation / Autonomous Decision Path
 ```
-WorkflowEngine.run3DayEvaluation(campaignId)
-    │
-    ├──▶ metaApi.getCampaignInsights(last_3d)
-    │
-    ├──▶ evaluateStoploss({ currentROAS, previousROAS, consecutiveDrops })
-    │       │
-    │       ├── action: WAIT       → return "monitoring"
-    │       ├── action: REDUCE     → metaApi.updateBudget(50%) → return "budget_cut"
-    │       ├── action: KILL       → metaApi.pauseCampaign() → return "stopped"
-    │       └── action: NONE       → continue ↓
-    │
-    ├──▶ scaleManager.evaluateScaleEligibility({ roas, ctr, cpc })
-    │       │
-    │       ├── canScale: true     → return "SCALE_UP"
-    │       └── canScale: false    → continue ↓
-    │
-    └──▶ roas < 1?
-            ├── yes → metaApi.pauseCampaign() → return "stopped"
-            └── no  → return "CONTINUE"
+user rule (compound {all}/{any})  →  rule-evaluator.js
+        │
+        ▼  (approval-first DEFAULT)
+draft action → Telegram/bot notify → owner approve → auto-optimizer.js
+   ├─ pause  → meta.updateCampaign(status:PAUSED)
+   ├─ budget → meta.updateCampaign(dailyBudget)
+   └─ (autonomous tier) → autonomous-agent.js runAutonomousMode() executes directly
+        │
+        ▼  audit-log (every mutation, body+redaction)
 ```
 
-## 4. Scale-Up Flow
-
+## 4. Optimization Engine (domain/optimization.js)
 ```
-ScaleManager.duplicateCampaign(accountId, sourceCampaignId, interests)
-    │
-    ├──▶ metaApi.getCampaigns() → find source
-    ├──▶ metaApi.createCampaign(PAUSED) → new campaign
-    ├──▶ metaApi.createAdSet(new interests) → new adset
-    └──▶ RETURN { campaignId, adsetId, requiresManualActivation: true }
-
-ScaleManager.expandHiddenInterests(product, currentInterests)
-    │
-    ├──▶ llmClient.generate(prompt) → competitor brands, media, activities
-    └──▶ RETURN filtered interests (exclude current)
-
-ScaleManager.discoverBudgetCap(currentBudget, roasIsDropping)
-    │
-    ├── roasIsDropping → HOLD
-    └── find next in ladder [200k, 500k, 1M, 2M, 5M, 10M]
-        └── RETURN INCREASE
+evaluateDayparting(campaign, hourOfDay)   ← peak-hours gate
+evaluateStoploss({roas, prevRoas, drops}) ← WAIT/REDUCE/KILL
+scaleManager.evaluateScaleEligibility()   ← SCALE_UP / HOLD
+        │ all pure functions, no I/O → unit-testable
+        ▼
+auto-optimizer.js wires results to real API calls
 ```
 
-## 5. Stoploss Cascade
-
+## 5. Multi-Platform Fan-Out (unified reporting)
 ```
-evaluateStoploss(params)
-    │
-    ├── ROAS drop < 30%?     → MONITOR
-    ├── ROAS drop >= 30%?
-    │   ├── consecutiveDrops == 1 → WAIT (fluktuasi normal)
-    │   ├── consecutiveDrops == 2 → REDUCE_BUDGET (potong 50%)
-    │   └── consecutiveDrops >= 3 → KILL (matikan campaign)
-    │
-    └── canIncreaseBudget(roasIsDropping)?
-        ├── true  → budget increase OK
-        └── false → "Jangan pernah tambah budget saat ROAS turun"
+GET /api/reporting/unified
+   → account-report-service.js
+   → for each connected platform: getPlatformSync(p).getCampaigns()
+   → normalize (metrics-normalizer.js) → single schema
 ```
 
-## 6. Cross-Project Integration
-
+## 6. Cross-Repo Integration (1ai ecosystem)
 ```
-┌──────────────┐     POST /api/content/generate-video     ┌──────────────┐
-│   1ai-ads    │ ─────────────────────────────────────────▶│  1ai-content │
-│ (Express)    │◀──────────────────────────────────────────│ (Fastify)    │
-│              │     { jobId, status, videoUrl }           │              │
-└──────┬───────┘                                           └──────────────┘
-       │
-       │  POST /api/social/post
+┌──────────────┐  POST /api/...   ┌──────────────┐
+│   1ai-ads    │ ───────────────▶│  1ai-content │ (video/ebook gen)
+│ (Express :5000)│◀───────────────│ (Node)       │
+└──────┬───────┘                  └──────────────┘
+       │ MCP  /api/mcp/*
        ▼
-┌──────────────┐                                           ┌──────────────┐
-│  1ai-social  │ ─────────────────────────────────────────▶│   GoLogin    │
-│ (FastAPI)    │     { profileId, pageId, content }        │   Browser    │
-└──────────────┘                                           └──────────────┘
+┌──────────────┐  agents / tools  ┌──────────────┐
+│ 1ai-hub (brain)│◀──────────────▶│ OmniRoute LLM │
+└──────────────┘                  └──────────────┘
 ```
+> Communication between repos is via HTTP/MCP only (no cross-imports per ecosystem rules).
 
-## 7. SRP Service Decomposition (T12)
-
+## 7. Local Deployment (Docker Compose)
 ```
-BEFORE: AutonomousAgent (500+ lines, 5 concerns)
-    ├── Facebook OAuth
-    ├── Rule Engine
-    ├── Campaign Actions
-    ├── Monitoring Loop
-    └── Daily Reports
-
-AFTER:
-    AutonomousAgent (thin orchestrator, ~100 lines)
-        ├── FacebookConnectionService (OAuth + accounts)
-        ├── RuleEvaluator (rules + actions)
-        ├── CampaignReporter (reports + stats)
-        └── (workflow/scale delegated to WorkflowEngine/ScaleManager)
+┌──────────────────────────────────────────┐
+│ docker-compose.yml                          │
+│  ┌──────────┐   ┌──────────┐                │
+│  │ 1ai-ads  │   │ 1ai-ads  │  (PM2 in container)│
+│  │ :5000    │   │ db vol   │  db/1ai-ads.db   │
+│  └────┬─────┘   └──────────┘                │
+│       │                                      │
+│  ┌────┴───────────────────────────┐         │
+│  │ Telegram Bot (webhook) + Mini App │       │
+│  └──────────────────────────────────┘        │
+└──────────────────────────────────────────┘
 ```
+> Single Express process (not microservices). SQLite default; Postgres path documented (`MIGRATION-POSTGRES.md`).
 
-## 8. Local Deployment Architecture
-
+## 8. Bot Cron Topology (server/bot/scheduler.js — 11 jobs)
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Docker Compose                         │
-│                                                          │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐              │
-│  │ 1ai-ads  │  │1ai-social│  │1ai-content│              │
-│  │ :3000    │  │ :8000    │  │ :3001     │              │
-│  └────┬─────┘  └────┬─────┘  └────┬──────┘              │
-│       │              │              │                     │
-│  ┌────┴─────┐  ┌────┴─────┐  ┌────┴──────┐             │
-│  │  SQLite  │  │PostgreSQL│  │PostgreSQL  │             │
-│  │  (vol)   │  │  Redis   │  │  Redis     │             │
-│  └──────────┘  └──────────┘  └────────────┘             │
-│                                                          │
-│  ┌──────────────────────────────────────────────┐       │
-│  │           OpenClaw (MCP Client)               │       │
-│  │  connects to 1ai-ads MCP server on :3000      │       │
-│  └──────────────────────────────────────────────┘       │
-└─────────────────────────────────────────────────────────┘
+initScheduler(bot, deps)
+ ├─ 0 */6 * * *   token health fan-out (multi-platform)
+ ├─ */5 * * * *   campaign monitor / anomaly
+ ├─ 0 0 * * *     daily billing expiry check
+ ├─ 0 18 * * *    daily digest → Telegram
+ ├─ 0 */6 * * *   backup
+ └─ (autonomous)  auto-scale triggered by monitor
 ```

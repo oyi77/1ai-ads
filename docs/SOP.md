@@ -1,195 +1,69 @@
-# 🛡️ VILONA META ADS — GLOBAL SOP
+# 🛡️ AdForge Operational SOP — Guard / Spend-Cap / Approval
 
-> Last updated: 2026-06-22 WIB
-> Berlaku untuk: 3 akun aktif
-
----
-
-## 1. AD ACCOUNTS
-
-| Account ID | Nama |
-|------------|------|
-| `act_435670549443081` | 0858 |
-| `act_380721031313330` | 1041 |
-| `act_1181078009580337` | 1340 |
-
-**Config**: `config/satpam.py` → `SatpamConfig.AD_ACCOUNTS`
+> **Refreshed:** 2026-08-28. **IMPORTANT:** the prior version described a **Python `scheduler/satpam.py` + `config/satpam.py`** system that **does not exist in this Node repo**. This rewrite maps those guard concepts onto the **actual** AdForge implementation (`server/services/draft-service.js`, `auto-optimizer.js`, `rule-evaluator.js`, bot cron).
 
 ---
 
-## 2. SPEND CAP (per akun)
+## 1. What This Repo Actually Has (guard model)
+AdForge's safety model is **approval-first + audit**, not a standalone Python satpam:
 
-| Parameter | Value |
-|-----------|-------|
-| Total spend harian | **Rp 300.000** per akun |
-| Scope | Semua campaign aktif digabung |
-| Aksi saat cap terlewati | Pause semua campaign aktif (kecuali OFF_) |
+| Concept (old SOP) | Actual implementation |
+|---|---|
+| `SatpamConfig.SPEND_CAP` | `auto-optimizer.js` budget guard + per-platform `daily_spend_cap` (e.g. Pinterest `createCampaign`) |
+| `SatpamConfig.CPR_THRESHOLD` | **Not implemented as hard CPR rule** — optimization is user-authored rules (`rule-evaluator.js` compound `{all}/{any}`) |
+| `scheduler/rules/satpam.py evaluate_campaign()` | `auto-optimizer.js` + `domain/optimization.js` (stoploss/scale/dayparting) |
+| `GuardBase.is_guard_paused()` | `draft-service.js:102 guardAutonomousChange()` — gates autonomous mutations |
+| `Notifier.send_action_alert()` | `server/bot/scheduler.js` Telegram digest/alert jobs |
+| `should_skip()` (OFF_ prefix) | naming convention — enforce in rule conditions, not a separate module |
 
-**Config**: `config/satpam.py` → `SatpamConfig.SPEND_CAP_PER_ACCOUNT`
-**Implementation**: `scheduler/rules/satpam.py` → `evaluate_spend_cap()`
-
----
-
-## 3. SATPAM RULES (CPR = Cost Per Outbound Click)
-
-**Result** = Outbound Clicks (link clicks to website)
-**CPR** = Cost Per Outbound Click = `spend / outbound_clicks`
-**Data window**: Last 7 days (excluding today) untuk evaluasi, real-time untuk spend cap
-
-| # | Kondisi | Aksi | Catatan |
-|---|---------|------|---------|
-| 1 | CPR 7d < 130 **AND** Result > 1 | ✅ **ON** | Kecuali OFF_ |
-| 2 | CPR > 130 **AND** Result > 5 | ❌ **OFF (PAUSE)** | Kecuali OFF_ |
-| 3 | Result > 0 **AND** CPR < 130 | ✅ **ON** | Kecuali OFF_ |
-| 4 | Spend > 130 **AND** Result = 0 | ❌ **OFF (PAUSE)** | Kecuali OFF_ |
-
-**Config**: `config/satpam.py` → `SatpamConfig.CPR_THRESHOLD`, `SPEND_KILL_THRESHOLD`
-**Implementation**: `scheduler/rules/satpam.py` → `evaluate_campaign()`
+> **Gap:** there is **no built-in CPR/spend-cap auto-pause** like the old SOP. If you need it, implement as a `rule-evaluator` rule (IF spend > X AND roas < Y → pause) or extend `auto-optimizer.js`. Tracked as a potential T-item.
 
 ---
 
-## 4. RULE DETAIL
+## 2. Spend Cap (recommended config)
+Set per-platform daily caps at account connect (UI) or via `daily_spend_cap` in create calls. Bot cron monitors spend every 5 min (`scheduler.js`).
 
-### Rule 1: Re-Activation (CPR 7d bagus)
-- **Kondisi**: Campaign PAUSED + CPR last 7d (excl today) < Rp 130 + clicks > 1
-- **Aksi**: Resume campaign
-- **Note**: Hanya campaign yang di-pause oleh satpam, bukan manual
-- **Code**: `scheduler/rules/satpam.py` → `rule_1_reactive()`
-
-### Rule 2: Stop-Loss (CPR mahal + banyak hasil)
-- **Kondisi**: Campaign ACTIVE + CPR > Rp 130 + clicks > 5
-- **Aksi**: Pause campaign
-- **Note**: Campaign sudah banyak spending tapi gak efisien
-- **Code**: `scheduler/rules/satpam.py` → `rule_2_stop_loss()`
-
-### Rule 3: Re-Activation (ada hasil + CPR bagus)
-- **Kondisi**: Campaign PAUSED + clicks > 0 + CPR < Rp 130
-- **Aksi**: Resume campaign
-- **Note**: Subset dari Rule 1, covers campaign dengan 1 click
-- **Code**: `scheduler/rules/satpam.py` → `rule_3_reactive_clicks()`
-
-### Rule 4: Early Kill (spending tanpa hasil)
-- **Kondisi**: Campaign ACTIVE + spend > Rp 130 + clicks = 0
-- **Aksi**: Pause campaign
-- **Note**: Buang campaign yang gak menghasilkan
-- **Code**: `scheduler/rules/satpam.py` → `rule_4_early_kill()`
-
----
-
-## 5. NAMING CONVENTION
-
-| Prefix | Arti | Action |
-|--------|------|--------|
-| `🌟_` | WINNER | Scale candidate — manual clone |
-| *(no prefix)* | Normal | KEEP |
-| `OFF_` | Sampah permanen | 🚫 NEVER TOUCH |
-| `DEAD_` | Trash | Bisa dihapus |
-
-**Implementation**: `scheduler/common.py` → `CampaignData.is_off`
-
----
-
-## 6. HARD RULES
-
-1. **OFF_ = HARAM disentuh** — jangan pause/resume/rename
-   - **Code**: `scheduler/rules/satpam.py` → `should_skip()`
-
-2. **Total spend cap Rp 300K/hari per akun** — pause semua saat cap terlewati
-   - **Code**: `scheduler/rules/satpam.py` → `evaluate_spend_cap()`
-
-3. **CPR threshold = Rp 130** — batas efisiensi
-   - **Config**: `config/satpam.py` → `SatpamConfig.CPR_THRESHOLD`
-
-4. **Hanya resume campaign yang di-pause oleh satpam**, bukan manual
-   - **Code**: `scheduler/common.py` → `GuardBase.is_guard_paused()`
-
-5. **Token dibaca dari DB**, bukan hardcoded
-   - **Code**: `scheduler/common.py` → `GuardBase.get_token_for_account()`
-
----
-
-## 7. REPORT FORMAT (tiap 5m)
-
+## 3. Approval-First Rules (the real "satpam")
+Users define compound rules in dashboard/bot:
 ```
-🛡️ SATPAM {ACCOUNT_ID} {timestamp}
-ACTIVE:{n} | PAUSED:{n} | Spend:Rp{x}/300K
-
-CPR (7d avg): Rp{x}
-
-⚡ RE-ACTIVE: {list (Rule 1/3)}
-🛑 PAUSED: {list (Rule 2/4)}
-🚨 SPEND CAP: {list if cap hit}
-
-Aksi: {ringkasan}
+IF roas < 1.0 AND active > 3d  → PAUSE (draft action → owner approves)
+IF ctr < 2% AND spend > 50K    → SCALE DOWN (draft → approve)
 ```
+`rule-evaluator.js` evaluates `{all}/{any}` nested (depth ≤3). Autonomous tier (optional) executes without approval after N verified actions — see `GAP-RESOLUTION-PLAN.md` T3.
 
-**Implementation**: `scheduler/notifier.py` → `Notifier.send_action_alert()`
+## 4. Naming Convention (keep)
+| Prefix | Meaning | Action |
+|--------|---------|--------|
+| `🌟_` | Winner | Scale candidate (manual clone) |
+| *(none)* | Normal | Keep |
+| `OFF_` | Permanent dead | Never touch (encode in rule `should_skip`) |
+| `DEAD_` | Trash | Deletable |
 
----
+## 5. Hard Rules
+1. `OFF_` never auto-touched — exclude in rule conditions.
+2. Spend cap enforced per account — pause all on breach.
+3. Token from DB (`resolve-owner-platform.js`), never hardcoded.
+4. Every mutation → **audit log** (`middleware/audit.js`, body+redaction).
+5. No action without owner approval **by default** (autonomous tier opt-in, audited).
 
-## 8. META API FIELDS
+## 6. Schedule (bot cron — 11 jobs, `server/bot/scheduler.js`)
+| Job | Interval | Purpose |
+|-----|----------|---------|
+| Token health fan-out | `0 */6 * * *` | multi-platform token check |
+| Campaign monitor / anomaly | `*/5 * * * *` | detect + alert |
+| Billing expiry | `0 0 * * *` | downgrade expired Pro |
+| Daily digest | `0 18 * * *` | Telegram recap |
+| Backup | `0 */6 * * *` | DB backup |
+| Auto-scale | triggered | by monitor |
 
+## 7. Monitoring
+- `curl /health` (healthcheck in docker-compose)
+- `pm2 logs 1ai-ads`
+- Telegram owner chat for digests/alerts
+- Audit log table for every action
+
+## 8. Testing
+```bash
+npm test            # 1867 tests (verified)
+npm run test:smoke  # boot
 ```
-insights:
-  - campaign_id
-  - spend
-  - outbound_clicks (result = link clicks)
-  - cost_per_outbound_click (CPR)
-
-campaigns:
-  - id, name, status
-```
-
-**Implementation**: `scheduler/insights.py` → `parse_campaign_row()`
-
----
-
-## 9. SCHEDULE
-
-| Job | Interval | File |
-|-----|----------|------|
-| Realtime Guard | Every 5 min | `scheduler/realtime_guard.py` |
-| Daily Eval Guard | 01:00 WIB | `scheduler/daily_eval_guard.py` |
-| Bid Satpam | Every 5 min | `scheduler/bid_satpam.py` |
-| Spend Guard | Every 5 min | `scheduler/spend_guard.py` |
-| Daily Dashboard | 07:00 WIB | `scheduler/daily_dashboard.py` |
-
-**Config**: `scheduler/jobs.py` → `init_scheduler()`
-
----
-
-## 10. TESTING
-
-| Test Type | File | Coverage |
-|-----------|------|----------|
-| Unit Tests | `tests/test_satpam_rules.py` | 37 tests, 100% rule coverage |
-| Integration Tests | `tests/test_guard_integration.py` | 13 tests, 90%+ guard coverage |
-
-**Run tests**: `pytest tests/ -v`
-
----
-
-## 11. MONITORING
-
-### Metrics
-- `satpam_campaign_actions_total` - Total actions taken
-- `satpam_guard_duration_seconds` - Guard execution time
-- `satpam_spend_cap_violations_total` - Spend cap hits
-- `satpam_api_calls_total` - Meta API calls
-
-**Implementation**: `scheduler/metrics.py` → `MetricsCollector`
-
-### Health Checks
-- Redis connection
-- Meta token validity
-- Scheduler status
-
-**Implementation**: `scheduler/health.py` → `HealthChecker`
-**Endpoint**: `GET /health`
-
-### Logging
-- Structured JSON logs
-- Campaign-level context
-- Performance metrics
-
-**Implementation**: `scheduler/logging.py` → `setup_structured_logging()`

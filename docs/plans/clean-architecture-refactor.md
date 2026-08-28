@@ -1,5 +1,7 @@
 # Clean Architecture Refactor — 1ai-ads (AdForge)
 
+> **Verified:** 2026-08-28 — refactored structure confirmed (routes/services/domain/repositories/lib/middleware/bot layers per `architecture.md`). Cross-ref: `ADR-001`, `ADR-002`.
+
 > **Status: IN PROGRESS (corrected 2026-08-15).** The previous version of this doc asserted
 > "✅ Verified" against fabricated metrics (routes 59→10, services 61→15, god functions 3→0).
 > Those numbers were never real. This revision documents the **true baseline** measured from
