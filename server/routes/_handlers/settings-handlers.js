@@ -150,6 +150,26 @@ export function handleListAccounts(settingsRepo) {
   };
 }
 
+// GET /meta/accounts — frontend accounts selector for the Saved Audiences builder.
+// Returns { accounts: [{ id, name }] } scoped to the requesting user (multi-tenant).
+export function handleListMetaAccounts(settingsRepo) {
+  return (req, res) => {
+    try {
+      const all = settingsRepo.getAccounts ? settingsRepo.getAccounts('meta') : [];
+      const accounts = (Array.isArray(all) ? all : []).filter(
+        acc => acc.user_id === req.user.id && acc.is_active !== 0
+      );
+      const data = accounts.map(acc => ({
+        id: acc.id,
+        name: acc.account_name || acc.id,
+      }));
+      res.json({ accounts: data });
+    } catch {
+      res.json({ accounts: [] });
+    }
+  };
+}
+
 // POST /accounts — create account
 export function handleCreateAccount(settingsRepo) {
   return (req, res) => {

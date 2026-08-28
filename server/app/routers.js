@@ -27,6 +27,8 @@ import { createUsageRouter } from '../routes/usage.js';
 import { createOAuthRouter } from '../routes/oauth.js';
 import { createMilestonesRouter } from '../routes/milestones.js';
 import { createWhatsappIntelligenceGroupRouter } from '../routes/_whatsapp-intelligence.js';
+import { createBoostRouter } from '../routes/boost.js';
+import { handleListMetaAccounts } from '../routes/_handlers/settings-handlers.js';
 export function createRouters({ app, repos, services }) {
   const publicRateLimit = rateLimit({
     windowMs: config.rateLimitWindowMs,
@@ -90,9 +92,11 @@ export function createRouters({ app, repos, services }) {
 
   // ── Milestones (customer self-serve) ──────────────────────
   app.use('/api/milestones', requireAuth, createMilestonesRouter(repos.paymentsRepo));
-
   // ── Boost Recommendations ────────────────────────────────────
-  // ── WhatsApp Intelligence ─────────────────────────────
+  app.use('/api/boost', createBoostRouter({ services }));
+  // ── Per-user Meta ad-accounts (Saved Audiences builder) ──
+  app.use('/api/meta/accounts', requireAuth, handleListMetaAccounts(repos.settingsRepo));
+  // ── WhatsApp Intelligence ─────────────────────────────────────
   app.use('/', createWhatsappIntelligenceGroupRouter(deps));
   // ── Meta webhook (public, no auth) ───────────────────────
   app.use('/webhooks', createWebhookRouter(repos.webhookEventsRepo));
