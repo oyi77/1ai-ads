@@ -35,7 +35,7 @@ export class BulkOperations {
    * @returns {Promise<Array>}
    */
   async bulkCreateAds(accountId, { template, variants }, userId) {
-    if (userId != null && !this.campaignsRepo?.ownsAccount?.(accountId, userId)) {
+    if (userId !== null && !this.campaignsRepo?.ownsAccount?.(accountId, userId)) {
       throw new Error('not authorized');
     }
     if (!accountId) throw new Error('accountId is required');
@@ -103,7 +103,7 @@ export class BulkOperations {
   async bulkUpdateStatus(campaignIds, status, userId) {
     if (!campaignIds?.length) throw new Error('campaignIds is required');
     if (!status) throw new Error('status is required');
-    if (userId != null) {
+    if (userId !== null) {
       campaignIds = campaignIds.filter((id) => this.campaignsRepo?.findById?.(id, userId));
     }
 
@@ -152,7 +152,7 @@ export class BulkOperations {
   async bulkScaleBudget(campaignIds, { action, value }, userId) {
     if (!campaignIds?.length) throw new Error('campaignIds is required');
     if (!action || value === undefined) throw new Error('action and value are required');
-    if (userId != null) {
+    if (userId !== null) {
       campaignIds = campaignIds.filter((id) => this.campaignsRepo?.findById?.(id, userId));
     }
 
@@ -212,7 +212,7 @@ export class BulkOperations {
    * @returns {Promise<Object>}
    */
   async cloneCampaign(sourceCampaignId, targetAccountId, { rename } = {}, userId) {
-    if (userId != null) {
+    if (userId !== null) {
       if (!this.campaignsRepo?.findById?.(sourceCampaignId, userId)) {
         throw new Error('not authorized');
       }
