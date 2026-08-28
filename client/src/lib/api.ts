@@ -52,9 +52,9 @@ async function tryRefreshToken(): Promise<boolean> {
 
       if (!response.ok) return false;
 
-      const data = await response.json();
-      setTokens(data.accessToken, data.refreshToken);
-      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      const envelope = await response.json();
+      setTokens(envelope.data.accessToken, envelope.data.refreshToken);
+      // refresh envelope carries no user payload; preserve existing USER_KEY
       return true;
     } catch {
       return false;
@@ -153,40 +153,48 @@ export const api = {
 
   // Auth lifecycle
   login: async (username: string, password: string) => {
-    const data = await request<{
-      accessToken: string;
-      refreshToken: string;
-      user: User;
+    const envelope = await request<{
+      data: {
+        accessToken: string;
+        refreshToken: string;
+        user: User;
+      };
     }>('POST', '/auth/login', { username, password });
 
-    setTokens(data.accessToken, data.refreshToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-    return data;
+    const { accessToken, refreshToken, user } = envelope.data;
+    setTokens(accessToken, refreshToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    return envelope.data;
   },
 
   register: async (username: string, password: string, email: string) => {
-    const data = await request<{
-      accessToken: string;
-      refreshToken: string;
-      user: User;
+    const envelope = await request<{
+      data: {
+        accessToken: string;
+        refreshToken: string;
+        user: User;
+      };
     }>('POST', '/auth/register', { username, password, email });
 
-    setTokens(data.accessToken, data.refreshToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-    return data;
+    const { accessToken, refreshToken, user } = envelope.data;
+    setTokens(accessToken, refreshToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    return envelope.data;
   },
 
   // Telegram Mini App SSO — exchanges validated initData for our JWT
   telegramLogin: async (initData: string) => {
-    const data = await request<{
-      accessToken: string;
-      refreshToken: string;
-      user: User;
+    const envelope = await request<{
+      data: {
+        accessToken: string;
+        refreshToken: string;
+        user: User;
+      };
     }>('POST', '/auth/telegram-webapp', { initData });
 
-    setTokens(data.accessToken, data.refreshToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-    return data;
+    setTokens(envelope.data.accessToken, envelope.data.refreshToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(envelope.data.user));
+    return envelope.data;
   },
 
   logout: () => {
