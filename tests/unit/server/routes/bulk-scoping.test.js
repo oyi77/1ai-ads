@@ -151,4 +151,19 @@ describe('bulk operations route — multi-tenant scoping', () => {
     // No Meta call ever reached BulkOperations
     expect(opsHolder.last).toBeNull();
   });
+  it('GET /progress is owner-scoped (cross-user operation UUID → 404)', async () => {
+    const ownedSingleton = {
+      getOperation: (id) => ({ operationId: id, status: 'done', userId: 'u1' }),
+    };
+    const ownerApp = createApp(campaignsRepo, { id: 'u1' }, ownedSingleton);
+    const r1 = await request(ownerApp).get('/api/campaigns/bulk/progress/op-123');
+    expect(r1.status).toBe(200);
+    expect(r1.body.data.userId).toBe('u1');
+
+    const otherApp = createApp(campaignsRepo, { id: 'u2' }, ownedSingleton);
+    const r2 = await request(otherApp).get('/api/campaigns/bulk/progress/op-123');
+    expect(r2.status).toBe(404);
+    expect(r2.body.error).toBe('Operation not found');
+  });
+
 });

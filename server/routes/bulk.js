@@ -12,7 +12,7 @@ async function ownerBulkOps(repos, userId) {
     throw new Error('not authorized');
   }
   const ownerMeta = MetaAdsAPI.withToken(token);
-  return new BulkOperations(ownerMeta, repos.campaignsRepo, repos.adsRepo);
+  return new BulkOperations(ownerMeta, repos.campaignsRepo, repos.adsRepo, userId);
 }
 
 export function createBulkRouter(bulkOps, repos) {
@@ -108,6 +108,10 @@ export function createBulkRouter(bulkOps, repos) {
     try {
       const op = bulkOps.getOperation(req.params.operationId);
       if (!op) {
+        return res.status(404).json({ success: false, error: 'Operation not found' });
+      }
+      // Multi-tenant: reject cross-user progress/result disclosure.
+      if (op.userId && op.userId !== req.user.id) {
         return res.status(404).json({ success: false, error: 'Operation not found' });
       }
       res.json({ success: true, data: op });

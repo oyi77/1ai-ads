@@ -12,10 +12,11 @@ export class BulkOperations {
    * @param {Object} campaignsRepo - CampaignsRepository
    * @param {Object} adsRepo - AdsRepository
    */
-  constructor(metaApi, campaignsRepo, adsRepo) {
+  constructor(metaApi, campaignsRepo, adsRepo, userId = null) {
     this.meta = metaApi;
     this.campaignsRepo = campaignsRepo;
     this.adsRepo = adsRepo;
+    this.userId = userId;
   }
 
   /**
@@ -43,6 +44,7 @@ export class BulkOperations {
     const operationId = crypto.randomUUID();
     const op = {
       id: operationId, type: 'bulk_create_ads', status: 'running',
+      userId: this.userId,
       total: variants.length, completed: 0, failed: 0, results: [],
       startedAt: new Date().toISOString(),
     };
@@ -108,6 +110,7 @@ export class BulkOperations {
     const operationId = crypto.randomUUID();
     const op = {
       id: operationId, type: 'bulk_update_status', status: 'running',
+      userId: this.userId,
       total: campaignIds.length, completed: 0, failed: 0, results: [],
       startedAt: new Date().toISOString(),
     };
@@ -156,6 +159,7 @@ export class BulkOperations {
     const operationId = crypto.randomUUID();
     const op = {
       id: operationId, type: 'bulk_scale_budget', status: 'running',
+      userId: this.userId,
       total: campaignIds.length, completed: 0, failed: 0, results: [],
       startedAt: new Date().toISOString(),
     };
@@ -222,6 +226,7 @@ export class BulkOperations {
     const operationId = crypto.randomUUID();
     const op = {
       id: operationId, type: 'clone_campaign', status: 'running',
+      userId: this.userId,
       total: 1, completed: 0, failed: 0,
       startedAt: new Date().toISOString(),
     };
