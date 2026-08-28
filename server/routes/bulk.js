@@ -1,6 +1,21 @@
 import { Router } from 'express';
+import { MetaAdsAPI } from '../services/meta/index.js';
+import { BulkOperations } from '../services/bulk-operations.js';
+import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
 
-export function createBulkRouter(bulkOps) {
+// Build an owner-scoped BulkOperations instance for the authenticated user.
+// Throws a 403-style error when the user has no bound Meta token.
+async function ownerBulkOps(repos, userId) {
+  // Canonical per-user Meta token resolution — rejects demo/placeholder tokens.
+  const token = await resolveOwnerPlatformToken('meta', userId, repos);
+  if (!token) {
+    throw new Error('not authorized');
+  }
+  const ownerMeta = MetaAdsAPI.withToken(token);
+  return new BulkOperations(ownerMeta, repos.campaignsRepo, repos.adsRepo);
+}
+
+export function createBulkRouter(bulkOps, repos) {
   const router = Router();
 
   // Bulk create ads from template + variants
@@ -10,10 +25,15 @@ export function createBulkRouter(bulkOps) {
       if (!accountId || !template || !variants?.length) {
         return res.status(400).json({ success: false, error: 'accountId, template, and variants[] are required' });
       }
-      const result = await bulkOps.bulkCreateAds(accountId, { template, variants });
+      if (!(await repos.campaignsRepo?.ownsAccount?.(accountId, req.user.id))) {
+        return res.status(403).json({ success: false, error: 'not authorized' });
+      }
+      const ops = await ownerBulkOps(repos, req.user.id);
+      const result = await ops.bulkCreateAds(accountId, { template, variants }, req.user.id);
       res.json({ success: true, data: result });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      const code = err.message === 'not authorized' ? 403 : 500;
+      res.status(code).json({ success: false, error: err.message });
     }
   });
 
@@ -24,10 +44,18 @@ export function createBulkRouter(bulkOps) {
       if (!campaignIds?.length || !status) {
         return res.status(400).json({ success: false, error: 'campaignIds[] and status are required' });
       }
-      const result = await bulkOps.bulkUpdateStatus(campaignIds, status);
+      const campaigns = await Promise.all(
+        campaignIds.map((id) => repos.campaignsRepo?.findById?.(id, req.user.id))
+      );
+      if (campaigns.some((c) => !c)) {
+        return res.status(403).json({ success: false, error: 'not authorized' });
+      }
+      const ops = await ownerBulkOps(repos, req.user.id);
+      const result = await ops.bulkUpdateStatus(campaignIds, status, req.user.id);
       res.json({ success: true, data: result });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      const code = err.message === 'not authorized' ? 403 : 500;
+      res.status(code).json({ success: false, error: err.message });
     }
   });
 
@@ -38,10 +66,18 @@ export function createBulkRouter(bulkOps) {
       if (!campaignIds?.length || !action || value === undefined) {
         return res.status(400).json({ success: false, error: 'campaignIds[], action, and value are required' });
       }
-      const result = await bulkOps.bulkScaleBudget(campaignIds, { action, value });
+      const campaigns = await Promise.all(
+        campaignIds.map((id) => repos.campaignsRepo?.findById?.(id, req.user.id))
+      );
+      if (campaigns.some((c) => !c)) {
+        return res.status(403).json({ success: false, error: 'not authorized' });
+      }
+      const ops = await ownerBulkOps(repos, req.user.id);
+      const result = await ops.bulkScaleBudget(campaignIds, { action, value }, req.user.id);
       res.json({ success: true, data: result });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      const code = err.message === 'not authorized' ? 403 : 500;
+      res.status(code).json({ success: false, error: err.message });
     }
   });
 
@@ -52,14 +88,22 @@ export function createBulkRouter(bulkOps) {
       if (!sourceCampaignId || !targetAccountId) {
         return res.status(400).json({ success: false, error: 'sourceCampaignId and targetAccountId are required' });
       }
-      const result = await bulkOps.cloneCampaign(sourceCampaignId, targetAccountId, { rename });
+      if (!(await repos.campaignsRepo?.findById?.(sourceCampaignId, req.user.id))) {
+        return res.status(404).json({ success: false, error: 'source campaign not found' });
+      }
+      if (!(await repos.campaignsRepo?.ownsAccount?.(targetAccountId, req.user.id))) {
+        return res.status(403).json({ success: false, error: 'not authorized' });
+      }
+      const ops = await ownerBulkOps(repos, req.user.id);
+      const result = await ops.cloneCampaign(sourceCampaignId, targetAccountId, { rename }, req.user.id);
       res.json({ success: true, data: result });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      const code = err.message === 'not authorized' ? 403 : 500;
+      res.status(code).json({ success: false, error: err.message });
     }
   });
 
-  // Get operation progress
+  // Get operation progress (system singleton tracking)
   router.get('/progress/:operationId', async (req, res) => {
     try {
       const op = bulkOps.getOperation(req.params.operationId);

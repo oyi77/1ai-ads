@@ -33,7 +33,10 @@ export class BulkOperations {
    * @param {{ template: Object, variants: Array<{ hook: string, body: string, image: string }> }} opts
    * @returns {Promise<Array>}
    */
-  async bulkCreateAds(accountId, { template, variants }) {
+  async bulkCreateAds(accountId, { template, variants }, userId) {
+    if (userId != null && !this.campaignsRepo?.ownsAccount?.(accountId, userId)) {
+      throw new Error('not authorized');
+    }
     if (!accountId) throw new Error('accountId is required');
     if (!variants?.length) throw new Error('variants array is required');
 
@@ -91,12 +94,16 @@ export class BulkOperations {
   /**
    * Bulk pause/resume campaigns.
    * @param {string[]} campaignIds
-   * @param {string} status - 'ACTIVE' | 'PAUSED'
+   * @param {string} status
+   * @param {string} [userId] - when provided, restrict to campaigns owned by this user
    * @returns {Promise<Array>}
    */
-  async bulkUpdateStatus(campaignIds, status) {
+  async bulkUpdateStatus(campaignIds, status, userId) {
     if (!campaignIds?.length) throw new Error('campaignIds is required');
     if (!status) throw new Error('status is required');
+    if (userId != null) {
+      campaignIds = campaignIds.filter((id) => this.campaignsRepo?.findById?.(id, userId));
+    }
 
     const operationId = crypto.randomUUID();
     const op = {
@@ -135,12 +142,16 @@ export class BulkOperations {
   /**
    * Bulk scale budgets across campaigns.
    * @param {string[]} campaignIds
-   * @param {{ action: 'multiply'|'set', value: number }} opts
+   * @param {{ action: 'multiply' | 'set', value: number }} opts
+   * @param {string} [userId] - when provided, restrict to campaigns owned by this user
    * @returns {Promise<Array>}
    */
-  async bulkScaleBudget(campaignIds, { action, value }) {
+  async bulkScaleBudget(campaignIds, { action, value }, userId) {
     if (!campaignIds?.length) throw new Error('campaignIds is required');
     if (!action || value === undefined) throw new Error('action and value are required');
+    if (userId != null) {
+      campaignIds = campaignIds.filter((id) => this.campaignsRepo?.findById?.(id, userId));
+    }
 
     const operationId = crypto.randomUUID();
     const op = {
@@ -193,9 +204,18 @@ export class BulkOperations {
    * @param {string} sourceCampaignId
    * @param {string} targetAccountId
    * @param {{ rename?: string }} opts
+   * @param {string} [userId] - when provided, enforce ownership of both source and target
    * @returns {Promise<Object>}
    */
-  async cloneCampaign(sourceCampaignId, targetAccountId, { rename } = {}) {
+  async cloneCampaign(sourceCampaignId, targetAccountId, { rename } = {}, userId) {
+    if (userId != null) {
+      if (!this.campaignsRepo?.findById?.(sourceCampaignId, userId)) {
+        throw new Error('not authorized');
+      }
+      if (!this.campaignsRepo?.ownsAccount?.(targetAccountId, userId)) {
+        throw new Error('not authorized');
+      }
+    }
     if (!sourceCampaignId) throw new Error('sourceCampaignId is required');
     if (!targetAccountId) throw new Error('targetAccountId is required');
 
