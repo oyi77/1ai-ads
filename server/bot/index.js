@@ -66,9 +66,11 @@ export function initBot(app, deps) {
   // eat subsequent commands (/start, /pricing etc still work normally).
   bot.use(async (ctx, next) => {
     const text = ctx.message?.text || '';
-    if (ctx.session?.__scenes && text.startsWith('/') && text !== '/skip') {
-      delete ctx.session.__scenes;
-      ctx.session.__scenes = undefined;
+    const cbData = ctx.callbackQuery?.data || '';
+    // Clear stuck scene state for ANY /command or callback query (except /skip which is scene-internal)
+    if (ctx.session?.__scenes && (text.startsWith('/') && text !== '/skip' || cbData)) {
+      log.debug('Clearing stuck session scene state', { text, cbData, scenes: ctx.session.__scenes });
+      ctx.session.__scenes = {};
     }
     return next();
   });

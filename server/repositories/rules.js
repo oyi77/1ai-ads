@@ -14,117 +14,85 @@ export class RulesRepository {
   _ensureTable() {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS ${this.table} (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
+        account_id TEXT DEFAULT NULL,
         name TEXT NOT NULL,
-        condition TEXT NOT NULL,
-        action TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        condition_json TEXT NOT NULL,
+        action_json TEXT NOT NULL,
         priority INTEGER DEFAULT 1,
         enabled INTEGER DEFAULT 1,
-        created_at TEXT NOT NULL,
-        updated_at TEXT,
-        account_id TEXT
+        last_triggered_at TEXT,
+        trigger_count INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
       );
-      
-      CREATE INDEX IF NOT EXISTS idx_user_rules ON ${this.table}(user_id, enabled);
+      CREATE INDEX IF NOT EXISTS idx_rules_user ON ${this.table}(user_id);
+      CREATE INDEX IF NOT EXISTS idx_rules_enabled ON ${this.table}(enabled);
+      CREATE INDEX IF NOT EXISTS idx_rules_account ON ${this.table}(account_id);
+      CREATE INDEX IF NOT EXISTS idx_rules_priority ON ${this.table}(priority);
     `);
-    log.info('Rules table created');
+    log.debug('autonomous_rules table ready');
   }
 
   create(rule) {
-    const now = new Date().toISOString();
-    const conditionStr = typeof rule.condition === 'string' ? rule.condition : JSON.stringify(rule.condition);
-    const actionStr = typeof rule.action === 'string' ? rule.action : JSON.stringify(rule.action);
-
+    const id = rule.id || crypto.randomUUID();
     const stmt = this.db.prepare(`
-      INSERT INTO ${this.table} (user_id, name, condition, action, priority, enabled, created_at, account_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO ${this.table} (id, user_id, account_id, name, description, condition_json, action_json, priority, enabled)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    
-    const result = stmt.run(
-      rule.user_id,
+    stmt.run(
+      id,
+      rule.userId || rule.user_id,
+      rule.accountId || rule.account_id || null,
       rule.name,
-      conditionStr,
-      actionStr,
-      rule.priority,
-      rule.enabled ? 1 : 0,
-      now,
-      rule.account_id ?? null
+      rule.description || '',
+      JSON.stringify(rule.condition),
+      JSON.stringify(rule.action),
+      rule.priority || 1,
+      (rule.enabled === undefined || rule.enabled) ? 1 : 0
     );
-    
-    log.info('Rule created', { id: result.lastInsertRowid, userId: rule.user_id });
-    return result.lastInsertRowid;
+    return this.getById(id);
   }
 
   update(id, updates) {
-    const set = [];
-    const values = [];
-    
-    if (updates.name) { set.push('name = ?'); values.push(updates.name); }
-    if (updates.condition) { set.push('condition = ?'); values.push(updates.condition); }
-    if (updates.action) { set.push('action = ?'); values.push(updates.action); }
-    if (updates.priority !== undefined) { set.push('priority = ?'); values.push(updates.priority); }
-    if (updates.enabled !== undefined) { set.push('enabled = ?'); values.push(updates.enabled ? 1 : 0); }
-    if (updates.account_id !== undefined) { set.push('account_id = ?'); values.push(updates.account_id ?? null); }
-    
-    if (set.length === 0) return false;
-    
-    values.push(id);
-    
-    const result = this.db.prepare(`
-      UPDATE ${this.table} SET ${set.join(', ')}, updated_at = ? WHERE id = ?
-    `).run(new Date().toISOString(), id);
-    
-    log.info('Rule updated', { id, changes: set.length });
-    return result.changes > 0;
+    const fields = [];
+    const params = [];
+    if (updates.name) { fields.push('name = ?'); params.push(updates.name); }
+    if (updates.description !== undefined) { fields.push('description = ?'); params.push(updates.description); }
+    if (updates.condition) { fields.push('condition_json = ?'); params.push(JSON.stringify(updates.condition)); }
+    if (updates.action) { fields.push('action_json = ?'); params.push(JSON.stringify(updates.action)); }
+    if (updates.priority !== undefined) { fields.push('priority = ?'); params.push(updates.priority); }
+    if (updates.enabled !== undefined) { fields.push('enabled = ?'); params.push(updates.enabled ? 1 : 0); }
+    if (!fields.length) return this.getById(id);
+    fields.push('updated_at = datetime(\'now\')');
+    params.push(id);
+    this.db.prepare(`UPDATE ${this.table} SET ${fields.join(', ')} WHERE id = ?`).run(...params);
+    return this.getById(id);
   }
 
   getById(id) {
-    return this.db.prepare(`SELECT * FROM ${this.table} WHERE id = ?`).get(id);
+    const row = this.db.prepare(`SELECT * FROM ${this.table} WHERE id = ?`).get(id);
+    if (!row) return null;
+    return this._hydrate(row);
   }
 
   getAll(userId) {
-    return this.db.prepare(`SELECT * FROM ${this.table} WHERE user_id = ?`).all(userId).map(r => ({
-      id: r.id,
-      user_id: r.user_id,
-      name: r.name,
-      condition: safeParse(r.condition),
-      action: safeParse(r.action),
-      priority: r.priority,
-      enabled: r.enabled === 1,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
-      account_id: r.account_id,
-    }));
+    const rows = this.db.prepare(`SELECT * FROM ${this.table} WHERE user_id = ? ORDER BY priority DESC, created_at DESC`).all(userId);
+    return rows.map(r => this._hydrate(r));
   }
 
   getAllEnabled(userId) {
-    return this.db.prepare(`SELECT * FROM ${this.table} WHERE user_id = ? AND enabled = 1`).all(userId).map(r => ({
-      id: r.id,
-      user_id: r.user_id,
-      name: r.name,
-      condition: safeParse(r.condition),
-      action: safeParse(r.action),
-      priority: r.priority,
-      enabled: true,
-      updated_at: r.updated_at,
-      account_id: r.account_id,
-    }));
+    const rows = this.db.prepare(`SELECT * FROM ${this.table} WHERE user_id = ? AND enabled = 1 ORDER BY priority DESC`).all(userId);
+    return rows.map(r => this._hydrate(r));
   }
 
   getAllEnabledForScope(userId, accountId) {
-    return this.db.prepare(
-      `SELECT * FROM ${this.table} WHERE user_id = ? AND enabled = 1 AND (account_id IS NULL OR account_id = ?)`
-    ).all(userId, accountId).map(r => ({
-      id: r.id,
-      user_id: r.user_id,
-      name: r.name,
-      condition: safeParse(r.condition),
-      action: safeParse(r.action),
-      priority: r.priority,
-      enabled: true,
-      account_id: r.account_id
-    }));
+    const rows = this.db.prepare(
+      `SELECT * FROM ${this.table} WHERE user_id = ? AND enabled = 1 AND (account_id = ? OR account_id IS NULL) ORDER BY priority DESC`
+    ).all(userId, accountId);
+    return rows.map(r => this._hydrate(r));
   }
 
   countEnabled(userId) {
@@ -132,63 +100,59 @@ export class RulesRepository {
   }
 
   findAll(filters = {}) {
-    let rows;
-    if (filters.campaignId) {
-      rows = this.db.prepare(`SELECT * FROM ${this.table} WHERE condition LIKE ? ORDER BY created_at DESC`).all(`%${filters.campaignId}%`);
-    } else {
-      rows = this.db.prepare(`SELECT * FROM ${this.table} ORDER BY created_at DESC`).all();
-    }
-    return rows.map(r => ({
-      id: r.id,
-      user_id: r.user_id,
-      name: r.name,
-      condition: safeParse(r.condition),
-      action: safeParse(r.action),
-      priority: r.priority,
-      enabled: r.enabled === 1,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
-      account_id: r.account_id,
-    }));
+    const where = [];
+    const params = [];
+    if (filters.userId) { where.push('user_id = ?'); params.push(filters.userId); }
+    if (filters.enabled !== undefined) { where.push('enabled = ?'); params.push(filters.enabled ? 1 : 0); }
+    if (filters.accountId) { where.push('account_id = ?'); params.push(filters.accountId); }
+    const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const rows = this.db.prepare(`SELECT * FROM ${this.table} ${whereClause} ORDER BY priority DESC`).all(...params);
+    return rows.map(r => this._hydrate(r));
   }
 
   findActive() {
     const rows = this.db.prepare(`SELECT * FROM ${this.table} WHERE enabled = 1 ORDER BY priority DESC`).all();
-    return rows.map(r => ({
-      id: r.id,
-      user_id: r.user_id,
-      name: r.name,
-      condition: safeParse(r.condition),
-      action: safeParse(r.action),
-      priority: r.priority,
-      enabled: true,
-      campaign_id: r.campaign_id,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
-      account_id: r.account_id,
-    }));
+    return rows.map(r => this._hydrate(r));
   }
 
   delete(id) {
-    const result = this.db.prepare(`DELETE FROM ${this.table} WHERE id = ?`).run(id);
-    log.info('Rule deleted', { id });
-    return result.changes > 0;
+    return this.db.prepare(`DELETE FROM ${this.table} WHERE id = ?`).run(id).changes > 0;
   }
 
-  // Batch operations
+  trigger(id) {
+    this.db.prepare(`UPDATE ${this.table} SET last_triggered_at = datetime('now'), trigger_count = trigger_count + 1 WHERE id = ?`).run(id);
+  }
+
   createMany(rules) {
-    const now = new Date().toISOString();
-    const stmt = this.db.prepare(`
-      INSERT INTO ${this.table} (user_id, name, condition, action, priority, enabled, created_at, account_id)
-      VALUES ${rules.map(() => '(?, ?, ?, ?, ?, ?, ?, ?)').join(', ')}
-    `);
-    
-    const values = rules.flatMap(r => [
-      r.user_id, r.name, r.condition, r.action, r.priority, r.enabled ? 1 : 0, now, r.account_id ?? null
-    ]);
-    
-    const result = stmt.run(...values);
-    log.info('Bulk rules created', { count: rules.length });
-    return result.lastInsertRowid;
+    const results = [];
+    const stmt = this.db.prepare(`INSERT INTO ${this.table} (id, user_id, account_id, name, description, condition_json, action_json, priority, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const transaction = this.db.transaction((rules) => {
+      for (const rule of rules) {
+        const id = rule.id || crypto.randomUUID();
+        stmt.run(id, rule.userId || rule.user_id, rule.accountId || rule.account_id || null, rule.name, rule.description || '', JSON.stringify(rule.condition), JSON.stringify(rule.action), rule.priority || 1, (rule.enabled === undefined || rule.enabled) ? 1 : 0);
+        results.push(this.getById(id));
+      }
+    });
+    transaction(rules);
+    return results;
+  }
+
+  _hydrate(row) {
+    if (!row) return null;
+    return {
+      id: row.id,
+      userId: row.user_id,
+      accountId: row.account_id,
+      name: row.name,
+      description: row.description,
+      condition: safeParse(row.condition_json, {}),
+      action: safeParse(row.action_json, {}),
+      priority: row.priority,
+      enabled: !!row.enabled,
+      lastTriggeredAt: row.last_triggered_at,
+      triggerCount: row.trigger_count || 0,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
   }
 }

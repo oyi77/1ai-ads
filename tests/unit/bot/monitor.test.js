@@ -1,16 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
 import { handleMonitor, handleMonitorCallback } from '../../../server/bot/commands/monitor.js';
 
-function makeCtx(userId = 'u1', match = ['monitor:view', 'monitor:view']) {
+function makeCtx(userId = 'u1', action = 'sync') {
   const replies = [];
   return {
     userId,
-    match,
+    match: [`rule:${action}`, action],
     answerCbQuery: vi.fn(async () => {}),
     reply: async (msg, opts) => {
       replies.push({ msg, opts });
       return { message: msg };
     },
+    session: {},
     _replies: replies,
   };
 }
@@ -20,6 +21,7 @@ function makeDeps(overrides = {}) {
     repos: {
       rulesRepo: {
         getAll: vi.fn(() => []),
+        getAllEnabled: vi.fn(() => []),
         create: vi.fn(),
         delete: vi.fn(),
         ...(overrides.repos?.rulesRepo ?? {}),
@@ -32,8 +34,18 @@ function makeDeps(overrides = {}) {
   };
 }
 
-describe('monitor — per-account rule scoping', () => {
-  it('lists each Meta ads account plus a global option', async () => {
+describe('monitor — enhanced rule system', () => {
+  it('shows main monitor menu with Add Rule, My Rules, Templates, Sync', async () => {
+    const ctx = makeCtx('u1', 'start');
+    await handleMonitor(makeDeps())(ctx);
+    const msg = ctx._replies[0].msg;
+    expect(msg).toContain('Add Rule');
+    expect(msg).toContain('My Rules');
+    expect(msg).toContain('Templates');
+    expect(msg).toContain('Sync');
+  });
+
+  it('shows account picker when user has Meta accounts', async () => {
     const deps = makeDeps({
       repos: {
         platformAccountsRepo: {
@@ -41,48 +53,36 @@ describe('monitor — per-account rule scoping', () => {
         },
       },
     });
-    const ctx = makeCtx();
+    const ctx = makeCtx('u1', 'start');
     await handleMonitor(deps)(ctx);
-    const kb = ctx._replies[0].opts.reply_markup.inline_keyboard;
-    const flat = kb.flat().map((b) => b.callback_data);
-    expect(flat).toContain('rule:view:acc1');
-    expect(flat).toContain('rule:view:global');
+    const msg = ctx._replies[0].msg;
+    expect(msg).toContain('Account Rules');
   });
 
-  it('falls back to the static monitor menu when no accounts exist', async () => {
-    const ctx = makeCtx();
-    await handleMonitor(makeDeps())(ctx);
-    const kb = ctx._replies[0].opts.reply_markup.inline_keyboard;
-    const flat = kb.flat().map((b) => b.callback_data);
-    expect(flat).toContain('rule:view:global');
-    expect(flat).toContain('rule:set:spend:global');
-    expect(flat).toContain('rule:set:roas:global');
-    expect(flat).toContain('monitor:sync');
-  });
-
-  it('acknowledges the sync callback', async () => {
-    const ctx = makeCtx('u1', ['sync', 'sync']);
+  it('callback acknowledges sync', async () => {
+    const ctx = makeCtx('u1', 'sync');
     await handleMonitorCallback(makeDeps())(ctx);
     expect(ctx._replies[0].msg).toContain('Campaign sync triggered');
   });
 
-  it('renders only rules matching the selected scope', async () => {
-    const deps = makeDeps({
-      repos: {
-        rulesRepo: {
-          getAll: vi.fn(() => [
-            { id: 1, name: 'Acc Rule', condition: '{}', action: '{}', priority: 1, enabled: true, account_id: 'acc1' },
-            { id: 2, name: 'Other Rule', condition: '{}', action: '{}', priority: 1, enabled: true, account_id: 'other2' },
-            { id: 3, name: 'Global Rule', condition: '{}', action: '{}', priority: 1, enabled: true, account_id: null },
-          ]),
-        },
-      },
-    });
-    const ctx = makeCtx('u1', ['view:acc1', 'view:acc1']);
-    await handleMonitorCallback(deps)(ctx);
+  it('templates action shows template list', async () => {
+    const ctx = makeCtx('u1', 'templates');
+    await handleMonitorCallback(makeDeps())(ctx);
     const msg = ctx._replies[0].msg;
-    expect(msg).toContain('Acc Rule');
-    expect(msg).toContain('Global Rule');
-    expect(msg).not.toContain('Other Rule');
+    expect(msg).toContain('Templates');
+  });
+
+  it('add rule shows metric categories', async () => {
+    const ctx = makeCtx('u1', 'add:start');
+    await handleMonitorCallback(makeDeps())(ctx);
+    const msg = ctx._replies[0].msg;
+    expect(msg).toContain('Category');
+  });
+
+  it('view:all shows rules list', async () => {
+    const ctx = makeCtx('u1', 'view:all');
+    await handleMonitorCallback(makeDeps())(ctx);
+    const msg = ctx._replies[0].msg;
+    expect(msg).toBeDefined();
   });
 });

@@ -355,63 +355,75 @@ async function proposeOptimization(ctx, deps, suggestion) {
 
 // ── Platforms Management ──────────────────────────────────────────────
 async function handlePlatforms(ctx, deps) {
-  await ctx.answerCbQuery();
-  const { buildPlatformKeyboard } = await import('../nav.js');
-  const keyboard = await buildPlatformKeyboard(deps, ctx.userId);
-  await ctx.reply(
-    '🌐 *Platforms*\n\nConnect or manage your ad platforms:',
-    {
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: [
-          ...keyboard,
-          [{ text: '⬅️ Menu', callback_data: 'quick:menu' }],
-        ],
-      },
-    }
-  );
-}
-
-async function handlePlatformAction(ctx, deps, scope) {
-  await ctx.answerCbQuery();
-  const [platform, action, ...rest] = scope.split(':');
-
-  if (action === 'connect') {
-    return ctx.scene.enter('connect-account', { platform });
-  }
-
-  if (action === 'manage') {
-    const { buildPlatformAccountKeyboard } = await import('../nav.js');
-    const accounts = await buildPlatformAccountKeyboard(deps, ctx.userId, platform);
+  try {
+    // Note: ctx.answerCbQuery() already called by handleMenuButton
+    const keyboard = await buildPlatformKeyboard(deps, ctx.userId);
     await ctx.reply(
-      `🌐 *${platform.toUpperCase()} Accounts*\n\nSelect an account to manage:`,
+      '🌐 *Platforms*\n\nConnect or manage your ad platforms:',
       {
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [
-            ...accounts,
-            [{ text: '⬅️ Back to Platforms', callback_data: 'menu:platforms' }],
+            ...keyboard,
+            [{ text: '⬅️ Menu', callback_data: 'quick:menu' }],
           ],
         },
       }
     );
-    return;
+  } catch (err) {
+    console.error('handlePlatforms failed:', err.message);
+    await ctx.reply('⚠️ Failed to load platforms. Try /menu again.', {
+      reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+    });
   }
+}
 
-  if (action === 'account') {
-    return ctx.reply(
-      `🔧 *Manage ${scope.toUpperCase()} Account*\n\nFeature coming soon...`,
-      {
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '⬅️ Back', callback_data: `platform:${platform}:manage` }],
-          ],
-        },
-      }
-    );
+async function handlePlatformAction(ctx, deps, scope) {
+  try {
+    // Note: ctx.answerCbQuery() already called by handleMenuButton
+    const [platform, action, ...rest] = scope.split(':');
+
+    if (action === 'connect') {
+      return ctx.scene.enter('connect-account', { platform });
+    }
+
+    if (action === 'manage') {
+      const accounts = await buildPlatformAccountKeyboard(deps, ctx.userId, platform);
+      await ctx.reply(
+        `🌐 *${platform.toUpperCase()} Accounts*\n\nSelect an account to manage:`,
+        {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              ...accounts,
+              [{ text: '⬅️ Back to Platforms', callback_data: 'menu:platforms' }],
+            ],
+          },
+        }
+      );
+      return;
+    }
+
+    if (action === 'account') {
+      return ctx.reply(
+        `🔧 *Manage ${scope.toUpperCase()} Account*\n\nFeature coming soon...`,
+        {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '⬅️ Back', callback_data: `platform:${platform}:manage` }],
+            ],
+          },
+        }
+      );
+    }
+
+    return ctx.reply('Unknown platform action.', {
+      reply_markup: { inline_keyboard: [[{ text: '⬅️ Menu', callback_data: 'quick:menu' }]] },
+    });
+  } catch (err) {
+    console.error('handlePlatformAction failed:', err.message);
+    await ctx.reply('⚠️ Platform action failed. Try /menu again.', {
+      reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+    });
   }
-
-  return ctx.reply('Unknown platform action.', {
-    reply_markup: { inline_keyboard: [[{ text: '⬅️ Menu', callback_data: 'quick:menu' }]] },
-  });
 }

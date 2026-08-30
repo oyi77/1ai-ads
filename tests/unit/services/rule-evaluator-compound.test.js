@@ -7,91 +7,115 @@ vi.mock('../../../server/lib/logger.js', () => ({
 import { RuleEvaluator } from '../../../server/services/rule-evaluator.js';
 
 function makeEvaluator() {
-  return new RuleEvaluator({
-    rulesRepo: {},
-    campaignsRepo: {},
-    adsRepo: {},
-    settingsRepo: {},
-    draftService: null,
-  });
+  return new RuleEvaluator(
+    {}, // settingsRepo
+    {}, // campaignsRepo
+    {}, // rulesRepo
+    {}, // llmClient
+    {}, // platformApis
+    null // draftService
+  );
 }
 
 const campaign = {
   id: 'c1',
   name: 'Camp',
   status: 'ACTIVE',
-  stats: { roas: 1.2, spend: 500, cpm: 20, ctr: 1.4, clicks: 300, impressions: 20000, frequency: 3.2, purchases: 5, cpc: 1.6 },
+  insights: {
+    roas: 1.2,
+    spend: 500,
+    impressions: 20000,
+    clicks: 300,
+    conversions: 5,
+    reach: 9000,
+  },
 };
 
 describe('RuleEvaluator — compound conditions', () => {
-  it('legacy single-condition leaf still evaluates (back-compat)', () => {
+  it('legacy single-condition leaf evaluates via new format', () => {
     const ev = makeEvaluator();
-    expect(ev._evaluateCondition({ type: 'roas', operator: '<', value: 1.5 }, campaign)).toBe(true);
-    expect(ev._evaluateCondition({ type: 'roas', operator: '>', value: 1.5 }, campaign)).toBe(false);
-  });
-
-  it('all-group = AND', () => {
-    const ev = makeEvaluator();
-    const cond = { all: [
-      { type: 'roas', operator: '<', value: 1.5 },
-      { type: 'spend', operator: '>', value: 100 },
-    ]};
+    const cond = { type: 'leaf', metric: 'roas', operator: '<', value: 1.5, window: '1h' };
     expect(ev._evaluateCondition(cond, campaign)).toBe(true);
-    expect(ev._evaluateCondition({ all: [
-      { type: 'roas', operator: '<', value: 1.5 },
-      { type: 'spend', operator: '>', value: 1000 },
-    ]}, campaign)).toBe(false);
   });
 
-  it('any-group = OR', () => {
+  it('AND group requires all children true', () => {
     const ev = makeEvaluator();
-    const cond = { any: [
-      { type: 'frequency', operator: '>', value: 4 },
-      { type: 'ctr', operator: '<', value: 2 },
-    ]};
-    expect(ev._evaluateCondition(cond, campaign)).toBe(true); // ctr 1.4 < 2
+    const cond = {
+      type: 'group',
+      logic: 'and',
+      children: [
+        { type: 'leaf', metric: 'roas', operator: '<', value: 1.5, window: '1h' },
+        { type: 'leaf', metric: 'spend', operator: '>', value: 100, window: '1h' },
+      ],
+    };
+    expect(ev._evaluateCondition(cond, campaign)).toBe(true);
+
+    const cond2 = {
+      type: 'group',
+      logic: 'and',
+      children: [
+        { type: 'leaf', metric: 'roas', operator: '<', value: 1.5, window: '1h' },
+        { type: 'leaf', metric: 'spend', operator: '>', value: 1000, window: '1h' },
+      ],
+    };
+    expect(ev._evaluateCondition(cond2, campaign)).toBe(false);
+  });
+
+  it('OR group requires any child true', () => {
+    const ev = makeEvaluator();
+    const cond = {
+      type: 'group',
+      logic: 'or',
+      children: [
+        { type: 'leaf', metric: 'roas', operator: '>', value: 5, window: '1h' },
+        { type: 'leaf', metric: 'spend', operator: '>', value: 100, window: '1h' },
+      ],
+    };
+    expect(ev._evaluateCondition(cond, campaign)).toBe(true);
   });
 
   it('nested groups evaluate recursively', () => {
     const ev = makeEvaluator();
-    const cond = { all: [
-      { any: [
-        { type: 'frequency', operator: '>', value: 4 },
-        { type: 'spend', operator: '>', value: 400 },
-      ]},
-      { type: 'roas', operator: '<', value: 1.5 },
-      { all: [
-        { type: 'status', operator: '==', value: 'ACTIVE' },
-        { type: 'clicks', operator: '>', value: 100 },
-      ]},
-    ]};
+    const cond = {
+      type: 'group',
+      logic: 'and',
+      children: [
+        {
+          type: 'group',
+          logic: 'or',
+          children: [
+            { type: 'leaf', metric: 'spend', operator: '>', value: 400, window: '1h' },
+            { type: 'leaf', metric: 'impressions', operator: '>', value: 50000, window: '1h' },
+          ],
+        },
+        { type: 'leaf', metric: 'roas', operator: '<', value: 1.5, window: '1h' },
+      ],
+    };
     expect(ev._evaluateCondition(cond, campaign)).toBe(true);
   });
 
-  it('empty group and unknown metric are non-matching, depth is bounded', () => {
+  it('empty group is non-matching, unknown metric is non-matching', () => {
     const ev = makeEvaluator();
-    expect(ev._evaluateCondition({ all: [] }, campaign)).toBe(false);
-    expect(ev._evaluateCondition({ any: [] }, campaign)).toBe(false);
-    expect(ev._evaluateCondition({ type: 'unknown_metric', operator: '>', value: 1 }, campaign)).toBe(false);
+    expect(ev._evaluateCondition({ type: 'group', logic: 'and', children: [] }, campaign)).toBe(false);
+    expect(ev._evaluateCondition({ type: 'leaf', metric: 'unknown', operator: '>', value: 1 }, campaign)).toBe(false);
+  });
 
-    // infinite nesting attempt: depth-capped at MAX_COMPOUND_DEPTH
-    let deep = { type: 'roas', operator: '<', value: 99 };
-    for (let i = 0; i < 10; i++) deep = { all: [deep] };
-    // roas 1.2 < 99 = true at leaf; the outermost groups beyond depth return false
+  it('depth is bounded at MAX_COMPOUND_DEPTH', () => {
+    const ev = makeEvaluator();
+    let deep = { type: 'leaf', metric: 'roas', operator: '<', value: 99 };
+    for (let i = 0; i < 10; i++) deep = { type: 'group', logic: 'and', children: [deep] };
     expect(ev._evaluateCondition(deep, campaign)).toBe(false);
   });
 
-  it('evaluateRule parses JSON condition strings with compound shape', async () => {
+  it('CVR metric resolves correctly', () => {
     const ev = makeEvaluator();
-    const rule = {
-      condition: JSON.stringify({ all: [
-        { type: 'spend', operator: '>', value: 100 },
-        { type: 'purchases', operator: '>', value: 3 },
-      ]}),
-      action: JSON.stringify({ type: 'pause' }),
-    };
-    const spy = vi.spyOn(ev, '_executeAction').mockResolvedValue({ ok: true });
-    await ev.evaluateRule(rule, campaign);
-    expect(spy).toHaveBeenCalled();
+    const cond = { type: 'leaf', metric: 'cvr', operator: '>', value: 0, window: '1h' };
+    expect(ev._evaluateCondition(cond, campaign)).toBe(true); // 5/300*100 = 1.67% > 0
+  });
+
+  it('CPM metric resolves correctly', () => {
+    const ev = makeEvaluator();
+    const cond = { type: 'leaf', metric: 'cpm', operator: '>', value: 0, window: '1h' };
+    expect(ev._evaluateCondition(cond, campaign)).toBe(true); // 500/20000*1000 = 25 > 0
   });
 });
