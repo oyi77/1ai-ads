@@ -137,6 +137,12 @@ export class RuleEvaluator {
   async _executeAction(action, campaign) {
     // Approval gate: route the intended change to a draft instead of mutating live.
     if (this.draftService) {
+      // Dedup: skip if a pending draft already exists for this campaign+type
+      const existingDraft = this.draftService?.draftsRepo?.findPendingByCampaignAndType?.(campaign.id, `rule_${action.type}`);
+      if (existingDraft) {
+        return { campaign_id: campaign.id, action: `pending_approval_${action.type}`, intercepted: true, deduped: true };
+      }
+
       const intercepted = await this.draftService.guardAutonomousChange({
         type: `rule_${action.type}`,
         summary: `Rule action: ${action.type} on campaign ${campaign.id}`,

@@ -45,7 +45,7 @@ export function handleMonitor(deps) {
     keyboard.push([
       { text: '🌐 Global (all accounts)', callback_data: 'rule:view:global' },
     ]);
-    keyboard.push(MONITOR_FOOTER[3]);
+    keyboard.push(...MONITOR_FOOTER);
 
     return ctx.reply(
       '⚡ *Campaign Monitor*\n\n' +
@@ -61,20 +61,22 @@ export function handleMonitor(deps) {
 function renderRulesList(rules, scope) {
   if (rules.length === 0) {
     return {
-      msg: `📭 Belum ada rule untuk ${scope === 'global' ? 'semua akun (global)' : 'akun ini'}.`,
+      msg: `📭 No rules for ${scope === 'global' ? 'global (all accounts)' : 'this account'}.\n\nTap *➕ Add Spend Rule* or *➕ Add ROAS Rule* to create your first rule.`,
       keyboard: [],
     };
   }
-  const lines = rules.map((r, i) => {
-    const cond = r.condition || '';
-    const act = r.action || '';
+  const lines = rules.map((r) => {
+    const cond = r.condition || {};
+    const act = r.action || {};
     const enabled = r.enabled ? '✅' : '⛔';
-    return `${i + 1}. ${enabled} *${r.name}*\n   kondisi: ${cond}\n   aksi: ${act}\n   prioritas: ${r.priority}`;
+    const threshold = cond.threshold !== undefined ? cond.threshold : '—';
+    const metric = cond.metric || cond.type || '—';
+    return `${enabled} *${r.name}*\n   ${metric} ${cond.operator || ''} ${threshold} → ${act.type || 'alert'}`;
   });
   return {
-    msg: `📋 *Rules — ${scope === 'global' ? 'Global' : 'Akun'}:*\n\n${lines.join('\n\n')}`,
+    msg: `📋 *Rules — ${scope === 'global' ? 'Global' : 'Account'}:*\n\n${lines.join('\n\n')}`,
     keyboard: rules.map((r) => [
-      { text: `🗑️ Hapus ${r.name}`, callback_data: `rule:del:${r.id}` },
+      { text: `🗑️ Delete ${r.name}`, callback_data: `rule:del:${r.id}` },
     ]),
   };
 }
@@ -97,6 +99,8 @@ export function handleMonitorCallback(deps) {
             : r.account_id === null || String(r.account_id) === String(scope)
         );
         const { msg, keyboard } = renderRulesList(rules, scope);
+        // Add back button to footer
+        keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
         return ctx.reply(msg, {
           parse_mode: 'Markdown',
           reply_markup: { inline_keyboard: keyboard },
@@ -105,26 +109,47 @@ export function handleMonitorCallback(deps) {
       case 'set': {
         const sub = rest[1] || 'spend';
         const metric = sub === 'roas' ? 'roas' : 'spend';
+        const name = `${metric === 'roas' ? 'ROAS Guard' : 'Spend Guard'} (${scope})`;
         deps?.repos?.rulesRepo?.create?.({
           user_id: ctx.userId,
-          name: `${metric === 'roas' ? 'ROAS Guard' : 'Spend Guard'} (${scope})`,
+          name,
           condition: JSON.stringify({ metric, operator: 'gt', threshold: 0 }),
           action: JSON.stringify({ type: 'alert' }),
           priority: 1,
           enabled: true,
           account_id: scope === 'global' ? null : scope,
         });
-        const target = scope === 'global' ? 'semua akun (global)' : `akun ${scope}`;
+        const target = scope === 'global' ? 'all accounts (global)' : `account ${scope}`;
         return ctx.reply(
-          `✅ Rule *${metric === 'roas' ? 'ROAS Guard' : 'Spend Guard'}* dibuat untuk ${target}.\n` +
-            'Atur threshold detailnya di dashboard: /app'
+          `✅ Rule *${name}* created for ${target}.\n\n` +
+          'Set detailed thresholds in the dashboard: /app\n\n' +
+          'Tap *📊 View Rules* to see all rules.',
+          {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '📊 View Rules', callback_data: `rule:view:${scope}` }],
+                [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+              ],
+            },
+          }
         );
       }
       case 'del': {
         const id = rest[0];
-        if (!id) return ctx.reply('⚠️ Rule tidak ditemukan.');
+        if (!id) return ctx.reply('⚠️ Rule not found.');
         deps?.repos?.rulesRepo?.delete?.(id);
-        return ctx.reply('✅ Rule dihapus.');
+        return ctx.reply(
+          '✅ Rule deleted.\n\nTap *📊 View Rules* to see remaining rules.',
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '📊 View Rules', callback_data: `rule:view:${scope}` }],
+                [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+              ],
+            },
+          }
+        );
       }
       default:
         return ctx.reply('Monitor action received. Configure rules via the dashboard: /app');

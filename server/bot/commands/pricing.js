@@ -16,8 +16,16 @@ export function handlePricing() {
       '🆓 *Free* — 3 campaigns, basic analytics\n' +
       '💎 *Pro* — Unlimited campaigns, AI optimization, priority support\n' +
       '🏢 *Enterprise* — Custom limits, dedicated support, white-label\n\n' +
-      'Use /menu → Connect Account to add integrations. Contact @adforge\\_support for upgrades.',
-      { parse_mode: 'Markdown' }
+      'Use /menu → Platforms to add integrations. Contact @adforge\\_support for upgrades.',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🌐 Platforms', callback_data: 'menu:platforms' }],
+            [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+          ],
+        },
+      }
     );
   };
 }

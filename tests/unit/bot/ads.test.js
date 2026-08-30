@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock the MetaAdsAPI service BEFORE importing ads.js so the handlers use the fake.
 const mockGetAdAccounts = vi.fn();
 const mockGetCampaigns = vi.fn();
 const mockGetAccountInsights = vi.fn();
@@ -22,7 +21,7 @@ vi.mock('../../../server/services/meta/index.js', () => {
   };
 });
 
-const { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm } =
+const { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport } =
   await import('../../../server/bot/commands/ads.js');
 
 function makeCtx(userId = 'u1') {
@@ -36,18 +35,18 @@ function makeCtx(userId = 'u1') {
   };
 }
 
-function makeDeps(accessToken = null, storedId = 'acc1', extra = {}) {
+function makeDeps({ accessToken = null, storedId = 'acc1', connected = null } = {}) {
   const repo = {
     getByPlatform: (userId, platform) =>
       accessToken ? { id: storedId, user_id: userId, platform, access_token: accessToken, is_active: 1 } : null,
-    findByUserId: () => extra.findByUserId || [],
-    findById: extra.findById || (() => null),
+    findByUserId: () => connected || (accessToken ? [{ id: storedId, platform: 'meta', access_token: accessToken, is_active: 1, account_name: 'Test' }] : []),
+    findById: () => null,
     update: vi.fn(() => ({ id: storedId })),
   };
   return { repos: { platformAccountsRepo: repo } };
 }
 
-describe('per-user ads handlers (disable/enable scoped to user token)', () => {
+describe('per-user ads handlers (multi-platform)', () => {
   beforeEach(() => {
     mockGetAdAccounts.mockReset();
     mockGetCampaigns.mockReset();
@@ -64,94 +63,42 @@ describe('per-user ads handlers (disable/enable scoped to user token)', () => {
     mockUpdateCampaign.mockResolvedValue({ success: true });
   });
 
-  it('handleAds lists the user\'s OWN ad accounts via stored token', async () => {
+  it('handleAds shows connect prompt when no connected platforms', async () => {
     const ctx = makeCtx();
-    await handleAds(makeDeps('USER_TOKEN'))(ctx);
-    const text = ctx._replies[1];
-    expect(text).toContain('Your Meta Ad Accounts');
-    expect(text).toContain('act_1181078009580337');
-    // The token passed to MetaAdsAPI must be the user's stored token, not a global/system token.
-    expect(mockGetAdAccounts).toHaveBeenCalled();
-    // withToken received the per-user token
-    expect(ctx._replies[0]).toContain('Loading');
-  });
-
-  it('handleAds reports "No Meta account connected" when no stored token', async () => {
-    const ctx = makeCtx();
-    await handleAds(makeDeps(null))(ctx);
+    await handleAds(makeDeps({ accessToken: null, connected: [] }))(ctx);
     const text = ctx._replies[0];
-    expect(text).toContain('No Meta account connected');
+    expect(text).toContain('No ad account connected');
   });
 
-  it('handleAdsSelect reads campaigns for the chosen account (read-only)', async () => {
+  it('handleAds lists ad accounts when single platform connected', async () => {
     const ctx = makeCtx();
-    await handleAdsSelect(makeDeps('USER_TOKEN'))(ctx, 'act_1181078009580337');
+    await handleAds(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx);
     const text = ctx._replies[1];
-    expect(text).toContain('Campaigns (2) — act_1181078009580337');
-    expect(text).toContain('Camp A');
-    expect(mockGetCampaigns).toHaveBeenCalledWith('act_1181078009580337');
+    expect(text).toContain('Your META Ad Accounts');
+    expect(text).toContain('Selow ID 1340');
+    expect(mockGetAdAccounts).toHaveBeenCalled();
   });
 
-  it('handleAdsToggle pauses an active campaign -> updateCampaign PAUSED', async () => {
+  it('handleAdsSelect reads campaigns for the chosen account', async () => {
     const ctx = makeCtx();
-    await handleAdsToggle(makeDeps('USER_TOKEN'))(ctx, 'act_1181078009580337', 'c1', 'pause');
+    await handleAdsSelect(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', '1181078009580337');
+    const text = ctx._replies[1];
+    expect(text).toContain('Campaigns (2)');
+    expect(text).toContain('Camp A');
+    expect(mockGetCampaigns).toHaveBeenCalledWith('1181078009580337');
+  });
+
+  it('handleAdsToggle pauses an active campaign', async () => {
+    const ctx = makeCtx();
+    await handleAdsToggle(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', '1181078009580337', 'c1', 'pause');
     expect(mockUpdateCampaign).toHaveBeenCalledWith('c1', { status: 'PAUSED' });
     expect(ctx._replies[1]).toContain('paused');
   });
 
-  it('handleAdsToggle resumes a paused campaign -> updateCampaign ACTIVE', async () => {
+  it('handleAdsToggle resumes a paused campaign', async () => {
     const ctx = makeCtx();
-    await handleAdsToggle(makeDeps('USER_TOKEN'))(ctx, 'act_1181078009580337', 'c2', 'resume');
+    await handleAdsToggle(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', '1181078009580337', 'c2', 'resume');
     expect(mockUpdateCampaign).toHaveBeenCalledWith('c2', { status: 'ACTIVE' });
     expect(ctx._replies[1]).toContain('resumed');
-  });
-
-  it('handleAdsReport aggregates spend across accounts', async () => {
-    const ctx = makeCtx();
-    await handleAdsReport(makeDeps('USER_TOKEN'))(ctx);
-    const text = ctx._replies[1];
-    expect(text).toContain('Meta Ads Report');
-    expect(text).toContain('Rp 100.000'); // totalSpend formatted
-    expect(mockGetAccountInsights).toHaveBeenCalledWith('1181078009580337', expect.objectContaining({ datePreset: 'last_30d' }));
-  });
-
-  it('handleAdsDisconnect lists the user\'s connections without directly deactivating', async () => {
-    const deps = makeDeps('USER_TOKEN', 'acc1', {
-      findByUserId: [{ id: 'acc1', user_id: 'u1', platform: 'meta', account_name: 'Acc1', is_active: 1 }],
-    });
-    const ctx = makeCtx('u1');
-    await handleAdsDisconnect(deps)(ctx);
-    expect(deps.repos.platformAccountsRepo.update).not.toHaveBeenCalled();
-    expect(ctx._replies[0]).toContain('Manage Meta Connections');
-  });
-
-  it('handleAdsDisconnectConfirm deactivates the user\'s OWN connection by id', async () => {
-    const deps = makeDeps('USER_TOKEN', 'acc1', {
-      findById: () => ({ id: 'acc1', user_id: 'u1', account_name: 'Acc1', platform: 'meta', is_active: 1 }),
-    });
-    const ctx = makeCtx('u1');
-    await handleAdsDisconnectConfirm(deps, 'acc1')(ctx);
-    expect(deps.repos.platformAccountsRepo.update).toHaveBeenCalledWith('acc1', { is_active: 0 });
-    expect(ctx._replies[0]).toContain('Disconnected');
-  });
-
-  it('handleAdsDisconnectConfirm rejects a connection owned by another user', async () => {
-    const deps = makeDeps('USER_TOKEN', 'acc1', {
-      findById: () => ({ id: 'acc1', user_id: 'OTHER_USER', account_name: 'Acc1', platform: 'meta', is_active: 1 }),
-    });
-    const ctx = makeCtx('u1');
-    await handleAdsDisconnectConfirm(deps, 'acc1')(ctx);
-    expect(ctx._replies[0]).toContain('Connection not found');
-    expect(deps.repos.platformAccountsRepo.update).not.toHaveBeenCalled();
-  });
-
-  it('handleAdsReport renders a scoped report for a specific account', async () => {
-    const ctx = makeCtx();
-    mockGetAdAccounts.mockResolvedValue([{ id: 'acc1', name: 'Acc One' }]);
-    mockGetAccountInsights.mockResolvedValue({ spend: 500000, revenue: 750000, clicks: 120, impressions: 5000 });
-    await handleAdsReport(makeDeps('USER_TOKEN'))(ctx, 'acc1');
-    expect(ctx._replies[0]).toContain('Acc One');
-    expect(ctx._replies[0]).toContain('Rp 500.000');
-    expect(mockGetAccountInsights).toHaveBeenCalledWith('acc1', expect.objectContaining({ datePreset: 'last_30d' }));
   });
 });

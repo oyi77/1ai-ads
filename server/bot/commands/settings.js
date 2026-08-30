@@ -1,6 +1,6 @@
 /**
  * /settings command — Token & account management
- * Ported from asisten-jualan/bot/handlers/settings_update.py
+ * Ported from asisten-jualan/bot/handlers/settings_update.js
  */
 
 import { PLATFORM_NAMES } from '../scenes/connect-account.js';
@@ -49,12 +49,36 @@ export function handleSettingsCallback(deps) {
       case 'connect_meta':
         return ctx.scene.enter('connect-account', { platform: 'meta' });
       case 'sync':
-        return ctx.reply('🔄 Syncing campaigns... Use the dashboard for real-time sync status.');
-      case 'accounts':
+        return ctx.reply('🔄 Syncing campaigns... Use the dashboard for real-time sync status.', {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+            ],
+          },
+        });
+      case 'accounts': {
         const accounts = deps.repos?.platformAccountsRepo?.findByUserId?.(ctx.userId) || [];
-        if (accounts.length === 0) return ctx.reply('No accounts connected. Use /settings to connect.');
+        if (accounts.length === 0) {
+          return ctx.reply('No accounts connected. Use /settings to connect.', {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🔧 Settings', callback_data: 'menu:settings' }],
+                [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+              ],
+            },
+          });
+        }
         const list = accounts.map(a => `• ${a.account_name} (${a.platform}) ${a.is_active ? '✅' : '⏸'}`).join('\n');
-        return ctx.reply(`📊 *Connected Accounts:*\n\n${list}`, { parse_mode: 'Markdown' });
+        return ctx.reply(`📊 *Connected Accounts:*\n\n${list}`, {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🔧 Settings', callback_data: 'menu:settings' }],
+              [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+            ],
+          },
+        });
+      }
       default:
         return ctx.reply('Unknown settings action.');
     }

@@ -514,7 +514,7 @@ export class FatigueDetector {
   async _runSnapshots() {
     try {
       const accounts = this.db.prepare(
-        `SELECT id, user_id FROM platform_accounts WHERE platform = 'meta' AND health_status = 'active'`
+        `SELECT id, user_id FROM platform_accounts WHERE platform = 'meta' AND health_status = 'ok'`
       ).all();
 
       for (const account of accounts) {

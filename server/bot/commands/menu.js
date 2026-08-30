@@ -1,30 +1,47 @@
 /**
- * /menu command — Main menu with inline buttons
- * Ported from asisten-jualan/bot/handlers/quick_start.py
+ * Main Menu & Handlers
+ * Multi-platform ads management
  */
-import { handlePricing } from './pricing.js';
-import { handleHelp } from './help.js';
-import { handleAds, handleAdsReport, getUserMetaAccount, makeApi, isExpiredToken } from './ads.js';
-import { handleSettings } from './settings.js';
-import { PLATFORM_NAMES } from '../scenes/connect-account.js';
+import config from '../../config/index.js';
+import { buildPlatformKeyboard, buildPlatformAccountKeyboard } from '../nav.js';
+import { getUserMetaAccount, makeApi, isExpiredToken } from './ads.js';
 import { resolveScaleDefault } from '../../lib/scale-defaults.js';
+import { handleMonitor } from './monitor.js';
+import { handleAds } from './ads.js';
+import { handleHelp } from './help.js';
+import { handlePricing } from './pricing.js';
+import { handleSettings } from './settings.js';
+const WEB_APP_URL = config.webAppUrl;
+// Platform name map (from platforms/index.js PLATFORM_REGISTRY)
+const PLATFORM_LABELS = {
+  meta: 'Meta (FB/IG)',
+  google: 'Google Ads',
+  tiktok: 'TikTok Ads',
+  linkedin: 'LinkedIn Ads',
+  twitter: 'Twitter/X Ads',
+  snapchat: 'Snapchat Ads',
+  pinterest: 'Pinterest Ads',
+  microsoft: 'Microsoft/Bing',
+  reddit: 'Reddit Ads',
+  yandex: 'Yandex Ads',
+  baidu: 'Baidu Ads',
+  apple: 'Apple Search Ads',
+  thetradedesk: 'The Trade Desk',
+  criteo: 'Criteo',
+  taboola: 'Taboola',
+  amazon: 'Amazon Ads',
+};
 
-const WEB_APP_URL = process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com';
-
-/**
- * Single source of truth for the main menu grid — used by /start AND /menu so
- * both surfaces always offer identical access to every feature.
- */
 export function mainMenuKeyboard() {
   return {
     inline_keyboard: [
-      [{ text: '📊 Dashboard', callback_data: 'menu:status' }, { text: '🎯 Buat Kampanye', callback_data: 'menu:create' }],
-      [{ text: '📈 Monitor', callback_data: 'menu:monitor' }, { text: '🤖 AI Optimize', callback_data: 'menu:optimize' }],
-      [{ text: '📣 My Meta Ads', callback_data: 'menu:ads' }, { text: '🔧 Setting', callback_data: 'menu:settings' }],
-      [{ text: '🔗 Connect Account', callback_data: 'menu:connect' }, { text: '💰 Pricing', callback_data: 'menu:pricing' }],
-      [{ text: '❓ Bantuan', callback_data: 'menu:help' }],
+      [{ text: '📊 Dashboard', callback_data: 'menu:status' }, { text: '🎯 Create Campaign', callback_data: 'menu:create' }],
+      [{ text: '⚡ Rules', callback_data: 'menu:monitor' }, { text: '🤖 AI Optimize', callback_data: 'menu:optimize' }],
+      [{ text: '📣 Ads Manager', callback_data: 'menu:ads' }, { text: '🌐 Platforms', callback_data: 'menu:platforms' }],
+      [{ text: '⚙️ Settings', callback_data: 'menu:settings' }, { text: '💰 Pricing', callback_data: 'menu:pricing' }],
+      [{ text: '❓ Help', callback_data: 'menu:help' }],
       [{ text: '📱 AdForge Mini App', web_app: { url: WEB_APP_URL } }],
-      [{ text: '🌐 Buka di Browser', url: WEB_APP_URL }],
+      [{ text: '🌐 Open in Browser', url: WEB_APP_URL }],
     ],
   };
 }
@@ -58,12 +75,16 @@ export function handleMenuButton(deps) {
         return sendPlatformChoice(ctx);
       case 'optimize':
         return handleOptimizeAction(ctx, deps, scope);
-      case 'monitor':   return ctx.reply('⚡ Monitor rules: /settings to configure spend guards and alerts.');
+      case 'monitor':   return handleMonitor(deps)(ctx);
       case 'settings':  return handleSettings(deps)(ctx);
       case 'ads':
         return handleAds(deps)(ctx);
       case 'fbads':
         return handleAds(deps)(ctx);
+      case 'platforms':
+        return handlePlatforms(ctx, deps);
+      case 'platform':
+        return handlePlatformAction(ctx, deps, scope);
       case 'pricing':
         return handlePricing()(ctx);
       case 'help':
@@ -75,7 +96,7 @@ export function handleMenuButton(deps) {
 }
 
 async function sendPlatformChoice(ctx) {
-  const entries = Object.entries(PLATFORM_NAMES);
+  const entries = Object.entries(PLATFORM_LABELS);
   const inline_keyboard = [];
   for (let i = 0; i < entries.length; i += 2) {
     const row = entries.slice(i, i + 2).map(([key, label]) => ({
@@ -93,6 +114,7 @@ async function sendPlatformChoice(ctx) {
     }
   );
 }
+
 async function handleStatusAction(ctx, deps) {
   try {
     const result = deps.repos?.campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [], total: 0 };
@@ -102,14 +124,27 @@ async function handleStatusAction(ctx, deps) {
     const totalRevenue = campaigns.reduce((s, c) => s + (c.revenue || 0), 0);
     const roas = totalSpend > 0 ? (totalRevenue / totalSpend).toFixed(2) : '0.00';
 
-    ctx.reply(
-      `📊 *Quick Status*\n\n` +
-      `Campaigns: ${active} active / ${campaigns.length} total\n` +
-      `Spend: Rp ${totalSpend.toLocaleString('id-ID')}\n` +
-      `Revenue: Rp ${totalRevenue.toLocaleString('id-ID')}\n` +
-      `ROAS: ${roas}x`,
-      { parse_mode: 'Markdown' }
-    );
+    let msg = `📊 *Quick Status*\n\n`;
+    msg += `Campaigns: ${active} active / ${campaigns.length} total\n`;
+    msg += `Spend: Rp ${totalSpend.toLocaleString('id-ID')}\n`;
+    msg += `Revenue: Rp ${totalRevenue.toLocaleString('id-ID')}\n`;
+    msg += `ROAS: ${roas}x`;
+
+    if (campaigns.length === 0) {
+      msg += '\n\n📭 No campaigns yet. Connect platforms and sync campaigns to get started!';
+    }
+
+    await ctx.reply(msg, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '📣 Ads Manager', callback_data: 'menu:ads' }],
+          [{ text: '⚡ Rules', callback_data: 'menu:monitor' }],
+          [{ text: '🌐 Platforms', callback_data: 'menu:platforms' }],
+          [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+        ],
+      },
+    });
   } catch {
     ctx.reply('⚠️ Failed to load status. Try again later.');
   }
@@ -125,7 +160,7 @@ async function handleOptimizeAction(ctx, deps, scope) {
     const acct = getUserMetaAccount(ctx, deps);
     if (!acct) return ctx.reply('🔌 Connect a Meta account first via /start.');
 
-    const { api } = makeApi(ctx, deps);
+    const { api } = await makeApi(ctx, deps);
     if (!api) return ctx.reply('🔌 Connect a Meta account first via /start.');
 
     let accounts;
@@ -167,7 +202,7 @@ async function handleOptimizeAction(ctx, deps, scope) {
     } else {
       const acct = getUserMetaAccount(ctx, deps);
       if (!acct) return ctx.reply('🔌 Connect a Meta account first via /start.');
-      const { api } = makeApi(ctx, deps);
+      const { api } = await makeApi(ctx, deps);
       if (!api) return ctx.reply('🔌 Connect a Meta account first via /start.');
 
       let live;
@@ -316,4 +351,67 @@ async function proposeOptimization(ctx, deps, suggestion) {
       },
     }
   );
+}
+
+// ── Platforms Management ──────────────────────────────────────────────
+async function handlePlatforms(ctx, deps) {
+  await ctx.answerCbQuery();
+  const { buildPlatformKeyboard } = await import('../nav.js');
+  const keyboard = await buildPlatformKeyboard(deps, ctx.userId);
+  await ctx.reply(
+    '🌐 *Platforms*\n\nConnect or manage your ad platforms:',
+    {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          ...keyboard,
+          [{ text: '⬅️ Menu', callback_data: 'quick:menu' }],
+        ],
+      },
+    }
+  );
+}
+
+async function handlePlatformAction(ctx, deps, scope) {
+  await ctx.answerCbQuery();
+  const [platform, action, ...rest] = scope.split(':');
+
+  if (action === 'connect') {
+    return ctx.scene.enter('connect-account', { platform });
+  }
+
+  if (action === 'manage') {
+    const { buildPlatformAccountKeyboard } = await import('../nav.js');
+    const accounts = await buildPlatformAccountKeyboard(deps, ctx.userId, platform);
+    await ctx.reply(
+      `🌐 *${platform.toUpperCase()} Accounts*\n\nSelect an account to manage:`,
+      {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            ...accounts,
+            [{ text: '⬅️ Back to Platforms', callback_data: 'menu:platforms' }],
+          ],
+        },
+      }
+    );
+    return;
+  }
+
+  if (action === 'account') {
+    return ctx.reply(
+      `🔧 *Manage ${scope.toUpperCase()} Account*\n\nFeature coming soon...`,
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '⬅️ Back', callback_data: `platform:${platform}:manage` }],
+          ],
+        },
+      }
+    );
+  }
+
+  return ctx.reply('Unknown platform action.', {
+    reply_markup: { inline_keyboard: [[{ text: '⬅️ Menu', callback_data: 'quick:menu' }]] },
+  });
 }

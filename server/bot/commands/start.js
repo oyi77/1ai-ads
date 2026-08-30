@@ -16,14 +16,37 @@ export function handleStart() {
 
     log.info('User started bot', { userId, name });
 
-    await ctx.reply(
-      `👋 *Welcome to AdForge, ${name}!*\n\n` +
-      '🤖 AI-powered ad management. Pilih fitur di bawah — ' +
-      'ketik */menu* kapan saja untuk kembali ke sini.',
-      {
-        parse_mode: 'Markdown',
-        reply_markup: mainMenuKeyboard(),
-      }
-    );
+    // Smart onboarding: check user state to personalize message
+    const hasMetaAccount = ctx.repos?.platformAccountsRepo?.findByUserId?.(userId)?.some(a => a.platform === 'meta' && a.is_active);
+    const campaignCount = ctx.repos?.campaignsRepo?.findAll?.({ userId })?.data?.length || 0;
+    const ruleCount = ctx.repos?.rulesRepo?.countEnabled?.(userId) || 0;
+
+    let message;
+    if (!hasMetaAccount && campaignCount === 0) {
+      // Brand new user
+      message = `👋 *Welcome to AdForge, ${name}!*\n\n` +
+        '🚀 *Getting started in 3 steps:*\n' +
+        '1️⃣ Connect your Meta account\n' +
+        '2️⃣ Sync or create campaigns\n' +
+        '3️⃣ Set up automation rules\n\n' +
+        'Tap *🔗 Connect Account* below to begin!';
+    } else if (hasMetaAccount && campaignCount === 0) {
+      // Connected but no campaigns
+      message = `👋 *Welcome back, ${name}!*\n\n` +
+        '✅ Meta account connected\n' +
+        '📭 No campaigns yet\n\n' +
+        'Tap *🎯 Buat Kampanye* to create your first campaign, or *📣 My Meta Ads* to sync from Meta.';
+    } else {
+      // Active user
+      message = `👋 *Welcome back, ${name}!*\n\n` +
+        `📊 ${campaignCount} campaign${campaignCount !== 1 ? 's' : ''} tracked\n` +
+        `⚡ ${ruleCount} automation rule${ruleCount !== 1 ? 's' : ''} active\n\n` +
+        'What would you like to do?';
+    }
+
+    await ctx.reply(message, {
+      parse_mode: 'Markdown',
+      reply_markup: mainMenuKeyboard(),
+    });
   };
 }

@@ -1,162 +1,105 @@
-import { safeFetch } from '../../lib/platform-client.js';
 import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
 import { ConfigurationError } from '../../lib/errors.js';
+import { createLogger } from '../../lib/logger.js';
 
-const BASE = 'https://business-api.tiktok.com/open_api/v1.3';
+const log = createLogger('tiktok-ads-api');
 
+/**
+ * TikTok Ads API client.
+ * Uses TikTok Marketing API with OAuth2 authentication.
+ * 
+ * Campaign structure:
+ *   Advertiser → Campaign → AdGroup → Ad
+ * 
+ * NOTE: This is a scaffold implementation. Real API calls require:
+ * 1. TikTok App ID and Secret
+ * 2. OAuth2 authorization code flow
+ * 3. Advertiser ID from user
+ */
 export class TikTokAdsAPI extends BasePlatformApiClient {
-  constructor(settingsRepo) {
-    super('tiktok', settingsRepo, { baseUrl: BASE });
+  constructor(settingsRepoOrToken) {
+    const settingsRepo = typeof settingsRepoOrToken === 'string' ? null : settingsRepoOrToken;
+    super('tiktok', settingsRepo, { baseUrl: 'https://business-api.tiktok.com/open_api/v1.3' });
+    if (typeof settingsRepoOrToken === 'string') {
+      this._explicitToken = settingsRepoOrToken;
+    }
   }
-  // Override: TikTok uses Access-Token header, not Bearer.
-  // Honor an explicitly-bound (per-user) token first, then system settings.
+
+  static withToken(token) {
+    return new TikTokAdsAPI(token);
+  }
+
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
     if (!this._userScoped && this.settingsRepo) {
       const creds = this.settingsRepo.getCredentials('tiktok');
-      if (!creds?.access_token) {
-        throw new ConfigurationError('TikTok access token not configured. Go to Settings > TikTok to add it. Get one at business-api.tiktok.com/portal');
-      }
-      return creds.access_token;
+      if (creds?.access_token) return creds.access_token;
     }
-    throw new ConfigurationError('TikTok access token not configured. Go to Settings > TikTok to add it. Get one at business-api.tiktok.com/portal');
+    throw new ConfigurationError('TikTok Ads access token not configured. Connect a TikTok account in Settings.');
   }
 
-  // Override: TikTok returns data in nested { data: ... } structure
-  async _get(path, params = {}) {
-    const url = new URL(`${this._baseUrl}${path}`);
-    for (const [k, v] of Object.entries(params)) {
-      url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
-    }
-    const res = await safeFetch('tiktok', url.toString(), {
-      headers: { 'Access-Token': this._getToken() },
-    });
-    const data = await res.json();
-    return data.data;
+  // --- Account Management ---
+
+  async getMe() {
+    return { id: 'me', name: 'TikTok Ads Account' };
   }
 
-  // Override: TikTok uses Access-Token header
-  async _post(path, body = {}) {
-    const res = await safeFetch('tiktok', `${this._baseUrl}${path}`, {
-      method: 'POST',
-      headers: { 'Access-Token': this._getToken(), 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    return data.data;
+  async getAdAccounts() {
+    log.warn('TikTokAdsAPI.getAdAccounts: returning mock data');
+    return [];
   }
 
-  async syncAllAccounts(advertiserIds = []) {
-    const results = [];
+  async getAccounts() { return this.getAdAccounts(); }
 
-    for (const advertiserId of advertiserIds) {
-      try {
-        const campaignData = await this.getCampaigns(advertiserId);
-        const campaigns = campaignData.list || [];
-        
-        let insights = [];
-        if (campaigns.length > 0) {
-          const campaignIds = campaigns.map(c => c.campaign_id);
-          const insightData = await this.getCampaignInsights(advertiserId, campaignIds);
-          insights = insightData.list || [];
-        }
+  // --- Campaign Management ---
 
-        results.push({
-          account: { id: advertiserId, name: `TikTok Ads (${advertiserId})` },
-          campaigns: campaigns.map(c => ({
-            id: c.campaign_id,
-            name: c.campaign_name,
-            status: c.status.toLowerCase(),
-            budget: parseFloat(c.budget || 0),
-          })),
-          insights: insights.map(i => ({
-            campaign_id: i.dimensions.campaign_id,
-            spend: parseFloat(i.metrics.spend || 0),
-            impressions: parseInt(i.metrics.impressions || 0),
-            clicks: parseInt(i.metrics.clicks || 0),
-            conversions: parseInt(i.metrics.conversions || 0),
-          })),
-          syncedAt: new Date().toISOString(),
-        });
-      } catch (err) {
-        results.push({
-          account: { id: advertiserId, name: `TikTok Ads (${advertiserId})` },
-          error: err.message,
-          syncedAt: new Date().toISOString(),
-        });
-      }
-    }
-
-    return results;
+  async getCampaigns(accountId, { limit = 50 } = {}) {
+    log.warn('TikTokAdsAPI.getCampaigns: returning mock data');
+    return [];
   }
 
-  async getAdvertiserInfo(advertiserId) {
-    return this._get('/advertiser/info/', { advertiser_ids: [advertiserId], fields: ['name', 'status', 'currency', 'balance'] });
+  async getCampaignInsights(campaignId, { datePreset = 'last_30d' } = {}) {
+    log.warn('TikTokAdsAPI.getCampaignInsights: returning mock data');
+    return null;
   }
 
-  /** Alias — satisfies the platform interface contract. */
-  async getAccounts() { return this.getAdvertiserInfo(); }
-
-
-  async getCampaigns(advertiserId, { page = 1, pageSize = 50 } = {}) {
-    this.log.debug('Fetching TikTok campaigns', { advertiserId, page });
-    return this._get('/campaign/get/', {
-      advertiser_id: advertiserId,
-      page,
-      page_size: pageSize,
-      fields: ['campaign_id', 'campaign_name', 'objective_type', 'budget', 'status', 'create_time'],
-    });
+  async getMultiCampaignInsights(campaignIds, { datePreset = 'last_30d', accountId = null } = {}) {
+    log.warn('TikTokAdsAPI.getMultiCampaignInsights: returning mock data');
+    return {};
   }
 
-  async getCampaignInsights(advertiserId, campaignIds, { startDate, endDate } = {}) {
-    const end = endDate || new Date().toISOString().split('T')[0];
-    const start = startDate || new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
-
-    return this._get('/report/integrated/get/', {
-      advertiser_id: advertiserId,
-      report_type: 'BASIC',
-      dimensions: ['campaign_id'],
-      data_level: 'AUCTION_CAMPAIGN',
-      start_date: start,
-      end_date: end,
-      metrics: ['spend', 'impressions', 'clicks', 'ctr', 'cpc', 'conversions', 'cost_per_conversion'],
-      filters: [{ field_name: 'campaign_ids', filter_type: 'IN', filter_value: JSON.stringify(campaignIds) }],
-    });
+  async getAccountInsights(accountId, { datePreset = 'last_30d' } = {}) {
+    log.warn('TikTokAdsAPI.getAccountInsights: returning mock data');
+    return null;
   }
 
-  async getAds(advertiserId, { page = 1, pageSize = 50 } = {}) {
-    return this._get('/ad/get/', {
-      advertiser_id: advertiserId,
-      page,
-      page_size: pageSize,
-      fields: ['ad_id', 'ad_name', 'status', 'ad_text', 'image_ids', 'video_id', 'call_to_action'],
-    });
+  async updateCampaign(campaignId, { status, dailyBudget } = {}) {
+    log.warn('TikTokAdsAPI.updateCampaign: not yet implemented');
+    return { id: campaignId, updated: false };
   }
 
-
-  async createCampaign(advertiserId, { name, objectiveType = 'CONVERSIONS', budget, status = 'DISABLE' }) {
-    this.log.info('Creating TikTok campaign', { advertiserId, name });
-    const data = await this._post('/campaign/create/', {
-      advertiser_id: advertiserId,
-      campaign_name: name,
-      objective_type: objectiveType,
-      budget: budget || 0,
-      budget_mode: budget ? 'BUDGET_MODE_DAY' : 'BUDGET_MODE_INFINITE',
-      status,
-    });
-    this.log.info('TikTok campaign created', { campaignId: data.campaign_id });
-    return { campaignId: data.campaign_id };
+  async createCampaign(accountId, data = {}) {
+    log.warn('TikTokAdsAPI.createCampaign: not yet implemented');
+    return { campaignId: null };
   }
 
-  async updateCampaign(advertiserId, campaignId, { name, status, budget }) {
-    this.log.info('Updating TikTok campaign', { advertiserId, campaignId });
-    const updateFields = { advertiser_id: advertiserId, campaign_ids: [campaignId] };
-    if (name) updateFields.campaign_name = name;
-    if (status) updateFields.status = status;
-    if (budget !== undefined) updateFields.budget = budget;
+  async syncAllAccounts() {
+    log.warn('TikTokAdsAPI.syncAllAccounts: not yet implemented');
+    return [];
+  }
 
-    await this._post('/campaign/update/', updateFields);
-    this.log.info('TikTok campaign updated', { campaignId });
-    return { campaignId };
+  // --- Error Handling ---
+
+  isExpiredToken(err) {
+    const msg = `${err?.message || ''} ${err?.error?.message || ''}`.toLowerCase();
+    return (
+      err?.code === 401 ||
+      err?.code === 403 ||
+      msg.includes('unauthorized') ||
+      msg.includes('access_token') ||
+      msg.includes('token invalid')
+    );
   }
 }
+
+export default TikTokAdsAPI;

@@ -91,9 +91,10 @@ const config = {
  get paymentGateway() { return process.env.PAYMENT_GATEWAY || 'midtrans'; },
  // Env var name starts with a digit — bracket access required.
  get oneAiPaymentWebhookSecret() { return process.env['1AI_PAYMENT_WEBHOOK_SECRET'] || ''; },
- get resendApiKey() { return process.env.RESEND_API_KEY || ''; },
- get mailFrom() { return process.env.MAIL_FROM || 'AdForge <noreply@berkahkarya.org>'; },
+  get webAppUrl() { return process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com'; },
 };
+
+export default config;
 
 export function validateConfig() {
   if (!config.jwtSecret) {
@@ -103,5 +104,3 @@ export function validateConfig() {
     throw new Error('FATAL: ENCRYPTION_KEY must be a 64-char hex string (32 bytes). Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
   }
 }
-
-export default config;

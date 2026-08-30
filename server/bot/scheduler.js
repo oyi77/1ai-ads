@@ -72,12 +72,11 @@ export function evaluateRuleForCampaign(rule, campaign) {
  * @param {{ repos: object, services: object }} deps
  */
 export function initScheduler(bot, deps) {
-  const _WIB_OFFSET = 7 * 60 * 60 * 1000; // UTC+7
-
   // ────────────────────────────────────────────────────────────
   // 1. Campaign Monitor — every 6 hours
   //    For each active campaign: generateReport + evaluateStoploss.
   //    Alert on KILL / REDUCE_BUDGET. Check scale eligibility on SCALE_UP.
+  //    Dedup: max 1 alert per campaign per day.
   // ────────────────────────────────────────────────────────────
   cron.schedule('0 */6 * * *', async () => {
     log.info('Running campaign monitor job');
@@ -85,6 +84,7 @@ export function initScheduler(bot, deps) {
       const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.() || { data: [] };
       const active = campaigns.filter(c => c.status === 'ACTIVE');
       const EVAL_DAYS = parseInt(process.env.EVALUATION_DAYS || '3', 10);
+      const today = new Date().toISOString().slice(0, 10);
 
       for (const campaign of active) {
         const spend = campaign.spend || 0;
@@ -111,7 +111,12 @@ export function initScheduler(bot, deps) {
         });
 
         if (stoploss.action === 'KILL' || stoploss.action === 'REDUCE_BUDGET') {
+          // Dedup: max 1 alert per campaign per day
+          const dedupKey = `campaign_monitor_alerted_${campaign.id}_${today}`;
+          if (deps.repos?.settingsRepo?.get(dedupKey)) continue;
+
           await safeSend(bot, `⚠️ *${campaign.name}*: ${stoploss.reason}`, { parse_mode: 'Markdown' });
+          deps.repos?.settingsRepo?.set(dedupKey, new Date().toISOString());
         }
 
         // Check scale eligibility on WINNING
@@ -122,7 +127,12 @@ export function initScheduler(bot, deps) {
             cpc: campaign.cpc || Infinity,
           });
           if (scaleResult.canScale) {
-            await safeSend(bot, `🚀 *${campaign.name}* eligible to scale!\n${scaleResult.reason}`, { parse_mode: 'Markdown' });
+            // Dedup: max 1 scale alert per campaign per day
+            const dedupKey = `campaign_monitor_scale_${campaign.id}_${today}`;
+            if (!deps.repos?.settingsRepo?.get(dedupKey)) {
+              await safeSend(bot, `🚀 *${campaign.name}* eligible to scale!\n${scaleResult.reason}`, { parse_mode: 'Markdown' });
+              deps.repos?.settingsRepo?.set(dedupKey, new Date().toISOString());
+            }
           }
         }
       }
@@ -271,6 +281,7 @@ export function initScheduler(bot, deps) {
   //    Evaluate automation rules against campaigns. On match, record an
   //    owner-scoped approval draft and prompt the owner with an
   //    Approve/Reject inline keyboard.
+  //    Dedup: skip if pending draft already exists for this rule+campaign.
   // ────────────────────────────────────────────────────────────
   cron.schedule('*/5 * * * *', async () => {
     try {
@@ -278,11 +289,26 @@ export function initScheduler(bot, deps) {
       const activeRules = rules.filter(r => r.enabled);
       if (activeRules.length === 0) return;
 
-      const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.() || { data: [] };
+      const { data: allCampaigns = [] } = deps.repos?.campaignsRepo?.findAll?.() || { data: [] };
+      const campaignsByUser = {};
+      for (const c of allCampaigns) {
+        const uid = c.user_id || 'system';
+        if (!campaignsByUser[uid]) campaignsByUser[uid] = [];
+        campaignsByUser[uid].push(c);
+      }
+
       for (const rule of activeRules) {
         const action = rule.action || {};
+        const ownerId = rule.user_id || 'system';
+        const campaigns = campaignsByUser[ownerId] || [];
+        if (campaigns.length === 0) continue;
+
         for (const campaign of campaigns) {
           if (!evaluateRuleForCampaign(rule, campaign)) continue;
+
+          // Dedup: skip if a pending draft already exists for this rule+campaign
+          const existingDraft = deps.repos?.draftsRepo?.findPendingForRuleCampaign?.(rule.name, campaign.id);
+          if (existingDraft) continue;
 
           const draft = await deps.services?.draftService?.guardAutonomousChange?.({
             type: `rule_${action.type}`,
@@ -537,18 +563,25 @@ export function initScheduler(bot, deps) {
   // ────────────────────────────────────────────────────────────
   // 7. Follow-up Engine — every hour at :30
   //    Find WINNING campaigns not yet scaled. Suggest scaling.
+  //    Dedup: max 1 alert per campaign per day.
   // ────────────────────────────────────────────────────────────
   cron.schedule('30 * * * *', async () => {
     log.debug('Running follow-up engine');
     try {
       const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.() || { data: [] };
-      const winning = campaigns.filter(c => c.status === 'WINNING' && !c.scaled);
+      const today = new Date().toISOString().slice(0, 10);
+      const winning = campaigns.filter(c => c.status === 'WINNING');
       for (const c of winning) {
+        // Dedup: skip if already alerted today for this campaign
+        const dedupKey = `followup_alerted_${c.id}_${today}`;
+        if (deps.repos?.settingsRepo?.get(dedupKey)) continue;
+
         await safeSend(
           bot,
           `🏆 *${c.name}* is WINNING and hasn't been scaled yet. Consider increasing budget.`,
           { parse_mode: 'Markdown' },
         );
+        deps.repos?.settingsRepo?.set(dedupKey, new Date().toISOString());
       }
       log.debug('Follow-up engine complete', { winning: winning.length });
     } catch (err) {
@@ -611,6 +644,7 @@ export function initScheduler(bot, deps) {
   // ────────────────────────────────────────────────────────────
   // 9. Daily Eval Guard — 01:00 WIB (18:00 UTC previous day)
   //    evaluateMetrics on all active campaigns. Flag LOSING.
+  //    Dedup: max 1 alert per campaign per day.
   // ────────────────────────────────────────────────────────────
   cron.schedule('0 18 * * *', async () => {
     log.info('Running daily eval guard');
@@ -618,6 +652,7 @@ export function initScheduler(bot, deps) {
       const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.() || { data: [] };
       const active = campaigns.filter(c => c.status === 'ACTIVE');
       const underperformers = [];
+      const today = new Date().toISOString().slice(0, 10);
 
       for (const campaign of active) {
         const spend = campaign.spend || 0;
@@ -626,7 +661,11 @@ export function initScheduler(bot, deps) {
 
         const metrics = evaluateMetrics(revenue, spend);
         if (metrics.status === 'LOSING') {
-          underperformers.push({ name: campaign.name, roas: metrics.roas, profit: metrics.profit });
+          // Dedup: only report each campaign once per day
+          const dedupKey = `daily_eval_alerted_${campaign.id}_${today}`;
+          if (deps.repos?.settingsRepo?.get(dedupKey)) continue;
+
+          underperformers.push({ name: campaign.name, roas: metrics.roas, profit: metrics.profit, dedupKey });
         }
       }
 
@@ -635,6 +674,9 @@ export function initScheduler(bot, deps) {
           `• ${c.name}: ROAS ${c.roas.toFixed(2)}x, Loss Rp ${Math.abs(c.profit).toLocaleString('id-ID')}`,
         );
         await safeSend(bot, `🔴 *Daily Eval — ${underperformers.length} underperformer(s):*\n${lines.join('\n')}`, { parse_mode: 'Markdown' });
+        for (const c of underperformers) {
+          deps.repos?.settingsRepo?.set(c.dedupKey, new Date().toISOString());
+        }
       }
       log.info('Daily eval guard complete', { checked: active.length, underperformers: underperformers.length });
     } catch (err) {

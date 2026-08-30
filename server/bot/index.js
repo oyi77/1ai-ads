@@ -81,6 +81,7 @@ export function initBot(app, deps) {
   bot.command('cancel', handleMenu());
   bot.help(handleHelp());
   bot.command('status', handleStatus(deps));
+  bot.command('quick', handleMenu());
   bot.command('settings', handleSettings(deps));
   bot.command('pricing', handlePricing());
   bot.command('admin_stats', handleAdminStats(deps));
@@ -179,7 +180,8 @@ bot.action(/^ads:disconnect(?::(.+))?$/, async (ctx) => {
   // authoritative from code so commands and buttons never drift apart.
   const MY_COMMANDS = [
     { command: 'start', description: '🚀 Mulai / menu utama' },
-    { command: 'menu', description: '📋 Semua fitur' },
+    { command: 'quick', description: '📋 Menu cepat' },
+    { command: 'monitor', description: '⚡ Aturan otomatis & alert' },
     { command: 'status', description: '📊 Ringkasan kampanye & ROAS' },
     { command: 'ads', description: '📣 Kelola akun Meta Ads' },
     { command: 'create', description: '🎯 Buat kampanye (wizard)' },

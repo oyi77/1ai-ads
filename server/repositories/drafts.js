@@ -110,4 +110,24 @@ export class DraftsRepository {
     const row = this.db.prepare('SELECT COUNT(*) as count FROM approval_drafts').get();
     return row.count;
   }
+
+  findPendingByCampaignAndType(campaignId, typePrefix) {
+    return this.db.prepare(
+      "SELECT id FROM approval_drafts WHERE campaign_id = ? AND status = 'pending' AND type LIKE ? LIMIT 1"
+    ).get(campaignId, `${typePrefix}%`) || null;
+  }
+
+  findPendingForRuleCampaign(ruleName, campaignId) {
+    return this.db.prepare(
+      "SELECT id FROM approval_drafts WHERE campaign_id = ? AND status = 'pending' AND summary LIKE ? LIMIT 1"
+    ).get(campaignId, `%Rule ${ruleName}%`) || null;
+  }
+
+  /** Delete all pending drafts for a campaign+type prefix (cleanup helper) */
+  deletePendingByCampaignAndType(campaignId, typePrefix) {
+    const result = this.db.prepare(
+      "DELETE FROM approval_drafts WHERE campaign_id = ? AND status = 'pending' AND type LIKE ?"
+    ).run(campaignId, `${typePrefix}%`);
+    return result.changes;
+  }
 }

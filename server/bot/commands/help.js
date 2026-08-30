@@ -11,21 +11,25 @@ export function handleHelp() {
       '/start — Menu utama & onboarding\n' +
       '/menu — Buka semua fitur\n' +
       '/status — Ringkasan kampanye & ROAS\n' +
-      '/ads — Kelola akun Meta Ads (pausa/resume/laporan)\n' +
+      '/ads — Kelola akun iklan multi-platform\n' +
       '/create — Wizard buat kampanye baru\n' +
       '/monitor — Aturan otomatis (spend guard, alert)\n' +
       '/metaapp — Kredensial Meta App milik kamu\n' +
       '/settings — Token & koneksi akun\n' +
       '/pricing — Lihat paket\n' +
-      '/cancel — Batalkan wizard/flow yang sedang jalan\n' +
+      '/cancel — Batalkan wizard/flow aktif\n' +
       '/help — Pesan ini\n\n' +
-      '*Fitur:*\n' +
-      '📊 Monitoring & analitik kampanye\n' +
-      '🎯 Buat kampanye lewat wizard\n' +
-      '⚡ Automation rules & spend guards\n' +
-      '🤖 AI Optimize — saran optimasi dari data kampanye\n' +
-      '📱 Mini App — dashboard penuh di dalam Telegram',
-      { parse_mode: 'Markdown' }
+      '*Quick actions:*',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '📊 Dashboard', callback_data: 'menu:status' }, { text: '📣 Ads Manager', callback_data: 'menu:ads' }],
+            [{ text: '⚡ Rules', callback_data: 'menu:monitor' }, { text: '🌐 Platforms', callback_data: 'menu:platforms' }],
+            [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+          ],
+        },
+      }
     );
   };
 }
