@@ -121,7 +121,7 @@ describe('Payments API Integration', () => {
       // 1ai-payment contract: POST to the /api/payments collection root
       expect(callUrl).toMatch(/\/api\/payments$/);
       const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(callBody.gateway).toBe('midtrans');
+      expect(callBody.gateway).toBe('duitku');
       expect(callBody.callback_url).toContain('/api/payments/notify');
       expect(callBody.amount).toBe(499000);
       expect(callBody.idempotency_key).toBe(callBody.project_order_id);

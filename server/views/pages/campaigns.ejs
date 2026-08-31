@@ -11,12 +11,13 @@ document.querySelector('.main-content').innerHTML = `
 <tbody id="tbody"><tr><td colspan="6" style="text-align:center;color:var(--text-tertiary);padding:24px">Loading...</td></tr></tbody></table></div></div>`;
 
 fetch('/api/campaigns').then(function(r){return r.json()}).then(function(data){
+    function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
     var c=data.campaigns||data||[];
     var tb=document.getElementById('tbody');
     if(!c.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text-tertiary);padding:24px">No campaigns</td></tr>';return}
     tb.innerHTML=c.map(function(x){
         var sc=x.status==='ACTIVE'?'badge-success':x.status==='PAUSED'?'badge-warning':'badge-neutral';
-        return '<tr><td style="font-weight:600">'+(x.name||x.id)+'</td><td>'+(x.platform||'—')+'</td><td><span class="badge '+sc+'">'+(x.status||'—')+'</span></td><td style="font-family:var(--font-mono)">Rp '+((x.budget||0)).toLocaleString('id-ID')+'</td><td style="font-family:var(--font-mono)">Rp '+((x.spend||0)).toLocaleString('id-ID')+'</td><td style="font-family:var(--font-mono)">'+((x.roas||0)).toFixed(2)+'x</td></tr>';
+        return '<tr><td style="font-weight:600">'+esc(x.name||x.id)+'</td><td>'+esc(x.platform||'—')+'</td><td><span class="badge '+sc+'">'+esc(x.status||'—')+'</span></td><td style="font-family:var(--font-mono)">Rp '+((x.budget||0)).toLocaleString('id-ID')+'</td><td style="font-family:var(--font-mono)">Rp '+((x.spend||0)).toLocaleString('id-ID')+'</td><td style="font-family:var(--font-mono)">'+((x.roas||0)).toFixed(2)+'x</td></tr>';
     }).join('');
 }).catch(function(){document.getElementById('tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text-tertiary)">Failed to load</td></tr>'});
 </script>

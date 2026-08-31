@@ -11,3 +11,14 @@ tests
 *.md
 !README.md
 !CHANGELOG.md
+# Never bake live databases or secrets into the image
+*.db
+*.db-shm
+*.db-wal
+db/*.db*
+db/*.db-shm
+db/*.db-wal
+secrets
+outputs
+*.pem
+*.key

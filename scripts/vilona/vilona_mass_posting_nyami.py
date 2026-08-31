@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 # PostBridge Config
 API_BASE_URL = "https://api.post-bridge.com/v1"
-API_KEY = "pb_live_AT9Xm4PKaYBzAvFZYGgexi"
+API_KEY = os.getenv('POSTBRIDGE_API_KEY', '')
 HEADERS = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
 # Nyamiresep Account IDs (Based on TOOLS.md and standard mapping)

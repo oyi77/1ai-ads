@@ -83,11 +83,12 @@ fetch('/api/campaigns', { headers: { 'Authorization': 'Bearer ' + (document.cook
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);padding:24px">No campaigns yet</td></tr>';
         return;
     }
+    function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
     tbody.innerHTML = campaigns.slice(0, 10).map(function(c) {
         var statusClass = c.status === 'ACTIVE' ? 'badge-success' : c.status === 'PAUSED' ? 'badge-warning' : 'badge-neutral';
         return '<tr>' +
-            '<td style="font-weight:600">' + (c.name || c.id || '—') + '</td>' +
-            '<td><span class="badge ' + statusClass + '">' + (c.status || 'unknown') + '</span></td>' +
+            '<td style="font-weight:600">' + esc(c.name || c.id || '—') + '</td>' +
+            '<td><span class="badge ' + statusClass + '">' + esc(c.status || 'unknown') + '</span></td>' +
             '<td style="font-family:var(--font-mono)">Rp ' + ((c.spend || 0)).toLocaleString('id-ID') + '</td>' +
             '<td style="font-family:var(--font-mono)">Rp ' + ((c.revenue || 0)).toLocaleString('id-ID') + '</td>' +
             '<td style="font-family:var(--font-mono);color:' + ((c.roas || 0) >= 1 ? 'var(--green)' : 'var(--red)') + '">' + ((c.roas || 0)).toFixed(2) + 'x</td>' +

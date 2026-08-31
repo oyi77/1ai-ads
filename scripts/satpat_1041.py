@@ -2,7 +2,8 @@ import requests, time, json, sys
 from datetime import datetime, timedelta
 
 ACT_ID = "act_380721031313330"
-TOKEN = "EAAKA2OT1FroBRot0MWOi39slvmVLfZAPYWFFYoSO4ZAYvZAq0X7wnLBvAmgp0vai9KHZBOjXQ5VmvWYZCwNDJkUhrdlDwSUXGvb0LZACz9v4DkQj33B2cDrizSrH49UCIDnoebkQPaRg3YoxDwgwT6nrgZA2IvZAXQ77A99YS1hm6VVbA9i2Dn3PPgD794QJNZCAMqyYEGXqOyzmOUc7IirP4KMXWxUzwZBtOSgQIx5v19Mz8oB2GB4TKcPQZDZD"
+import os
+TOKEN = os.getenv("META_ACCESS_TOKEN", "")
 BASE = f"https://graph.facebook.com/v22.0/{ACT_ID}"
 
 def api_get(url, params=None):

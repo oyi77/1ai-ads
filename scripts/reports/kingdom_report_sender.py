@@ -5,8 +5,9 @@ from pathlib import Path
 from datetime import datetime
 
 BASE = Path.home()
-BOT_TOKEN = '8665546627:AAFp6SSBasBcpN3tGf1jNSpRPotMYwM8DEM'
-CHAT_ID = 157228659
+import os
+BOT_TOKEN = os.getenv('KINGDOM_BOT_TOKEN', '')
+CHAT_ID = int(os.getenv('KINGDOM_CHAT_ID', '0'))
 
 state = {}
 sf = BASE / 'projects/1ai-ads/data/rakdapur_kingdom_state.json'

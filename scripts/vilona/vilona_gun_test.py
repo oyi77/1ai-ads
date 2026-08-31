@@ -1,3 +1,4 @@
+import os
 """
 VILONA GUN TEST — Open market, then close immediately.
 Proves the weapon fires. Min size, min risk.
@@ -6,9 +7,9 @@ import ccxt
 import time
 from datetime import datetime
 
-API_KEY = 'bg_c1fb96084150a4b4a3caa85191640af2'
-API_SECRET = 'eb62757df9d41fdfe5cb829448bd76cb5b7fe980f268dfb952b610d3cb9bf0a3'
-PASSPHRASE = 'Sugehberkah'
+API_KEY = os.getenv('BITGET_API_KEY', '')
+API_SECRET = os.getenv('BITGET_API_SECRET', '')
+PASSPHRASE = os.getenv('BITGET_PASSPHRASE', '')
 SYMBOL = 'BTCUSDT'  # Most liquid, tight spread
 LEVERAGE = 2
 AMOUNT_USDT = 5  # Minimum test size

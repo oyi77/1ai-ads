@@ -88,7 +88,8 @@ const config = {
  get nangoSecretKey() { return process.env.NANGO_SECRET_KEY || ''; },
  get approvalRequired() { return process.env.APPROVAL_REQUIRED === 'true' || process.env.APPROVAL_REQUIRED === '1'; },
  get publicBaseUrl() { return process.env.PUBLIC_BASE_URL || 'https://adforge.aitradepulse.com'; },
- get paymentGateway() { return process.env.PAYMENT_GATEWAY || 'midtrans'; },
+ get paymentGateway() { return process.env.PAYMENT_GATEWAY || 'duitku'; },
+ get webhookSecret() { return process.env.WEBHOOK_SECRET || process.env.SCALEV_WEBHOOK_SECRET || ''; },
  // Env var name starts with a digit — bracket access required.
  get oneAiPaymentWebhookSecret() { return process.env['1AI_PAYMENT_WEBHOOK_SECRET'] || ''; },
   get webAppUrl() { return process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com'; },
@@ -102,5 +103,8 @@ export function validateConfig() {
   }
   if (!process.env.ENCRYPTION_KEY || process.env.ENCRYPTION_KEY.length < 64) {
     throw new Error('FATAL: ENCRYPTION_KEY must be a 64-char hex string (32 bytes). Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+  }
+  if (config.paymentGateway === 'midtrans' && config.nodeEnv === 'production') {
+    throw new Error('FATAL: PAYMENT_GATEWAY=midtrans is not a working provider on this deployment. Set PAYMENT_GATEWAY=duitku (or your active gateway) in .env.');
   }
 }

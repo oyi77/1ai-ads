@@ -1,17 +1,14 @@
 """Shared meta API configuration — load token, helpers"""
 
-import json, requests, os, re
+import json, requests, os
 
 
 def get_token():
-    """Extract Meta API access token from list_ad_accounts.py"""
-    script_path = os.path.join(os.path.dirname(__file__), "list_ad_accounts.py")
-    with open(script_path) as f:
-        content = f.read()
-    match = re.search(r"ACCESS_TOKEN = '([^']+)'", content)
-    if match:
-        return match.group(1)
-    raise Exception("Token not found in list_ad_accounts.py")
+    """Load Meta API access token from environment (never hardcode credentials)."""
+    token = os.getenv("META_ACCESS_TOKEN", "").strip()
+    if not token:
+        raise Exception("META_ACCESS_TOKEN not set in environment")
+    return token
 
 
 TOKEN = get_token()

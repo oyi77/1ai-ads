@@ -32,7 +32,7 @@ export function createBoostRouter({ services }) {
 
   // ── POST /api/boost/telegram-webhook ─────────────────────────
   // Receives Telegram bot updates; handles /boost_approve_N and /boost_reject_N commands.
-  router.post('/telegram-webhook', async (req, res) => {
+  router.post('/telegram-webhook', requireAuth, async (req, res) => {
     const text = req.body?.message?.text ?? req.body?.callback_query?.data ?? '';
     try {
       const result = await svc.handleTelegramCommand(text);

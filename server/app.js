@@ -231,6 +231,22 @@ export function createApp(params) {
   });
 
   app.post('/api/webhooks/video-complete', (req, res) => {
+    const signature = req.headers['x-webhook-signature'];
+    if (!signature) {
+      return res.status(401).json({ error: 'Missing signature' });
+    }
+    const secret = config.webhookSecret || config.scalevWebhookSecret;
+    if (!secret) {
+      return res.status(500).json({ error: 'Webhook secret not configured' });
+    }
+    const raw = req.rawBody || Buffer.from(JSON.stringify(req.body || {}));
+    const expected = crypto.createHmac('sha256', secret).update(raw).digest('hex');
+    const provided = String(signature).replace(/^sha256=/, '');
+    const valid = expected.length === provided.length &&
+      crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(provided));
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid signature' });
+    }
     const { jobId, status, videoUrl, thumbnailUrl } = req.body;
     log.info('Video completion webhook received', { jobId, status, videoUrl });
     if (status === 'completed' && videoUrl) {
