@@ -23,7 +23,7 @@ export const manageMetaAppScene = new Scenes.WizardScene(
   'manage-meta-app',
   // Step 0 — welcome + friendly label
   async (ctx) => {
-    const existing = ctx.repos?.userMetaAppsRepo?.getMasked?.(ctx.userId);
+    const existing = ctx.deps?.repos?.userMetaAppsRepo?.getMasked?.(ctx.userId);
     const note = existing
       ? `\n\nℹ️ You already have an App configured (AppId ${existing.appIdHint}). Saving new credentials will replace the current one.`
       : '';
@@ -105,7 +105,7 @@ export const manageMetaAppScene = new Scenes.WizardScene(
       threadsSecret = parts[1] || null;
     }
     const { label, systemToken, appId, appSecret } = ctx.wizard.state;
-    const repo = ctx.repos?.userMetaAppsRepo;
+    const repo = ctx.deps?.repos?.userMetaAppsRepo;
     if (!repo) {
       await ctx.reply('⚠️ Storage unavailable. Please try again later.');
       return ctx.scene.leave();
