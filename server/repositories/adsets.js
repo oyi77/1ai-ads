@@ -5,11 +5,12 @@ export class AdsetsRepository {
     this.db = db;
   }
 
-  findAll({ campaignId, status, page = 1, limit = 50 } = {}) {
+  findAll({ campaignId, status, userId, page = 1, limit = 50 } = {}) {
     const where = [];
     const params = [];
     if (campaignId) { where.push('campaign_id = ?'); params.push(campaignId); }
     if (status) { where.push('status = ?'); params.push(status); }
+    if (userId) { where.push('user_id = ?'); params.push(userId); }
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const total = this.db.prepare(`SELECT COUNT(*) as count FROM ad_sets ${whereClause}`).get(...params).count;
     const offset = (page - 1) * limit;
@@ -19,12 +20,15 @@ export class AdsetsRepository {
     return { data, total, page, limit };
   }
 
-  findById(id) {
+  findById(id, userId) {
+    if (userId) {
+      return this.db.prepare('SELECT * FROM ad_sets WHERE id = ? AND user_id = ?').get(id, userId) || null;
+    }
     return this.db.prepare('SELECT * FROM ad_sets WHERE id = ?').get(id) || null;
   }
 
-  upsert(data) {
-    const existing = data.id ? this.findById(data.id) : null;
+  upsert(data, userId) {
+    const existing = data.id ? this.findById(data.id, userId) : null;
     if (existing) {
       const fields = [];
       const params = [];
@@ -40,10 +44,10 @@ export class AdsetsRepository {
     }
     const id = data.id || uuidv4();
     this.db.prepare(`
-      INSERT INTO ad_sets (id, campaign_id, platform, name, status, daily_budget, targeting_json, optimization_goal, billing_event, platform_adset_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO ad_sets (id, campaign_id, user_id, platform, name, status, daily_budget, targeting_json, optimization_goal, billing_event, platform_adset_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      id, data.campaignId || data.campaign_id || '', data.platform || 'meta',
+      id, data.campaignId || data.campaign_id || '', userId || data.userId || data.user_id || null, data.platform || 'meta',
       data.name || '', data.status || 'PAUSED',
       data.dailyBudget ?? data.daily_budget ?? 0,
       typeof data.targeting === 'string' ? data.targeting : JSON.stringify(data.targeting || {}),
@@ -58,8 +62,8 @@ export class AdsetsRepository {
     return this.upsert(data);
   }
 
-  update(id, data) {
-    const existing = this.findById(id);
+  update(id, data, userId) {
+    const existing = this.findById(id, userId);
     if (!existing) return null;
     const normalized = {
       name: data.name,
@@ -81,7 +85,11 @@ export class AdsetsRepository {
     return this.findById(id);
   }
 
-  remove(id) {
+  remove(id, userId) {
+    if (userId) {
+      const result = this.db.prepare('DELETE FROM ad_sets WHERE id = ? AND user_id = ?').run(id, userId);
+      return result.changes > 0;
+    }
     const result = this.db.prepare('DELETE FROM ad_sets WHERE id = ?').run(id);
     return result.changes > 0;
   }

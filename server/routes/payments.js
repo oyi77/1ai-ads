@@ -87,6 +87,10 @@ export function createPaymentsRouter(paymentService) {
       if (!payment) {
         return res.status(404).json({ success: false, error: 'Payment not found' });
       }
+      // Verify ownership
+      if (payment.user_id && payment.user_id !== req.user?.id) {
+        return res.status(404).json({ success: false, error: 'Payment not found' });
+      }
 
       // Parse metadata and add display text
       const metadata = payment.metadata ? JSON.parse(payment.metadata) : {};
@@ -130,6 +134,10 @@ export function createPaymentsRouter(paymentService) {
     try {
       const payment = paymentService.getPaymentStatus(req.params.orderId);
       if (!payment) {
+        return res.status(404).json({ success: false, error: 'Payment not found' });
+      }
+      // Verify ownership
+      if (payment.user_id && payment.user_id !== req.user?.id) {
         return res.status(404).json({ success: false, error: 'Payment not found' });
       }
       res.json({ success: true, data: payment });

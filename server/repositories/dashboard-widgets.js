@@ -34,8 +34,10 @@ export class DashboardWidgetsRepository {
   }
 
 
-  update(id, data) {
-    const existing = this.db.prepare('SELECT * FROM dashboard_widgets WHERE id = ?').get(id);
+  update(id, data, userId) {
+    const existing = userId
+      ? this.db.prepare('SELECT * FROM dashboard_widgets WHERE id = ? AND user_id = ?').get(id, userId)
+      : this.db.prepare('SELECT * FROM dashboard_widgets WHERE id = ?').get(id);
     if (!existing) return null;
 
     const fields = [];
@@ -69,8 +71,10 @@ export class DashboardWidgetsRepository {
     return this.getByUser(userId);
   }
 
-  delete(id) {
-    const result = this.db.prepare('DELETE FROM dashboard_widgets WHERE id = ?').run(id);
+  delete(id, userId) {
+    const result = userId
+      ? this.db.prepare('DELETE FROM dashboard_widgets WHERE id = ? AND user_id = ?').run(id, userId)
+      : this.db.prepare('DELETE FROM dashboard_widgets WHERE id = ?').run(id);
     return result.changes > 0;
   }
 }

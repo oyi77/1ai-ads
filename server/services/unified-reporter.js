@@ -106,7 +106,7 @@ export class UnifiedReporter {
 
         if (api) {
           if (platform === 'meta') {
-            insights = await api.getCampaignInsights(id);
+            insights = await api.getCampaignInsights(campaign.campaign_id || id);
           } else if (platform === 'google') {
             // Google returns cost_micros; getCampaignPerformance needs customerId
             const perf = await api.getCampaignPerformance(campaign.account_id || id, { days: 30 });

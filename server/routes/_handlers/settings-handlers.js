@@ -18,6 +18,7 @@ export function handleGetGeneralSettings(settingsRepo) {
     const safe = {};
     for (const [key, value] of Object.entries(all)) {
       if (key.startsWith('credentials_')) continue; // Skip legacy creds in general list
+      if (SENSITIVE_PREFIXES.some(p => key.startsWith(p))) continue; // redact LLM keys/cookies
       safe[key] = value;
     }
     res.json({ success: true, data: safe });
@@ -538,11 +539,19 @@ export function handleToggleIntegration(settingsRepo) {
 }
 
 // PUT /:key — save a general setting
+const USER_SETTING_KEYS = new Set(['timezone', 'currency', 'language', 'notifications', 'theme', 'theme_preference', 'auto_refresh']);
+const SENSITIVE_PREFIXES = ['credentials_', 'llm_config', 'meta_ai_cookies', 'ads_library_ai_cookies', 'integration_'];
+
 export function handlePutSetting(settingsRepo) {
   return (req, res) => {
     const { value } = req.body;
     if (value === undefined) return res.status(400).json({ success: false, error: 'value is required' });
-    settingsRepo.set(req.params.key, value);
+    const key = req.params.key;
+    const isAdmin = req.user?.role === 'admin';
+    if (!isAdmin && !USER_SETTING_KEYS.has(key)) {
+      return res.status(403).json({ success: false, error: 'Cannot modify this setting' });
+    }
+    settingsRepo.set(key, value);
     res.json({ success: true });
   };
 }

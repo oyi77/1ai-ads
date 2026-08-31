@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requireAuth } from '../middleware/auth.js';
 import crypto from 'crypto';
 import { createLogger } from '../lib/logger.js';
 import { CacheService } from '../services/cache-service.js';
@@ -202,7 +203,7 @@ export function createAdsLibraryAiRouter(settingsRepo) {
     });
   });
 
-  router.put('/config', async (req, res) => {
+  router.put('/config', requireAuth, async (req, res) => {
     const { cookies, test = true } = req.body || {};
     if (!settingsRepo) {
       return res.status(500).json({ success: false, error: 'Settings repository not available' });
@@ -237,7 +238,7 @@ export function createAdsLibraryAiRouter(settingsRepo) {
     res.json({ success: true, data: { saved: true, cacheCleared: true, cookieTest: 'skipped' } });
   });
 
-  router.delete('/config', (_req, res) => {
+  router.delete('/config', requireAuth, (_req, res) => {
     if (!settingsRepo) {
       return res.status(500).json({ success: false, error: 'Settings repository not available' });
     }
@@ -336,7 +337,7 @@ export function createAdsLibraryAiRouter(settingsRepo) {
     res.status(500).json({ success: false, error: 'All search paths failed. Try again later.' });
   });
 
-  router.delete('/cache', (_req, res) => {
+  router.delete('/cache', requireAuth, (_req, res) => {
     memoryCache.clear();
     if (settingsRepo) {
       const all = settingsRepo.getAll?.() || {};

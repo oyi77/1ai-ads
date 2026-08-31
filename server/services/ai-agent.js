@@ -44,8 +44,8 @@ export class AiAgent {
   async analyzeAndSuggest(userId) {
     if (!this.isEnabled()) return [];
 
-    const ads = this.adsRepo.getByUserId ? this.adsRepo.getByUserId(userId) : [];
-    const campaigns = this.campaignsRepo.getAll ? this.campaignsRepo.getAll(userId) : [];
+    const ads = this.adsRepo.findAll ? this.adsRepo.findAll({ userId }).data || [] : [];
+    const campaigns = this.campaignsRepo.findAll ? this.campaignsRepo.findAll({ userId }).data || [] : [];
     if (ads.length === 0 && campaigns.length === 0) return [];
 
     const context = this._buildAnalysisContext(ads, campaigns);

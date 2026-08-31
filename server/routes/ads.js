@@ -101,7 +101,7 @@ export function createAdsRouter(adsRepo, adGenerator) {
     try {
       const { q, page = 1, limit = 20 } = req.query;
       if (!q) return res.json({ success: true, data: [], total: 0 });
-      const result = adsRepo.search(q, { page: +page, limit: +limit });
+      const result = adsRepo.search(q, { page: +page, limit: +limit, userId: req.user?.id });
       res.json({ success: true, ...result });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -110,7 +110,7 @@ export function createAdsRouter(adsRepo, adGenerator) {
 
   router.get('/:id', (req, res) => {
     try {
-      const ad = adsRepo.findById(req.params.id);
+      const ad = adsRepo.findById(req.params.id, req.user?.id);
       if (!ad) return res.status(404).json({ success: false, error: 'Not found' });
       res.json({ success: true, data: ad });
     } catch (err) {
@@ -122,7 +122,7 @@ export function createAdsRouter(adsRepo, adGenerator) {
     try {
       const v = validateAd(req.body);
       if (!v.valid) return res.status(400).json({ success: false, error: v.error });
-      const id = adsRepo.create(req.body);
+      const id = adsRepo.create({ ...req.body, userId: req.user?.id });
       res.json({ success: true, data: { id } });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -131,7 +131,7 @@ export function createAdsRouter(adsRepo, adGenerator) {
 
   router.put('/:id', (req, res) => {
     try {
-      const updated = adsRepo.update(req.params.id, req.body);
+      const updated = adsRepo.update(req.params.id, req.body, req.user?.id);
       if (!updated) return res.status(404).json({ success: false, error: 'Not found' });
       res.json({ success: true, data: updated });
     } catch (err) {
@@ -141,7 +141,7 @@ export function createAdsRouter(adsRepo, adGenerator) {
 
   router.delete('/:id', (req, res) => {
     try {
-      const removed = adsRepo.remove(req.params.id);
+      const removed = adsRepo.remove(req.params.id, req.user?.id);
       if (!removed) return res.status(404).json({ success: false, error: 'Not found' });
       res.json({ success: true });
     } catch (err) {

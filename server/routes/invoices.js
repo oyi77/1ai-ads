@@ -18,7 +18,7 @@ export function createInvoicesRouter(invoicesRepo) {
   // Get single invoice
   router.get('/:id', async (req, res) => {
     try {
-      const inv = invoicesRepo.findById(req.params.id);
+      const inv = invoicesRepo.findById(req.params.id, req.user?.id);
       if (!inv) return res.status(404).json({ success: false, error: 'Invoice not found' });
       res.json({ success: true, data: inv });
     } catch (err) {
@@ -45,7 +45,7 @@ export function createInvoicesRouter(invoicesRepo) {
   // Mark invoice as paid
   router.post('/:id/paid', async (req, res) => {
     try {
-      const inv = invoicesRepo.updateStatus(req.params.id, 'paid', { paidAt: new Date().toISOString() });
+      const inv = invoicesRepo.updateStatus(req.params.id, 'paid', { paidAt: new Date().toISOString() }, req.user?.id);
       if (!inv) return res.status(404).json({ success: false, error: 'Invoice not found' });
       res.json({ success: true, data: inv });
     } catch (err) {
@@ -56,7 +56,7 @@ export function createInvoicesRouter(invoicesRepo) {
   // Cancel invoice
   router.post('/:id/cancel', async (req, res) => {
     try {
-      const inv = invoicesRepo.updateStatus(req.params.id, 'cancelled');
+      const inv = invoicesRepo.updateStatus(req.params.id, 'cancelled', {}, req.user?.id);
       if (!inv) return res.status(404).json({ success: false, error: 'Invoice not found' });
       res.json({ success: true, data: inv });
     } catch (err) {

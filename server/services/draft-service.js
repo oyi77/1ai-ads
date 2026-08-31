@@ -126,8 +126,10 @@ export class DraftService {
   // Self-contained outbound notify (mirrors BoostApprovalService._notify).
   // Reads token/chat from env (preferred) or settingsRepo. Outbound only.
   async _notifyDirect(draft, action) {
-    const token = process.env.TELEGRAM_BOT_TOKEN || (this._settings() && this._settings().get('telegram_token'));
-    const chatId = process.env.TELEGRAM_CHAT_ID || (this._settings() && this._settings().get('telegram_chat_id'));
+    const settings = this._settings && typeof this._settings === 'function' ? this._settings() : null;
+    const getVal = settings && typeof settings.get === 'function' ? (k) => settings.get(k) : () => null;
+    const token = process.env.TELEGRAM_BOT_TOKEN || getVal('telegram_token');
+    const chatId = process.env.TELEGRAM_CHAT_ID || getVal('telegram_chat_id');
     if (!token || !chatId) return;
 
     const emoji = action === 'approved' ? '✅' : action === 'rejected' ? '❌' : '📝';
@@ -153,5 +155,7 @@ export class DraftService {
   }
 
   _settings() {
+    const repo = this.draftsRepo?.settingsRepo || this.draftsRepo || null;
+    return repo && typeof repo.get === 'function' ? repo : null;
   }
 }

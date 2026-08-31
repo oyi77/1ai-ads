@@ -177,7 +177,7 @@ describe('RuleEvaluator', () => {
         { id: 'c1', insights: { roas: 0.5 } },
         { id: 'c2', insights: { roas: 3.0 } },
       ];
-      mockCampaignsRepo.findAll.mockReturnValue(campaigns);
+      mockCampaignsRepo.findAll.mockReturnValue({ data: campaigns, total: campaigns.length });
       mockRulesRepo.getAllEnabled.mockReturnValue([
         { id: 'r1', condition: { type: 'leaf', metric: 'roas', operator: '<', value: 1 }, action: { type: 'pause' } },
       ]);

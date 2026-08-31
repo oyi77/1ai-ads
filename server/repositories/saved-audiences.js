@@ -31,9 +31,10 @@ export class SavedAudiencesRepository {
     return this.findById(id);
   }
 
-  update(id, data) {
+  update(id, data, userId) {
     const existing = this.findById(id);
     if (!existing) return null;
+    if (userId && existing.user_id !== userId) return null;
     const fields = [];
     const params = [];
     const updatable = ['name', 'platform', 'description'];
@@ -46,7 +47,11 @@ export class SavedAudiencesRepository {
     return this.findById(id);
   }
 
-  remove(id) {
+  remove(id, userId) {
+    if (userId) {
+      const result = this.db.prepare('DELETE FROM saved_audiences WHERE id = ? AND user_id = ?').run(id, userId);
+      return result.changes > 0;
+    }
     const result = this.db.prepare('DELETE FROM saved_audiences WHERE id = ?').run(id);
     return result.changes > 0;
   }

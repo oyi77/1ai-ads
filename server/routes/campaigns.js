@@ -326,7 +326,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
             campaign_id: c.id,
             name: c.name,
             status: c.status,
-            budget: c.dailyBudget || c.lifetimeBudget || 0,
+            budget: (c.dailyBudget || 0) / 100 || (c.lifetimeBudget || 0) / 100 || 0,
             spend: spendVal,
             revenue: revenueVal,
             impressions: parseInt(insights.impressions || 0),
@@ -440,9 +440,9 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   });
 
   // GET /api/campaigns/list - Simple campaign list for external dashboard
-  router.get('/list', async (_req, res) => {
+  router.get('/list', async (req, res) => {
     try {
-      const result = campaignsRepo.findAll();
+      const result = campaignsRepo.findAll({ userId: req.user?.id });
       res.json({ success: true, data: result.data, total: result.total });
     } catch (e) {
       res.json({ success: false, error: e.message });

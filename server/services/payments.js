@@ -69,7 +69,7 @@ export class PaymentService {
         maxAds: p.max_ads,
         maxCampaigns: p.max_campaigns,
         maxPlatformAccounts: p.max_platform_accounts,
-        features: typeof p.features === 'string' ? JSON.parse(p.features) : (p.features || []),
+        features: (() => { try { return typeof p.features === 'string' ? JSON.parse(p.features) : (p.features || []); } catch { return []; } })(),
         amount: cfg ? cfg.amount : null,
         currency: 'IDR',
       };

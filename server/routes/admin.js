@@ -116,9 +116,8 @@ export function createAdminRouter(usersRepo, _refreshTokensRepo, _settingsRepo) 
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
 
-      // Store refresh token
-      const { refreshTokensRepo } = await import('../app/repositories.js');
-      refreshTokensRepo.upsert(user.id, refreshToken, expiresAt.toISOString());
+      // Store refresh token (use injected param, not dynamic import)
+      _refreshTokensRepo.upsert(user.id, refreshToken, expiresAt.toISOString());
 
       log.info('Admin impersonation', { adminId: req.user.id, targetId: user.id });
       res.json({ success: true, data: { accessToken, refreshToken, user } });

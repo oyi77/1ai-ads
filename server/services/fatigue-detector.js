@@ -51,11 +51,12 @@ class CreativePerformanceRepository {
   }
 
   findByAccountId(accountId, lookbackDays = 7) {
+    if (!accountId) return [];
     return this.db.prepare(`
       SELECT * FROM creative_performance
-      WHERE snapshot_date >= date('now', ?)
+      WHERE campaign_id = ? AND snapshot_date >= date('now', ?)
       ORDER BY ad_id, snapshot_date ASC
-    `).all(`-${lookbackDays} days`);
+    `).all(accountId, `-${lookbackDays} days`);
   }
 }
 export class FatigueDetector {
@@ -513,13 +514,15 @@ export class FatigueDetector {
    */
   async _runSnapshots() {
     try {
-      const accounts = this.db.prepare(
-        `SELECT id, user_id FROM platform_accounts WHERE platform = 'meta' AND health_status = 'ok'`
-      ).all();
+      const accounts = (this.platformAccountsRepo?.getAccounts?.('meta') || [])
+        .filter(a => a.credentials?.ad_account_id);
 
       for (const account of accounts) {
         try {
-          await this.snapshotCreatives(account.id, { ownerId: account.user_id });
+          const realAccountId = account.credentials.ad_account_id.startsWith('act_')
+            ? account.credentials.ad_account_id
+            : `act_${account.credentials.ad_account_id}`;
+          await this.snapshotCreatives(realAccountId, { ownerId: account.user_id });
         } catch (err) {
           log.error('Snapshot failed for account', { accountId: account.id, error: err.message });
         }

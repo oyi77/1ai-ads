@@ -68,12 +68,20 @@ export class WebhookProcessor {
     }
   }
 
-  async handleCampaignStatusChange(_eventType, payload) {
+  _resolveCampaign(campaignLookupId) {
+    let campaign = this.campaignsRepo.findByCampaignId?.(campaignLookupId) || null;
+    if (!campaign) campaign = this.campaignsRepo.getById?.(campaignLookupId) || null;
+    return campaign;
+  }
+
+  handleCampaignStatusChange(_eventType, payload) {
     if (payload.campaign_id && payload.status) {
       log.info('Campaign status change', { campaignId: payload.campaign_id, status: payload.status });
       try {
-        const campaign = this.campaignsRepo.getById(payload.campaign_id);
-        this.campaignsRepo.update(payload.campaign_id, { status: payload.status }, campaign?.user_id);
+        const campaign = this._resolveCampaign(payload.campaign_id);
+        if (campaign) {
+          this.campaignsRepo.update(campaign.id, { status: payload.status }, campaign.user_id);
+        }
       } catch (err) {
         log.error('Failed to update campaign status', { campaignId: payload.campaign_id, error: err.message });
       }
@@ -84,9 +92,9 @@ export class WebhookProcessor {
     log.info('Lead received', { leadId: payload.lead_id, formId: payload.form_id });
     if (payload.campaign_id) {
       try {
-        const campaign = this.campaignsRepo.findById(payload.campaign_id);
+        const campaign = this._resolveCampaign(payload.campaign_id);
         if (campaign) {
-          this.campaignsRepo.update(payload.campaign_id, {
+          this.campaignsRepo.update(campaign.id, {
             conversions: (campaign.conversions || 0) + 1,
           }, campaign.user_id);
         }
@@ -100,9 +108,11 @@ export class WebhookProcessor {
     log.info('Ad review event', { adId: payload.ad_id, status: eventType });
     if (eventType === 'ad_review_rejected' && payload.campaign_id) {
       try {
-        const campaign = this.campaignsRepo.getById(payload.campaign_id);
-        this.campaignsRepo.update(payload.campaign_id, { status: 'PAUSED' }, campaign?.user_id);
-        log.warn('Auto-paused campaign due to ad rejection', { campaignId: payload.campaign_id, adId: payload.ad_id });
+        const campaign = this._resolveCampaign(payload.campaign_id);
+        if (campaign) {
+          this.campaignsRepo.update(campaign.id, { status: 'PAUSED' }, campaign.user_id);
+          log.warn('Auto-paused campaign due to ad rejection', { campaignId: payload.campaign_id, adId: payload.ad_id });
+        }
       } catch (err) {
         log.error('Failed to pause campaign on ad rejection', { campaignId: payload.campaign_id, error: err.message });
       }

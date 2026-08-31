@@ -17,7 +17,7 @@ function createMockRepo() {
       limit: 50,
     })),
     create: vi.fn(() => ({ id: 'w2', widget_type: 'spend', config: '{}', position: 1 })),
-    findById: vi.fn(() => ({ id: 'w1', widget_type: 'roas', config: '{"enabled":true}' })),
+    findById: vi.fn(() => ({ id: 'w1', widget_type: 'roas', config: '{"enabled":true}', user_id: 'user-1' })),
     update: vi.fn(() => ({ id: 'w1' })),
     reorder: vi.fn(),
     delete: vi.fn(),

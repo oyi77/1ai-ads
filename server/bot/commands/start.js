@@ -5,6 +5,10 @@
  */
 
 import { createLogger } from '../../lib/logger.js';
+function escMd(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/[_*[\]()~`>#+\-|=.!{}]/g, '\\$&');
+}
 import { mainMenuKeyboard } from './menu.js';
 
 const log = createLogger('bot:start');
@@ -27,7 +31,7 @@ export function handleStart() {
     // For new users, add a prominent Connect Account button on top of the menu.
     const keyboard = mainMenuKeyboard();
     if (!hasMetaAccount && campaignCount === 0) {
-      message = `👋 *Welcome to AdForge, ${name}!*\n\n` +
+      message = `👋 *Welcome to AdForge, ${escMd(name)}!*\n\n` +
         '🚀 *Getting started in 3 steps:*\n' +
         '1️⃣ Connect your Meta account\n' +
         '2️⃣ Sync or create campaigns\n' +
@@ -38,7 +42,7 @@ export function handleStart() {
         { text: '🌐 Platforms', callback_data: 'menu:platforms' },
       ]);
     } else if (hasMetaAccount && campaignCount === 0) {
-      message = `👋 *Welcome back, ${name}!*\n\n` +
+      message = `👋 *Welcome back, ${escMd(name)}!*\n\n` +
         '✅ Meta account connected\n' +
         '📭 No campaigns yet\n\n' +
         'Tap *🎯 Buat Kampanye* to create your first campaign, or *📣 My Meta Ads* to sync from Meta.';
@@ -47,7 +51,7 @@ export function handleStart() {
         { text: '📣 Ads Manager', callback_data: 'menu:ads' },
       ]);
     } else {
-      message = `👋 *Welcome back, ${name}!*\n\n` +
+      message = `👋 *Welcome back, ${escMd(name)}!*\n\n` +
         `📊 ${campaignCount} campaign${campaignCount !== 1 ? 's' : ''} tracked\n` +
         `⚡ ${ruleCount} automation rule${ruleCount !== 1 ? 's' : ''} active\n\n` +
         'What would you like to do?';

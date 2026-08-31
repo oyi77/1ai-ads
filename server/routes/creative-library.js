@@ -61,7 +61,7 @@ export function createCreativeLibraryRouter(creativeLibRepo) {
   // Update a creative
   router.put('/:id', async (req, res) => {
     try {
-      const result = creativeLibRepo.update(req.params.id, req.body);
+      const result = creativeLibRepo.update(req.params.id, req.body, req.user?.id);
       if (!result) {
         return res.status(404).json({ success: false, error: 'Creative not found' });
       }
@@ -74,7 +74,7 @@ export function createCreativeLibraryRouter(creativeLibRepo) {
   // Delete a creative
   router.delete('/:id', async (req, res) => {
     try {
-      creativeLibRepo.delete(req.params.id);
+      creativeLibRepo.delete(req.params.id, req.user?.id);
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -84,7 +84,7 @@ export function createCreativeLibraryRouter(creativeLibRepo) {
   // Record creative usage (increment times_used)
   router.post('/:id/use', async (req, res) => {
     try {
-      const result = creativeLibRepo.incrementUsage(req.params.id);
+      const result = creativeLibRepo.incrementUsage(req.params.id, req.user?.id);
       if (!result) {
         return res.status(404).json({ success: false, error: 'Creative not found' });
       }

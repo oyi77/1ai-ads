@@ -67,11 +67,11 @@ describe('creative-library router — wired repo contract', () => {
     expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ userId: 'user-1', name: 'N' }));
   });
 
-  it('POST /:id/use increments usage via incrementUsage (not recordUsage)', async () => {
+  it('POST /:id/use increments usage via incrementUsage scoped to user', async () => {
     const res = await request(createApp(repo)).post('/api/creative/library/c1/use').send({});
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(repo.incrementUsage).toHaveBeenCalledWith('c1');
+    expect(repo.incrementUsage).toHaveBeenCalledWith('c1', 'user-1');
   });
 
   it('POST /:id/use returns 404 when the creative is missing', async () => {
@@ -80,11 +80,12 @@ describe('creative-library router — wired repo contract', () => {
     expect(res.status).toBe(404);
   });
 
-  it('PUT /:id updates and DELETE /:id removes', async () => {
+  it('PUT /:id updates and DELETE /:id removes scoped to user', async () => {
     const up = await request(createApp(repo)).put('/api/creative/library/c1').send({ name: 'x' });
     expect(up.status).toBe(200);
+    expect(repo.update).toHaveBeenCalledWith('c1', expect.anything(), 'user-1');
     const del = await request(createApp(repo)).delete('/api/creative/library/c1');
     expect(del.status).toBe(200);
-    expect(repo.delete).toHaveBeenCalledWith('c1');
+    expect(repo.delete).toHaveBeenCalledWith('c1', 'user-1');
   });
 });

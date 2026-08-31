@@ -63,9 +63,10 @@ export class CreativeLibraryRepository {
     return { data, total, page, limit };
   }
 
-  update(id, data) {
+  update(id, data, userId) {
     const existing = this.findById(id);
     if (!existing) return null;
+    if (userId && existing.user_id !== userId) return null;
 
     const fields = [];
     const params = [];
@@ -88,14 +89,19 @@ export class CreativeLibraryRepository {
     return this.findById(id);
   }
 
-  incrementUsage(id) {
-    this.db.prepare(`
-      UPDATE creative_library SET times_used = times_used + 1, updated_at = datetime('now') WHERE id = ?
-    `).run(id);
+  incrementUsage(id, userId) {
+    const sql = userId
+      ? "UPDATE creative_library SET times_used = times_used + 1, updated_at = datetime('now') WHERE id = ? AND user_id = ?"
+      : "UPDATE creative_library SET times_used = times_used + 1, updated_at = datetime('now') WHERE id = ?";
+    this.db.prepare(sql).run(userId ? [id, userId] : [id]);
     return this.findById(id);
   }
 
-  delete(id) {
+  delete(id, userId) {
+    if (userId) {
+      const result = this.db.prepare('DELETE FROM creative_library WHERE id = ? AND user_id = ?').run(id, userId);
+      return result.changes > 0;
+    }
     const result = this.db.prepare('DELETE FROM creative_library WHERE id = ?').run(id);
     return result.changes > 0;
   }

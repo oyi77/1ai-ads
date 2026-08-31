@@ -27,7 +27,6 @@ export function identify(deps) {
 
       let user = usersRepo.findByTelegramId(String(tgId));
       if (!user) {
-        const handle = (from.username || `tg_${tgId}`).toLowerCase();
         const username = `tg_${tgId}`;
         const email = `tg_${tgId}@telegram.local`;
         const id = usersRepo.create({
@@ -39,7 +38,6 @@ export function identify(deps) {
         });
         user = usersRepo.findById(id);
         log.info({ telegramId: tgId, username }, 'auto-created telegram customer');
-        void handle;
       }
 
       ctx.user = user;

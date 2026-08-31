@@ -124,6 +124,10 @@ export function handleDashboardCallback(deps) {
     if (action.startsWith('remove:')) {
       const removeId = action.split(':')[1];
       try {
+        const row = deps.repos.platformAccountsRepo.findById(removeId);
+        if (!row || row.user_id !== ctx.userId) {
+          return ctx.reply('⚠️ Account not found.');
+        }
         deps.repos.platformAccountsRepo.update(removeId, { is_active: 0 });
         return ctx.reply('✅ Account removed.', {
           reply_markup: { inline_keyboard: [[{ text: '📊 Dashboard', callback_data: 'menu:status' }]] },

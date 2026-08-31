@@ -125,12 +125,13 @@ export class RuleEvaluator {
     if (!campaign) return;
     const api = this._platformApiForOwner(campaign.platform, campaign);
     if (!api) return;
+    const metaCampaignId = campaign.campaign_id || campaignId;
     const currentBudget = campaign.budget || 0;
     const newBudget = direction === 'up'
       ? Math.round(currentBudget * (1 + multiplier / 100))
       : Math.round(currentBudget * (1 - multiplier / 100));
-    await api.updateCampaign(campaignId, { dailyBudget: newBudget });
-    log.info('Budget scaled', { campaignId, multiplier, direction, newBudget });
+    await api.updateCampaign(metaCampaignId, { dailyBudget: newBudget });
+    log.info('Budget scaled', { campaignId, metaCampaignId, multiplier, direction, newBudget });
   }
 
   async _increaseBudget(campaignId, percentage) {
@@ -154,7 +155,7 @@ export class RuleEvaluator {
     if (!campaign) return;
     const api = this._platformApiForOwner(campaign.platform, campaign);
     if (!api) return;
-    await api.updateCampaign(campaignId, { status: 'PAUSED' });
+    await api.updateCampaign(campaign.campaign_id || campaignId, { status: 'PAUSED' });
     log.info('Campaign paused', { campaignId });
   }
 
@@ -163,7 +164,7 @@ export class RuleEvaluator {
     if (!campaign) return;
     const api = this._platformApiForOwner(campaign.platform, campaign);
     if (!api) return;
-    await api.updateCampaign(campaignId, { status: 'ACTIVE' });
+    await api.updateCampaign(campaign.campaign_id || campaignId, { status: 'ACTIVE' });
     log.info('Campaign resumed', { campaignId });
   }
 
@@ -181,7 +182,7 @@ export class RuleEvaluator {
 
   async checkCampaigns(userId) {
     const rules = this.rulesRepo.getAllEnabled(userId);
-    const campaigns = this.campaignsRepo.findAll({ userId });
+    const { data: campaigns = [] } = this.campaignsRepo.findAll({ userId }) || {};
     let matched = 0;
     const now = Date.now();
     for (const rule of rules) {
@@ -191,7 +192,7 @@ export class RuleEvaluator {
       if (last && now - last < intervalMs) continue;
       this.rulesRepo.markEvaluated(rule.id);
       for (const campaign of campaigns) {
-        if (rule.accountId && rule.accountId !== campaign.accountId) continue;
+        if (rule.accountId && rule.accountId !== (campaign.account_id || campaign.accountId)) continue;
         if (await this.evaluateRule(rule, campaign)) matched++;
       }
     }

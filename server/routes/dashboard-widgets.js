@@ -52,10 +52,12 @@ export function createDashboardWidgetsRouter(widgetsRepo) {
       const updateData = { ...rest };
 
       // If frontend-sent fields are present, merge them into config
+      const userId = req.user?.id || req.userId;
       if (name !== undefined || description !== undefined || type !== undefined || enabled !== undefined) {
-        const _userId = req.user?.id || req.userId;
         const existing = widgetsRepo.findById(req.params.id);
-
+        if (existing && existing.user_id !== userId) {
+          return res.status(404).json({ success: false, error: 'Widget not found' });
+        }
         if (existing) {
           const cfg = typeof existing.config === 'string' ? JSON.parse(existing.config) : (existing.config || {});
           if (name !== undefined) cfg.name = name;
@@ -66,7 +68,7 @@ export function createDashboardWidgetsRouter(widgetsRepo) {
         }
       }
 
-      const result = widgetsRepo.update(req.params.id, updateData);
+      const result = widgetsRepo.update(req.params.id, updateData, userId);
       if (!result) {
         return res.status(404).json({ success: false, error: 'Widget not found' });
       }
@@ -84,12 +86,12 @@ export function createDashboardWidgetsRouter(widgetsRepo) {
       if (!Array.isArray(order)) {
         return res.status(400).json({ success: false, error: 'order array is required' });
       }
+      const userId = req.user?.id || req.userId;
       for (const item of order) {
         if (item.id && item.position !== undefined) {
-          widgetsRepo.update(item.id, { position: item.position });
+          widgetsRepo.update(item.id, { position: item.position }, userId);
         }
       }
-      const userId = req.user?.id || req.userId;
       const result = widgetsRepo.getByUser(userId, { limit: 1000 });
       res.json({ success: true, data: result.data.map(toFrontend) });
     } catch (err) {
@@ -100,7 +102,9 @@ export function createDashboardWidgetsRouter(widgetsRepo) {
   // Delete a widget
   router.delete('/:id', async (req, res) => {
     try {
-      widgetsRepo.delete(req.params.id);
+      const userId = req.user?.id || req.userId;
+      const ok = widgetsRepo.delete(req.params.id, userId);
+      if (!ok) return res.status(404).json({ success: false, error: 'Widget not found' });
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });

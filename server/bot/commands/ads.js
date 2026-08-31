@@ -382,7 +382,7 @@ export function handleAdsBudgetScale(deps) {
       let done = 0;
       for (const c of active) {
         try {
-          const current = c.dailyBudget || 0;
+          const current = (c.dailyBudget || 0) / 100; // Meta minor → major IDR
           if (current <= 0) continue;
           const next = Math.max(10000, Math.round(current * mult * 100) / 100);
           await api.updateCampaign(c.id, { dailyBudget: next });
@@ -510,7 +510,7 @@ export function handleAdsAccountReport(deps) {
         parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
-            [{ text: '🔄 Refresh', callback_data: `ads:repacc:${accountId}` }],
+            [{ text: '🔄 Refresh', callback_data: `ads:repacc:meta:${accountId}` }],
             [{ text: '📱 Lihat di AdForge Mini App', web_app: { url: `${BACKEND}/reports` } }],
           ],
         },

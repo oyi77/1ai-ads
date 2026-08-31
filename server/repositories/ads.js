@@ -24,7 +24,10 @@ export class AdsRepository {
     return { data, total, page, limit };
   }
 
-  findById(id) {
+  findById(id, userId) {
+    if (userId) {
+      return this.db.prepare('SELECT * FROM ads WHERE id = ? AND user_id = ?').get(id, userId) || null;
+    }
     return this.db.prepare('SELECT * FROM ads WHERE id = ?').get(id) || null;
   }
 
@@ -43,8 +46,8 @@ export class AdsRepository {
     return id;
   }
 
-  update(id, data) {
-    const existing = this.findById(id);
+  update(id, data, userId) {
+    const existing = this.findById(id, userId);
     if (!existing) return null;
 
     const fields = [];
@@ -65,21 +68,31 @@ export class AdsRepository {
     return this.findById(id);
   }
 
-  remove(id) {
+  remove(id, userId) {
+    if (userId) {
+      const result = this.db.prepare('DELETE FROM ads WHERE id = ? AND user_id = ?').run(id, userId);
+      return result.changes > 0;
+    }
     const result = this.db.prepare('DELETE FROM ads WHERE id = ?').run(id);
     return result.changes > 0;
   }
 
-  search(query, { page = 1, limit = 20 } = {}) {
+  search(query, { page = 1, limit = 20, userId } = {}) {
     const pattern = `%${query}%`;
-    const total = this.db.prepare(
-      'SELECT COUNT(*) as count FROM ads WHERE name LIKE ? OR product LIKE ? OR tags LIKE ?'
-    ).get(pattern, pattern, pattern).count;
+    let sql = 'SELECT COUNT(*) as count FROM ads WHERE (name LIKE ? OR product LIKE ? OR tags LIKE ?)';
+    const params = [pattern, pattern, pattern];
+    if (userId) { sql += ' AND user_id = ?'; params.push(userId); }
+    const total = this.db.prepare(sql).get(...params).count;
 
     const offset = (page - 1) * limit;
-    const data = this.db.prepare(
-      'SELECT * FROM ads WHERE name LIKE ? OR product LIKE ? OR tags LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
-    ).all(pattern, pattern, pattern, limit, offset);
+    const dataParams = [pattern, pattern, pattern];
+    const data = userId
+      ? this.db.prepare(
+          'SELECT * FROM ads WHERE (name LIKE ? OR product LIKE ? OR tags LIKE ?) AND user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
+        ).all(...dataParams, userId, limit, offset)
+      : this.db.prepare(
+          'SELECT * FROM ads WHERE name LIKE ? OR product LIKE ? OR tags LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
+        ).all(...dataParams, limit, offset);
 
     return { data, total, page, limit };
   }

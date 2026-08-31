@@ -136,12 +136,13 @@ export class CapiMonitor {
    * @returns {Array}
    */
   getHealthHistory(accountId, days = 30) {
+    const n = Math.max(1, Math.min(365, Math.floor(Number(days) || 30)));
     return this.db.prepare(`
       SELECT * FROM capi_health
       WHERE account_id = ?
-        AND checked_at >= DATE('now', '-${days} days')
+        AND checked_at >= DATE('now', ?)
       ORDER BY checked_at DESC
-    `).all(accountId);
+    `).all(accountId, `-${n} days`);
   }
 
   // ── Periodic Monitoring ──────────────────────────────────────

@@ -23,8 +23,14 @@ export class CampaignsRepository {
   upsert(data) {
     const id = data.id || uuid();
     this.db.prepare(`
-      INSERT OR REPLACE INTO campaigns (id, user_id, platform, campaign_id, name, status, budget, spend, revenue, impressions, clicks, conversions, roas, last_synced)
+      INSERT INTO campaigns (id, user_id, platform, campaign_id, name, status, budget, spend, revenue, impressions, clicks, conversions, roas, last_synced)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(id) DO UPDATE SET
+        user_id = excluded.user_id, platform = excluded.platform,
+        campaign_id = excluded.campaign_id, name = excluded.name, status = excluded.status,
+        budget = excluded.budget, spend = excluded.spend, revenue = excluded.revenue,
+        impressions = excluded.impressions, clicks = excluded.clicks, conversions = excluded.conversions,
+        roas = excluded.roas, last_synced = CURRENT_TIMESTAMP
     `).run(
       id, data.userId || data.user_id || 'system', data.platform, data.campaign_id, data.name || null, data.status || null,
       data.budget || null, data.spend || null, data.revenue || null,
@@ -182,6 +188,10 @@ export class CampaignsRepository {
     }
     const result = this.db.prepare(sql).run(...values);
     return result.changes > 0;
+  }
+
+  findByCampaignId(metaCampaignId) {
+    return this.db.prepare("SELECT * FROM campaigns WHERE campaign_id = ?").get(metaCampaignId) || null;
   }
 
   getAds(campaignId) {

@@ -19,7 +19,10 @@ export class InvoicesRepository {
     return { data, total, page, limit };
   }
 
-  findById(id) {
+  findById(id, userId) {
+    if (userId) {
+      return this.db.prepare('SELECT * FROM invoices WHERE id = ? AND user_id = ?').get(id, userId) || null;
+    }
     return this.db.prepare('SELECT * FROM invoices WHERE id = ?').get(id) || null;
   }
 
@@ -32,15 +35,18 @@ export class InvoicesRepository {
     return this.findById(id);
   }
 
-  updateStatus(id, status, extra = {}) {
-    const existing = this.findById(id);
+  updateStatus(id, status, extra = {}, userId) {
+    const existing = this.findById(id, userId);
     if (!existing) return null;
     const fields = ['status = ?', 'updated_at = datetime(\'now\')'];
     const params = [status];
     if (extra.paidAt) { fields.push('paid_at = ?'); params.push(extra.paidAt); }
-    params.push(id);
-    this.db.prepare(`UPDATE invoices SET ${fields.join(', ')} WHERE id = ?`).run(...params);
-    return this.findById(id);
+    if (userId) {
+      this.db.prepare(`UPDATE invoices SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`).run(...params, id, userId);
+    } else {
+      this.db.prepare(`UPDATE invoices SET ${fields.join(', ')} WHERE id = ?`).run(...params, id);
+    }
+    return this.findById(id, userId);
   }
 
   remove(id) {

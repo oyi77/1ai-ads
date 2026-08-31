@@ -45,7 +45,7 @@ describe('RealtimeService', () => {
 
   beforeEach(() => {
     const metaApi = { getCampaignInsights: vi.fn() };
-    const campaignsRepo = { getAll: vi.fn(() => []) };
+    const campaignsRepo = { findAll: vi.fn(() => ({ data: [] })) };
     service = new RealtimeService(metaApi, campaignsRepo);
   });
 
@@ -148,7 +148,7 @@ describe('RealtimeService', () => {
 
     it('returns a fresh owner-scoped Meta instance when the owner has a bound token', () => {
       const metaApi = { getCampaignInsights: vi.fn() };
-      const service = new RealtimeService(metaApi, { getAll: vi.fn(() => []) }, { platformAccountsRepo: acctRepo, settingsRepo });
+      const service = new RealtimeService(metaApi, { findAll: vi.fn(() => ({ data: [] })) }, { platformAccountsRepo: acctRepo, settingsRepo });
       acctRepo.getByPlatform.mockReturnValue({ user_id: 'owner-1', platform: 'meta', access_token: 'owner-tok-rt' });
 
       const api = service._metaApiForOwner({ id: 'c1', user_id: 'owner-1', platform: 'meta' });
@@ -161,7 +161,7 @@ describe('RealtimeService', () => {
 
     it('resolves owner via created_by when user_id is absent', () => {
       const metaApi = { getCampaignInsights: vi.fn() };
-      const service = new RealtimeService(metaApi, { getAll: vi.fn(() => []) }, { platformAccountsRepo: acctRepo, settingsRepo });
+      const service = new RealtimeService(metaApi, { findAll: vi.fn(() => ({ data: [] })) }, { platformAccountsRepo: acctRepo, settingsRepo });
       acctRepo.getByPlatform.mockReturnValue({ user_id: 'owner-2', platform: 'meta', access_token: 'owner-tok-rt2' });
 
       const api = service._metaApiForOwner({ id: 'c2', created_by: 'owner-2', platform: 'meta' });
@@ -172,7 +172,7 @@ describe('RealtimeService', () => {
 
     it('falls back to the system meta when no owner token is bound', () => {
       const metaApi = { getCampaignInsights: vi.fn() };
-      const service = new RealtimeService(metaApi, { getAll: vi.fn(() => []) }, { platformAccountsRepo: acctRepo, settingsRepo });
+      const service = new RealtimeService(metaApi, { findAll: vi.fn(() => ({ data: [] })) }, { platformAccountsRepo: acctRepo, settingsRepo });
       acctRepo.getByPlatform.mockReturnValue(null);
 
       const api = service._metaApiForOwner({ id: 'c3', user_id: 'owner-3', platform: 'meta' });
@@ -183,7 +183,7 @@ describe('RealtimeService', () => {
 
     it('falls back to system meta when no platformAccountsRepo is wired', () => {
       const metaApi = { getCampaignInsights: vi.fn() };
-      const service = new RealtimeService(metaApi, { getAll: vi.fn(() => []) });
+      const service = new RealtimeService(metaApi, { findAll: vi.fn(() => ({ data: [] })) });
       const api = service._metaApiForOwner({ id: 'c4', user_id: 'owner-4', platform: 'meta' });
       expect(api).toBe(metaApi);
     });
@@ -192,7 +192,7 @@ describe('RealtimeService', () => {
       const metaApi = { getCampaignInsights: vi.fn() };
       const acctRepo = { getByPlatform: vi.fn().mockReturnValue({ user_id: 'owner-9', platform: 'meta', access_token: 'owner-tok-rt9' }) };
       const service = new RealtimeService(metaApi, {
-        getAll: vi.fn(() => [{ id: 'c9', campaign_id: 'camp-9', platform: 'meta', status: 'ACTIVE', user_id: 'owner-9' }]),
+        findAll: vi.fn(() => ({ data: [{ id: 'c9', campaign_id: 'camp-9', platform: 'meta', status: 'ACTIVE', user_id: 'owner-9' }] })),
       }, { platformAccountsRepo: acctRepo, settingsRepo });
 
       await service._poll();

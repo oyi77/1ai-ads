@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { createLogger } from '../lib/logger.js';
 import config from '../config/index.js';
 
@@ -41,7 +42,7 @@ export function createMetaAiRouter(settingsRepo) {
     });
   });
 
-  router.put('/config', (req, res) => {
+  router.put('/config', requireAuth, requireAdmin, (req, res) => {
     const { cookies, adAccountId } = req.body || {};
     if (!settingsRepo) {
       return res.status(500).json({ success: false, error: 'Settings repository not available' });
@@ -61,7 +62,7 @@ export function createMetaAiRouter(settingsRepo) {
     res.json({ success: true, data: { saved: true } });
   });
 
-  router.delete('/config', (_req, res) => {
+  router.delete('/config', requireAuth, requireAdmin, (_req, res) => {
     if (!settingsRepo) {
       return res.status(500).json({ success: false, error: 'Settings repository not available' });
     }

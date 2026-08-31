@@ -4,6 +4,9 @@ import { buildUserMetaClients } from '../lib/meta-user-factory.js';
 
 const log = createLogger('whatsapp_intelligence');
 
+function safeParseJson(text, fallback) {
+  try { return JSON.parse(text); } catch { return fallback; }
+}
 export class WhatsAppIntelligenceService {
   constructor({ waConversationsRepo, metaApi, whatsappApi, llmClient, db, settingsRepo, config, userMetaAppsRepo }) {
     this.repo = waConversationsRepo;
@@ -49,7 +52,7 @@ export class WhatsAppIntelligenceService {
 
       let convId;
       if (activeConv) {
-        const messages = JSON.parse(activeConv.messages || '[]');
+        const messages = safeParseJson(activeConv.messages || '[]', []);
         messages.push(message);
         this.repo.update(activeConv.id, { messages });
         convId = activeConv.id;
@@ -108,7 +111,7 @@ Score guidance:
 Return ONLY valid JSON, no markdown, no explanation.`;
 
   async _scoreConversation(conversation) {
-    const messages = JSON.parse(conversation.messages || '[]');
+    const messages = safeParseJson(conversation.messages || '[]', []);
     const transcript = messages
       .map(m => `${m.direction === 'inbound' ? 'Customer' : 'Business'}: ${m.text}`)
       .join('\n');
@@ -330,7 +333,7 @@ Balasan maksimal 150 karakter, langsung ke intinya, jangan formal berlebihan.`;
   async _generateAutoReply(conversation) {
     if (!conversation) return null;
 
-    const messages = JSON.parse(conversation.messages || '[]');
+    const messages = safeParseJson(conversation.messages || '[]', []);
     const inbound = messages.filter(m => m.direction === 'inbound');
     if (inbound.length === 0) return null;
 
@@ -347,7 +350,7 @@ Balasan maksimal 150 karakter, langsung ke intinya, jangan formal berlebihan.`;
       if (clean.length < 3) return null;
 
       // Append to conversation
-      const updatedMessages = JSON.parse(conversation.messages || '[]');
+      const updatedMessages = safeParseJson(conversation.messages || '[]', []);
       updatedMessages.push({
         from: conversation.wa_phone_number_id || 'business',
         text: clean,
@@ -414,7 +417,7 @@ Balasan maksimal 150 karakter, langsung ke intinya, jangan formal berlebihan.`;
     }
 
     // Append to conversation log
-    const messages = JSON.parse(conversation.messages || '[]');
+    const messages = safeParseJson(conversation.messages || '[]', []);
     messages.push({
       from: waPhoneNumberId,
       text,
@@ -443,7 +446,7 @@ Buat pesan follow-up untuk percakapan berikut (langsung teks balasan, tanpa penj
 
   async _generateFollowUp(conversation) {
     if (!conversation) return null;
-    const messages = JSON.parse(conversation.messages || '[]');
+    const messages = safeParseJson(conversation.messages || '[]', []);
     const transcript = messages
       .map(m => `${m.direction === 'inbound' ? 'Customer' : 'Business'}: ${m.text}`)
       .join('\n');
@@ -476,7 +479,7 @@ Buat pesan follow-up untuk percakapan berikut (langsung teks balasan, tanpa penj
       const result = await this.sendWhatsAppMessage(waPhoneNumberId, to, text);
       if (result && !result.error) {
         sent++;
-        const messages = JSON.parse(conv.messages || '[]');
+        const messages = safeParseJson(conv.messages || '[]', []);
         messages.push({
           from: waPhoneNumberId,
           text,
@@ -557,7 +560,7 @@ Buat pesan follow-up untuk percakapan berikut (langsung teks balasan, tanpa penj
   ];
 
   _classifyConversation(conversation) {
-    const messages = JSON.parse(conversation.messages || '[]');
+    const messages = safeParseJson(conversation.messages || '[]', []);
     const text = messages.map(m => (m.text || '')).join(' ').toLowerCase();
 
     for (const rule of this.LABEL_RULES) {
@@ -577,7 +580,7 @@ Buat pesan follow-up untuk percakapan berikut (langsung teks balasan, tanpa penj
 
   async _autoLabelConversation(conversation) {
     if (!conversation) return null;
-    const currentLabels = typeof conversation.labels === 'string' ? JSON.parse(conversation.labels) : conversation.labels;
+    const currentLabels = typeof conversation.labels === 'string' ? safeParseJson(conversation.labels, []) : conversation.labels;
     if (Array.isArray(currentLabels) && currentLabels.length > 0) return null;
     const label = this._classifyConversation(conversation);
     this.repo.update(conversation.id, { labels: [label] });

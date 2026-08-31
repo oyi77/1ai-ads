@@ -255,6 +255,7 @@ Example: for CTR > 5, send \`5\``,
       const ruleId = action.split(':')[1];
       const rule = deps.repos.rulesRepo.getById(ruleId);
       if (!rule) return ctx.reply('⚠️ Rule not found.');
+      if (rule.user_id && rule.user_id !== ctx.userId) return ctx.reply('⚠️ Rule not found.');
       deps.repos.rulesRepo.update(ruleId, { enabled: !rule.enabled });
       return ctx.reply(`✅ Rule *${rule.name}* ${rule.enabled ? 'disabled' : 'enabled'}.`, {
         parse_mode: 'Markdown',

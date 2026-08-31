@@ -5,12 +5,12 @@ function makeMocks() {
   // Default: fully_auto (AI enabled + auto-apply everything)
   const settingsRepo = { get: vi.fn().mockImplementation(key => key === 'ai_autonomy_level' ? 'fully_auto' : null) };
   const adsRepo = {
-    getByUserId: vi.fn().mockReturnValue([
+    findAll: vi.fn().mockReturnValue({ data: [
       { id: 'ad1', title: 'Test Ad', status: 'active', platform: 'meta' },
-    ]),
+    ], total: 1 }),
     update: vi.fn(),
   };
-  const campaignsRepo = { getAll: vi.fn().mockReturnValue([]) };
+  const campaignsRepo = { findAll: vi.fn().mockReturnValue({ data: [], total: 0 }) };
   const llmClient = {
     call: vi.fn().mockResolvedValue(JSON.stringify([
       {
@@ -88,8 +88,8 @@ describe('AiAgent', () => {
   });
 
   it('analyzeAndSuggest returns [] when no ads or campaigns', async () => {
-    mocks.adsRepo.getByUserId.mockReturnValue([]);
-    mocks.campaignsRepo.getAll.mockReturnValue([]);
+    mocks.adsRepo.findAll.mockReturnValue({ data: [], total: 0 });
+    mocks.campaignsRepo.findAll.mockReturnValue({ data: [], total: 0 });
     const ids = await agent.analyzeAndSuggest('u1');
     expect(ids).toEqual([]);
     expect(mocks.llmClient.call).not.toHaveBeenCalled();

@@ -121,7 +121,9 @@ export class BulkOperations {
     try {
       const results = await this._executeParallel(campaignIds, async (campaignId) => {
         try {
-          await this.meta.updateCampaign(campaignId, { status });
+          const campaign = this.campaignsRepo?.findById?.(campaignId);
+          const metaCampaignId = campaign?.campaign_id || campaignId;
+          await this.meta.updateCampaign(metaCampaignId, { status });
           op.completed++;
           return { campaignId, success: true };
         } catch (err) {
@@ -173,7 +175,9 @@ export class BulkOperations {
         try {
           // Fetch current campaign to get existing budget
           const campaign = this.campaignsRepo?.findById?.(campaignId);
-          const oldBudget = campaign?.budget || campaign?.dailyBudget || 0;
+          if (!campaign) return { campaignId, success: false, error: 'Campaign not found' };
+          const oldBudget = campaign?.budget || 0; // budget is now major IDR
+          const metaCampaignId = campaign.campaign_id || campaignId;
 
           let newBudget;
           if (action === 'multiply') {
@@ -183,7 +187,7 @@ export class BulkOperations {
           }
           newBudget = Math.round(newBudget * 100) / 100;
 
-          await this.meta.updateCampaign(campaignId, { dailyBudget: newBudget });
+          await this.meta.updateCampaign(metaCampaignId, { dailyBudget: Math.round(newBudget * 100) / 100 });
           op.completed++;
           return { campaignId, oldBudget, newBudget, success: true };
         } catch (err) {
@@ -254,7 +258,8 @@ export class BulkOperations {
       const adIds = [];
 
       try {
-        const adsets = await this.meta._get(`/${sourceCampaignId}/adsets`, {
+        const metaSourceId = sourceCampaign?.campaign_id || sourceCampaignId;
+        const adsets = await this.meta._get(`/${metaSourceId}/adsets`, {
           fields: 'id,name,status,daily_budget,targeting,billing_event,optimization_goal',
           limit: '50',
         });

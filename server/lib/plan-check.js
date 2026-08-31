@@ -60,7 +60,7 @@ export class PlanCheck {
       return { allowed: true, remaining: -1 };
     }
 
-    const currentAds = this.db.prepare('SELECT COUNT(*) as count FROM ads').get();
+    const currentAds = this.db.prepare('SELECT COUNT(*) as count FROM ads WHERE user_id = ?').get(userId);
     const remaining = plan.max_ads - (currentAds?.count || 0);
     return { allowed: remaining > 0, remaining };
   }
@@ -83,7 +83,7 @@ export class PlanCheck {
       return { allowed: true, remaining: -1 };
     }
 
-    const currentCampaigns = this.db.prepare('SELECT COUNT(*) as count FROM campaigns').get();
+    const currentCampaigns = this.db.prepare('SELECT COUNT(*) as count FROM campaigns WHERE user_id = ?').get(userId);
     const remaining = plan.max_campaigns - (currentCampaigns?.count || 0);
     return { allowed: remaining > 0, remaining };
   }

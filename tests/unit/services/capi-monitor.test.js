@@ -96,7 +96,8 @@ describe('CapiMonitor', () => {
 
     it('should use default 30 day lookback', () => {
       monitor.getHealthHistory('act_123');
-      expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('30 days'));
+      expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('checked_at >= DATE'));
+      expect(mockPrepare.all).toHaveBeenCalledWith('act_123', '-30 days');
     });
   });
 

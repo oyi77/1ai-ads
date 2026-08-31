@@ -101,16 +101,17 @@ export class RealtimeService {
 
   async _poll() {
     try {
-      const campaigns = this.campaignsRepo.getAll ? this.campaignsRepo.getAll() : [];
-      const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE');
+      const result = this.campaignsRepo.findAll ? this.campaignsRepo.findAll({}) : { data: [] };
+      const campaigns = result.data || [];
+      const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE' || c.status === 'active');
 
       for (const campaign of activeCampaigns) {
         try {
           const api = this._metaApiForOwner(campaign);
           const insights = await api.getCampaignInsights(campaign.campaign_id, {
-            date_preset: 'today', fields: 'spend,impressions,clicks,actions,cost_per_action_type,ctr,cpc,cpm',
+            datePreset: 'today', fields: 'spend,impressions,clicks,actions,cost_per_action_type,ctr,cpc,cpm',
           });
-          const data = insights?.data?.[0] || {};
+          const data = insights || {};
           const metric = this._buildMetricFromInsights(campaign, data);
           this.metrics.set(campaign.campaign_id, metric);
           this._broadcast({ type: 'metric_update', data: metric });
@@ -168,9 +169,9 @@ export class RealtimeService {
       const campaign = this.campaignsRepo.getById ? this.campaignsRepo.getById(campaignId) : null;
       const api = this._metaApiForOwner(campaign || { campaign_id: campaignId });
       const insights = await api.getCampaignInsights(campaignId, {
-        date_preset: 'today', fields: 'spend,impressions,clicks,actions,ctr,cpc,cpm',
+        datePreset: 'today', fields: 'spend,impressions,clicks,actions,ctr,cpc,cpm',
       });
-      const data = insights?.data?.[0] || {};
+      const data = insights || {};
       const metric = {
         campaign_id: campaignId, spend: parseFloat(data.spend || 0),
         clicks: parseInt(data.clicks || 0), impressions: parseInt(data.impressions || 0),

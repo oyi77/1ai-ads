@@ -124,7 +124,7 @@ export function createReportingGroupRouter({ repos, services }) {
 
   // CSV Export — download campaign data as CSV
   router.get('/reports/export/csv', requireAuth, (req, res) => {
-    const result = repos.campaignsRepo?.findAll?.() || [];
+    const result = repos.campaignsRepo?.findAll?.({ userId: req.user?.id }) || [];
     const campaigns = Array.isArray(result) ? result : (result.data || []);
     const header = 'Name,Status,Spend,Revenue,ROAS,Impressions,Clicks,Conversions';
     const rows = campaigns.map(c => {

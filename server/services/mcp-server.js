@@ -286,7 +286,8 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
 
   const TOOL_HANDLERS = {
     '1ai-ads_list_campaigns': async (args) => {
-      const campaigns = campaignsRepo.getAll();
+      const result = campaignsRepo.findAll({});
+      const campaigns = result.data || result || [];
       const filtered = args?.platform ? campaigns.filter(c => c.platform === args.platform) : campaigns;
       return { content: [{ type: "text", text: JSON.stringify(filtered, null, 2) }] };
     },
@@ -298,12 +299,14 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
     },
 
     '1ai-ads_list_landing_pages': async (_args) => {
-      const pages = landingRepo.getAll();
+      const result = landingRepo.findAll({});
+      const pages = result.data || result || [];
       return { content: [{ type: "text", text: JSON.stringify(pages, null, 2) }] };
     },
 
     '1ai-ads_list_creatives': async (_args) => {
-      const ads = adsRepo.getAll();
+      const result = adsRepo.findAll({});
+      const ads = result.data || result || [];
       return { content: [{ type: "text", text: JSON.stringify(ads, null, 2) }] };
     },
 

@@ -11,6 +11,7 @@ function createMockRulesRepo() {
       { id: 'r2', name: 'Rule 2', enabled: false },
     ]),
     create: vi.fn(() => 'new-rule-id'),
+    findById: vi.fn((id) => ({ id, user_id: 'user-1', name: 'Rule 1' })),
     update: vi.fn(() => true),
     delete: vi.fn(() => true),
   };

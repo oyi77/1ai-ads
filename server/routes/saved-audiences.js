@@ -31,7 +31,7 @@ export function createSavedAudiencesRouter(savedAudiencesRepo) {
   // Delete saved audience
   router.delete('/:id', async (req, res) => {
     try {
-      const ok = savedAudiencesRepo.remove(req.params.id);
+      const ok = savedAudiencesRepo.remove(req.params.id, req.user?.id);
       if (!ok) return res.status(404).json({ success: false, error: 'Audience not found' });
       res.json({ success: true, data: { id: req.params.id, deleted: true } });
     } catch (err) {
@@ -43,7 +43,7 @@ export function createSavedAudiencesRouter(savedAudiencesRepo) {
   router.put('/:id', async (req, res) => {
     try {
       const { name, platform, description } = req.body;
-      const updated = savedAudiencesRepo.update(req.params.id, { name, platform, description });
+      const updated = savedAudiencesRepo.update(req.params.id, { name, platform, description }, req.user?.id);
       if (!updated) return res.status(404).json({ success: false, error: 'Audience not found' });
       res.json({ success: true, data: updated });
     } catch (err) {

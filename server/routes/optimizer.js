@@ -49,6 +49,9 @@ export function createOptimizerRouter(rulesRepo, optimizer) {
   // Update a rule
   router.put('/rules/:id', (req, res, next) => {
     try {
+      const rule = rulesRepo.findById ? rulesRepo.findById(req.params.id) : null;
+      if (!rule) return res.status(404).json({ success: false, error: 'Rule not found' });
+      if (rule.user_id !== req.user?.id) return res.status(403).json({ success: false, error: 'Forbidden' });
       const updated = rulesRepo.update(req.params.id, req.body);
       if (!updated) return res.status(404).json({ success: false, error: 'Rule not found' });
       res.json({ success: true });
@@ -58,6 +61,9 @@ export function createOptimizerRouter(rulesRepo, optimizer) {
   // Delete a rule
   router.delete('/rules/:id', (req, res, next) => {
     try {
+      const rule = rulesRepo.findById ? rulesRepo.findById(req.params.id) : null;
+      if (!rule) return res.status(404).json({ success: false, error: 'Rule not found' });
+      if (rule.user_id !== req.user?.id) return res.status(403).json({ success: false, error: 'Forbidden' });
       const removed = rulesRepo.delete(req.params.id);
       if (!removed) return res.status(404).json({ success: false, error: 'Rule not found' });
       res.json({ success: true });
