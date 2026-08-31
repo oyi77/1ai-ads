@@ -199,18 +199,19 @@ export function handleMonitorCallback(deps) {
     const action = ctx.match[1];
     await ctx.answerCbQuery();
 
-    if (action === 'start') return showMetricCategories(ctx);
-    if (action.startsWith('cat:')) return showMetricsInCategory(ctx, action.split(':')[1]);
-    if (action.startsWith('metric:')) return showOperators(ctx, action.split(':')[2]);
-    if (action.startsWith('op:')) {
+    // Handle rule:add:cat:xxx format
+    if (action === 'add:start') return showMetricCategories(ctx);
+    if (action.startsWith('add:cat:')) return showMetricsInCategory(ctx, action.split(':')[2]);
+    if (action.startsWith('add:metric:')) return showOperators(ctx, action.split(':')[3]);
+    if (action.startsWith('add:op:')) {
       const parts = action.split(':');
-      const metric = parts[2];
-      const op = parts[3];
+      const metric = parts[3];
+      const op = parts[4];
       ctx.session = ctx.session || {};
       ctx.session.ruleBuilder = { metric, operator: op };
       return showActionPicker(ctx);
     }
-    if (action.startsWith('action:')) return createRule(ctx, deps, action.split(':')[1]);
+    if (action.startsWith('add:action:')) return createRule(ctx, deps, action.split(':')[2]);
     if (action.startsWith('template:')) return applyTemplate(ctx, deps, action.split(':')[1]);
     if (action === 'view:all') {
       return ctx.reply(renderRulesList(deps, ctx.userId), {

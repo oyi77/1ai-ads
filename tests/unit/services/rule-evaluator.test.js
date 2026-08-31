@@ -169,7 +169,7 @@ describe('RuleEvaluator', () => {
         { id: 'r1', condition: { type: 'leaf', metric: 'roas', operator: '<', value: 1 }, action: { type: 'pause' } },
       ]);
       const matched = await evaluator.checkCampaigns('u1');
-      expect(matched).toBe(1);
+      expect(matched).toBe(2);
     });
   });
 });

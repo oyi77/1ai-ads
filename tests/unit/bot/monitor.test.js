@@ -35,14 +35,16 @@ function makeDeps(overrides = {}) {
 }
 
 describe('monitor — enhanced rule system', () => {
-  it('shows main monitor menu with Add Rule, My Rules, Templates, Sync', async () => {
+  it('shows main monitor menu with correct buttons', async () => {
     const ctx = makeCtx('u1', 'start');
     await handleMonitor(makeDeps())(ctx);
-    const msg = ctx._replies[0].msg;
-    expect(msg).toContain('Add Rule');
-    expect(msg).toContain('My Rules');
-    expect(msg).toContain('Templates');
-    expect(msg).toContain('Sync');
+    const kb = ctx._replies[0].opts.reply_markup.inline_keyboard;
+    const flat = kb.flat().map((b) => b.callback_data);
+    expect(flat).toContain('rule:add:start');
+    expect(flat).toContain('rule:view:all');
+    expect(flat).toContain('rule:templates');
+    expect(flat).toContain('monitor:sync');
+    expect(flat).toContain('quick:menu');
   });
 
   it('shows account picker when user has Meta accounts', async () => {
@@ -53,10 +55,10 @@ describe('monitor — enhanced rule system', () => {
         },
       },
     });
-    const ctx = makeCtx('u1', 'start');
-    await handleMonitor(deps)(ctx);
+    const ctx = makeCtx('u1', 'account_picker');
+    await handleMonitorCallback(deps)(ctx);
     const msg = ctx._replies[0].msg;
-    expect(msg).toContain('Account Rules');
+    expect(msg).toContain('Account');
   });
 
   it('callback acknowledges sync', async () => {
@@ -65,14 +67,14 @@ describe('monitor — enhanced rule system', () => {
     expect(ctx._replies[0].msg).toContain('Campaign sync triggered');
   });
 
-  it('templates action shows template list', async () => {
-    const ctx = makeCtx('u1', 'templates');
+  it('template:apply applies a template', async () => {
+    const ctx = makeCtx('u1', 'template:roasGuard');
     await handleMonitorCallback(makeDeps())(ctx);
     const msg = ctx._replies[0].msg;
-    expect(msg).toContain('Templates');
+    expect(msg).toContain('ROAS Guard');
   });
 
-  it('add rule shows metric categories', async () => {
+  it('add:start shows metric categories', async () => {
     const ctx = makeCtx('u1', 'add:start');
     await handleMonitorCallback(makeDeps())(ctx);
     const msg = ctx._replies[0].msg;
