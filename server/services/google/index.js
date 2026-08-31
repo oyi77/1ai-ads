@@ -7,18 +7,6 @@ const log = createLogger('google-ads-api');
 /**
  * Google Ads API client (v16).
  * Uses Google Ads API with OAuth2 authentication.
- * 
- * Campaign structure:
- *   Customer → Campaign → AdGroup → Ad
- * 
- * Queries via GAQL (Google Ads Query Language).
- * Mutations via SOAP XML.
- * 
- * NOTE: This is a scaffold implementation. Real API calls require:
- * 1. Google Ads Developer Token
- * 2. OAuth2 Client ID/Secret
- * 3. Refresh Token from user authorization
- * 4. gRPC client setup
  */
 export class GoogleAdsAPI extends BasePlatformApiClient {
   constructor(settingsRepoOrToken) {
@@ -43,8 +31,6 @@ export class GoogleAdsAPI extends BasePlatformApiClient {
     throw new ConfigurationError('Google Ads access token not configured. Connect a Google account in Settings.');
   }
 
-  // --- Account Management ---
-
   async getMe() {
     return { id: 'me', name: 'Google Ads Account' };
   }
@@ -55,8 +41,6 @@ export class GoogleAdsAPI extends BasePlatformApiClient {
   }
 
   async getAccounts() { return this.getAdAccounts(); }
-
-  // --- Campaign Management ---
 
   async getCampaigns(accountId, { limit = 50 } = {}) {
     log.warn('GoogleAdsAPI.getCampaigns: returning mock data');
@@ -92,8 +76,6 @@ export class GoogleAdsAPI extends BasePlatformApiClient {
     log.warn('GoogleAdsAPI.syncAllAccounts: not yet implemented');
     return [];
   }
-
-  // --- Error Handling ---
 
   isExpiredToken(err) {
     const msg = `${err?.message || ''} ${err?.error?.message || ''}`.toLowerCase();

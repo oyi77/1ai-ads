@@ -50,7 +50,7 @@ export class RuleEvaluator {
     return this.platformApis[platform] || null;
   }
 
-  createRule(userId, { name, condition, action, priority = 1, enabled = true, account_id = null }) {
+  createRule(userId, { name, condition, action, priority = 1, enabled = true, account_id = null, intervalMinutes = 15 }) {
     return this.rulesRepo.create({
       userId,
       name,
@@ -59,6 +59,7 @@ export class RuleEvaluator {
       priority,
       enabled,
       accountId: account_id,
+      intervalMinutes,
     });
   }
 
@@ -176,7 +177,13 @@ export class RuleEvaluator {
     const rules = this.rulesRepo.getAllEnabled(userId);
     const campaigns = this.campaignsRepo.findAll({ userId });
     let matched = 0;
+    const now = Date.now();
     for (const rule of rules) {
+      // Respect evaluation interval (15/30 min or follow-FB default 15)
+      const intervalMs = (rule.intervalMinutes || 15) * 60 * 1000;
+      const last = rule.lastEvaluatedAt ? new Date(rule.lastEvaluatedAt).getTime() : 0;
+      if (last && now - last < intervalMs) continue;
+      this.rulesRepo.markEvaluated(rule.id);
       for (const campaign of campaigns) {
         if (rule.accountId && rule.accountId !== campaign.accountId) continue;
         if (await this.evaluateRule(rule, campaign)) matched++;

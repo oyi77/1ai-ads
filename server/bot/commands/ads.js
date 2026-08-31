@@ -1,11 +1,3 @@
-/**
- * /ads command + inline actions — Multi-platform ad management.
- *
- * Uses the platform-specific access token the user connected via the /start
- * connect wizard (stored per-user in platform_accounts, scoped to ctx.userId
- * by the identify middleware). Every action is built on the platform-specific
- * API client with the user's token.
- */
 import { createLogger } from '../../lib/logger.js';
 import { MetaAdsAPI } from '../../services/meta/index.js';
 
@@ -13,10 +5,6 @@ const log = createLogger('bot:ads');
 
 const BACKEND = process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com';
 
-/**
- * Resolve the current user's stored token for a specific platform, or null.
- * @param {string} platform - Platform key (e.g., 'meta', 'google', 'tiktok')
- */
 export function getUserPlatformAccount(ctx, deps, platform = 'meta') {
   const repo = deps?.repos?.platformAccountsRepo;
   if (!repo) return null;
@@ -26,19 +14,13 @@ export function getUserPlatformAccount(ctx, deps, platform = 'meta') {
   return acct;
 }
 
-/** @deprecated Use getUserPlatformAccount instead */
 export function getUserMetaAccount(ctx, deps) {
   return getUserPlatformAccount(ctx, deps, 'meta');
 }
 
-/**
- * Create a platform-specific API client instance.
- * @param {string} platform - Platform key (e.g., 'meta', 'google', 'tiktok')
- */
 export async function makeApi(ctx, deps, platform = 'meta') {
   const acct = getUserPlatformAccount(ctx, deps, platform);
   if (!acct?.access_token) return { api: null, acct };
-
   let api;
   if (platform === 'meta') {
     api = MetaAdsAPI.withToken(acct.access_token);
@@ -58,9 +40,7 @@ export function isExpiredToken(err) {
   const code = err?.code || err?.error?.code;
   const msg = `${err?.message || ''} ${err?.error?.message || ''}`.toLowerCase();
   return (
-    code === 190 ||
-    code === 110 ||
-    code === 463 ||
+    code === 190 || code === 110 || code === 463 ||
     msg.includes('session has expired') ||
     msg.includes('user token is expired') ||
     msg.includes('invalid oauth')
@@ -77,6 +57,10 @@ function money(n) {
   return v.toLocaleString('id-ID', { maximumFractionDigits: 2 });
 }
 
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 // ── /ads entry ──────────────────────────────────────────────
 export function handleAds(deps) {
   return async (ctx) => {
@@ -84,20 +68,29 @@ export function handleAds(deps) {
     const connected = platformAccountsRepo?.findByUserId?.(ctx.userId) || [];
     const active = connected.filter(a => a.is_active);
 
+    const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [] };
+    const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE').length;
+
     if (active.length === 0) {
-      const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [] };
-      const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE').length;
-      let msg;
+      // No connected account — show read-only campaign list with connect CTA
       if (campaigns.length > 0) {
-        msg = `📊 You have ${campaigns.length} campaign(s) in the database (${activeCampaigns} active), but no connected ad account to manage them.\n\nConnect your ad account to manage your campaigns:`;
-      } else {
-        msg = '🔌 *No ad account connected*\n\nConnect your ad account first:';
+        const lines = campaigns.slice(0, 10).map((c, i) => `${i + 1}. ${escHtml(c.name)} — ${c.status === 'ACTIVE' ? '✅ ON' : '⏸ OFF'}`);
+        const more = campaigns.length > 10 ? `\n... and ${campaigns.length - 10} more` : '';
+        return ctx.reply(
+          `📊 *Campaigns* (${activeCampaigns} active / ${campaigns.length} total)\n\n${lines.join('\n')}${more}\n\n` +
+          `⚠️ *Connect your ad account to manage these campaigns.*\n\n` +
+          `• Tap /start → Connect Account, or\n` +
+          `• /settings → Connect`,
+          {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [[{ text: '🔗 Connect Account', callback_data: 'menu:connect' }]],
+            },
+          }
+        );
       }
       return ctx.reply(
-        msg + '\n' +
-          '• Tap /start → Connect Account, or\n' +
-          '• /settings → Connect\n\n' +
-          'Your token is encrypted and scoped to you only.',
+        '🔌 *No ad account connected*\n\nConnect your ad account first:',
         {
           parse_mode: 'HTML',
           reply_markup: {
@@ -150,8 +143,8 @@ async function showPlatformAccounts(ctx, deps, platform) {
     await replyAccountList(ctx, accounts, 1, platform);
   } catch (err) {
     log.error('ads list failed', { userId: ctx.userId, platform, error: err?.message });
-    if (api.isExpiredToken ? api.isExpiredToken(err) : isExpiredToken(err)) {
-      return ctx.reply(`🔑 Your ${platform.toUpperCase()} token has expired. Reconnect via /settings.`);
+    if (isExpiredToken(err)) {
+      return ctx.reply('🔑 Your Meta token has expired. Reconnect via /settings.');
     }
     return ctx.reply('⚠️ Could not load your ad accounts. The token may lack permission or network failed.');
   }
@@ -176,38 +169,21 @@ function pagerRow(prefix, p, pages) {
   ];
 }
 
-/** Render the paginated account list (page = 1-based). */
 async function replyAccountList(ctx, accounts, page, platform = 'meta') {
   const { slice, pages, p } = pageSlice(accounts, page, ACCOUNTS_PER_PAGE);
   const start = (p - 1) * ACCOUNTS_PER_PAGE;
   const lines = slice
-    .map(
-      (a, i) =>
-        `${start + i + 1}. ${escHtml(a.name)} (` + (a.id.startsWith('act_') && platform === 'meta' ? a.id : `act_${a.id}`) +
-        `) — ${a.status === 'active' ? '✅ active' : a.status === 'disabled' ? '⏸ disabled' : a.status}`
-    )
+    .map((a, i) => `${start + i + 1}. ${escHtml(a.name)} (${a.id}) — ${a.status === 'active' ? '✅ active' : '⏸ disabled'}`)
     .join('\n');
   return ctx.reply(
-    `📣 *Your ${platform.toUpperCase()} Ad Accounts* (${accounts.length})\n\n${lines}\n\n` +
-      'Tap an account to manage it.',
+    `📣 *${platform.toUpperCase()} Ad Accounts* (${accounts.length})\n\n${lines}\n\nTap an account to manage it.`,
     {
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
-          ...slice.map((a) => [
-            { text: `⚙️ ${a.name}`, callback_data: `ads:select:${platform}:${a.id}` },
-          ]),
+          ...slice.map((a) => [{ text: `⚙️ ${a.name}`, callback_data: `ads:select:${platform}:${a.id}` }]),
           pagerRow(`ads:accts:${platform}`, p, pages),
-          [
-            ...(p === pages || pages > 1 ? [{ text: '📈 All Accounts Report', callback_data: `ads:report:${platform}` }] : []),
-            ...(p === pages ? [{ text: '🔌 Disconnect', callback_data: `ads:disconnect:${platform}` }] : []),
-          ],
-          ...(p === pages
-            ? [
-                [{ text: '⚙️ Manage Connections', callback_data: `ads:manage:${platform}` }],
-                [{ text: '📱 Buka AdForge Mini App', web_app: { url: `${BACKEND}/reports` } }],
-              ]
-            : []),
+          [{ text: '📈 All Accounts Report', callback_data: `ads:report:${platform}` }],
           [{ text: '📋 Menu', callback_data: 'quick:menu' }],
         ],
       },
@@ -215,11 +191,10 @@ async function replyAccountList(ctx, accounts, page, platform = 'meta') {
   );
 }
 
-/** Pager callback: re-render the account list at a given page (no refetch). */
 export function handleAdsAccountsPage(deps) {
   return async (ctx, pageStr, platform = 'meta') => {
     const { api } = await makeApi(ctx, deps, platform);
-    if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first via /start.`);
+    if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first.`);
     try {
       const accounts = await api.getAdAccounts();
       await replyAccountList(ctx, accounts, parseInt(pageStr, 10) || 1, platform);
@@ -230,26 +205,18 @@ export function handleAdsAccountsPage(deps) {
   };
 }
 
-// ── Account detail: list campaigns with pause/resume ────────
+// ── Account detail: list campaigns ──────────────────────────
 export function handleAdsSelect(deps) {
   return async (ctx, platform, accountId) => {
     const { api } = await makeApi(ctx, deps, platform);
-    if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first via /start.`);
+    if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first.`);
     await ctx.reply(`🔄 Loading campaigns for ${accountId}…`);
     try {
       const campaigns = await api.getCampaigns(accountId);
       if (!campaigns.length) {
-        return ctx.reply(
-          `📭 No campaigns in this account yet.\n\nCreate your first campaign in the dashboard:`,
-          {
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: '🎯 Buat Kampanye', callback_data: 'menu:create' }],
-                [{ text: '◀️ Back to accounts', callback_data: `ads:platform:${platform}` }],
-              ],
-            },
-          }
-        );
+        return ctx.reply(`📭 No campaigns in this account yet.`, {
+          reply_markup: { inline_keyboard: [[{ text: '🎯 Create Campaign', callback_data: 'menu:create' }], [{ text: '◀️ Back to accounts', callback_data: `ads:platform:${platform}` }]] },
+        });
       }
       await replyCampaignList(ctx, accountId, campaigns, 1, platform);
     } catch (err) {
@@ -259,48 +226,35 @@ export function handleAdsSelect(deps) {
   };
 }
 
-/** Render the paginated campaign list for an account (page = 1-based). */
 async function replyCampaignList(ctx, accountId, campaigns, page, platform = 'meta') {
   const { slice, pages, p } = pageSlice(campaigns, page, CAMPAIGNS_PER_PAGE);
-  const lines = slice
-    .map((c) => `• ${escHtml(c.name)} — ${c.status === 'active' ? '✅ ON' : c.status === 'paused' ? '⏸ OFF' : c.status}`)
-    .join('\n');
+  const lines = slice.map((c) => `• ${escHtml(c.name)} — ${c.status === 'active' ? '✅ ON' : '⏸ OFF'}`).join('\n');
   return ctx.reply(
-    `⚙️ <b>Campaigns (${campaigns.length}) — ${escHtml(accountId)}</b>\n\n${lines}\n\n` +
-      'Tap to toggle on/off:',
+    `⚙️ <b>Campaigns (${campaigns.length}) — ${accountId}</b>\n\n${lines}\n\nTap to toggle on/off:`,
     {
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
-          ...slice.map((c) => [
-            {
-              text:
-                (c.status === 'active' ? '⏸ Pause ' : '▶️ Resume ') + c.name,
-              callback_data: `ads:toggle:${platform}:${accountId}:${c.id}:${c.status === 'active' ? 'pause' : 'resume'}`,
-            },
-          ]),
+          ...slice.map((c) => [{
+            text: (c.status === 'active' ? '⏸ Pause ' : '▶️ Resume ') + c.name,
+            callback_data: `ads:toggle:${platform}:${accountId}:${c.id}:${c.status === 'active' ? 'pause' : 'resume'}`,
+          }]),
           pagerRow(`ads:camps:${platform}:${accountId}`, p, pages),
-          [{ text: '📊 Laporan Akun + Analisis AI', callback_data: `ads:repacc:${platform}:${accountId}` }],
-          [
-            { text: '➕20%', callback_data: `ads:budget:${platform}:${accountId}:pct:1.2` },
-            { text: '➖20%', callback_data: `ads:budget:${platform}:${accountId}:pct:0.8333` },
-            { text: '🚀 Buat Kampanye', callback_data: 'menu:create' },
-          ],
-          [{ text: '◀️ Kembali ke daftar akun', callback_data: `ads:platform:${platform}` }],
+          [{ text: '📊 Report', callback_data: `ads:repacc:${platform}:${accountId}` }],
+          [{ text: '➕20%', callback_data: `ads:budget:${platform}:${accountId}:pct:1.2` }, { text: '➖20%', callback_data: `ads:budget:${platform}:${accountId}:pct:0.8333` }, { text: '🎯 Create', callback_data: 'menu:create' }],
+          [{ text: '◀️ Back to accounts', callback_data: `ads:platform:${platform}` }],
         ],
       },
     }
   );
 }
 
-/** Pager callback: re-render the campaign list at a given page (no refetch). */
 export function handleAdsCampaignsPage(deps) {
   return async (ctx, platform, accountId, pageStr) => {
     const { api } = await makeApi(ctx, deps, platform);
-    if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first via /start.`);
+    if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first.`);
     try {
       const campaigns = await api.getCampaigns(accountId);
-      if (!campaigns.length) return ctx.reply(`📭 No campaigns in ${accountId}.`);
       await replyCampaignList(ctx, accountId, campaigns, parseInt(pageStr, 10) || 1, platform);
     } catch (err) {
       log.error('campaigns pager failed', { userId: ctx.userId, platform, accountId, error: err?.message });
@@ -309,137 +263,131 @@ export function handleAdsCampaignsPage(deps) {
   };
 }
 
-// ── Pause / Resume a campaign ───────────────────────────────
+// ── Pause / Resume ──────────────────────────────────────────
 export function handleAdsToggle(deps) {
   return async (ctx, platform, accountId, campaignId, mode) => {
     const { api } = await makeApi(ctx, deps, platform);
-    if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first via /start.`);
+    if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first.`);
     await ctx.reply(`🔄 ${mode === 'pause' ? 'Pausing' : 'Resuming'} campaign ${campaignId}…`);
     try {
       await api.updateCampaign(campaignId, { status: mode === 'pause' ? 'PAUSED' : 'ACTIVE' });
-      return ctx.reply(
-        `✅ Campaign *${mode === 'pause' ? 'paused' : 'resumed'}*.\n\n` +
-          `Open it in the dashboard: ${BACKEND}/campaigns`,
-        {
-          parse_mode: 'HTML',
-          reply_markup: {
-            inline_keyboard: [[{ text: '⚙️ Back to campaigns', callback_data: `ads:select:${platform}:${accountId}` }]],
-          },
-        }
-      );
+      return ctx.reply(`✅ Campaign *${mode === 'pause' ? 'paused' : 'resumed'}*.`, {
+        parse_mode: 'HTML',
+        reply_markup: { inline_keyboard: [[{ text: '⚙️ Back to campaigns', callback_data: `ads:select:${platform}:${accountId}` }]] },
+      });
     } catch (err) {
       log.error('ads toggle failed', { userId: ctx.userId, platform, campaignId, mode, error: err?.message });
-      const isExpired = api.isExpiredToken ? api.isExpiredToken(err) : isExpiredToken(err);
-      if (isExpired) {
-        return ctx.reply(`🔑 Your ${platform.toUpperCase()} token has expired. Reconnect via /settings.`);
-      }
-      return ctx.reply('⚠️ Could not update the campaign. Check that the token has ads_management permission.');
+      if (isExpiredToken(err)) return ctx.reply('🔑 Your token has expired. Reconnect via /settings.');
+      return ctx.reply('⚠️ Could not update the campaign.');
     }
   };
 }
 
-// ── Report: spend + insights across accounts ────────────────
+// ── Reports ─────────────────────────────────────────────────
 export function handleAdsReport(deps) {
   return async (ctx, platformOrAccountId, accountIdOrUndefined) => {
     const platform = accountIdOrUndefined ? platformOrAccountId : 'meta';
     const accountId = accountIdOrUndefined || platformOrAccountId;
 
     const { api } = await makeApi(ctx, deps, platform);
-    if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first via /start.`);
+    if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first.`);
 
     if (accountId) {
-      let accounts;
       try {
-        accounts = await api.getAdAccounts();
+        const accounts = await api.getAdAccounts();
+        const acct = accounts.find((a) => String(a.id) === String(accountId));
+        if (!acct) return ctx.reply('⚠️ Account not found.');
+        const ins = await api.getAccountInsights(accountId, { datePreset: 'last_30d' });
+        if (!ins) return ctx.reply('📭 No insight data for this account.');
+        const roas = ins.spend > 0 ? (ins.revenue / ins.spend).toFixed(2) : '0.00';
+        const body =
+          `📊 *Report: ${acct.name} (30d)*\n\n` +
+          `Total Spend: ${fmtCurrency(ins.spend)}\n` +
+          `Total Revenue: ${fmtCurrency(ins.revenue)}\n` +
+          `ROAS: ${roas}x\n` +
+          `Clicks: ${(ins.clicks || 0).toLocaleString('id-ID')}\n` +
+          `Impressions: ${(ins.impressions || 0).toLocaleString('id-ID')}`;
+        return ctx.reply(body, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '🔄 Refresh', callback_data: `menu:reports:${platform}:${accountId}` }]] } });
       } catch (err) {
-        log.error('ads report scoped list failed', { userId: ctx.userId, platform, error: err?.message });
-        return ctx.reply('⚠️ Could not load your accounts for the report.');
+        log.error('ads report scoped failed', { userId: ctx.userId, platform, accountId, error: err?.message });
+        if (isExpiredToken(err)) return ctx.reply('🔑 Your token has expired.');
+        return ctx.reply('⚠️ Could not load report.');
       }
-      const acct = accounts.find((a) => String(a.id) === String(accountId));
-      if (!acct) return ctx.reply('⚠️ Akun tidak ditemukan.');
-
-      let ins;
-      try {
-        ins = await api.getAccountInsights(accountId, { datePreset: 'last_30d' });
-      } catch (err) {
-        const isExpired = api.isExpiredToken ? api.isExpiredToken(err) : isExpiredToken(err);
-        if (isExpired) {
-          return ctx.reply(`🔑 Sesi ${platform.toUpperCase()} kamu sudah kedaluwarsa. Hubungkan ulang via /start.`);
-        }
-        log.warn('ads report scoped failed', { platform, accountId, error: err?.message });
-        return ctx.reply('⚠️ Gagal mengambil report akun ini.');
-      }
-      if (!ins) return ctx.reply('📭 Tidak ada data insight untuk akun ini.');
-
-      const roas = ins.spend > 0 ? (ins.revenue / ins.spend).toFixed(2) : '0.00';
-      const body =
-        `📊 *Report: ${acct.name} (30d)*\n\n` +
-        `Total Spend: ${fmtCurrency(ins.spend)}\n` +
-        `Total Revenue: ${fmtCurrency(ins.revenue)}\n` +
-        `ROAS: ${roas}x\n` +
-        `Clicks: ${(ins.clicks || 0).toLocaleString('id-ID')}\n` +
-        `Impressions: ${(ins.impressions || 0).toLocaleString('id-ID')}`;
-
-      return ctx.reply(body, {
-        parse_mode: 'HTML',
-        reply_markup: {
-          inline_keyboard: [[{ text: '🔄 Refresh', callback_data: `menu:reports:${platform}:${accountId}` }]],
-        },
-      });
     }
 
     await ctx.reply('📈 Gathering your ad report…');
-    let accounts;
     try {
-      accounts = await api.getAdAccounts();
+      const accounts = await api.getAdAccounts();
+      if (!accounts.length) return ctx.reply('📭 No ad accounts found.');
+      let totalSpend = 0, totalRev = 0, totalClicks = 0, totalImpr = 0;
+      const perAcct = [];
+      for (const acct of accounts) {
+        try {
+          const ins = await api.getAccountInsights(acct.id, { datePreset: 'last_30d' });
+          if (!ins) continue;
+          totalSpend += ins.spend || 0;
+          totalRev += ins.revenue || 0;
+          totalClicks += ins.clicks || 0;
+          totalImpr += ins.impressions || 0;
+          perAcct.push(`• ${escHtml(acct.name)}: ${fmtCurrency(ins.spend)} spend · ${money(ins.revenue)} rev · ${ins.clicks || 0} clicks`);
+        } catch (err) {
+          log.warn('ads report acct failed', { accountId: acct.id, error: err?.message });
+        }
+      }
+      const roas = totalSpend > 0 ? (totalRev / totalSpend).toFixed(2) : '0.00';
+      const body =
+        `📊 *Your ${platform.toUpperCase()} Ads Report (30d)*\n\n` +
+        `Total Spend: ${fmtCurrency(totalSpend)}\n` +
+        `Total Revenue: ${fmtCurrency(totalRev)}\n` +
+        `ROAS: ${roas}x\n` +
+        `Clicks: ${totalClicks.toLocaleString('id-ID')}\n` +
+        `Impressions: ${totalImpr.toLocaleString('id-ID')}\n\n` +
+        (perAcct.length ? `*Per account:*\n${perAcct.join('\n')}` : '');
+      return ctx.reply(body, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '🔄 Refresh', callback_data: `ads:report:${platform}` }]] } });
     } catch (err) {
       log.error('ads report list failed', { userId: ctx.userId, platform, error: err?.message });
-      return ctx.reply('⚠️ Could not load your accounts for the report.');
+      if (isExpiredToken(err)) return ctx.reply('🔑 Your token has expired.');
+      return ctx.reply('⚠️ Could not load report.');
     }
-    if (!accounts.length) return ctx.reply('📭 No ad accounts found to report on.');
-
-    let totalSpend = 0;
-    let totalRev = 0;
-    let totalClicks = 0;
-    let totalImpr = 0;
-    const perAcct = [];
-
-    for (const acct of accounts) {
-      try {
-        const ins = await api.getAccountInsights(acct.id, { datePreset: 'last_30d' });
-        if (!ins) continue;
-        totalSpend += ins.spend || 0;
-        totalRev += ins.revenue || 0;
-        totalClicks += ins.clicks || 0;
-        totalImpr += ins.impressions || 0;
-        perAcct.push(
-          `• ${escHtml(acct.name)}: ${fmtCurrency(ins.spend)} spend · ${money(ins.revenue)} rev · ${ins.clicks || 0} clicks`
-        );
-      } catch (err) {
-        log.warn('ads report acct failed', { platform, accountId: acct.id, error: err?.message });
-      }
-    }
-
-    const roas = totalSpend > 0 ? (totalRev / totalSpend).toFixed(2) : '0.00';
-    const body =
-      `📊 *Your ${platform.toUpperCase()} Ads Report (30d)*\n\n` +
-      `Total Spend: ${fmtCurrency(totalSpend)}\n` +
-      `Total Revenue: ${fmtCurrency(totalRev)}\n` +
-      `ROAS: ${roas}x\n` +
-      `Clicks: ${totalClicks.toLocaleString('id-ID')}\n` +
-      `Impressions: ${totalImpr.toLocaleString('id-ID')}\n\n` +
-      (perAcct.length ? `*Per account:*\n${perAcct.join('\n')}` : 'No insight data returned.');
-
-    return ctx.reply(body, {
-      parse_mode: 'HTML',
-      reply_markup: {
-        inline_keyboard: [[{ text: '🔄 Refresh', callback_data: `ads:report:${platform}` }]],
-      },
-    });
   };
 }
 
-// ── Disconnect: deactivate stored account ───────────────────
+// ── Quick budget scale: ±% applied to ACTIVE campaigns of one account ──
+export function handleAdsBudgetScale(deps) {
+  return async (ctx, accountId, _pctStr, multStr) => {
+    await ctx.answerCbQuery();
+    const { api } = await makeApi(ctx, deps, 'meta');
+    if (!api) return ctx.reply('🔌 Hubungkan akun Meta dulu via /start.');
+    const mult = parseFloat(multStr);
+    if (!Number.isFinite(mult) || mult <= 0.2 || mult >= 5) {
+      return ctx.reply('⚠️ Multiplier tidak valid.');
+    }
+    await ctx.reply(`🔄 Menyesuaikan budget ${Math.round((mult - 1) * 100)}% untuk campaign AKTIF di akun ini…`);
+    try {
+      const campaigns = await api.getCampaigns(accountId, { limit: 50 });
+      const active = campaigns.filter(c => c.status === 'active');
+      let done = 0;
+      for (const c of active) {
+        try {
+          const current = c.dailyBudget || 0;
+          if (current <= 0) continue;
+          const next = Math.max(10000, Math.round(current * mult * 100) / 100);
+          await api.updateCampaign(c.id, { dailyBudget: next });
+          done++;
+        } catch (e) {
+          log.warn('budget scale failed per campaign', { campaignId: c.id, error: e.message });
+        }
+      }
+      return ctx.reply(
+        `✅ Budget ${done} campaign aktif disesuaikan (${Math.round((mult - 1) * 100) > 0 ? '+' : ''}${Math.round((mult - 1) * 100)}%).\n\nLihat hasil: /ads`
+      );
+    } catch (err) {
+      log.error('budget scale failed', { userId: ctx.userId, accountId, error: err.message });
+      return ctx.reply('⚠️ Gagal menyesuaikan budget.');
+    }
+  };
+}
+
 export function handleAdsDisconnect(deps) {
   const manage = handleAdsManage(deps);
   return async (ctx) => manage(ctx);
@@ -504,11 +452,6 @@ export function handleAdsDisconnectConfirm(deps, id) {
   };
 }
 
-// ── Per-account detailed report + AI recommendation ─────────
-function escHtml(s) {
-  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
 function fmtRoas(v) { return v === null || v === undefined ? '—' : `${Number(v).toFixed(2)}x`; }
 function fmtCpr(v) { return v === null || v === undefined ? '—' : fmtCurrency(v); }
 
@@ -531,8 +474,7 @@ export function handleAdsAccountReport(deps) {
       const avg = report.comparison.avg7d;
       const ai = report.ai;
       const body =
-        `📊 <b>LAPORAN AKUN — ${escHtml(report.accountName)}</b>
-:` +
+        `📊 <b>LAPORAN AKUN — ${escHtml(report.accountName)}</b>\n` +
         `🗓 Hari ini sampai sekarang (WIB)\n\n` +
         `💰 <b>Belanja:</b> ${fmtCurrency(s.spend)}\n` +
         `👁 Tayangan: ${(s.impressions).toLocaleString('id-ID')}\n` +
@@ -570,43 +512,5 @@ export function handleAdsAccountReport(deps) {
   };
 }
 
-// ── Quick budget scale: ±% applied to ACTIVE campaigns of one account ──
-export function handleAdsBudgetScale(deps) {
-  return async (ctx, accountId, _pctStr, multStr) => {
-    await ctx.answerCbQuery();
-    const { api } = await makeApi(ctx, deps, 'meta');
-    if (!api) return ctx.reply('🔌 Hubungkan akun Meta dulu via /start.');
-    const mult = parseFloat(multStr);
-    if (!Number.isFinite(mult) || mult <= 0.2 || mult >= 5) {
-      return ctx.reply('⚠️ Multiplier tidak valid.');
-    }
-    await ctx.reply(`🔄 Menyesuaikan budget ${Math.round((mult - 1) * 100)}% untuk campaign AKTIF di akun ini…`);
-    try {
-      const campaigns = await api.getCampaigns(accountId, { limit: 50 });
-      const active = campaigns.filter(c => c.status === 'active');
-      let done = 0;
-      for (const c of active) {
-        try {
-          const current = c.dailyBudget || 0;
-          if (current <= 0) continue;
-          const next = Math.max(10000, Math.round(current * mult * 100) / 100);
-          await api.updateCampaign(c.id, { dailyBudget: next });
-          done++;
-        } catch (e) {
-          log.warn('budget scale failed per campaign', { campaignId: c.id, error: e.message });
-        }
-      }
-      return ctx.reply(
-        `✅ Budget ${done} campaign aktif disesuaikan (${Math.round((mult - 1) * 100) > 0 ? '+' : ''}${Math.round((mult - 1) * 100)}%).\n\nLihat hasil: /ads`
-      );
-    } catch (err) {
-      log.error('budget scale failed', { userId: ctx.userId, accountId, error: err.message });
-      return ctx.reply('⚠️ Gagal menyesuaikan budget.');
-    }
-  };
-}
-
-// ── Drop-in replacement for old global fbads (kept as alias) ─
-export function handleFbAds(deps) {
-  return handleAds(deps);
-}
+// ── Aliases ─────────────────────────────────────────────────
+export function handleFbAds(deps) { return handleAds(deps); }

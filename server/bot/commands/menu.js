@@ -11,6 +11,7 @@ import { handleAds } from './ads.js';
 import { handleHelp } from './help.js';
 import { handlePricing } from './pricing.js';
 import { handleSettings } from './settings.js';
+import { handleStatus } from './status.js';
 const WEB_APP_URL = config.webAppUrl;
 // Platform name map (from platforms/index.js PLATFORM_REGISTRY)
 const PLATFORM_LABELS = {
@@ -66,7 +67,7 @@ export function handleMenuButton(deps) {
 
     switch (base) {
       case 'status':
-        return handleStatusAction(ctx, deps);
+        return handleStatus(deps)(ctx);
       case 'reports':
         return scope ? handleAdsReport(deps)(ctx, scope) : handleReportsAction(ctx, deps);
       case 'create':
@@ -115,40 +116,6 @@ async function sendPlatformChoice(ctx) {
   );
 }
 
-async function handleStatusAction(ctx, deps) {
-  try {
-    const result = deps.repos?.campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [], total: 0 };
-    const campaigns = result.data || [];
-    const active = campaigns.filter(c => c.status === 'ACTIVE').length;
-    const totalSpend = campaigns.reduce((s, c) => s + (c.spend || 0), 0);
-    const totalRevenue = campaigns.reduce((s, c) => s + (c.revenue || 0), 0);
-    const roas = totalSpend > 0 ? (totalRevenue / totalSpend).toFixed(2) : '0.00';
-
-    let msg = `📊 *Quick Status*\n\n`;
-    msg += `Campaigns: ${active} active / ${campaigns.length} total\n`;
-    msg += `Spend: Rp ${totalSpend.toLocaleString('id-ID')}\n`;
-    msg += `Revenue: Rp ${totalRevenue.toLocaleString('id-ID')}\n`;
-    msg += `ROAS: ${roas}x`;
-
-    if (campaigns.length === 0) {
-      msg += '\n\n📭 No campaigns yet. Connect platforms and sync campaigns to get started!';
-    }
-
-    await ctx.reply(msg, {
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '📣 Ads Manager', callback_data: 'menu:ads' }],
-          [{ text: '⚡ Rules', callback_data: 'menu:monitor' }],
-          [{ text: '🌐 Platforms', callback_data: 'menu:platforms' }],
-          [{ text: '📋 Menu', callback_data: 'quick:menu' }],
-        ],
-      },
-    });
-  } catch {
-    ctx.reply('⚠️ Failed to load status. Try again later.');
-  }
-}
 
 async function handleReportsAction(ctx, deps) {
   if (deps) return handleAdsReport(deps)(ctx);

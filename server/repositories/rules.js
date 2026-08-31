@@ -23,6 +23,8 @@ export class RulesRepository {
         action_json TEXT NOT NULL,
         priority INTEGER DEFAULT 1,
         enabled INTEGER DEFAULT 1,
+        interval_minutes INTEGER DEFAULT 15,
+        last_evaluated_at TEXT,
         last_triggered_at TEXT,
         trigger_count INTEGER DEFAULT 0,
         created_at TEXT DEFAULT (datetime('now')),
@@ -33,17 +35,40 @@ export class RulesRepository {
       CREATE INDEX IF NOT EXISTS idx_rules_account ON ${this.table}(account_id);
       CREATE INDEX IF NOT EXISTS idx_rules_priority ON ${this.table}(priority);
     `);
+    // Reconcile legacy schemas: rename condition→condition_json, action→action_json,
+    // and add any missing columns so both fresh and pre-existing tables work.
+    const cols = this.db.prepare(`PRAGMA table_info(${this.table})`).all().map(c => c.name);
+    const addCol = (name, ddl) => {
+      if (!cols.includes(name)) this.db.exec(`ALTER TABLE ${this.table} ADD COLUMN ${ddl}`);
+    };
+    if (cols.includes('condition') && !cols.includes('condition_json')) {
+      this.db.exec(`ALTER TABLE ${this.table} RENAME COLUMN condition TO condition_json`);
+      cols.splice(cols.indexOf('condition'), 1, 'condition_json');
+    }
+    if (cols.includes('action') && !cols.includes('action_json')) {
+      this.db.exec(`ALTER TABLE ${this.table} RENAME COLUMN action TO action_json`);
+      cols.splice(cols.indexOf('action'), 1, 'action_json');
+    }
+    addCol('description', "description TEXT DEFAULT ''");
+    addCol('interval_minutes', 'interval_minutes INTEGER DEFAULT 15');
+    addCol('last_evaluated_at', 'last_evaluated_at TEXT');
+    addCol('last_triggered_at', 'last_triggered_at TEXT');
+    addCol('trigger_count', 'trigger_count INTEGER DEFAULT 0');
     log.debug('autonomous_rules table ready');
   }
 
   create(rule) {
     const id = rule.id || crypto.randomUUID();
+    // Legacy tables use INTEGER PRIMARY KEY (rowid alias) — inserting a TEXT uuid
+    // into that column throws "datatype mismatch". Detect once and fall back to
+    // letting SQLite autoincrement the id.
+    const idType = this._idColumnType();
+    const useAutoincrement = idType === 'INTEGER';
     const stmt = this.db.prepare(`
-      INSERT INTO ${this.table} (id, user_id, account_id, name, description, condition_json, action_json, priority, enabled)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO ${this.table} (id, user_id, account_id, name, description, condition_json, action_json, priority, enabled, interval_minutes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `);
-    stmt.run(
-      id,
+    const base = [
       rule.userId || rule.user_id,
       rule.accountId || rule.account_id || null,
       rule.name,
@@ -51,9 +76,18 @@ export class RulesRepository {
       JSON.stringify(rule.condition),
       JSON.stringify(rule.action),
       rule.priority || 1,
-      (rule.enabled === undefined || rule.enabled) ? 1 : 0
-    );
-    return this.getById(id);
+      (rule.enabled === undefined || rule.enabled) ? 1 : 0,
+      rule.intervalMinutes !== undefined ? rule.intervalMinutes : (rule.interval_minutes !== undefined ? rule.interval_minutes : 15),
+    ];
+    const result = useAutoincrement ? stmt.run(null, ...base) : stmt.run(id, ...base);
+    const rowId = useAutoincrement ? Number(result.lastInsertRowid) : id;
+    return this.getById(String(rowId));
+  }
+
+  _idColumnType() {
+    const cols = this.db.prepare(`PRAGMA table_info(${this.table})`).all();
+    const idCol = cols.find(c => c.name === 'id');
+    return idCol?.type ? String(idCol.type).toUpperCase() : 'TEXT';
   }
 
   update(id, updates) {
@@ -65,6 +99,10 @@ export class RulesRepository {
     if (updates.action) { fields.push('action_json = ?'); params.push(JSON.stringify(updates.action)); }
     if (updates.priority !== undefined) { fields.push('priority = ?'); params.push(updates.priority); }
     if (updates.enabled !== undefined) { fields.push('enabled = ?'); params.push(updates.enabled ? 1 : 0); }
+    if (updates.intervalMinutes !== undefined || updates.interval_minutes !== undefined) {
+      fields.push('interval_minutes = ?');
+      params.push(updates.intervalMinutes !== undefined ? updates.intervalMinutes : updates.interval_minutes);
+    }
     if (!fields.length) return this.getById(id);
     fields.push('updated_at = datetime(\'now\')');
     params.push(id);
@@ -123,14 +161,22 @@ export class RulesRepository {
     this.db.prepare(`UPDATE ${this.table} SET last_triggered_at = datetime('now'), trigger_count = trigger_count + 1 WHERE id = ?`).run(id);
   }
 
+  markEvaluated(id) {
+    this.db.prepare(`UPDATE ${this.table} SET last_evaluated_at = datetime('now') WHERE id = ?`).run(id);
+  }
+
   createMany(rules) {
     const results = [];
-    const stmt = this.db.prepare(`INSERT INTO ${this.table} (id, user_id, account_id, name, description, condition_json, action_json, priority, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const idType = this._idColumnType();
+    const useAutoincrement = idType === 'INTEGER';
+    const stmt = this.db.prepare(`INSERT INTO ${this.table} (id, user_id, account_id, name, description, condition_json, action_json, priority, enabled, interval_minutes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`);
     const transaction = this.db.transaction((rules) => {
       for (const rule of rules) {
         const id = rule.id || crypto.randomUUID();
-        stmt.run(id, rule.userId || rule.user_id, rule.accountId || rule.account_id || null, rule.name, rule.description || '', JSON.stringify(rule.condition), JSON.stringify(rule.action), rule.priority || 1, (rule.enabled === undefined || rule.enabled) ? 1 : 0);
-        results.push(this.getById(id));
+        const base = [rule.userId || rule.user_id, rule.accountId || rule.account_id || null, rule.name, rule.description || '', JSON.stringify(rule.condition), JSON.stringify(rule.action), rule.priority || 1, (rule.enabled === undefined || rule.enabled) ? 1 : 0, rule.intervalMinutes !== undefined ? rule.intervalMinutes : (rule.interval_minutes !== undefined ? rule.interval_minutes : 15)];
+        const result = useAutoincrement ? stmt.run(null, ...base) : stmt.run(id, ...base);
+        const rowId = useAutoincrement ? Number(result.lastInsertRowid) : id;
+        results.push(this.getById(String(rowId)));
       }
     });
     transaction(rules);
@@ -149,6 +195,8 @@ export class RulesRepository {
       action: safeParse(row.action_json, {}),
       priority: row.priority,
       enabled: !!row.enabled,
+      intervalMinutes: row.interval_minutes !== undefined ? row.interval_minutes : 15,
+      lastEvaluatedAt: row.last_evaluated_at,
       lastTriggeredAt: row.last_triggered_at,
       triggerCount: row.trigger_count || 0,
       createdAt: row.created_at,

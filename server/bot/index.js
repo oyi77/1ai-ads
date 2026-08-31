@@ -1,13 +1,9 @@
 /**
  * Telegram Bot — Initialization & Webhook Setup
  *
- * Ported from asisten-jualan/ (Python FastAPI + python-telegram-bot)
- * to Node.js Telegraf inside Express.
- *
- * All asisten-jualan features available via Telegram:
- * - 7 commands (start, menu, cancel, help, status, settings, pricing)
- * - Connect-account wizard (per-customer platform connection via /start buttons)
- * - 10 scheduled jobs (bid-satpam, daily-dashboard, etc.)
+ * Bot lifecycle:
+ *   1. initBot() — set up webhook, register handlers, start scheduler
+ *   2. Telegram → webhook → Express → bot.handleUpdate()
  */
 
 import { Telegraf, Scenes } from 'telegraf';
@@ -15,10 +11,10 @@ import { session } from 'telegraf/session';
 import { createLogger } from '../lib/logger.js';
 import { handleStart } from './commands/start.js';
 import { handleMenu, handleMenuButton } from './commands/menu.js';
-import { handleStatus } from './commands/status.js';
+import { handleStatus, handleDashboardCallback } from './commands/status.js';
 import { handleHelp } from './commands/help.js';
 import { handleSettings, handleSettingsCallback } from './commands/settings.js';
-import { handleMonitor, handleMonitorCallback } from './commands/monitor.js';
+import { handleMonitor, handleMonitorCallback, handleMonitorText } from './commands/monitor.js';
 import { handleAdminStats, handleAdminUsers, handleAdminBroadcast } from './commands/admin.js';
 import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm, handleAdsAccountReport, handleAdsAccountsPage, handleAdsCampaignsPage, handleAdsBudgetScale } from './commands/ads.js';
 import { handleApprovalApprove, handleApprovalReject } from './commands/approvals.js';
@@ -35,41 +31,39 @@ const log = createLogger('bot');
 
 let botInstance = null;
 
+// Known bot commands (for unknown-command detection)
+const KNOWN_COMMANDS = [
+  'start', 'menu', 'quick', 'status', 'help', 'pricing',
+  'monitor', 'settings', 'ads', 'cancel', 'metaapp', 'create',
+  'fbads', 'admin_stats', 'admin_users', 'admin_broadcast'
+];
+
 /**
  * Initialize the Telegram bot and mount webhook on Express.
- * @param {object} app — Express app
- * @param {object} deps — { repos, services }
- * @returns {Telegraf} bot instance
  */
 export function initBot(app, deps) {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token) {
+  if (!process.env.TELEGRAM_BOT_TOKEN) {
     log.warn('TELEGRAM_BOT_TOKEN not set — bot disabled');
     return null;
   }
 
-  const bot = new Telegraf(token);
+  const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
   botInstance = bot;
 
-  // Store deps in bot context
-  bot.context.repos = deps.repos;
-  bot.context.services = deps.services;
-
-  // Identify/auto-bind Telegram user -> local multi-tenant account
   bot.use(identify(deps));
-  // Session + Stage middleware — REQUIRED for WizardScene (connect + meta-app flows)
+  // Expose deps to all handlers/scenes (repos, services) via ctx.deps
+  bot.use((ctx, next) => {
+    ctx.deps = deps;
+    return next();
+  });
   bot.use(session());
   const stage = new Scenes.Stage([connectScene, connectOAuthScene, manageMetaAppScene, createCampaignScene]);
 
-  // Escape hatch: any /command while inside a wizard clears the scene state
-  // from the session BEFORE stage sees it, so an abandoned wizard can never
-  // eat subsequent commands (/start, /pricing etc still work normally).
+  // Clear stuck scene state
   bot.use(async (ctx, next) => {
     const text = ctx.message?.text || '';
     const cbData = ctx.callbackQuery?.data || '';
-    // Clear stuck scene state for ANY /command or callback query (except /skip which is scene-internal)
     if (ctx.session?.__scenes && (text.startsWith('/') && text !== '/skip' || cbData)) {
-      log.debug('Clearing stuck session scene state', { text, cbData, scenes: ctx.session.__scenes });
       ctx.session.__scenes = {};
     }
     return next();
@@ -94,22 +88,31 @@ export function initBot(app, deps) {
   bot.command('monitor', handleMonitor(deps));
   bot.command('metaapp', (ctx) => ctx.scene.enter('manage-meta-app'));
   bot.command('create', (ctx) => ctx.scene.enter('create-campaign'));
+
+  // ── Callback queries (inline buttons) ────────────────────
   bot.action(/^ads:budget:(.+):pct:([\d.]+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     const [, acct, mult] = ctx.match;
     await handleAdsBudgetScale(deps)(ctx, acct, 'pct', mult);
   });
-  // ── Callback queries (inline buttons) ────────────────────
   bot.action(/^menu:(.+)$/, handleMenuButton(deps));
   bot.action(/^settings:(.+)$/, handleSettingsCallback(deps));
-  bot.action(/^ads:select:(.+)$/, async (ctx) => { await ctx.answerCbQuery(); await handleAdsSelect(deps)(ctx, ctx.match[1]); });
-  bot.action(/^ads:toggle:(.+):(.+):(.+)$/, async (ctx) => { await ctx.answerCbQuery(); const [, acct, camp, mode] = ctx.match; await handleAdsToggle(deps)(ctx, acct, camp, mode); });
-  bot.action(/^ads:report$/, async (ctx) => { await ctx.answerCbQuery(); await handleAdsReport(deps)(ctx); });
+  bot.action(/^ads:select:(.+)$/, async (ctx) => { await ctx.answerCbQuery(); await handleAdsSelect(deps)(ctx, 'meta', ctx.match[1]); });
+  bot.action(/^ads:toggle:(.+):(.+):(.+):(.+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const [, platform, acct, camp, mode] = ctx.match;
+    await handleAdsToggle(deps)(ctx, platform, acct, camp, mode);
+  });
+  bot.action(/^ads:report:(.+)?$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const platform = ctx.match[1] || 'meta';
+    await handleAdsReport(deps)(ctx, undefined);
+  });
   bot.action(/^ads:repacc:(.+)$/, async (ctx) => { await ctx.answerCbQuery(); await handleAdsAccountReport(deps)(ctx, ctx.match[1]); });
   bot.action(/^ads:nop$/, (ctx) => ctx.answerCbQuery());
-  bot.action(/^ads:accts:(\d+)$/, async (ctx) => { await ctx.answerCbQuery(); await handleAdsAccountsPage(deps)(ctx, ctx.match[1]); });
-  bot.action(/^ads:camps:(.+):(\d+)$/, async (ctx) => { await ctx.answerCbQuery(); const [, acct, page] = ctx.match; await handleAdsCampaignsPage(deps)(ctx, acct, page); });
-bot.action(/^ads:disconnect(?::(.+))?$/, async (ctx) => {
+  bot.action(/^ads:accts:(\d+)$/, async (ctx) => { await ctx.answerCbQuery(); await handleAdsAccountsPage(deps)(ctx, ctx.match[1], 'meta'); });
+  bot.action(/^ads:camps:(.+):(\d+)$/, async (ctx) => { await ctx.answerCbQuery(); const [, acct, page] = ctx.match; await handleAdsCampaignsPage(deps)(ctx, 'meta', acct, page); });
+  bot.action(/^ads:disconnect(?::(.+))?$/, async (ctx) => {
     await ctx.answerCbQuery();
     const id = ctx.match?.[1];
     const handler = id ? handleAdsDisconnectConfirm(deps, id) : handleAdsDisconnect(deps);
@@ -127,11 +130,10 @@ bot.action(/^ads:disconnect(?::(.+))?$/, async (ctx) => {
   bot.action(/^approval:reject:(.+)$/, async (ctx) => { await ctx.answerCbQuery(); await handleApprovalReject(deps)(ctx, ctx.match[1]); });
   bot.action(/^monitor:(.+)$/, handleMonitorCallback(deps));
   bot.action(/^rule:(.+)$/, handleMonitorCallback(deps));
-  // Scene-cancel buttons must beat their generic enter-regexes below.
+  bot.action(/^dash:(.+)$/, handleDashboardCallback(deps));
+  bot.action(/^quick:menu$/, handleMenu());
   bot.action(/^connect:cancel$/, handleSceneCancel('❌ Koneksi dibatalkan.'));
   bot.action(/^metaapp:cancel$/, handleSceneCancel('❌ Konfigurasi Meta App dibatalkan.'));
-  bot.action(/^quick:menu$/, handleMenu());
-  // ── Connect wizard (per-customer platform connection) ────
   bot.action(/^connect:(.+)$/, async (ctx) => {
     const platform = ctx.match[1];
     const oauthPlatforms = ['google', 'tiktok', 'linkedin'];
@@ -154,41 +156,31 @@ bot.action(/^ads:disconnect(?::(.+))?$/, async (ctx) => {
   const webhookPath = '/webhook/telegram';
   app.use(bot.webhookCallback(webhookPath));
 
-  // Set webhook (async, non-blocking, retried — Telegram API calls can fail
-  // transiently right after container boot before DNS/network settles).
-  const host = process.env.TELEGRAM_WEBHOOK_HOST || 'adforge.aitradepulse.com';
-  const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-  const retrySync = (label, fn) => {
-    let attempt = 0;
-    const run = async () => {
-      for (; attempt < 3; attempt++) {
-        try {
-          await fn();
-          log.info(label);
-          return;
-        } catch (err) {
-          if (attempt === 2) log.warn(`${label} failed after retries`, { error: err.message });
-          else await new Promise(r => setTimeout(r, 3000 * (attempt + 1)));
-        }
+  // Set webhook
+  const retrySync = (label, fn, retries = 5, delayMs = 3000) => {
+    fn().catch((err) => {
+      if (retries > 0) {
+        log.warn(`${label} failed, retrying in ${delayMs}ms`, { error: err.message, retries });
+        setTimeout(() => retrySync(label, fn, retries - 1, delayMs * 1.5), delayMs);
+      } else {
+        log.warn(`${label} failed after retries`, { error: err.message });
       }
-    };
-    run();
+    });
   };
+
+  const host = process.env.WEBAPP_HOST || 'adforge.aitradepulse.com';
+  const protocol = 'https';
   retrySync('Telegram webhook set', () =>
     bot.telegram.setWebhook(`${protocol}://${host}${webhookPath}`));
 
-  // ── Sync the "/" command picker & chat menu button with reality ──
-  // The BotFather-side list was stale from a previous product; keep it
-  // authoritative from code so commands and buttons never drift apart.
+  // Sync command picker
   const MY_COMMANDS = [
     { command: 'start', description: '🚀 Mulai / menu utama' },
     { command: 'quick', description: '📋 Menu cepat' },
-    { command: 'monitor', description: '⚡ Aturan otomatis & alert' },
     { command: 'status', description: '📊 Ringkasan kampanye & ROAS' },
-    { command: 'ads', description: '📣 Kelola akun Meta Ads' },
+    { command: 'ads', description: '📣 Kelola akun iklan multi-platform' },
     { command: 'create', description: '🎯 Buat kampanye (wizard)' },
     { command: 'monitor', description: '⚡ Aturan otomatis & alert' },
-    { command: 'metaapp', description: '🔧 Kredensial Meta App' },
     { command: 'settings', description: '⚙️ Token & koneksi akun' },
     { command: 'pricing', description: '💰 Paket & harga' },
     { command: 'cancel', description: '❌ Batalkan wizard/flow aktif' },
@@ -203,12 +195,11 @@ bot.action(/^ads:disconnect(?::(.+))?$/, async (ctx) => {
     menu_button: { type: 'web_app', text: '📱 AdForge', web_app: { url: webAppUrl } },
   })
     .then(() => log.info('Chat menu button set to Mini App', { url: webAppUrl }))
-    .catch(err => log.warn('Failed to set chat menu button (register the domain in @BotFather to enable)', { error: err.message }));
+    .catch(err => log.warn('Failed to set chat menu button', { error: err.message }));
 
-  // ── Start scheduled jobs ─────────────────────────────────
+  // Start scheduler
   initScheduler(bot, deps);
 
-  log.info('Telegram bot initialized');
   return bot;
 }
 
@@ -221,12 +212,36 @@ export function getBot() {
 
 // ── Default handlers ─────────────────────────────────────────
 
-
-
-function handleTextMessage(_deps) {
+function handleTextMessage(deps) {
   return (ctx) => {
     const text = ctx.message?.text;
-    if (!text || text.startsWith('/')) return;
+    if (!text) return;
+    
+    // Check if a monitor rule value is pending
+    if (ctx.session?.ruleBuilder?.awaitingValue) {
+      return handleMonitorText(deps)(ctx);
+    }
+
+    // Handle unknown /commands
+    if (text.startsWith('/')) {
+      const cmd = text.split(' ')[0].toLowerCase().replace('/', '');
+      if (!KNOWN_COMMANDS.includes(cmd)) {
+        return ctx.reply(
+          `❓ Unknown command: *${cmd}*\n\n` +
+          `Use /menu to see available options, or /help for guidance.`,
+          {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+                [{ text: '❓ Help', callback_data: 'menu:help' }],
+              ],
+            },
+          }
+        );
+      }
+      return;
+    }
 
     // Default: show menu
     ctx.reply('Use /menu to see available options, or /help for guidance.', {

@@ -49,6 +49,7 @@ describe('RuleEvaluator', () => {
       create: vi.fn(),
       getAllEnabled: vi.fn(() => []),
       trigger: vi.fn(),
+      markEvaluated: vi.fn(),
     };
     mockPlatformAccountsRepo = {
       findByUserId: vi.fn(() => []),

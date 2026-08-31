@@ -65,7 +65,7 @@ describe('per-user ads handlers (multi-platform)', () => {
 
   it('handleAds shows connect prompt when no connected platforms', async () => {
     const ctx = makeCtx();
-    await handleAds(makeDeps({ accessToken: null, connected: [] }))(ctx);
+    await handleAds(makeDeps({ accessToken: null }))(ctx);
     const text = ctx._replies[0];
     expect(text).toContain('No ad account connected');
   });
@@ -74,7 +74,7 @@ describe('per-user ads handlers (multi-platform)', () => {
     const ctx = makeCtx();
     await handleAds(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx);
     const text = ctx._replies[1];
-    expect(text).toContain('Your META Ad Accounts');
+    expect(text).toContain('META Ad Accounts');
     expect(text).toContain('Selow ID 1340');
     expect(mockGetAdAccounts).toHaveBeenCalled();
   });
