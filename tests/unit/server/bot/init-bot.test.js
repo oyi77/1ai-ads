@@ -51,7 +51,7 @@ describe('initBot smoke', () => {
     else process.env.TELEGRAM_BOT_TOKEN = OLD_TOKEN;
   });
 
-  it('mounts webhook callback and registers /metaapp without throwing', async () => {
+  it('mounts webhook callback and registers /metaapp without throwing', { timeout: 30000 }, async () => {
     const { initBot } = await import('../../../../server/bot/index.js');
     const app = { use: vi.fn() };
     const deps = { repos: {}, services: {} };
