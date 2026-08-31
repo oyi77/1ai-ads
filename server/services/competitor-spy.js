@@ -43,7 +43,7 @@ export class CompetitorSpyService {
 
     try {
       const adData = await intelligenceService.getCompetitorAds(domain, { platform });
-      return this._buildMonitorSuccess(competitorId, domain, platform, adData);
+      return this._buildMonitorSuccess(competitorId, domain, platform, adData, userId);
     } catch (error) {
       log.error('Failed to monitor competitor with AdIntelligenceService', {
         competitorId, domain, platform, error: error.message,
@@ -52,9 +52,10 @@ export class CompetitorSpyService {
     }
   }
 
-  _buildMonitorSuccess(competitorId, domain, platform, adData) {
+  _buildMonitorSuccess(competitorId, domain, platform, adData, userId) {
     const snapshot = this.competitorsRepo.create({
       url: competitorId, platform: platform || null, adData, snapshotType: 'monitor',
+      userId: userId || null,
     });
 
     log.info('Competitor monitoring completed', {
@@ -142,13 +143,14 @@ export class CompetitorSpyService {
    * @returns {Promise<Object>} Basic monitoring result
    * @private
    */
-  async _performBasicMonitoring(domain, _userId) {
+  async _performBasicMonitoring(domain, userId) {
     const html = await this._fetchHtml(domain);
     const meta = this._extractMeta(html);
     const basicData = this._buildBasicData(domain, meta);
 
     const snapshot = this.competitorsRepo.create({
       url: domain, platform: null, adData: basicData, snapshotType: 'basic',
+      userId: userId || null,
     });
 
     log.info('Basic competitor monitoring completed', { domain, title: basicData.title, snapshotId: snapshot.id });

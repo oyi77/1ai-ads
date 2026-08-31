@@ -19,7 +19,7 @@ export function createCompetitorSpyRouter(competitorsRepo, adIntelligenceService
   // GET /:id - single snapshot
   router.get('/:id', (req, res) => {
     try {
-      const snapshot = competitorsRepo.findById(req.params.id);
+      const snapshot = competitorsRepo.findById(req.params.id, req.user?.id);
       if (!snapshot) return res.status(404).json({ success: false, error: 'Snapshot not found' });
       res.json({ success: true, data: snapshot });
     } catch (e) {
@@ -34,7 +34,7 @@ export function createCompetitorSpyRouter(competitorsRepo, adIntelligenceService
       if (!url) return res.status(400).json({ success: false, error: 'url is required' });
 
       const adData = await adIntelligenceService.getCompetitorAds(url, { platform }).catch(() => ({ ads: [], total: 0 }));
-      const snapshot = competitorsRepo.create({ url, platform: platform || null, adData, snapshotType: 'manual' });
+      const snapshot = competitorsRepo.create({ url, platform: platform || null, adData, snapshotType: 'manual', userId: req.user?.id });
       log.info('Competitor snapshot created', { url, id: snapshot.id });
       res.json({ success: true, data: snapshot });
     } catch (e) {
@@ -51,7 +51,7 @@ export function createCompetitorSpyRouter(competitorsRepo, adIntelligenceService
       for (const snapshot of latest) {
         try {
           const adData = await adIntelligenceService.getCompetitorAds(snapshot.url, { platform: snapshot.platform }).catch(() => ({ ads: [], total: 0 }));
-          const newSnapshot = competitorsRepo.create({ url: snapshot.url, platform: snapshot.platform, adData, snapshotType: 'auto' });
+          const newSnapshot = competitorsRepo.create({ url: snapshot.url, platform: snapshot.platform, adData, snapshotType: 'auto', userId: _req.user?.id });
           results.push(newSnapshot);
         } catch (e) {
           log.error('Failed to refresh competitor', { url: snapshot.url, error: e.message });
@@ -67,7 +67,7 @@ export function createCompetitorSpyRouter(competitorsRepo, adIntelligenceService
   // DELETE /:url - remove all snapshots for a URL
   router.delete('/:url', (req, res) => {
     try {
-      competitorsRepo.removeByUrl(decodeURIComponent(req.params.url));
+      competitorsRepo.removeByUrl(decodeURIComponent(req.params.url), req.user?.id);
       res.json({ success: true });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
@@ -122,7 +122,7 @@ export function createCompetitorSpyRouter(competitorsRepo, adIntelligenceService
     try {
       const { competitorId } = req.params;
       const { platform } = req.body || {};
-      const userId = req.user?.id || 'anonymous';
+      const userId = req.user?.id || null;
 
       const result = await competitorSpyService.monitorCompetitor(competitorId, userId, { platform });
 
