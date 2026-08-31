@@ -2,6 +2,9 @@
  * /status command — Dashboard showing connected ad accounts + per-account reports
  */
 import { MetaAdsAPI } from '../../services/meta/index.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('bot:status');
 
 function escHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -14,15 +17,11 @@ function fmtRp(n) {
 export function handleStatus(deps) {
   return async (ctx) => {
     try {
-      const platformAccountsRepo = deps.repos?.platformAccountsRepo;
-      const campaignsRepo = deps.repos?.campaignsRepo;
-
       // Get connected accounts
-      const connected = platformAccountsRepo?.findByUserId?.(ctx.userId) || [];
+      const connected = deps.repos?.platformAccountsRepo?.findByUserId?.(ctx.userId) || [];
       const activeAccounts = connected.filter(a => a.is_active);
-
       // Get campaigns
-      const result = campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [], total: 0 };
+      const result = deps.repos?.campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [], total: 0 };
       const campaigns = result.data || [];
       const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE').length;
       const totalSpend = campaigns.reduce((s, c) => s + (c.spend || 0), 0);
@@ -66,7 +65,7 @@ export function handleStatus(deps) {
         reply_markup: { inline_keyboard: keyboard },
       });
     } catch (err) {
-      console.error('Dashboard error:', err.message);
+      log.error('dashboard failed', { userId: ctx.userId, error: err?.message });
       await ctx.reply('⚠️ Failed to load dashboard.');
     }
   };
@@ -144,7 +143,7 @@ export function handleDashboardCallback(deps) {
 async function showAccountReport(ctx, deps, accountId) {
   try {
     const platformAccountsRepo = deps.repos?.platformAccountsRepo;
-    const campaignsRepo = deps.repos?.campaignsRepo;
+    const _campaignsRepo = deps.repos?.campaignsRepo;
 
     const account = platformAccountsRepo?.findById?.(accountId);
     if (!account) return ctx.reply('⚠️ Account not found.');
@@ -165,7 +164,7 @@ async function showAccountReport(ctx, deps, accountId) {
           tokenOk = true;
           insights = await api.getAccountInsights(realAccountId, { datePreset: 'last_30d' });
         }
-      } catch (e) {
+      } catch {
         // Token expired or API error → tokenOk stays false
       }
     }

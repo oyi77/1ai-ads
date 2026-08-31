@@ -2,12 +2,14 @@
  * Main Menu & Handlers
  * Multi-platform ads management
  */
+import { createLogger } from '../../lib/logger.js';
 import config from '../../config/index.js';
+
+const log = createLogger('bot:menu');
 import { buildPlatformKeyboard, buildPlatformAccountKeyboard } from '../nav.js';
-import { getUserMetaAccount, makeApi, isExpiredToken, handleAdsReport } from './ads.js';
+import { getUserMetaAccount, makeApi, isExpiredToken, handleAdsReport, handleAds } from './ads.js';
 import { resolveScaleDefault } from '../../lib/scale-defaults.js';
 import { handleMonitor } from './monitor.js';
-import { handleAds } from './ads.js';
 import { handleHelp } from './help.js';
 import { handlePricing } from './pricing.js';
 import { handleSettings } from './settings.js';
@@ -343,7 +345,7 @@ async function handlePlatforms(ctx, deps) {
       }
     );
   } catch (err) {
-    console.error('handlePlatforms failed:', err.message);
+    log.error('handlePlatforms failed', { error: err.message });
     await ctx.reply('⚠️ Failed to load platforms. Try /menu again.', {
       reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
     });
@@ -353,7 +355,7 @@ async function handlePlatforms(ctx, deps) {
 export async function handlePlatformAction(ctx, deps, scope) {
   try {
     // Note: ctx.answerCbQuery() already called by handleMenuButton
-    const [platform, action, ...rest] = scope.split(':');
+    const [platform, action] = scope.split(':');
 
     if (action === 'connect') {
       return ctx.scene.enter('connect-account', { platform });
@@ -393,7 +395,7 @@ export async function handlePlatformAction(ctx, deps, scope) {
       reply_markup: { inline_keyboard: [[{ text: '⬅️ Menu', callback_data: 'quick:menu' }]] },
     });
   } catch (err) {
-    console.error('handlePlatformAction failed:', err.message);
+    log.error('handlePlatformAction failed', { error: err.message });
     await ctx.reply('⚠️ Platform action failed. Try /menu again.', {
       reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
     });

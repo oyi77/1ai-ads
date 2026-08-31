@@ -139,7 +139,7 @@ export function initBot(app, deps) {
   });
   bot.action(/^ads:repacc:(.+):(.+)$/, async (ctx) => {
     await ctx.answerCbQuery();
-    const [, platform, accountId] = ctx.match;
+    const [, _platform, accountId] = ctx.match;
     await handleAdsAccountReport(deps)(ctx, accountId);
   });
   bot.action(/^ads:nop$/, (ctx) => ctx.answerCbQuery());

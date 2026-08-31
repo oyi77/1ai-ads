@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { requireAdmin } from '../middleware/auth.js';
 
 export function createOptimizerRouter(rulesRepo, optimizer) {
   const router = Router();

@@ -126,7 +126,7 @@ export function createMetaContentRouter(videoService, contentScheduler, platform
   });
 
   // GET /api/meta/content/queue/status — Queue summary
-  router.get('/queue/status', (_req, res) => {
+  router.get('/queue/status', (req, res) => {
     try {
       const status = contentScheduler.getQueueStatus(req.user?.id);
       res.json({ success: true, data: status });

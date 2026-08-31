@@ -4,9 +4,7 @@ import { TikTokAdsAPI } from './tiktok/index.js';
 import { createLogger } from '../lib/logger.js';
 import { compare } from '../lib/operators.js';
 import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
-import { resolveScaleDefault } from '../lib/scale-defaults.js';
 import { METRICS } from '../lib/rule-metrics.js';
-import { ConditionGroup } from '../lib/rule-builder.js';
 
 const log = createLogger('rule-evaluator');
 

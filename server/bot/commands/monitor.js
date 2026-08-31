@@ -1,4 +1,8 @@
 import { METRICS, METRIC_CATEGORIES } from '../../lib/rule-metrics.js';
+import { MetaAdsAPI } from '../../services/meta/index.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('monitor');
 import { RULE_TEMPLATES, ConditionGroup, Condition, RuleAction, OPERATORS } from '../../lib/rule-builder.js';
 
 const MONITOR_HEADER =

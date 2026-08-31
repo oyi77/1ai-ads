@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { createLogger } from '../lib/logger.js';
 import { safeParse } from '../lib/safe-parse.js';
 

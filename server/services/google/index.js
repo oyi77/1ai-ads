@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
 import { ConfigurationError } from '../../lib/errors.js';
 import { createLogger } from '../../lib/logger.js';
