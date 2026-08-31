@@ -64,13 +64,26 @@ export class BasePlatformApiClient {
    * @param {object} [extraHeaders] - Additional headers
    * @returns {Promise<object>} Parsed JSON response
    */
+  _authHeaders(extraHeaders = {}) {
+    // Subclasses may override _getToken() to supply a bearer token; when they
+    // do, inject it here so base HTTP helpers never send unauthenticated
+    // requests silently.
+    if (typeof this._getToken === 'function' && !extraHeaders.Authorization && !extraHeaders.authorization) {
+      try {
+        const token = this._getToken();
+        if (token) return { ...extraHeaders, Authorization: `Bearer ${token}` };
+      } catch { /* token resolution failed — fall through to extraHeaders */ }
+    }
+    return extraHeaders;
+  }
+
   async _get(path, params = {}, extraHeaders = {}) {
     const url = new URL(`${this._baseUrl}${path}`);
     for (const [k, v] of Object.entries(params)) {
       url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
     }
     const res = await safeFetch(this.platformName, url.toString(), {
-      headers: { ...extraHeaders },
+      headers: this._authHeaders(extraHeaders),
     });
     return await res.json();
   }
@@ -81,7 +94,7 @@ export class BasePlatformApiClient {
   async _post(path, body = {}, extraHeaders = {}) {
     const res = await safeFetch(this.platformName, `${this._baseUrl}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...extraHeaders },
+      headers: { 'Content-Type': 'application/json', ...this._authHeaders(extraHeaders) },
       body: JSON.stringify(body),
     });
     return await res.json();
@@ -93,7 +106,7 @@ export class BasePlatformApiClient {
   async _delete(path, extraHeaders = {}) {
     const res = await safeFetch(this.platformName, `${this._baseUrl}${path}`, {
       method: 'DELETE',
-      headers: { ...extraHeaders },
+      headers: this._authHeaders(extraHeaders),
     });
     return await res.json();
   }

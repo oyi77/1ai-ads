@@ -93,7 +93,7 @@ export class ABTestService {
   /**
    * Create a new A/B test with variants.
    */
-  async createTest({ name, campaignId, variants, metric, confidence, accountId, adsetId, pageId, linkUrl }) {
+  async createTest({ name, campaignId, variants, metric, confidence, accountId, adsetId, pageId, linkUrl, userId }) {
     log.info('Creating A/B test', { name, variantCount: variants?.length });
 
     const id = uuid();
@@ -102,6 +102,7 @@ export class ABTestService {
     this.repo.createTest({
       id,
       name,
+      userId,
       campaign_id: campaignId || null,
       status: 'draft',
       metric: metric || 'ctr',
@@ -143,8 +144,8 @@ export class ABTestService {
   /**
    * Start a test: optionally creates ad creatives + ads on Meta for variants without ad_id.
    */
-  async startTest(testId) {
-    const test = this.repo.getTest(testId);
+  async startTest(testId, userId) {
+    const test = this.repo.getTest(testId, userId);
     if (!test) throw new Error(`Test ${testId} not found`);
 
     const variants = this.repo.getVariants(testId);
@@ -199,8 +200,8 @@ export class ABTestService {
   /**
    * Stop a test: syncs final metrics, calculates winner using Bayesian test.
    */
-  async stopTest(testId) {
-    const test = this.repo.getTest(testId);
+  async stopTest(testId, userId) {
+    const test = this.repo.getTest(testId, userId);
     if (!test) throw new Error(`Test ${testId} not found`);
 
     // Sync final metrics
@@ -370,8 +371,8 @@ export class ABTestService {
     }));
   }
 
-  getTests({ status, page = 1, limit = 50 } = {}) {
-    const { data, total, page: p, limit: l } = this.repo.getTests({ status, page, limit });
+  getTests({ status, page = 1, limit = 50, userId } = {}) {
+    const { data, total, page: p, limit: l } = this.repo.getTests({ status, page, limit, userId });
     const enriched = data.map(t => {
       const variants = this.repo.getVariants(t.id);
       return this._enrichTest(t, variants);
@@ -386,8 +387,8 @@ export class ABTestService {
     return this._enrichTest(test, variants);
   }
 
-  updateWinner(testId, winnerId) {
-    const test = this.repo.getTest(testId);
+  updateWinner(testId, winnerId, userId) {
+    const test = this.repo.getTest(testId, userId);
     if (!test) throw new Error(`Test ${testId} not found`);
 
     this.repo.updateTest(testId, {

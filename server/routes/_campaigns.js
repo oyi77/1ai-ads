@@ -21,7 +21,7 @@ export function createCampaignsGroupRouter({ repos, services }) {
   router.use('/invoices', requireAuth, createInvoicesRouter(repos.invoicesRepo));
   router.use('/templates', requireAuth, createTemplatesRouter(repos.templatesRepo));
   router.use('/ops/bulk', requireAuth, createBulkRouter(services.bulkOperations, repos));
-  router.use('/batch', requireAuth, createBatchRouter(services.metaApi));
-  router.use('/pixels', requireAuth, createPixelRouter(services.metaApi));
+  router.use('/batch', requireAuth, createBatchRouter(services.metaApi, repos.platformAccountsRepo));
+  router.use('/pixels', requireAuth, createPixelRouter(services.metaApi, repos.platformAccountsRepo));
   return router;
 }

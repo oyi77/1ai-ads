@@ -160,7 +160,7 @@ export class AlertingService {
         if (adminChatId) {
           this.bot.telegram.sendMessage(adminChatId, alert.message, {
             parse_mode: 'HTML',
-          });
+          }).catch(err => log.error('Failed to deliver alert message', { error: err.message }));
         }
 
         // Also log for audit

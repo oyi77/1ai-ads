@@ -64,7 +64,7 @@ describe('monitor — enhanced rule system', () => {
   it('callback acknowledges sync', async () => {
     const ctx = makeCtx('u1', 'sync');
     await handleMonitorCallback(makeDeps())(ctx);
-    expect(ctx._replies[0].msg).toContain('Campaign sync triggered');
+    expect(ctx._replies[0].msg).toContain('Campaign sync selesai');
   });
 
   it('template:apply applies a template', async () => {

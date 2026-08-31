@@ -103,7 +103,9 @@ export class RealtimeService {
     try {
       const result = this.campaignsRepo.findAll ? this.campaignsRepo.findAll({}) : { data: [] };
       const campaigns = result.data || [];
-      const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE' || c.status === 'active');
+      // Only Meta has a real-time API path here; skip other platform rows so we
+      // don't fire Meta requests against google/tiktok campaign ids.
+      const activeCampaigns = campaigns.filter(c => (c.platform === 'meta' || !c.platform) && (c.status === 'ACTIVE' || c.status === 'active'));
 
       for (const campaign of activeCampaigns) {
         try {

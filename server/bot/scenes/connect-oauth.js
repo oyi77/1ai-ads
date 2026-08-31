@@ -51,13 +51,20 @@ export const connectOAuthScene = new Scenes.WizardScene(
     const platform = ctx.wizard.state.platform;
     await ctx.reply(
       `Please click the button above to connect ${PLATFORM_LABELS[platform]}. ` +
-      `If you already completed the flow, the connection should appear in /status shortly.`,
+      `If you already completed the flow, the connection should appear in /status shortly. ` +
+      `Type /done when you finish in the browser to leave this flow.`,
       { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
-    // Stay in this step
+    // Stay in this step, but never trap the user: any /command (handled by
+    // the scene-clear middleware) already exits; /done explicitly leaves.
     return;
   }
 );
+
+connectOAuthScene.command('done', async (ctx) => {
+  await ctx.reply('✅ Selesai. Cek /status untuk akun yang baru terhubung.');
+  return ctx.scene.leave();
+});
 
 connectOAuthScene.action(/^connect:cancel$/, async (ctx) => {
   await ctx.answerCbQuery();

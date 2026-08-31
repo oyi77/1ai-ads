@@ -190,7 +190,7 @@ async function showAccountReport(ctx, deps, accountId) {
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
-          [{ text: '📈 Full Report', callback_data: `ads:report:${account.platform}:${accountId}` }],
+          [{ text: '📈 Full Report', callback_data: `ads:report:${account.platform}:${realAccountId || accountId}` }],
           [{ text: '📋 Menu', callback_data: 'quick:menu' }],
         ],
       },

@@ -9,6 +9,7 @@
  */
 
 import { createLogger } from '../../lib/logger.js';
+import { getBot } from '../index.js';
 
 const log = createLogger('bot:error-handler');
 
@@ -84,5 +85,20 @@ function sendAdminAlert(userId, error, domain) {
   if (now - lastAlert < 5 * 60 * 1000) return; // Rate limit: 1 per 5 mins
 
   adminAlerts.set(userId, now);
+  try {
+    const bot = getBot();
+    if (bot) {
+      const errText = String(error?.message || error || '');
+      const esc = (str) => String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      bot.telegram.sendMessage(
+        process.env.ADMIN_CHAT_ID || userId,
+        `⚠️ Bot error from user ${esc(userId)}
+
+Domain: ${esc(domain)}
+Error: ${esc(errText)}`,
+        { parse_mode: 'HTML' }
+      ).catch(() => {});
+    }
+  } catch { /* best effort */ }
   log.warn('Bot error (admin alert)', { userId, error, domain });
 }

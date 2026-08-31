@@ -350,7 +350,7 @@ async function handlePlatforms(ctx, deps) {
   }
 }
 
-async function handlePlatformAction(ctx, deps, scope) {
+export async function handlePlatformAction(ctx, deps, scope) {
   try {
     // Note: ctx.answerCbQuery() already called by handleMenuButton
     const [platform, action, ...rest] = scope.split(':');

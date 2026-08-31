@@ -26,7 +26,7 @@ export class PixelService {
   async sendCAPIEvent(pixelId, { event_name, event_time, user_data, custom_data, action_source = 'website' }) {
     log.info('sendCAPIEvent', { pixelId, event_name });
     const accessToken = this.meta._getToken();
-    const url = `${this.meta._base}/${pixelId}/events?access_token=${accessToken}`;
+    const url = `${this.meta._baseUrl}/${pixelId}/events?access_token=${accessToken}`;
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

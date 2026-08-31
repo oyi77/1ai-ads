@@ -147,8 +147,13 @@ export const manageMetaAppScene = new Scenes.WizardScene(
 
 manageMetaAppScene.action(/^metaapp:cancel$/, handleSceneCancel('❌ Konfigurasi Meta App dibatalkan.'));
 
-// Allow /skip on the final Threads step so the user can finish without Threads.
+// Allow /skip ONLY on the final persist step (cursor 5) so the user can
+// finish without Threads. Forwarding /skip into earlier credential steps
+// would store the literal string '/skip' as the label/token/secret.
 manageMetaAppScene.command('skip', async (ctx) => {
+  if (ctx.wizard.cursor < 4) {
+    return ctx.reply('⚠️ /skip hanya tersedia di langkah Threads (opsional). Kirim nilai yang diminta.');
+  }
   ctx.message = { ...(ctx.message || {}), text: '/skip' };
   return ctx.wizard.steps[ctx.wizard.cursor](ctx);
 });

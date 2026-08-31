@@ -1,9 +1,23 @@
 import { Router } from 'express';
 import { BatchService } from '../services/batch-service.js';
+import { MetaAdsAPI } from '../services/meta/index.js';
+import { resolveUserPlatformToken } from '../lib/resolve-user-platform.js';
+import { ValidationError } from '../lib/errors.js';
 
-export function createBatchRouter(metaApi) {
+export function createBatchRouter(metaApi, platformAccountsRepo = null) {
   const router = Router();
-  const svc = new BatchService(metaApi);
+
+  // Per-request Meta client bound to the REQUESTING user's token — never the
+  // shared system token. Batch operations act on the caller's own entities.
+  function clientFor(req) {
+    const token = platformAccountsRepo
+      ? resolveUserPlatformToken('meta', req, platformAccountsRepo, null)
+      : null;
+    if (!token) {
+      throw new ValidationError('Meta account not connected. Please connect your account in Settings.');
+    }
+    return MetaAdsAPI.withToken(token);
+  }
 
   router.get('/', (_req, res) => {
     res.json({ service: 'batch', endpoints: ['POST /', 'POST /pause', 'POST /activate', 'POST /update-budget'] });
@@ -13,9 +27,10 @@ export function createBatchRouter(metaApi) {
     try {
       const { requests } = req.body;
       if (!requests?.length) return res.status(400).json({ error: 'requests array required' });
+      const svc = new BatchService(clientFor(req));
       res.json(await svc.batchRequest(requests));
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err instanceof ValidationError ? 400 : 500).json({ error: err.message });
     }
   });
 
@@ -23,9 +38,10 @@ export function createBatchRouter(metaApi) {
     try {
       const { ids, entity_type } = req.body;
       if (!ids?.length) return res.status(400).json({ error: 'ids array required' });
+      const svc = new BatchService(clientFor(req));
       res.json(await svc.batchPause(ids, entity_type));
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err instanceof ValidationError ? 400 : 500).json({ error: err.message });
     }
   });
 
@@ -33,9 +49,10 @@ export function createBatchRouter(metaApi) {
     try {
       const { ids, entity_type } = req.body;
       if (!ids?.length) return res.status(400).json({ error: 'ids array required' });
+      const svc = new BatchService(clientFor(req));
       res.json(await svc.batchActivate(ids, entity_type));
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err instanceof ValidationError ? 400 : 500).json({ error: err.message });
     }
   });
 
@@ -43,9 +60,10 @@ export function createBatchRouter(metaApi) {
     try {
       const { updates } = req.body;
       if (!updates?.length) return res.status(400).json({ error: 'updates array required' });
+      const svc = new BatchService(clientFor(req));
       res.json(await svc.batchUpdateBudget(updates));
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err instanceof ValidationError ? 400 : 500).json({ error: err.message });
     }
   });
 

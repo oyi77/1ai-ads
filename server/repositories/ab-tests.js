@@ -8,14 +8,15 @@ export class ABTestsRepository {
   createTest(data) {
     const id = `abt_${uuid()}`;
     this.db.prepare(`
-      INSERT INTO ab_tests (id, name, campaign_id, status, metric, confidence, winner_id, config)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO ab_tests (id, name, campaign_id, user_id, status, metric, confidence, winner_id, config)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       data.name,
       data.campaignId || null,
       data.status || 'draft',
       data.metric || 'ctr',
+      data.userId || data.user_id || null,
       data.confidence ?? 0.95,
       data.winnerId || null,
       typeof data.config === 'string' ? data.config : JSON.stringify(data.config || {})
@@ -45,17 +46,20 @@ export class ABTestsRepository {
     return id;
   }
 
-  getTest(id) {
-    const row = this.db.prepare('SELECT * FROM ab_tests WHERE id = ?').get(id);
+  getTest(id, userId) {
+    const row = userId
+      ? this.db.prepare('SELECT * FROM ab_tests WHERE id = ? AND user_id = ?').get(id, userId)
+      : this.db.prepare('SELECT * FROM ab_tests WHERE id = ?').get(id);
     if (!row) return null;
     const variants = this.getVariants(id);
     return { ...row, variants };
   }
 
-  getTests({ status, page = 1, limit = 50 } = {}) {
+  getTests({ status, userId, page = 1, limit = 50 } = {}) {
     const where = [];
     const params = [];
     if (status) { where.push('status = ?'); params.push(status); }
+    if (userId) { where.push('user_id = ?'); params.push(userId); }
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const total = this.db.prepare(`SELECT COUNT(*) as count FROM ab_tests ${whereClause}`).get(...params).count;
     const offset = (page - 1) * limit;
@@ -69,7 +73,7 @@ export class ABTestsRepository {
     return this.db.prepare('SELECT * FROM ab_test_variants WHERE test_id = ? ORDER BY variant_index').all(testId);
   }
 
-  updateTest(id, updates) {
+  updateTest(id, updates, userId) {
     const fields = [];
     const params = [];
     const updatable = ['name', 'campaign_id', 'status', 'metric', 'confidence', 'winner_id', 'config', 'started_at', 'stopped_at'];
@@ -83,12 +87,17 @@ export class ABTestsRepository {
       }
     }
 
-    if (fields.length === 0) return this.getTest(id);
+    if (fields.length === 0) return this.getTest(id, userId);
 
     fields.push("updated_at = datetime('now')");
-    params.push(id);
-    this.db.prepare(`UPDATE ab_tests SET ${fields.join(', ')} WHERE id = ?`).run(...params);
-    return this.getTest(id);
+    if (userId) {
+      params.push(id, userId);
+      this.db.prepare(`UPDATE ab_tests SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`).run(...params);
+    } else {
+      params.push(id);
+      this.db.prepare(`UPDATE ab_tests SET ${fields.join(', ')} WHERE id = ?`).run(...params);
+    }
+    return this.getTest(id, userId);
   }
 
   updateVariant(variantId, updates) {
@@ -110,8 +119,10 @@ export class ABTestsRepository {
     return this.db.prepare('SELECT * FROM ab_test_variants WHERE id = ?').get(variantId);
   }
 
-  deleteTest(id) {
-    const result = this.db.prepare('DELETE FROM ab_tests WHERE id = ?').run(id);
+  deleteTest(id, userId) {
+    const result = userId
+      ? this.db.prepare('DELETE FROM ab_tests WHERE id = ? AND user_id = ?').run(id, userId)
+      : this.db.prepare('DELETE FROM ab_tests WHERE id = ?').run(id);
     return result.changes > 0;
   }
 }

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 export function createOptimizerRouter(rulesRepo, optimizer) {
   const router = Router();
@@ -73,7 +74,7 @@ export function createOptimizerRouter(rulesRepo, optimizer) {
   // Manually trigger evaluation
 
   // POST /run — alias for /evaluate
-  router.post('/run', async (req, res) => {
+  router.post('/run', requireAdmin, async (req, res) => {
     try {
       const result = await optimizer.evaluate();
       res.json({ success: true, data: result });
@@ -81,7 +82,7 @@ export function createOptimizerRouter(rulesRepo, optimizer) {
       res.status(500).json({ success: false, error: err.message });
     }
   });
-  router.post('/evaluate', async (req, res) => {
+  router.post('/evaluate', requireAdmin, async (req, res) => {
     try {
       const result = await optimizer.evaluate();
       res.json({ success: true, data: result });

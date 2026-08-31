@@ -64,9 +64,11 @@ export function createAdsRouter(adsRepo, adGenerator) {
       return res.status(400).json({ success: false, error: 'sessionId and finalData are required' });
     }
 
+    const { userId: _clientUserId, ...cleanFinal } = finalData || {};
     const adData = {
-      ...finalData,
-      status: finalData.status || 'draft',
+      ...cleanFinal,
+      status: finalData?.status || 'draft',
+      userId: req.user?.id,
       created_at: new Date().toISOString()
     };
     const id = adsRepo.create(adData);
@@ -76,7 +78,7 @@ export function createAdsRouter(adsRepo, adGenerator) {
   router.post('/preview', (req, res) => {
     try {
       const { id } = req.body;
-      const ad = adsRepo.findById(id);
+      const ad = adsRepo.findById(id, req.user?.id);
       if (!ad) return res.status(404).json({ success: false, error: 'Ad not found' });
       const html = generateAdPreview(ad);
       res.setHeader('Content-Type', 'text/html');

@@ -276,7 +276,35 @@ Example: for CTR > 5, send \`5\``,
       const { text, keyboard } = showRulesForAccount(deps, ctx.userId, accountId);
       return ctx.reply(text, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } });
     }
-    if (action === 'sync') return ctx.reply('🔄 Campaign sync triggered. Check /status for results.');
+    if (action === 'sync') {
+      let synced = 0;
+      let failed = 0;
+      const accounts = (deps.repos?.platformAccountsRepo?.findByUserId?.(ctx.userId) || [])
+        .filter(a => a.platform === 'meta' && a.credentials?.access_token);
+      for (const acct of accounts) {
+        try {
+          const adAccountId = acct.credentials?.ad_account_id;
+          if (!adAccountId) { failed++; continue; }
+          const api = MetaAdsAPI.withToken(acct.credentials.access_token);
+          const campaigns = await api.getCampaigns(adAccountId, { limit: 50 });
+          for (const c of campaigns) {
+            deps.repos?.campaignsRepo?.upsert?.({
+              platform: 'meta',
+              campaign_id: c.id,
+              name: c.name,
+              status: c.status,
+              budget: (c.dailyBudget || 0) / 100,
+              userId: ctx.userId,
+            });
+          }
+          synced += campaigns.length;
+        } catch (e) {
+          failed++;
+          log.warn('Sync failed for account', { accountId: acct.id, error: e.message });
+        }
+      }
+      return ctx.reply(`🔄 Campaign sync selesai. ${synced} campaign dari Meta${failed ? `, ${failed} gagal.` : '.'}`);
+    }
     return ctx.reply('Unknown rule action.');
   };
 }

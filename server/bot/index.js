@@ -10,7 +10,7 @@ import { Telegraf, Scenes } from 'telegraf';
 import { session } from 'telegraf/session';
 import { createLogger } from '../lib/logger.js';
 import { handleStart } from './commands/start.js';
-import { handleMenu, handleMenuButton } from './commands/menu.js';
+import { handleMenu, handleMenuButton, handlePlatformAction } from './commands/menu.js';
 import { handleStatus, handleDashboardCallback } from './commands/status.js';
 import { handleHelp } from './commands/help.js';
 import { handleSettings, handleSettingsCallback } from './commands/settings.js';
@@ -65,7 +65,7 @@ export function initBot(app, deps) {
   // /skip is reserved for wizard "skip this optional field" steps.
   bot.use(async (ctx, next) => {
     const text = ctx.message?.text || '';
-    if (ctx.session?.__scenes && text.startsWith('/') && text !== '/skip') {
+    if (ctx.session?.__scenes && text.startsWith('/') && text !== '/skip' && text !== '/done') {
       ctx.session.__scenes = {};
     }
     return next();
@@ -111,6 +111,15 @@ export function initBot(app, deps) {
     await handleAdsPlatform(deps)(ctx, ctx.match[1]);
   });
   bot.action(/^menu:(.+)$/, handleMenuButton(deps));
+  // Platform keyboard callbacks (nav.js buildPlatformKeyboard / buildPlatformAccountKeyboard)
+  bot.action(/^platform:account:(.+):(.+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    await handlePlatformAction(ctx, deps, `platform:account:${ctx.match[1]}:${ctx.match[2]}`);
+  });
+  bot.action(/^platform:(.+):(.+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    await handlePlatformAction(ctx, deps, ctx.match[0]);
+  });
   bot.action(/^settings:(.+)$/, handleSettingsCallback(deps));
   bot.action(/^ads:select:(.+):(.+)$/, async (ctx) => {
     await ctx.answerCbQuery();
