@@ -111,7 +111,8 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
   router.post('/facebook/deauthorize', async (req, res) => {
     const hostname = req.get('host');
     const isLocal = hostname && (hostname.includes('127.0.0.1') || hostname.includes('localhost'));
-    const base = isLocal || !hostname ? 'https://adforge.aitradepulse.com' : `${req.protocol}://${hostname}`;
+    // Always HTTPS — Meta requires an https data-deletion callback URL.
+    const base = isLocal || !hostname ? 'https://adforge.aitradepulse.com' : `https://${hostname}`;
     res.json({ url: `${base}/data-deletion-status`, confirmation_code: `del_${Date.now()}` });
   });
 
@@ -123,7 +124,7 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
   router.post('/google/deauthorize', async (req, res) => {
     const hostname = req.get('host');
     const isLocal = hostname && (hostname.includes('127.0.0.1') || hostname.includes('localhost'));
-    const base = isLocal || !hostname ? 'https://adforge.aitradepulse.com' : `${req.protocol}://${hostname}`;
+    const base = isLocal || !hostname ? 'https://adforge.aitradepulse.com' : `https://${hostname}`;
     // Google sends signed_request (JWT) identifying the user; extract user_id
     const userId = req.body?.user_id || req.user?.id;
     if (settingsRepo && userId) {

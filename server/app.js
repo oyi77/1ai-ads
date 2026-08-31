@@ -28,6 +28,63 @@ if (process.env.SENTRY_DSN) {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Server-rendered legal pages (Meta/Google review crawlers need real text).
+function legalPage(page) {
+  const base = 'https://adforge.aitradepulse.com';
+  const shell = (title, body) => `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${title} — AdForge</title><style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.6;color:#1f2328;max-width:760px;margin:0 auto;padding:32px 20px;}h1{font-size:1.6em;border-bottom:2px solid #00a884;padding-bottom:8px;}h2{font-size:1.2em;margin-top:24px;color:#00a884;}p,li{margin:8px 0;}a{color:#00a884;}small{color:#656d76;}footer{margin-top:40px;border-top:1px solid #d8dee4;padding-top:12px;}</style></head><body>${body}</body></html>`;
+
+  if (page === 'privacy') {
+    return shell('Privacy Policy', `
+      <h1>Privacy Policy</h1>
+      <small>Last updated: 2026-08-31</small>
+      <p>AdForge ("Adforge", "we") is a multi-platform ad management tool that helps businesses manage their Meta (Facebook/Instagram) advertising from a Telegram bot and web dashboard. This policy explains what data we access, how we use it, and your rights.</p>
+      <h2>1. Data We Collect</h2>
+      <p>We access, through your explicit OAuth authorization, the following data from your Meta account:</p>
+      <ul><li>Ad accounts you connect and their campaigns, ad sets, and ads</li><li>Campaign performance data (spend, impressions, clicks, conversions, ROAS)</li><li>Facebook Pages you manage (for creating ad creatives)</li><li>Your Telegram user ID (used to identify you and deliver bot messages)</li></ul>
+      <h2>2. How We Use Data</h2>
+      <p>Your data is used solely to provide the features you request:</p>
+      <ul><li>Displaying dashboards and performance reports</li><li>Executing your commands (create, pause, resume, scale campaigns)</li><li>Running automation rules you configure</li><li>Sending notifications to your Telegram account</li></ul>
+      <h2>3. Data Storage &amp; Security</h2>
+      <ul><li>Access tokens are encrypted at rest (AES-256) and never exposed in plain text</li><li>All data is stored per-user and scoped so no user can access another user's data</li><li>We do not sell, rent, or share your data with third parties</li></ul>
+      <h2>4. Data Deletion</h2>
+      <p>You can delete your account and all associated data at any time. To request deletion, contact us via Telegram (<a href="https://t.me/vilonaaiadsbot">@vilonaaiadsbot</a>) or email, and we will remove your data within 30 days. See our <a href="${base}/data-deletion-status">Data Deletion Status</a> page for the deletion callback.</p>
+      <h2>5. Your Rights</h2>
+      <p>You may request access, correction, or deletion of your personal data at any time. You may also revoke AdForge's access to your Meta account at any time via your Facebook Settings → Apps and websites.</p>
+      <h2>6. Contact</h2>
+      <p>Questions or requests: <a href="mailto:privacy@berkahkarya.org">privacy@berkahkarya.org</a> or Telegram <a href="https://t.me/vilonaaiadsbot">@vilonaaiadsbot</a>.</p>
+    `);
+  }
+
+  if (page === 'terms') {
+    return shell('Terms of Service', `
+      <h1>Terms of Service</h1>
+      <small>Last updated: 2026-08-31</small>
+      <p>By using AdForge, you agree to these terms.</p>
+      <h2>1. Service</h2>
+      <p>AdForge provides ad management via a Telegram bot and web dashboard. You must own or have authorization to manage the ad accounts and Pages you connect.</p>
+      <h2>2. Your Responsibility</h2>
+      <p>You are responsible for the content of your ads and for complying with Meta's Advertising Policies and applicable law. AdForge is a management tool and does not guarantee ad performance.</p>
+      <h2>3. No Warranty</h2>
+      <p>The service is provided "as is" without warranty of any kind. AdForge is not liable for ad spend, lost revenue, or any indirect damages.</p>
+      <h2>4. Termination</h2>
+      <p>You may stop using the service at any time. We may suspend accounts that violate these terms.</p>
+      <h2>5. Contact</h2>
+      <p><a href="mailto:privacy@berkahkarya.org">privacy@berkahkarya.org</a> / Telegram <a href="https://t.me/vilonaaiadsbot">@vilonaaiadsbot</a></p>
+    `);
+  }
+
+  // data-deletion-status
+  return shell('Data Deletion Status', `
+    <h1>Data Deletion Request</h1>
+    <p>AdForge supports user data deletion in accordance with Meta and Google platform policies.</p>
+    <h2>How to Request Deletion</h2>
+    <ol><li>Send us a message via Telegram (<a href="https://t.me/vilonaaiadsbot">@vilonaaiadsbot</a>) or email <a href="mailto:privacy@berkahkarya.org">privacy@berkahkarya.org</a>.</li><li>Include your account identifier (Telegram username or connected email).</li><li>We will delete your account and all associated data within 30 days.</li></ol>
+    <h2>Confirmation</h2>
+    <p>Once processed, you will receive a confirmation. This page is also the callback target for platform-initiated data deletion requests.</p>
+    <p><a href="${base}/privacy">Privacy Policy</a> · <a href="${base}/terms">Terms of Service</a></p>
+  `);
+}
+
 export function createApp(params) {
   const log = createLogger('app');
   const db = params && typeof params === 'object' && params.db ? params.db : params;
@@ -191,6 +248,16 @@ export function createApp(params) {
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // Server-rendered legal pages — Meta/Google review crawlers must see real
+  // policy text (the SPA shell alone fails review), and /data-deletion-status
+  // is the callback target for both facebook and google deauthorize endpoints.
+  app.get(['/privacy', '/terms', '/data-deletion-status'], (req, res) => {
+    const page = req.path.replace('/', '');
+    const html = legalPage(page);
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
   });
 
 
