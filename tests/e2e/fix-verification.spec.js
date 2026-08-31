@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE = 'http://localhost:5173';
+const BASE = 'http://localhost:5000';
 
 async function loginAs(page, username = 'admin', password = 'admin123') {
   await page.goto(`${BASE}/login`);

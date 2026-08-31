@@ -3,11 +3,11 @@ module.exports = {
     name: '1ai-ads',
     script: 'server.js',
     cwd: __dirname,
+    // server.js loads .env via dotenv.config({override:true}) — no need to
+    // forward individual vars. Keeping only NODE_ENV so PM2 sets it before
+    // the app starts (dotenv does not set NODE_ENV).
     env: {
       NODE_ENV: 'production',
-      PORT: 5000,
-      JWT_SECRET: process.env.JWT_SECRET,
-      FB_SYSTEM_TOKEN: process.env.FB_SYSTEM_TOKEN
     },
     instances: 1,
     exec_mode: 'fork',
