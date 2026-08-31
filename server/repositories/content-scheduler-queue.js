@@ -8,6 +8,7 @@
 const CONTENT_QUEUE_SCHEMA = `
   CREATE TABLE IF NOT EXISTS content_queue (
     id TEXT PRIMARY KEY,
+    user_id TEXT,
     page_id TEXT,
     platform TEXT,
     file_path TEXT,
@@ -41,8 +42,8 @@ export class ContentSchedulerQueueRepository {
 
   insert(item) {
     const stmt = this.db.prepare(`
-      INSERT INTO content_queue (id, page_id, platform, file_path, caption, hashtags, hook, cta, status, scheduled_at, created_at, category, style, product_desc)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO content_queue (id, user_id, page_id, platform, file_path, caption, hashtags, hook, cta, status, scheduled_at, created_at, category, style, product_desc)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       item.id, item.pageId, item.platform, item.filePath,
@@ -54,7 +55,12 @@ export class ContentSchedulerQueueRepository {
     return item.id;
   }
 
-  findPendingByPage(pageId, now) {
+  findPendingByPage(pageId, now, userId) {
+    if (userId) {
+      return this.db.prepare(
+        'SELECT * FROM content_queue WHERE user_id = ? AND page_id = ? AND status = ? AND scheduled_at <= ? ORDER BY created_at ASC'
+      ).all(userId, pageId, 'pending', now);
+    }
     return this.db.prepare(
       'SELECT * FROM content_queue WHERE page_id = ? AND status = ? AND scheduled_at <= ? ORDER BY created_at ASC'
     ).all(pageId, 'pending', now);
@@ -95,18 +101,32 @@ export class ContentSchedulerQueueRepository {
     return { total, pending, generating, uploading, completed, failed };
   }
 
-  findByStatus(status, limit) {
+  findByStatus(status, limit, userId) {
+    if (userId && status) {
+      return this.db.prepare('SELECT * FROM content_queue WHERE user_id = ? AND status = ? ORDER BY created_at DESC LIMIT ?').all(userId, status, limit);
+    }
+    if (userId) {
+      return this.db.prepare('SELECT * FROM content_queue WHERE user_id = ? ORDER BY created_at DESC LIMIT ?').all(userId, limit);
+    }
     if (status) {
       return this.db.prepare('SELECT * FROM content_queue WHERE status = ? ORDER BY created_at DESC LIMIT ?').all(status, limit);
     }
     return this.db.prepare('SELECT * FROM content_queue ORDER BY created_at DESC LIMIT ?').all(limit);
   }
 
-  findById(id) {
+  findById(id, userId) {
+    if (userId) {
+      return this.db.prepare('SELECT * FROM content_queue WHERE id = ? AND user_id = ?').get(id, userId);
+    }
     return this.db.prepare('SELECT * FROM content_queue WHERE id = ?').get(id);
   }
 
-  cancelById(id, updatedAt) {
+  cancelById(id, updatedAt, userId) {
+    if (userId) {
+      this.db.prepare('UPDATE content_queue SET status = ?, updated_at = ? WHERE id = ? AND user_id = ?')
+        .run('cancelled', updatedAt, id, userId);
+      return;
+    }
     this.db.prepare('UPDATE content_queue SET status = ?, updated_at = ? WHERE id = ?')
       .run('cancelled', updatedAt, id);
   }

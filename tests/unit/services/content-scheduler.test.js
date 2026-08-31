@@ -166,7 +166,7 @@ describe('ContentScheduler', () => {
       mockQueueRepo.findById.mockReturnValue({ id: 'q1', status: 'pending' });
       const result = scheduler.cancelSchedule('q1');
       expect(result.success).toBe(true);
-      expect(mockQueueRepo.cancelById).toHaveBeenCalledWith('q1', expect.any(Number));
+      expect(mockQueueRepo.cancelById).toHaveBeenCalledWith('q1', expect.any(Number), undefined);
     });
 
     it('should fail if item not found', () => {
@@ -190,7 +190,7 @@ describe('ContentScheduler', () => {
 
     it('should return queue items by status', () => {
       scheduler.getQueue('pending', 10);
-      expect(mockQueueRepo.findByStatus).toHaveBeenCalledWith('pending', 10);
+      expect(mockQueueRepo.findByStatus).toHaveBeenCalledWith('pending', 10, undefined);
     });
   });
 

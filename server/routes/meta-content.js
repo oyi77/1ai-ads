@@ -8,9 +8,19 @@
  */
 
 import { Router } from 'express';
+import { resolveUserPlatformToken } from '../lib/resolve-user-platform.js';
+import { ValidationError } from '../lib/errors.js';
 
-export function createMetaContentRouter(videoService, contentScheduler) {
+export function createMetaContentRouter(videoService, contentScheduler, platformAccountsRepo = null) {
   const router = Router();
+
+  function userMetaToken(req) {
+    const token = platformAccountsRepo
+      ? resolveUserPlatformToken('meta', req, platformAccountsRepo, null)
+      : null;
+    if (!token) throw new ValidationError('Meta account not connected. Please connect your account in Settings.');
+    return token;
+  }
 
   // ─── Video Upload ─────────────────────────────────────────────────
 
@@ -24,6 +34,7 @@ export function createMetaContentRouter(videoService, contentScheduler) {
       }
 
       let result;
+      const accessToken = userMetaToken(req);
       if (videoUrl) {
         // Upload from URL
         result = await videoService.uploadVideoFromUrl({
@@ -32,6 +43,7 @@ export function createMetaContentRouter(videoService, contentScheduler) {
           title: title || '',
           description: description || '',
           published: published !== false,
+          accessToken,
         });
       } else {
         return res.status(400).json({
@@ -72,6 +84,7 @@ export function createMetaContentRouter(videoService, contentScheduler) {
         category,
         style,
         productDesc,
+        userId: req.user?.id,
       });
 
       if (result.success) {
@@ -105,7 +118,7 @@ export function createMetaContentRouter(videoService, contentScheduler) {
   router.get('/queue', (req, res) => {
     try {
       const { status, limit = 50 } = req.query;
-      const items = contentScheduler.getQueue(status || null, parseInt(limit, 10));
+      const items = contentScheduler.getQueue(status || null, parseInt(limit, 10), req.user?.id);
       res.json({ success: true, data: items });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -125,7 +138,7 @@ export function createMetaContentRouter(videoService, contentScheduler) {
   // DELETE /api/meta/content/queue/:id — Cancel a pending item
   router.delete('/queue/:id', (req, res) => {
     try {
-      const result = contentScheduler.cancelSchedule(req.params.id);
+      const result = contentScheduler.cancelSchedule(req.params.id, req.user?.id);
       if (result.success) {
         res.json({ success: true, data: { cancelled: true } });
       } else {

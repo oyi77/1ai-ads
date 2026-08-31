@@ -83,7 +83,7 @@ export function createPlatformsGroupRouter({ repos, services, publicRateLimit })
   }
 
   // ── Meta extensions (content, AI, system user) ─────────────────
-  router.use('/meta/content', requireAuth, createMetaContentRouter(services.videoService, services.contentScheduler));
+  router.use('/meta/content', requireAuth, createMetaContentRouter(services.videoService, services.contentScheduler, repos.platformAccountsRepo));
   router.use('/meta-ai', requireAuth, createMetaAiRouter(repos.settingsRepo));
   router.use('/meta-system', createFacebookSystemUserRouter(services.facebookSystemUserService, { userMetaAppsRepo: repos.userMetaAppsRepo }));
 

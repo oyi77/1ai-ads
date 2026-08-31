@@ -87,7 +87,7 @@ export class ContentScheduler {
   /**
    * Add content to the posting queue
    */
-  queueContent({ pageId, filePath, caption, hashtags, hook, cta, scheduleAt, category, style, productDesc }) {
+  queueContent({ pageId, filePath, caption, hashtags, hook, cta, scheduleAt, category, style, productDesc, userId }) {
     if (!pageId || !filePath) {
       return { success: false, queueId: null, error: 'pageId and filePath are required' };
     }
@@ -97,7 +97,7 @@ export class ContentScheduler {
     const needsCaption = !caption && (category || productDesc);
 
     this.queueRepo.insert({
-      id, pageId, platform: 'facebook', filePath,
+      id, userId, pageId, platform: 'facebook', filePath,
       caption: caption || '',
       hashtags: hashtags || [],
       hook: hook || '',
@@ -265,17 +265,17 @@ Respond ONLY JSON:
   }
 
   /** Get items by status */
-  getQueue(status, limit = 50) {
-    return this.queueRepo.findByStatus(status, limit);
+  getQueue(status, limit = 50, userId) {
+    return this.queueRepo.findByStatus(status, limit, userId);
   }
 
   /** Cancel a pending queue item */
-  cancelSchedule(queueId) {
-    const item = this.queueRepo.findById(queueId);
+  cancelSchedule(queueId, userId) {
+    const item = this.queueRepo.findById(queueId, userId);
     if (!item) return { success: false, error: 'Queue item not found' };
     if (item.status !== 'pending') return { success: false, error: `Cannot cancel item with status: ${item.status}` };
 
-    this.queueRepo.cancelById(queueId, Math.floor(Date.now() / 1000));
+    this.queueRepo.cancelById(queueId, Math.floor(Date.now() / 1000), userId);
     return { success: true };
   }
 
