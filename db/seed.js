@@ -382,19 +382,27 @@ export function seedTemplates(db, adminUserId) {
 }
 
 export function seedUsers(db) {
-  const passwordHash = hashPassword(process.env.ADMIN_PASSWORD || 'admin123');
+  // Fail closed in production: never seed with the well-known 'admin123' default.
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (process.env.NODE_ENV === 'production' && !adminPassword) {
+    throw new Error('FATAL: ADMIN_PASSWORD is required in production to seed the admin user. Set it in .env before starting.');
+  }
+  const adminHash = hashPassword(adminPassword || 'admin123');
+  // Demo user gets its own distinct credential so a shared hash is never reused
+  // across accounts (and admin/demo can never log in as each other).
+  const demoHash = hashPassword(process.env.DEMO_PASSWORD || 'demo12345');
 
   // Create admin user if not exists — stable ID for dedup
   db.prepare(`
     INSERT OR IGNORE INTO users (id, username, email, password_hash, role, plan, confirmed, created_at)
     VALUES (?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
-  `).run(USERS.admin.id, USERS.admin.username, USERS.admin.email, passwordHash, USERS.admin.role, USERS.admin.plan);
+  `).run(USERS.admin.id, USERS.admin.username, USERS.admin.email, adminHash, USERS.admin.role, USERS.admin.plan);
 
   // Create demo user
   db.prepare(`
     INSERT OR IGNORE INTO users (id, username, email, password_hash, role, plan, confirmed, created_at)
     VALUES (?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
-  `).run(USERS.demo.id, USERS.demo.username, USERS.demo.email, passwordHash, USERS.demo.role, USERS.demo.plan);
+  `).run(USERS.demo.id, USERS.demo.username, USERS.demo.email, demoHash, USERS.demo.role, USERS.demo.plan);
 
   log.info('Seeded demo users');
 }
