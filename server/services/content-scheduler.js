@@ -117,7 +117,7 @@ export class ContentScheduler {
   /**
    * Process the queue — uploads pending items that are due
    */
-  async processQueue({ pageId } = {}) {
+  async processQueue({ pageId, userId } = {}) {
     if (this._processing) {
       log.warn('Queue processing already in progress, skipping');
       return [];
@@ -129,8 +129,10 @@ export class ContentScheduler {
     try {
       const now = Math.floor(Date.now() / 1000);
       const rows = pageId
-        ? this.queueRepo.findPendingByPage(pageId, now)
-        : this.queueRepo.findPendingAll(now);
+        ? this.queueRepo.findPendingByPage(pageId, now, userId)
+        : userId
+          ? this.queueRepo.findByStatus('pending', 500, userId)
+          : this.queueRepo.findPendingAll(now);
 
       for (const row of rows) {
         const result = await this._processItem(row);
@@ -260,8 +262,8 @@ Respond ONLY JSON:
   }
 
   /** Get queue status summary */
-  getQueueStatus() {
-    return this.queueRepo.getStatusCounts();
+  getQueueStatus(userId) {
+    return userId ? this.queueRepo.getStatusCounts(userId) : this.queueRepo.getStatusCounts();
   }
 
   /** Get items by status */

@@ -46,6 +46,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
         campaignsRepo.upsert({
           platform: 'meta',
           campaign_id: result.campaignId,
+          userId: req.user?.id,
           name: `${product} - ${objective || 'TRAFFIC'}`,
           status: 'paused',
           budget: parseFloat(dailyBudget),
@@ -324,6 +325,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
           campaignsRepo.upsert({
             platform: 'meta',
             campaign_id: c.id,
+            userId: req.user?.id,
             name: c.name,
             status: c.status,
             budget: (c.dailyBudget || 0) / 100 || (c.lifetimeBudget || 0) / 100 || 0,
@@ -358,14 +360,17 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
                   targeting: targetingFlat,
                 });
               } else {
-                adsetsRepo?.create?.({
-                  id: as.id, campaignId: as.campaign_id,
-                  name: as.name, status: as.status,
-                  dailyBudget: as.daily_budget || 0,
-                  targeting: targetingFlat,
-                  optimizationGoal: as.optimization_goal,
-                  billingEvent: as.billing_event,
-                });
+                adsetsRepo?.create?.(
+                  {
+                    id: as.id, campaignId: as.campaign_id,
+                    name: as.name, status: as.status,
+                    dailyBudget: as.daily_budget || 0,
+                    targeting: targetingFlat,
+                    optimizationGoal: as.optimization_goal,
+                    billingEvent: as.billing_event,
+                  },
+                  req.user?.id
+                );
               }
             } catch { /* skip individual adset errors */ }
           }
@@ -384,7 +389,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
                 adsRepo?.update?.(ad.id, { name: ad.name, status: ad.status });
               } else {
                 adsRepo?.create?.({
-                  id: ad.id, name: ad.name, product: ad.creative?.title || '',
+                  id: ad.id, userId: req.user?.id, name: ad.name, product: ad.creative?.title || '',
                   target: ad.creative?.body || '', platform: 'meta',
                   format: 'single_image', status: ad.status,
                 });

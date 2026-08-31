@@ -58,8 +58,8 @@ export class AdsetsRepository {
     return this.findById(id);
   }
 
-  create(data) {
-    return this.upsert(data);
+  create(data, userId) {
+    return this.upsert(data, userId);
   }
 
   update(id, data, userId) {

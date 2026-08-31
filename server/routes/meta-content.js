@@ -101,7 +101,7 @@ export function createMetaContentRouter(videoService, contentScheduler, platform
   router.post('/queue/process', async (req, res) => {
     try {
       const { pageId } = req.body;
-      const results = await contentScheduler.processQueue({ pageId });
+      const results = await contentScheduler.processQueue({ pageId, userId: req.user?.id });
       res.json({
         success: true,
         data: {
@@ -128,7 +128,7 @@ export function createMetaContentRouter(videoService, contentScheduler, platform
   // GET /api/meta/content/queue/status — Queue summary
   router.get('/queue/status', (_req, res) => {
     try {
-      const status = contentScheduler.getQueueStatus();
+      const status = contentScheduler.getQueueStatus(req.user?.id);
       res.json({ success: true, data: status });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });

@@ -91,7 +91,17 @@ export class ContentSchedulerQueueRepository {
     ).run(status, updatedAt, id);
   }
 
-  getStatusCounts() {
+  getStatusCounts(userId) {
+    if (userId) {
+      const total = this.db.prepare('SELECT COUNT(*) as c FROM content_queue WHERE user_id = ?').get(userId).c;
+      const pending = this.db.prepare("SELECT COUNT(*) as c FROM content_queue WHERE user_id = ? AND status = 'pending'").get(userId).c;
+      const generating = this.db.prepare("SELECT COUNT(*) as c FROM content_queue WHERE user_id = ? AND status = 'generating_caption'").get(userId).c;
+      const completed = this.db.prepare("SELECT COUNT(*) as c FROM content_queue WHERE user_id = ? AND status = 'completed'").get(userId).c;
+      const failed = this.db.prepare("SELECT COUNT(*) as c FROM content_queue WHERE user_id = ? AND status = 'failed'").get(userId).c;
+      const uploading = this.db.prepare("SELECT COUNT(*) as c FROM content_queue WHERE user_id = ? AND status = 'uploading'").get(userId).c;
+      const cancelled = this.db.prepare("SELECT COUNT(*) as c FROM content_queue WHERE user_id = ? AND status = 'cancelled'").get(userId).c;
+      return { total, pending, generating, uploading, completed, failed, cancelled };
+    }
     const total = this.db.prepare('SELECT COUNT(*) as c FROM content_queue').get().c;
     const pending = this.db.prepare("SELECT COUNT(*) as c FROM content_queue WHERE status = 'pending'").get().c;
     const generating = this.db.prepare("SELECT COUNT(*) as c FROM content_queue WHERE status = 'generating_caption'").get().c;

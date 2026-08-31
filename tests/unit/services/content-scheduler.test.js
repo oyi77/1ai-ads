@@ -145,7 +145,7 @@ describe('ContentScheduler', () => {
 
     it('should filter by pageId when provided', async () => {
       await scheduler.processQueue({ pageId: 'page-1' });
-      expect(mockQueueRepo.findPendingByPage).toHaveBeenCalledWith('page-1', expect.any(Number));
+      expect(mockQueueRepo.findPendingByPage).toHaveBeenCalledWith('page-1', expect.any(Number), undefined);
     });
 
     it('should handle upload failure', async () => {

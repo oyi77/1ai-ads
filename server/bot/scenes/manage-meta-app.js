@@ -151,7 +151,7 @@ manageMetaAppScene.action(/^metaapp:cancel$/, handleSceneCancel('❌ Konfigurasi
 // finish without Threads. Forwarding /skip into earlier credential steps
 // would store the literal string '/skip' as the label/token/secret.
 manageMetaAppScene.command('skip', async (ctx) => {
-  if (ctx.wizard.cursor < 4) {
+  if (ctx.wizard.cursor < 5) {
     return ctx.reply('⚠️ /skip hanya tersedia di langkah Threads (opsional). Kirim nilai yang diminta.');
   }
   ctx.message = { ...(ctx.message || {}), text: '/skip' };
