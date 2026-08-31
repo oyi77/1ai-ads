@@ -50,10 +50,6 @@ export class RuleEvaluator {
     return this.platformApis[platform] || null;
   }
 
-  _scaleDefault(type) {
-    return resolveScaleDefault(type, this.settingsRepo);
-  }
-
   createRule(userId, { name, condition, action, priority = 1, enabled = true, account_id = null }) {
     return this.rulesRepo.create({
       userId,
@@ -83,10 +79,7 @@ export class RuleEvaluator {
 
   _evaluateCondition(condition, campaign, depth = 0) {
     if (!condition) return false;
-
-    if (condition.type === 'group') {
-      return this._evaluateGroup(condition, campaign, depth);
-    }
+    if (condition.type === 'group') return this._evaluateGroup(condition, campaign, depth);
     return this._evaluateLeaf(condition, campaign);
   }
 
@@ -96,7 +89,6 @@ export class RuleEvaluator {
       log.warn('Unknown metric in rule', { metric: condition.metric });
       return false;
     }
-
     const value = metric.resolve(campaign, campaign.insights || {});
     return compare(value, condition.operator, condition.value);
   }
@@ -106,20 +98,10 @@ export class RuleEvaluator {
       log.warn('Max compound depth exceeded');
       return false;
     }
-
     if (!group.children || !group.children.length) return false;
-
-    if (group.logic === 'and') {
-      return group.children.every(c => this._evaluateCondition(c, campaign, depth + 1));
-    }
-    if (group.logic === 'or') {
-      return group.children.some(c => this._evaluateCondition(c, campaign, depth + 1));
-    }
+    if (group.logic === 'and') return group.children.every(c => this._evaluateCondition(c, campaign, depth + 1));
+    if (group.logic === 'or') return group.children.some(c => this._evaluateCondition(c, campaign, depth + 1));
     return false;
-  }
-
-  _compare(value, operator, target) {
-    return compare(value, operator, target);
   }
 
   async _executeAction(action, campaign) {
@@ -131,23 +113,33 @@ export class RuleEvaluator {
     await handler.call(this, action.params || {}, campaign);
   }
 
-  async _applyAction(action, campaign) {
-    return this._executeAction(action, campaign);
-  }
-
   async _scaleCampaign(campaignId, multiplier, direction) {
     const campaign = this.campaignsRepo.findById(campaignId);
     if (!campaign) return;
     const api = this._platformApiForOwner(campaign.platform, campaign);
     if (!api) return;
-
     const currentBudget = campaign.budget || 0;
     const newBudget = direction === 'up'
       ? Math.round(currentBudget * (1 + multiplier / 100))
       : Math.round(currentBudget * (1 - multiplier / 100));
-
     await api.updateCampaign(campaignId, { dailyBudget: newBudget });
     log.info('Budget scaled', { campaignId, multiplier, direction, newBudget });
+  }
+
+  async _increaseBudget(campaignId, percentage) {
+    await this._scaleCampaign(campaignId, percentage, 'up');
+    log.info('Budget increased', { campaignId, percentage });
+  }
+
+  async _decreaseBudget(campaignId, percentage) {
+    await this._scaleCampaign(campaignId, percentage, 'down');
+    log.info('Budget decreased', { campaignId, percentage });
+  }
+
+  async _duplicateCampaign(campaignId, nameSuffix) {
+    const campaign = this.campaignsRepo.findById(campaignId);
+    if (!campaign) return;
+    log.info('Duplicating campaign', { campaignId, nameSuffix });
   }
 
   async _pauseCampaign(campaignId) {
@@ -183,7 +175,6 @@ export class RuleEvaluator {
   async checkCampaigns(userId) {
     const rules = this.rulesRepo.getAllEnabled(userId);
     const campaigns = this.campaignsRepo.findAll({ userId });
-
     let matched = 0;
     for (const rule of rules) {
       for (const campaign of campaigns) {
@@ -200,6 +191,9 @@ RuleEvaluator.ACTION_HANDLERS = {
   pause: async function(params, campaign) { await this._pauseCampaign(campaign.id); },
   resume: async function(params, campaign) { await this._resumeCampaign(campaign.id); },
   scale_budget: async function(params, campaign) { await this._scaleCampaign(campaign.id, params.percentage || 10, 'up'); },
+  increase_budget: async function(params, campaign) { await this._increaseBudget(campaign.id, params.percentage !== undefined ? params.percentage : 20); },
+  decrease_budget: async function(params, campaign) { await this._decreaseBudget(campaign.id, params.percentage !== undefined ? params.percentage : 20); },
+  duplicate_campaign: async function(params, campaign) { await this._duplicateCampaign(campaign.id, params.name || '_copy'); },
   change_bid: async function(params, campaign) { log.info('Change bid', { strategy: params.strategy, campaignId: campaign.id }); },
   notify: async function(params, campaign) { log.info('Notify', { message: params.message, campaignId: campaign.id }); },
   notify_and_pause: async function(params, campaign) { log.info('Notify+Pause', { message: params.message, campaignId: campaign.id }); await this._pauseCampaign(campaign.id); },

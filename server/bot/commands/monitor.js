@@ -87,13 +87,18 @@ function showTemplates(ctx) {
   }
   keyboard.push([{ text: '⬅️ Back', callback_data: 'menu:monitor' }]);
   return ctx.reply(
-    '📦 *Rule Templates*\n\nPre-built rules for common scenarios:\n\n' +
+    '📦 *Rule Templates*\n\nPre-built rules:\n\n' +
     '• ROAS Guard — Pause when ROAS < 1x\n' +
     '• Frequency Cap — Pause when frequency > 5\n' +
-    '• High CTR Alert — Notify on high CTR\n' +
-    '• Low CVR Alert — Notify on low CVR\n' +
-    '• CPA Drop Alert — Notify on CPA increase\n' +
-    '• CPM Budget Control — Pause when CPM too high',
+    '• High CTR Alert — CTR > 5%\n' +
+    '• Low CVR Alert — CVR < 1%\n' +
+    '• CPC Spike — CPC > 200\n' +
+    '• CPA Drop — CPA < 50k\n' +
+    '• CPM Control — CPM > 15k\n' +
+    '• Dayparting — Peak hours 6-11PM\n' +
+    '• Auto Increase — ROAS > 2x, +20%\n' +
+    '• Auto Decrease — ROAS < 1x, -30%\n' +
+    '• Auto Duplicate — CVR > 3%, spend > 100k',
     { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } }
   );
 }
@@ -122,6 +127,9 @@ function showActionPicker(ctx) {
   const keyboard = [
     [{ text: '🔴 Pause', callback_data: 'rule:add:action:pause' }],
     [{ text: '🟢 Resume', callback_data: 'rule:add:action:resume' }],
+    [{ text: '📈 Increase Budget', callback_data: 'rule:add:action:increase_budget' }],
+    [{ text: '📉 Decrease Budget', callback_data: 'rule:add:action:decrease_budget' }],
+    [{ text: '📋 Duplicate', callback_data: 'rule:add:action:duplicate_campaign' }],
     [{ text: '💰 Scale Budget', callback_data: 'rule:add:action:scale_budget' }],
     [{ text: '📢 Notify', callback_data: 'rule:add:action:notify' }],
     [{ text: '🔴📢 Notify + Pause', callback_data: 'rule:add:action:notify_and_pause' }],
@@ -199,7 +207,6 @@ export function handleMonitorCallback(deps) {
     const action = ctx.match[1];
     await ctx.answerCbQuery();
 
-    // Handle rule:add:cat:xxx format
     if (action === 'add:start') return showMetricCategories(ctx);
     if (action.startsWith('add:cat:')) return showMetricsInCategory(ctx, action.split(':')[2]);
     if (action.startsWith('add:metric:')) return showOperators(ctx, action.split(':')[3]);
@@ -212,6 +219,7 @@ export function handleMonitorCallback(deps) {
       return showActionPicker(ctx);
     }
     if (action.startsWith('add:action:')) return createRule(ctx, deps, action.split(':')[2]);
+    if (action === 'templates') return showTemplates(ctx);
     if (action.startsWith('template:')) return applyTemplate(ctx, deps, action.split(':')[1]);
     if (action === 'view:all') {
       return ctx.reply(renderRulesList(deps, ctx.userId), {

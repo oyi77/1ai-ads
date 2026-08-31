@@ -76,6 +76,9 @@ export class RuleAction {
     pause: 'pause',
     resume: 'resume',
     scale_budget: 'scale_budget',
+    increase_budget: 'increase_budget',
+    decrease_budget: 'decrease_budget',
+    duplicate_campaign: 'duplicate_campaign',
     change_bid: 'change_bid',
     notify: 'notify',
     notify_and_pause: 'notify_and_pause',
@@ -93,6 +96,9 @@ export class RuleAction {
   static pause() { return new RuleAction('pause'); }
   static resume() { return new RuleAction('resume'); }
   static scaleBudget(percentage) { return new RuleAction('scale_budget', { percentage }); }
+  static increaseBudget(percentage) { return new RuleAction('increase_budget', { percentage }); }
+  static decreaseBudget(percentage) { return new RuleAction('decrease_budget', { percentage }); }
+  static duplicateCampaign(name) { return new RuleAction('duplicate_campaign', { name }); }
   static changeBid(strategy) { return new RuleAction('change_bid', { strategy }); }
   static notify(message) { return new RuleAction('notify', { message }); }
   static notifyAndPause(message) { return new RuleAction('notify_and_pause', { message }); }
@@ -224,6 +230,33 @@ export const RULE_TEMPLATES = {
     ConditionGroup.and().add(Condition.gt('hour_of_day', 18)).add(Condition.lt('hour_of_day', 23)),
     RuleAction.scaleBudget(30),
     true, 2
+  ),
+
+  // NEW: Auto increase budget
+  autoIncreaseBudget: () => new RuleTemplate(
+    'Auto Increase Budget',
+    'Increase budget by 20% when ROAS > 2x',
+    ConditionGroup.and().add(Condition.gt('roas', 2)).add(Condition.gt('conversions', 5)),
+    RuleAction.increaseBudget(20),
+    true, 2
+  ),
+
+  // NEW: Auto decrease budget
+  autoDecreaseBudget: () => new RuleTemplate(
+    'Auto Decrease Budget',
+    'Decrease budget by 30% when ROAS < 1x',
+    ConditionGroup.and().add(Condition.lt('roas', 1)).add(Condition.gt('spend', 50000)),
+    RuleAction.decreaseBudget(30),
+    true, 4
+  ),
+
+  // NEW: Auto duplicate campaign
+  autoDuplicate: () => new RuleTemplate(
+    'Auto Duplicate Campaign',
+    'Duplicate campaign when CVR > 3% and spend > 100k',
+    ConditionGroup.and().add(Condition.gt('cvr', 3)).add(Condition.gt('spend', 100000)),
+    RuleAction.duplicateCampaign('_auto_copy'),
+    true, 1
   ),
 };
 
