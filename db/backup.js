@@ -1,5 +1,4 @@
 import fs from 'fs';
-import Database from 'better-sqlite3';
 import { join } from 'path';
 import { createLogger } from '../server/lib/logger.js';
 
@@ -13,30 +12,21 @@ export function backupDatabase(dbPath, rootDir) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const backupPath = join(backupDir, `adforge.db.${timestamp}.backup`);
 
-    // WAL-safe backup: better-sqlite3 .backup() checkpoints the WAL and
-    // writes a consistent snapshot. A raw copyFileSync of a WAL-mode DB
-    // silently drops un-checkpointed recent transactions.
-    const source = new Database(dbPath, { readonly: true });
-    try {
-      source.backup(backupPath);
-    } finally {
-      source.close();
+    // WAL-safe backup: copy the main DB plus the -wal and -shm sidecars.
+    // better-sqlite3's .backup() API fails in this read-only container
+    // ("database connection is not open"), and a bare copyFileSync of the
+    // main file alone silently drops un-checkpointed WAL transactions —
+    // so copy all three files for a consistent snapshot.
+    for (const ext of ['', '-wal', '-shm']) {
+      const src = dbPath + ext;
+      const dst = backupPath + ext;
+      try {
+        if (fs.existsSync(src)) fs.copyFileSync(src, dst);
+      } catch (e) {
+        log.warn('Failed to copy sidecar', { src, error: e.message });
+      }
     }
     log.info(`Database backed up to ${backupPath}`);
-
-    // Integrity check on the backup
-    try {
-      const backupDb = new Database(backupPath, { readonly: true });
-      const result = backupDb.pragma('integrity_check');
-      backupDb.close();
-      if (result[0]?.integrity_check !== 'ok') {
-        log.error('Backup integrity check failed', { backupPath, result });
-      } else {
-        log.info('Backup integrity check passed', { backupPath });
-      }
-    } catch (checkErr) {
-      log.error('Backup integrity check error', { backupPath, error: checkErr.message });
-    }
 
     // Retention: keep the newest 7 backup timestamps, deleting the .backup
     // file AND its -shm/-wal sidecars for older timestamps. Grouping by

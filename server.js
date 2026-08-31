@@ -41,9 +41,11 @@ process.on('uncaughtException', (err) => {
   log.error('Uncaught exception (contained)', { error: err.message, stack: err.stack?.split('\n').slice(0, 4).join(' ') });
 });
 
-backupDatabase(config.dbPath, __dirname);
-
 const db = createDatabase(config.dbPath);
+
+// Backup AFTER the database is initialized — calling it before
+// createDatabase() opens a not-yet-existing DB file.
+backupDatabase(config.dbPath, __dirname);
 // Seed demo data for non-production environments only
 if (process.env.NODE_ENV !== 'production') {
   seedDemoData(db);

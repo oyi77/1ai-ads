@@ -25,9 +25,8 @@ export class CampaignsRepository {
     this.db.prepare(`
       INSERT INTO campaigns (id, user_id, platform, campaign_id, name, status, budget, spend, revenue, impressions, clicks, conversions, roas, last_synced)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(id) DO UPDATE SET
-        user_id = excluded.user_id, platform = excluded.platform,
-        campaign_id = excluded.campaign_id, name = excluded.name, status = excluded.status,
+      ON CONFLICT(platform, campaign_id) DO UPDATE SET
+        id = excluded.id, user_id = excluded.user_id, name = excluded.name, status = excluded.status,
         budget = excluded.budget, spend = excluded.spend, revenue = excluded.revenue,
         impressions = excluded.impressions, clicks = excluded.clicks, conversions = excluded.conversions,
         roas = excluded.roas, last_synced = CURRENT_TIMESTAMP
