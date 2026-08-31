@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { realtimeClient } from '../lib/realtime';
 import type { MetricUpdate, WSMessage } from '../lib/realtime';
@@ -13,6 +13,17 @@ export function useRealtime() {
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [liveMetrics, setLiveMetrics] = useState<Record<string, MetricUpdate>>({});
 
+  // Debounce campaign refetch so a high-frequency metric stream (one WS message
+  // per campaign) doesn't trigger a full /api/campaigns round-trip per message.
+  const invalidateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const invalidateCampaigns = () => {
+    if (invalidateTimer.current) clearTimeout(invalidateTimer.current);
+    invalidateTimer.current = setTimeout(() => {
+      invalidateTimer.current = null;
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+    }, 1500);
+  };
+
   useEffect(() => {
     const unsubscribe = realtimeClient.subscribe((message: WSMessage) => {
       setConnected(realtimeClient.connected);
@@ -20,8 +31,7 @@ export function useRealtime() {
       if (message.type === 'snapshot' && message.data) {
         setLiveMetrics(message.data as Record<string, MetricUpdate>);
         setLastUpdate(message.timestamp || new Date().toISOString());
-        // Invalidate campaigns query to refresh dashboard
-        queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+        invalidateCampaigns();
       }
 
       if (message.type === 'metric_update' && message.data) {
@@ -31,8 +41,7 @@ export function useRealtime() {
           [update.campaign_id]: update,
         }));
         setLastUpdate(update.timestamp);
-        // Invalidate campaigns query to refresh dashboard
-        queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+        invalidateCampaigns();
       }
     });
 
@@ -44,18 +53,14 @@ export function useRealtime() {
     return () => {
       unsubscribe();
       clearInterval(interval);
+      if (invalidateTimer.current) clearTimeout(invalidateTimer.current);
     };
   }, [queryClient]);
-
-  const getMetric = useCallback((campaignId: string): MetricUpdate | undefined => {
-    return liveMetrics[campaignId];
-  }, [liveMetrics]);
 
   return {
     connected,
     lastUpdate,
     liveMetrics,
-    getMetric,
     metricCount: Object.keys(liveMetrics).length,
   };
 }

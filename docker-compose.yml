@@ -17,6 +17,9 @@ services:
       - DB_PATH=/app/data/1ai-ads.db
     security_opt:
       - no-new-privileges:true
+    init: true
+    cap_drop:
+      - ALL
     read_only: true
     tmpfs:
       - /tmp

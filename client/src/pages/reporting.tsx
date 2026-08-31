@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Download, DollarSign, TrendingUp, Activity, BarChart3 } from 'lucide-react';
-import { api } from '../lib/api';
+import { api, getToken } from '../lib/api';
 import { DataTable } from '../components/DataTable';
 import type { Column } from '../components/DataTable';
 
@@ -34,13 +35,19 @@ export function ReportingPage() {
     queryFn: () => api.get<ReportingData>('/reporting/unified/dashboard'),
   });
 
+  const [exportError, setExportError] = useState<string | null>(null);
   const handleExport = async () => {
-    const token = localStorage.getItem('1ai-ads_token');
-    const res = await fetch('/api/reports/export/csv', { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) throw new Error('Export failed');
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'report.csv'; a.click();
+    setExportError(null);
+    try {
+      const token = getToken();
+      const res = await fetch('/api/reports/export/csv', { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'report.csv'; a.click();
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Export failed');
+    }
   };
 
   const totals = data?.totals;
@@ -64,6 +71,7 @@ export function ReportingPage() {
       </div>
 
       {error && <p style={{ color: 'var(--error, #ef4444)', fontSize: '0.85rem', marginBottom: 16 }}>Failed to load: {(error as Error).message}</p>}
+      {exportError && <p style={{ color: 'var(--error, #ef4444)', fontSize: '0.85rem', marginBottom: 16 }}>⛔ {exportError}</p>}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
         {metrics.map(m => (

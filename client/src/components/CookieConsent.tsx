@@ -15,6 +15,19 @@ export function CookieConsent() {
   const accept = () => {
     localStorage.setItem(CONSENT_KEY, 'accepted');
     setVisible(false);
+    // Load GA4 dynamically after consent — never before
+    if (!document.querySelector('script[src*="googletagmanager.com/gtag/js"]')) {
+      const gtagScript = document.createElement('script');
+      gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-V9C14XZ9SG';
+      gtagScript.async = true;
+      document.head.appendChild(gtagScript);
+      const w = window as any;
+      w.dataLayer = w.dataLayer || [];
+      function gtag(...args: unknown[]) { w.dataLayer.push(args); }
+      w.gtag = gtag;
+      gtag('js', new Date());
+      gtag('config', 'G-V9C14XZ9SG');
+    }
   };
 
   const decline = () => {

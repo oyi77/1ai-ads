@@ -24,6 +24,7 @@ const C = {
 // Conversion tracking — gtag/dataLayer wired in index.html (GA4 G-V9C14XZ9SG)
 function track(eventName: string, payload: Record<string, string | number | boolean> = {}) {
   const w = window as unknown as { gtag?: (...args: unknown[]) => void; dataLayer?: unknown[] };
+  if (localStorage.getItem('1ai-ads_cookie_consent') !== 'accepted') return;
   w.dataLayer?.push({ event: eventName, ...payload });
   w.gtag?.('event', eventName, payload);
 }

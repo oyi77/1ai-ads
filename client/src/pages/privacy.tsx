@@ -186,7 +186,7 @@ export function PrivacyPage() {
       <ul style={S.ul}>
         <li style={S.li}><T>Authentication token</T> — stored in localStorage to maintain your session. Cleared on sign out.</li>
         <li style={S.li}><T>Cookie consent preference</T> — stored in localStorage to remember your choice.</li>
-        <li style={S.li}>We do <T>not</T> use third-party tracking cookies or advertising pixels on this platform.</li>
+        <li style={S.li}>We use Google Analytics 4 (G-V9C14XZ9SG) for anonymous usage analytics. GA4 is loaded only after you accept via the cookie consent banner. You can opt out by declining consent.</li>
       </ul>
 
       {/* 9 */}

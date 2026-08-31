@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CSSProperties } from 'react';
 import { Loader2, Bookmark, Plus, X, Trash2, Pencil } from 'lucide-react';
@@ -92,9 +92,11 @@ export function AudiencesPage() {
     finally { setSearching(false); }
   }, []);
 
+  const interestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onInterestQueryChange = (q: string) => {
     setInterestQuery(q);
-    window.setTimeout(() => { searchInterests(q); }, 400);
+    if (interestTimer.current) clearTimeout(interestTimer.current);
+    interestTimer.current = setTimeout(() => { searchInterests(q); interestTimer.current = null; }, 400);
   };
 
   const stackInterest = (i: { id: string; name: string }) => {

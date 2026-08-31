@@ -16,7 +16,7 @@ const API_BASE = '/api';
 
 // ── Token helpers ─────────────────────────────────────────────
 
-function getToken(): string | null {
+export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 

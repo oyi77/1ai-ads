@@ -18,7 +18,7 @@ type MetricUpdate = {
 };
 
 type WSMessage = {
-  type: 'snapshot' | 'metric_update' | 'pong';
+  type: 'snapshot' | 'metric_update';
   data: Record<string, MetricUpdate> | MetricUpdate;
   timestamp?: string;
 };
@@ -31,6 +31,8 @@ class RealtimeClient {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private url: string;
   private _connected = false;
+  private attempts = 0;
+  private readonly MAX_ATTEMPTS = 10;
 
   constructor() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -42,14 +44,14 @@ class RealtimeClient {
   }
 
   connect(): void {
-    if (this.ws?.readyState === WebSocket.OPEN) return;
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
 
     try {
       this.ws = new WebSocket(this.url);
 
       this.ws.onopen = () => {
         this._connected = true;
-        console.log('[realtime] Connected');
+        this.attempts = 0; // reset backoff on successful connection
         if (this.reconnectTimer) {
           clearTimeout(this.reconnectTimer);
           this.reconnectTimer = null;
@@ -69,7 +71,6 @@ class RealtimeClient {
 
       this.ws.onclose = () => {
         this._connected = false;
-        console.log('[realtime] Disconnected, reconnecting in 5s...');
         this.scheduleReconnect();
       };
 
@@ -103,10 +104,15 @@ class RealtimeClient {
 
   private scheduleReconnect(): void {
     if (this.reconnectTimer) return;
+    if (this.attempts >= this.MAX_ATTEMPTS) return; // stop after repeated failures
+    // Exponential backoff 1s -> 30s cap with jitter
+    const base = Math.min(1000 * Math.pow(2, this.attempts), 30000);
+    const delay = base + Math.random() * 1000;
+    this.attempts++;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.connect();
-    }, 5000);
+    }, delay);
   }
 }
 
