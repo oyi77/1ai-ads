@@ -24,22 +24,29 @@ export function handleStart() {
     const ruleCount = deps.repos?.rulesRepo?.countEnabled?.(ctx.userId) || 0;
 
     let message;
+    // For new users, add a prominent Connect Account button on top of the menu.
+    const keyboard = mainMenuKeyboard();
     if (!hasMetaAccount && campaignCount === 0) {
-      // Brand new user
       message = `👋 *Welcome to AdForge, ${name}!*\n\n` +
         '🚀 *Getting started in 3 steps:*\n' +
         '1️⃣ Connect your Meta account\n' +
         '2️⃣ Sync or create campaigns\n' +
         '3️⃣ Set up automation rules\n\n' +
         'Tap *🔗 Connect Account* below to begin!';
+      keyboard.inline_keyboard.unshift([
+        { text: '🔗 Connect Account', callback_data: 'menu:connect' },
+        { text: '🌐 Platforms', callback_data: 'menu:platforms' },
+      ]);
     } else if (hasMetaAccount && campaignCount === 0) {
-      // Connected but no campaigns
       message = `👋 *Welcome back, ${name}!*\n\n` +
         '✅ Meta account connected\n' +
         '📭 No campaigns yet\n\n' +
         'Tap *🎯 Buat Kampanye* to create your first campaign, or *📣 My Meta Ads* to sync from Meta.';
+      keyboard.inline_keyboard.unshift([
+        { text: '🎯 Create Campaign', callback_data: 'menu:create' },
+        { text: '📣 Ads Manager', callback_data: 'menu:ads' },
+      ]);
     } else {
-      // Active user
       message = `👋 *Welcome back, ${name}!*\n\n` +
         `📊 ${campaignCount} campaign${campaignCount !== 1 ? 's' : ''} tracked\n` +
         `⚡ ${ruleCount} automation rule${ruleCount !== 1 ? 's' : ''} active\n\n` +
@@ -48,7 +55,7 @@ export function handleStart() {
 
     await ctx.reply(message, {
       parse_mode: 'Markdown',
-      reply_markup: mainMenuKeyboard(),
+      reply_markup: keyboard,
     });
   };
 }
