@@ -107,21 +107,40 @@ export class RealtimeService {
       // don't fire Meta requests against google/tiktok campaign ids.
       const activeCampaigns = campaigns.filter(c => (c.platform === 'meta' || !c.platform) && (c.status === 'ACTIVE' || c.status === 'active'));
 
+      // Group by owner+account so we can fetch ONE batched insights call per
+      // account instead of N individual calls — avoids Meta "User request limit
+      // reached" (code 17) when many campaigns are active.
+      const byOwner = new Map(); // "ownerId:accountId" -> { api, accountId, campaignIds: [] }
       for (const campaign of activeCampaigns) {
-        try {
+        const ownerId = campaign?.user_id || campaign?.created_by;
+        if (!ownerId) continue;
+        const key = `${ownerId}:${campaign.account_id || ''}`;
+        if (!byOwner.has(key)) {
           const api = this._metaApiForOwner(campaign);
-          const insights = await api.getCampaignInsights(campaign.campaign_id, {
-            datePreset: 'today', fields: 'spend,impressions,clicks,actions,cost_per_action_type,ctr,cpc,cpm',
-          });
-          const data = insights || {};
-          const metric = this._buildMetricFromInsights(campaign, data);
-          this.metrics.set(campaign.campaign_id, metric);
-          this._broadcast({ type: 'metric_update', data: metric });
+          byOwner.set(key, { api, accountId: campaign.account_id, campaignIds: [] });
+        }
+        byOwner.get(key).campaignIds.push(campaign);
+      }
+
+      for (const [, { api, accountId, campaignIds }] of byOwner) {
+        try {
+          const ids = campaignIds.map(c => c.campaign_id).filter(Boolean);
+          if (!ids.length) continue;
+          const insightsMap = accountId
+            ? await api.getMultiCampaignInsights(ids, { datePreset: 'today', accountId })
+            : {};
+          for (const campaign of campaignIds) {
+            const cid = campaign.campaign_id;
+            const insights = insightsMap[cid] || {};
+            const metric = this._buildMetricFromInsights(campaign, insights);
+            this.metrics.set(cid, metric);
+            this._broadcast({ type: 'metric_update', data: metric });
+          }
         } catch (err) {
-          log.warn('Failed to poll campaign', { campaignId: campaign.campaign_id, error: err.message });
+          log.warn('Failed to poll owner account', { accountId, error: err.message });
         }
       }
-      log.debug('Poll complete', { campaigns: activeCampaigns.length, clients: this.clients.size });
+      log.debug('Poll complete', { active: activeCampaigns.length, groups: byOwner.size, clients: this.clients.size });
     } catch (err) {
       log.error('Poll failed', { error: err.message });
     }
