@@ -81,6 +81,7 @@ export function createTeamRouter(paymentsRepo, usersRepo, mailer) {
         email,
         role,
         status: 'pending',
+        inviteToken,
       });
 
       // Send invite email if mailer available
@@ -117,25 +118,26 @@ export function createTeamRouter(paymentsRepo, usersRepo, mailer) {
   // POST /api/team/accept — accept team invitation (public, no auth)
   router.post('/accept', async (req, res) => {
     try {
-      const { email } = req.body;
-      // In a real implementation, validate token against stored invite
-      // For now, accept by email + find pending invite
+      const { email, token } = req.body;
       if (!email) {
         return res.status(400).json({ success: false, error: 'Email required' });
       }
-
-      // Find pending invite for this email
-      // This is simplified - in production, use the token to find the invite
-      const user = usersRepo.findByEmail?.(email);
-      if (!user) {
-        return res.status(404).json({ success: false, error: 'No pending invite for this email. Create an account first.' });
+      if (!token) {
+        return res.status(400).json({ success: false, error: 'Invite token required' });
       }
 
-      // Find pending membership for this user
-      const memberships = paymentsRepo.findTeamMembershipByUserId(user.id);
-      const pending = memberships.find(m => m.status === 'pending' && m.email === email);
-      if (!pending) {
+      // Find the pending invite by invite_token (authoritative), never by email alone
+      const pending = paymentsRepo.findTeamInviteByToken?.(token);
+      if (!pending || pending.status !== 'pending') {
         return res.status(404).json({ success: false, error: 'No pending invite found' });
+      }
+      if (pending.email !== email) {
+        return res.status(403).json({ success: false, error: 'Token does not match this email' });
+      }
+
+      const user = usersRepo.findByEmail?.(email);
+      if (!user) {
+        return res.status(404).json({ success: false, error: 'No account found for this email. Create an account first.' });
       }
 
       const accepted = paymentsRepo.acceptTeamInvite(pending.id, user.id);

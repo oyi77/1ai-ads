@@ -104,15 +104,31 @@ export class PaymentsRepository {
 
   // Team Members
   addTeamMember(params) {
-    const { teamOwnerId, userId, email, role, status } = params;
+    const { teamOwnerId, userId, email, role, status, inviteToken } = params;
     this.db.prepare(`
-      INSERT INTO team_members (id, team_owner_id, user_id, email, role, status)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(uuidv4(), teamOwnerId, userId, email, role, status || 'pending');
-    return this.findTeamMember(teamOwnerId, userId);
+      INSERT INTO team_members (id, team_owner_id, user_id, email, role, status, invite_token)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(uuidv4(), teamOwnerId, userId, email, role, status || 'pending', inviteToken || null);
+    const row = inviteToken
+      ? this.findTeamInviteByToken(inviteToken)
+      : this.findTeamMember(teamOwnerId, userId);
+    return row;
   }
 
   findTeamMember(teamOwnerId, userId) {
     return this.db.prepare('SELECT * FROM team_members WHERE team_owner_id = ? AND user_id = ?').get(teamOwnerId, userId);
+  }
+
+  findTeamInviteByToken(token) {
+    return this.db.prepare('SELECT * FROM team_members WHERE invite_token = ?').get(token) || null;
+  }
+
+  findTeamMembershipByUserId(userId) {
+    return this.db.prepare('SELECT * FROM team_members WHERE user_id = ?').all(userId);
+  }
+
+  acceptTeamInvite(memberId, userId) {
+    this.db.prepare("UPDATE team_members SET status = 'active', user_id = ?, accepted_at = datetime('now'), invite_token = NULL WHERE id = ?").run(userId, memberId);
+    return this.db.prepare('SELECT * FROM team_members WHERE id = ?').get(memberId);
   }
 }

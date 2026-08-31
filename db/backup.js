@@ -13,7 +13,15 @@ export function backupDatabase(dbPath, rootDir) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const backupPath = join(backupDir, `adforge.db.${timestamp}.backup`);
 
-    fs.copyFileSync(dbPath, backupPath);
+    // WAL-safe backup: better-sqlite3 .backup() checkpoints the WAL and
+    // writes a consistent snapshot. A raw copyFileSync of a WAL-mode DB
+    // silently drops un-checkpointed recent transactions.
+    const source = new Database(dbPath, { readonly: true });
+    try {
+      source.backup(backupPath);
+    } finally {
+      source.close();
+    }
     log.info(`Database backed up to ${backupPath}`);
 
     // Integrity check on the backup

@@ -95,10 +95,10 @@ export class LearningService {
     return this.syncInsightToKB(insight);
   }
 
-  async syncAllToKB() {
-    const campaigns = this.campaignsRepo.findAll().data || [];
-    const ads = this.adsRepo.findAll().data || [];
-    const landingPages = this.landingRepo.findAll().data || [];
+  async syncAllToKB(userId = null) {
+    const campaigns = (this.campaignsRepo.findAll({ userId }) || { data: [] }).data || [];
+    const ads = (this.adsRepo.findAll({ userId }) || { data: [] }).data || [];
+    const landingPages = (this.landingRepo.findAll({ userId }) || { data: [] }).data || [];
 
     let synced = 0;
 

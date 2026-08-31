@@ -13,6 +13,14 @@ const SHOPEE_UPLOADS_KEY = 'shopee_uploads';
 const csvParser = new ShopeeCSVParser();
 const log = createLogger('shopee-dashboard');
 
+// Settings table is global (no user_id column) — scope these keys per user so
+// one tenant can't read/write another's Shopee data. Preserve the global key
+// when no user is bound (legacy/system calls).
+function keyFor(req, base) {
+  const uid = req?.user?.id;
+  return uid ? `${base}:${uid}` : base;
+}
+
 /**
  * settingsRepo.get() returns either a parsed value (the real repo JSON.parses the
  * stored row) or a raw JSON string (test mocks / legacy callers). Coerce safely so
@@ -28,7 +36,7 @@ function coerceArray(raw) {
 export function handleListAccounts(settingsRepo) {
   return (req, res) => {
     try {
-      const raw = settingsRepo.get(SHOPEE_ACCOUNTS_KEY);
+      const raw = settingsRepo.get(keyFor(req, SHOPEE_ACCOUNTS_KEY));
       const accounts = coerceArray(raw);
       res.json({ success: true, accounts });
     } catch (err) {
@@ -43,7 +51,7 @@ export function handleListOrders(shopeeAdapter, settingsRepo) {
   return async (req, res) => {
     const { accountId } = req.params;
     try {
-      const raw = settingsRepo.get(SHOPEE_ACCOUNTS_KEY);
+      const raw = settingsRepo.get(keyFor(req, SHOPEE_ACCOUNTS_KEY));
       const accounts = coerceArray(raw);
       const account = accounts.find(a => a.id === accountId);
       if (!account) {
@@ -67,7 +75,7 @@ export function handleGetSummary(shopeeAdapter, settingsRepo, commissionsRepo) {
   return async (req, res) => {
     const { accountId } = req.params;
     try {
-      const raw = settingsRepo.get(SHOPEE_ACCOUNTS_KEY);
+      const raw = settingsRepo.get(keyFor(req, SHOPEE_ACCOUNTS_KEY));
       const accounts = coerceArray(raw);
       const account = accounts.find(a => a.id === accountId);
       if (!account) {
@@ -186,7 +194,7 @@ export function handleUpload(settingsRepo, commissionsRepo) {
         const fileId = randomUUID();
         let uploads = [];
         try {
-          const raw = settingsRepo.get(SHOPEE_UPLOADS_KEY);
+          const raw = settingsRepo.get(keyFor(req, SHOPEE_UPLOADS_KEY));
           uploads = coerceArray(raw);
         } catch {
           uploads = [];
@@ -203,7 +211,7 @@ export function handleUpload(settingsRepo, commissionsRepo) {
         };
 
         uploads.push(upload);
-        settingsRepo.set(SHOPEE_UPLOADS_KEY, JSON.stringify(uploads));
+        settingsRepo.set(keyFor(req, SHOPEE_UPLOADS_KEY), JSON.stringify(uploads));
 
         // Parse CSV and store commission data
         let parseResult = { orders: [], summary: null };
@@ -252,7 +260,7 @@ export function handleUpload(settingsRepo, commissionsRepo) {
 export function handleListUploads(settingsRepo) {
   return (req, res) => {
     try {
-      const raw = settingsRepo.get(SHOPEE_UPLOADS_KEY);
+      const raw = settingsRepo.get(keyFor(req, SHOPEE_UPLOADS_KEY));
       const uploads = coerceArray(raw);
       // Strip embedded data from list response
       const list = uploads.map(({ data: _data, ...meta }) => meta);
@@ -269,7 +277,7 @@ export function handleDeleteUpload(settingsRepo) {
   return (req, res) => {
     const { fileId } = req.params;
     try {
-      const raw = settingsRepo.get(SHOPEE_UPLOADS_KEY);
+      const raw = settingsRepo.get(keyFor(req, SHOPEE_UPLOADS_KEY));
       const uploads = coerceArray(raw);
       const idx = uploads.findIndex(u => u.id === fileId);
       if (idx === -1) {
@@ -277,7 +285,7 @@ export function handleDeleteUpload(settingsRepo) {
       }
 
       uploads.splice(idx, 1);
-      settingsRepo.set(SHOPEE_UPLOADS_KEY, JSON.stringify(uploads));
+      settingsRepo.set(keyFor(req, SHOPEE_UPLOADS_KEY), JSON.stringify(uploads));
       log.info('Shopee upload deleted', { fileId });
       res.json({ success: true });
     } catch (err) {

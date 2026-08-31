@@ -10,11 +10,12 @@ document.querySelector('.main-content').innerHTML = `
 <div id="rulesList" style="padding:16px;color:var(--text-tertiary);text-align:center">Loading...</div></div>`;
 
 fetch('/api/automation').then(function(r){return r.json()}).then(function(data){
+    function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
     var rules=data.rules||[];
     var el=document.getElementById('rulesList');
     if(!rules.length){el.innerHTML='<div style="padding:40px;text-align:center"><i class="bi bi-lightning-charge" style="font-size:2rem;color:var(--text-tertiary)"></i><p style="margin-top:8px">No automation rules yet</p></div>';return}
     el.innerHTML=rules.map(function(r){
-        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)"><div><div style="font-weight:600;font-size:0.85rem">'+r.name+'</div><div style="font-size:0.72rem;color:var(--text-tertiary)">'+(r.trigger_metric||'')+' '+(r.trigger_operator||'')+' '+(r.trigger_value||'')+' → '+(r.action_type||'')+'</div></div><div style="display:flex;gap:8px;align-items:center"><span class="badge '+(r.is_active?'badge-success':'badge-neutral')+'">'+(r.is_active?'Active':'Paused')+'</span></div></div>';
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)"><div><div style="font-weight:600;font-size:0.85rem">'+esc(r.name)+'</div><div style="font-size:0.72rem;color:var(--text-tertiary)">'+esc(r.trigger_metric||'')+' '+esc(r.trigger_operator||'')+' '+esc(r.trigger_value||'')+' → '+esc(r.action_type||'')+'</div></div><div style="display:flex;gap:8px;align-items:center"><span class="badge '+(r.is_active?'badge-success':'badge-neutral')+'">'+esc(r.is_active?'Active':'Paused')+'</span></div></div>';
     }).join('');
 });
 function showCreateForm(){window.location.href='/api/automation/rules'}

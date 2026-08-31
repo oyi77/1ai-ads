@@ -14,9 +14,10 @@ fetch('/api/dashboard-widgets').then(function(r){return r.json()}).then(function
         grid.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-tertiary)"><i class="bi bi-bar-chart" style="font-size:2rem"></i><p style="margin-top:8px">No widgets configured. Use the API to add widgets.</p></div>';
         return;
     }
+    function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
     grid.innerHTML = widgets.map(function(w){
         var icon = w.type === 'chart' ? 'bi-bar-chart' : w.type === 'metric' ? 'bi-speedometer' : 'bi-grid';
-        return '<div class="metric-card" style="cursor:pointer;text-align:center"><i class="bi '+icon+'" style="font-size:1.5rem;color:var(--accent)"></i><div style="font-size:0.8rem;font-weight:600;margin-top:6px">'+w.name+'</div><div style="font-size:0.7rem;color:var(--text-tertiary)">'+(w.description||'')+'</div></div>';
+        return '<div class="metric-card" style="cursor:pointer;text-align:center"><i class="bi '+icon+'" style="font-size:1.5rem;color:var(--accent)"></i><div style="font-size:0.8rem;font-weight:600;margin-top:6px">'+esc(w.name)+'</div><div style="font-size:0.7rem;color:var(--text-tertiary)">'+esc(w.description||'')+'</div></div>';
     }).join('');
 });
 </script>

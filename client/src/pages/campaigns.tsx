@@ -173,7 +173,7 @@ export function CampaignsPage() {
         searchPlaceholder="Search campaigns..."
         filterOptions={[
           { key: 'platform', label: 'All Platforms', options: ['meta', 'google', 'tiktok', 'linkedin', 'twitter', 'snapchat', 'pinterest', 'microsoft'] },
-          { key: 'status', label: 'All Status', options: ['ACTIVE', 'PAUSED', 'ARCHIVED'] },
+          { key: 'status', label: 'All Status', options: ['active', 'paused', 'archived'] },
         ]}
         isLoading={isLoading}
         emptyMessage="No campaigns yet. Click New Campaign to create one, or Sync Now to import."
