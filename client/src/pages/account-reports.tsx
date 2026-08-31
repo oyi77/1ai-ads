@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Minus, Sparkles, RefreshCw, AlertTriangle, CheckCircle2, Lightbulb, Wrench, ThumbsUp, ThumbsDown, Download, Clock } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Sparkles, RefreshCw, AlertTriangle, Lightbulb, Wrench, ThumbsUp, ThumbsDown, Download, Clock } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface Insights {
@@ -29,11 +29,11 @@ interface AdAccount { id: string; name: string; status: string }
 
 const fmtIDR = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
 const fmtNum = (n: number) => (n || 0).toLocaleString('id-ID');
-const fmtRoas = (v: number | null) => (v == null ? '—' : `${v.toFixed(2)}x`);
-const fmtCpr = (v: number | null) => (v == null ? '—' : fmtIDR(v));
+const fmtRoas = (v: number | null) => (v === null ? '—' : `${v.toFixed(2)}x`);
+const fmtCpr = (v: number | null) => (v === null ? '—' : fmtIDR(v));
 
 function Delta({ value, base, invert }: { value: number | null; base: number | null; invert?: boolean }) {
-  if (value == null || base == null || base === 0 || value === 0) return <span style={{ color: 'var(--text-tertiary)', fontSize: '0.68rem' }}><Minus size={10} /> no baseline</span>;
+  if (value === null || base === null || base === 0 || value === 0) return <span style={{ color: 'var(--text-tertiary)', fontSize: '0.68rem' }}><Minus size={10} /> no baseline</span>;
   const pct = ((value - base) / Math.abs(base)) * 100;
   const good = invert ? pct < 0 : pct > 0;
   const color = Math.abs(pct) < 5 ? 'var(--text-tertiary)' : good ? 'var(--green)' : 'var(--red)';

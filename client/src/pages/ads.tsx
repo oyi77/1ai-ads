@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Megaphone, Play, Pause, Trash2 } from 'lucide-react';
+import { Megaphone, Trash2 } from 'lucide-react';
 import { api } from '../lib/api';
 import type { CSSProperties } from 'react';
 import { DataTable } from '../components/DataTable';
@@ -62,12 +62,12 @@ export function AdsPage() {
     queryFn: () => api.get('/ads'),
   });
 
-  const statusMutation = useMutation({
+  const _statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => api.put(`/ads/${id}`, { status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ads'] }),
   });
 
-  const deleteMutation = useMutation({
+  const _deleteMutation = useMutation({
     mutationFn: (id: string) => api.del(`/ads/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ads'] }),
   });

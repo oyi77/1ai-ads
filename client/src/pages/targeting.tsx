@@ -98,7 +98,7 @@ export function TargetingPage() {
     { key: 'post_id', label: 'Post ID', sortable: true, width: 160 },
     {
       key: 'confidence_score', label: 'Confidence', sortable: true, align: 'right', width: 120,
-      render: (s) => (s.confidence_score != null ? `${Math.round(s.confidence_score * 100)}%` : '—'),
+      render: (s) => (s.confidence_score !== null ? `${Math.round(s.confidence_score * 100)}%` : '—'),
     },
     {
       key: 'interests_json', label: 'Interests', sortable: false, width: 260,

@@ -7,7 +7,7 @@ export interface Column<T> {
   label: string;
   sortable?: boolean;
   width?: number;
-  render?: (row: T, index: number) => ReactNode;
+  render?: (__row: T, _index: number) => ReactNode;
   align?: 'left' | 'center' | 'right';
 }
 
@@ -21,9 +21,9 @@ interface DataTableProps<T> {
   isLoading?: boolean;
   emptyMessage?: string;
   emptyIcon?: ReactNode;
-  onRowClick?: (row: T) => void;
+  onRowClick?: (_row: T) => void;
   pageSize?: number;
-  rowKey: (row: T) => string;
+  rowKey: (_row: T) => string;
 }
 
 export function DataTable<T>({
@@ -59,7 +59,7 @@ export function DataTable<T>({
       const q = search.toLowerCase();
       result = result.filter(row => {
         const val = (row as Record<string, unknown>)[searchKey];
-        return val != null && String(val).toLowerCase().includes(q);
+        return val !== null && String(val).toLowerCase().includes(q);
       });
     }
 

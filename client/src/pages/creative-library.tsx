@@ -63,7 +63,7 @@ export function CreativeLibraryPage() {
   });
   const perfList = Array.isArray(perfQuery.data) ? perfQuery.data : [];
 
-  const tabsUi = (
+  const _tabsUi = (
     <div style={{ display: 'flex', gap: 4, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 4, width: 'fit-content' }}>
       {(['library', 'performance'] as const).map(v => (
         <button key={v} onClick={() => setTab(v)}

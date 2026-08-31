@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import {
   Brain, ShieldCheck, Target, Layers, BarChart3, ArrowRight,
-  Sparkles, Gauge, Wallet, Zap, Building2, Users, Lock, Server,
+  Gauge, Wallet, Zap, Building2, Users, Lock, Server,
   KeyRound, Unlock, CheckCircle2, ChevronRight, User,
 } from 'lucide-react';
 

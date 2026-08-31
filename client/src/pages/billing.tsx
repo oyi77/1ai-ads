@@ -22,7 +22,7 @@ interface Payment {
 }
 
 export function BillingPage() {
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
   const [error, setError] = useState('');
   const [redirecting, setRedirecting] = useState(false);
 
@@ -80,7 +80,7 @@ export function BillingPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
         {(planList.length > 0 ? planList : [{ id: 'plan_pro', name: 'Pro', tier: 2, maxCampaigns: 10, features: [], amount: null, currency: 'IDR' }]).map(p => {
           const isCurrent = p.id === `plan_${currentPlan}`;
-          const priceable = p.amount != null && p.amount > 0;
+          const priceable = p.amount !== null && p.amount > 0;
           return (
             <div key={p.id} style={{
               background: 'var(--bg-elevated)', border: isCurrent ? '1px solid var(--accent)' : '1px solid var(--border)',

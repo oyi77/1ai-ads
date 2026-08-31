@@ -1,8 +1,8 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Megaphone, Settings, LogOut, Menu,
+  LayoutDashboard, Megaphone, LogOut, Menu,
   Library, Activity, FlaskConical, BarChart3, Zap, Eye, GitBranch, LayoutGrid,
-  TrendingUp, Bot, FileText, Globe, Users, Link2, FileEdit, Layers, Shield, Boxes, Receipt, Bookmark, Target, FileBarChart, CreditCard,
+  TrendingUp, Bot, FileText, Globe, Users, Link2, FileEdit, Layers, Boxes, Receipt, Bookmark, Target, FileBarChart, CreditCard,
 } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { useState, useEffect, useCallback } from 'react';

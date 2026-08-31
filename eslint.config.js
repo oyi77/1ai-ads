@@ -1,3 +1,5 @@
+import parser from '@typescript-eslint/parser';
+
 export default [
   {
     files: ['server/**/*.js'],
@@ -43,16 +45,38 @@ export default [
   {
     files: ['client/src/**/*.{ts,tsx}'],
     languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: 'module',
+      parser,
+      parserOptions: {
+        ecmaVersion: 2022,
+        sourceType: 'module',
+        ecmaFeatures: { jsx: true },
+      },
       globals: {
         console: 'readonly',
         window: 'readonly',
         document: 'readonly',
+        localStorage: 'readonly',
         fetch: 'readonly',
         setTimeout: 'readonly',
         setInterval: 'readonly',
+        clearTimeout: 'readonly',
+        clearInterval: 'readonly',
         AbortController: 'readonly',
+        AbortSignal: 'readonly',
+        Event: 'readonly',
+        HTMLDivElement: 'readonly',
+        HTMLElement: 'readonly',
+        HTMLTableRowElement: 'readonly',
+        HTMLTableCellElement: 'readonly',
+        React: 'readonly',
+        WebSocket: 'readonly',
+        URLSearchParams: 'readonly',
+        NodeJS: 'readonly',
+        confirm: 'readonly',
+        alert: 'readonly',
+        URL: 'readonly',
+        FormData: 'readonly',
+        Blob: 'readonly',
       },
     },
     rules: {

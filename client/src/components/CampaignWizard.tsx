@@ -26,7 +26,7 @@ const btnStyle: CSSProperties = {
   borderRadius: 6, fontFamily: 'var(--font)', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
 };
 
-export function CampaignWizard({ onDone, onClose }: { onDone: (campaignId: string) => void; onClose: () => void }) {
+export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: string) => void; onClose: () => void }) {
   const [step, setStep] = useState(1);
   const [objective, setObjective] = useState('');
   const [accountId, setAccountId] = useState('');
@@ -53,7 +53,6 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (campaignId: strin
   const pagesLoading = pagesQuery.isLoading;
 
   const canNext1 = Boolean(objective && accountId && Number(dailyBudget) >= 10000);
-  const canCreate = Boolean(product && pageId && landingUrl.startsWith('http'));
 
   async function handleCreate() {
     setCreating(true); setError('');

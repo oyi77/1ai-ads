@@ -31,7 +31,7 @@ const columns: Column<FatiguedCreative>[] = [
     <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600, background: severityBg(c.severity), color: severityColor(c.severity) }}>{c.severity}</span>
   )},
   { key: 'ctr_drop', label: 'CTR Drop', sortable: true, align: 'right', render: (c) => (
-    <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--red)' }}>{c.ctr_drop != null ? `${c.ctr_drop.toFixed(1)}%` : '—'}</span>
+    <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--red)' }}>{c.ctr_drop !== null ? `${c.ctr_drop.toFixed(1)}%` : '—'}</span>
   )},
   { key: 'frequency', label: 'Frequency', sortable: true, align: 'right', render: (c) => (
     <span style={{ fontFamily: 'var(--font-mono)' }}>{c.frequency?.toFixed(1) ?? '—'}</span>

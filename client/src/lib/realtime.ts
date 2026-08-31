@@ -23,7 +23,7 @@ type WSMessage = {
   timestamp?: string;
 };
 
-type Listener = (message: WSMessage) => void;
+type Listener = (_message: WSMessage) => void;
 
 class RealtimeClient {
   private ws: WebSocket | null = null;

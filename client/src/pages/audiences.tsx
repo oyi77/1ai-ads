@@ -171,7 +171,7 @@ export function AudiencesPage() {
     { key: 'platform', label: 'Platform', sortable: true, width: 110 },
     {
       key: 'size_estimate', label: 'Est. Size', sortable: true, align: 'right', width: 110,
-      render: (a) => (a.size_estimate != null ? a.size_estimate.toLocaleString('id-ID') : '—'),
+      render: (a) => (a.size_estimate !== null ? a.size_estimate.toLocaleString('id-ID') : '—'),
     },
     { key: 'source', label: 'Source', sortable: true, width: 100 },
     { key: 'description', label: 'Description', sortable: true, width: 220, render: (a) => a.description || '—' },

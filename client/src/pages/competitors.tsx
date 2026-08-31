@@ -25,7 +25,7 @@ interface SearchResult {
 }
 
 export function CompetitorsPage() {
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
   const [query, setQuery] = useState('');
   const [platform, setPlatform] = useState('meta');
   const [country, setCountry] = useState('');
