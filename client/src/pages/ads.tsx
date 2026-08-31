@@ -23,6 +23,7 @@ interface Creative {
   tags: string[];
 }
 
+// eslint-disable-next-line no-unused-vars
 interface CreativeResponse {
   success: boolean;
   data: Creative[];

@@ -5,6 +5,7 @@
  */
 import { api } from './api';
 
+/* eslint-disable no-unused-vars */
 declare global {
   interface Window {
     Telegram?: {

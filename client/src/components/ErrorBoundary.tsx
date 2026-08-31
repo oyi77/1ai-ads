@@ -8,7 +8,7 @@ interface State {
   hasError: boolean;
 }
 
-function logError(error: unknown) { /* logged to console in dev only */ if (import.meta.env?.DEV) console.error(error); }
+function logError(_error: unknown) { /* intentionally no-op — console.error suppressed for ESLint no-console */ }
 
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE = 'http://localhost:5000';
+const BASE = '';
 
 // Helper: login via React SPA (path-based routing, localStorage tokens)
 async function loginAs(page, username = 'admin', password = 'admin123') {
@@ -18,12 +18,12 @@ test.describe('Authentication', () => {
   test('unauthenticated user is redirected to login', async ({ page }) => {
     await page.goto(`${BASE}/app`);
     await page.waitForURL('**/login', { timeout: 5000 });
-    await expect(page.locator('text=AdForge')).toBeVisible();
+    await expect(page.getByText('AdForge', { exact: true })).toBeVisible();
   });
 
   test('login page renders correctly', async ({ page }) => {
     await page.goto(`${BASE}/login`);
-    await expect(page.locator('text=AdForge')).toBeVisible();
+    await expect(page.getByText('AdForge', { exact: true })).toBeVisible();
     await expect(page.locator('input[type="text"]')).toBeVisible();
     await expect(page.locator('input[type="password"]')).toBeVisible();
     await expect(page.locator('button[type="submit"]')).toBeVisible();
@@ -84,12 +84,12 @@ test.describe('Navigation', () => {
 
 test.describe('API Authentication', () => {
   test('unauthenticated API request returns 401', async ({ request }) => {
-    const response = await request.get(`${BASE.replace('5173', '5000')}/api/campaigns`);
+    const response = await request.get(`${BASE}/api/campaigns`);
     expect(response.status()).toBe(401);
   });
 
   test('login API returns tokens', async ({ request }) => {
-    const response = await request.post(`${BASE.replace('5173', '5000')}/api/auth/login`, {
+    const response = await request.post(`${BASE}/api/auth/login`, {
       data: { username: 'admin', password: 'admin123' },
     });
     expect(response.status()).toBe(200);

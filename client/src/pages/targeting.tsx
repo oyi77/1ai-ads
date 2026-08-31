@@ -89,7 +89,7 @@ export function TargetingPage() {
 
   const searchColumns: Column<InterestResult>[] = [
     { key: 'name', label: 'Interest', sortable: true, width: 260 },
-    { key: 'audience_size', label: 'Audience Size', sortable: true, align: 'right', width: 160, render: (r) => (r.audience_size !== null ? r.audience_size.toLocaleString('id-ID') : '—') },
+    { key: 'audience_size', label: 'Audience Size', sortable: true, align: 'right', width: 160, render: (r) => (r.audience_size === null || r.audience_size === undefined ? '—' : r.audience_size.toLocaleString('id-ID')) },
     { key: 'path', label: 'Path', sortable: true, width: 220, render: (r) => r.path || '—' },
   ];
 

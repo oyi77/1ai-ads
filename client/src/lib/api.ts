@@ -82,7 +82,11 @@ async function request<T>(method: string, path: string, body?: unknown, retried 
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  if (response.status === 401 && !retried) {
+  // A 401 on the login endpoint means bad credentials, NOT an expired token —
+  // don't run the refresh-redirect flow there (it would wipe the error message
+  // and bounce the user back to /login with no feedback).
+  const isAuthEndpoint = path === '/auth/login' || path === '/auth/register';
+  if (response.status === 401 && !retried && !isAuthEndpoint) {
     const refreshed = await tryRefreshToken();
     if (refreshed) return request<T>(method, path, body, true);
     clearAuth();
