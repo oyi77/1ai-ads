@@ -150,6 +150,13 @@ async function showPlatformAccounts(ctx, deps, platform) {
   }
 }
 
+// ── Platform account list (used by ads:platform: callbacks) ──
+export function handleAdsPlatform(deps) {
+  return async (ctx, platform) => {
+    await showPlatformAccounts(ctx, deps, platform);
+  };
+}
+
 // ── Pagination helpers ──────────────────────────────────────
 const ACCOUNTS_PER_PAGE = 6;
 const CAMPAIGNS_PER_PAGE = 8;
@@ -354,9 +361,9 @@ export function handleAdsReport(deps) {
 
 // ── Quick budget scale: ±% applied to ACTIVE campaigns of one account ──
 export function handleAdsBudgetScale(deps) {
-  return async (ctx, accountId, _pctStr, multStr) => {
+  return async (ctx, platform, accountId, _pctStr, multStr) => {
     await ctx.answerCbQuery();
-    const { api } = await makeApi(ctx, deps, 'meta');
+    const { api } = await makeApi(ctx, deps, platform || 'meta');
     if (!api) return ctx.reply('🔌 Hubungkan akun Meta dulu via /start.');
     const mult = parseFloat(multStr);
     if (!Number.isFinite(mult) || mult <= 0.2 || mult >= 5) {

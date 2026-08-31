@@ -41,9 +41,8 @@ export function handleStatus(deps) {
       if (activeAccounts.length > 0) {
         message += `\n\n*Connected Ad Accounts*\n`;
         for (const acct of activeAccounts) {
-          const acctCampaigns = campaigns.filter(c => c.account_id === acct.id);
-          const acctActive = acctCampaigns.filter(c => c.status === 'ACTIVE').length;
-          message += `• ${escHtml(acct.account_name || acct.platform)} — ${acctActive}/${acctCampaigns.length} active\n`;
+          // Note: campaigns table has no account_id column, so show total user campaigns
+          message += `• ${escHtml(acct.account_name || acct.platform)}\n`;
         }
         for (const acct of activeAccounts.slice(0, 6)) {
           keyboard.push([{
@@ -146,22 +145,24 @@ async function showAccountReport(ctx, deps, accountId) {
     const account = platformAccountsRepo?.findById?.(accountId);
     if (!account) return ctx.reply('⚠️ Account not found.');
 
-    // Get account insights via Meta API
+    // Get account insights via Meta API using the REAL ad account id (not internal UUID)
     let insights = null;
     const token = account.access_token || account.credentials?.access_token;
+    let realAccountId = account.credentials?.ad_account_id;
     if (token) {
       try {
         const api = MetaAdsAPI.withToken(token);
-        insights = await api.getAccountInsights(accountId, { datePreset: 'last_30d' });
+        if (!realAccountId) {
+          const adAccounts = await api.getAdAccounts();
+          if (adAccounts.length > 0) realAccountId = adAccounts[0].id;
+        }
+        if (realAccountId) {
+          insights = await api.getAccountInsights(realAccountId, { datePreset: 'last_30d' });
+        }
       } catch (e) {
         // Token expired or API error
       }
     }
-
-    // Get campaigns for this account
-    const allCampaigns = campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [] };
-    const accountCampaigns = allCampaigns.data.filter(c => c.account_id === accountId);
-    const active = accountCampaigns.filter(c => c.status === 'ACTIVE').length;
 
     let message = `📊 *Report: ${escHtml(account.account_name || account.platform)}*\n\n`;
 
@@ -174,7 +175,6 @@ async function showAccountReport(ctx, deps, accountId) {
       message += `👆 Clicks: ${(insights.clicks || 0).toLocaleString('id-ID')}\n`;
       message += `👁 Impressions: ${(insights.impressions || 0).toLocaleString('id-ID')}`;
     } else {
-      message += `*Campaigns*: ${active} active / ${accountCampaigns.length} total\n`;
       message += `\n⚠️ Connect token to see detailed insights.`;
     }
 

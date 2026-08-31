@@ -16,7 +16,7 @@ import { handleHelp } from './commands/help.js';
 import { handleSettings, handleSettingsCallback } from './commands/settings.js';
 import { handleMonitor, handleMonitorCallback, handleMonitorText } from './commands/monitor.js';
 import { handleAdminStats, handleAdminUsers, handleAdminBroadcast } from './commands/admin.js';
-import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm, handleAdsAccountReport, handleAdsAccountsPage, handleAdsCampaignsPage, handleAdsBudgetScale } from './commands/ads.js';
+import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm, handleAdsAccountReport, handleAdsAccountsPage, handleAdsCampaignsPage, handleAdsBudgetScale, handleAdsPlatform } from './commands/ads.js';
 import { handleApprovalApprove, handleApprovalReject } from './commands/approvals.js';
 import { handleFbAds } from './commands/fbads.js';
 import { handlePricing } from './commands/pricing.js';
@@ -90,28 +90,58 @@ export function initBot(app, deps) {
   bot.command('create', (ctx) => ctx.scene.enter('create-campaign'));
 
   // ── Callback queries (inline buttons) ────────────────────
-  bot.action(/^ads:budget:(.+):pct:([\d.]+)$/, async (ctx) => {
+  // ads:* callbacks carry explicit platform:accountId segments:
+  //   ads:select:<platform>:<accountId>
+  //   ads:accts:<platform>:<page>
+  //   ads:camps:<platform>:<accountId>:<page>
+  //   ads:toggle:<platform>:<accountId>:<campaignId>:<mode>
+  //   ads:report:<platform>[:<accountId>]
+  //   ads:repacc:<platform>:<accountId>
+  //   ads:budget:<platform>:<accountId>:pct:<mult>
+  //   ads:platform:<platform>  (list accounts for a platform)
+  bot.action(/^ads:budget:(.+):(.+):pct:([\d.]+)$/, async (ctx) => {
     await ctx.answerCbQuery();
-    const [, acct, mult] = ctx.match;
-    await handleAdsBudgetScale(deps)(ctx, acct, 'pct', mult);
+    const [, platform, acct, mult] = ctx.match;
+    await handleAdsBudgetScale(deps)(ctx, platform, acct, 'pct', mult);
+  });
+  bot.action(/^ads:platform:(.+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    await handleAdsPlatform(deps)(ctx, ctx.match[1]);
   });
   bot.action(/^menu:(.+)$/, handleMenuButton(deps));
   bot.action(/^settings:(.+)$/, handleSettingsCallback(deps));
-  bot.action(/^ads:select:(.+)$/, async (ctx) => { await ctx.answerCbQuery(); await handleAdsSelect(deps)(ctx, 'meta', ctx.match[1]); });
+  bot.action(/^ads:select:(.+):(.+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const [, platform, accountId] = ctx.match;
+    await handleAdsSelect(deps)(ctx, platform, accountId);
+  });
   bot.action(/^ads:toggle:(.+):(.+):(.+):(.+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     const [, platform, acct, camp, mode] = ctx.match;
     await handleAdsToggle(deps)(ctx, platform, acct, camp, mode);
   });
-  bot.action(/^ads:report:(.+)?$/, async (ctx) => {
+  bot.action(/^ads:report:(.+?)(?::(.+))?$/, async (ctx) => {
     await ctx.answerCbQuery();
     const platform = ctx.match[1] || 'meta';
-    await handleAdsReport(deps)(ctx, undefined);
+    const accountId = ctx.match[2] || undefined;
+    await handleAdsReport(deps)(ctx, platform, accountId);
   });
-  bot.action(/^ads:repacc:(.+)$/, async (ctx) => { await ctx.answerCbQuery(); await handleAdsAccountReport(deps)(ctx, ctx.match[1]); });
+  bot.action(/^ads:repacc:(.+):(.+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const [, platform, accountId] = ctx.match;
+    await handleAdsAccountReport(deps)(ctx, accountId);
+  });
   bot.action(/^ads:nop$/, (ctx) => ctx.answerCbQuery());
-  bot.action(/^ads:accts:(\d+)$/, async (ctx) => { await ctx.answerCbQuery(); await handleAdsAccountsPage(deps)(ctx, ctx.match[1], 'meta'); });
-  bot.action(/^ads:camps:(.+):(\d+)$/, async (ctx) => { await ctx.answerCbQuery(); const [, acct, page] = ctx.match; await handleAdsCampaignsPage(deps)(ctx, 'meta', acct, page); });
+  bot.action(/^ads:accts:(.+):(\d+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const [, platform, page] = ctx.match;
+    await handleAdsAccountsPage(deps)(ctx, page, platform);
+  });
+  bot.action(/^ads:camps:(.+):(.+):(\d+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const [, platform, acct, page] = ctx.match;
+    await handleAdsCampaignsPage(deps)(ctx, platform, acct, page);
+  });
   bot.action(/^ads:disconnect(?::(.+))?$/, async (ctx) => {
     await ctx.answerCbQuery();
     const id = ctx.match?.[1];

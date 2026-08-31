@@ -69,7 +69,12 @@ export function handleMenuButton(deps) {
       case 'status':
         return handleStatus(deps)(ctx);
       case 'reports':
-        return scope ? handleAdsReport(deps)(ctx, scope) : handleReportsAction(ctx, deps);
+        // callback menu:reports:<platform>[:<accountId>] → scope may be "meta" or "meta:123"
+        if (scope) {
+          const [rp, ra] = scope.split(':');
+          return handleAdsReport(deps)(ctx, rp, ra);
+        }
+        return handleReportsAction(ctx, deps);
       case 'create':
         return ctx.scene.enter('create-campaign');
       case 'connect':

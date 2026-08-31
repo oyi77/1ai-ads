@@ -17,9 +17,11 @@ export function handleStart() {
     log.info('User started bot', { userId, name });
 
     // Smart onboarding: check user state to personalize message
-    const hasMetaAccount = ctx.repos?.platformAccountsRepo?.findByUserId?.(userId)?.some(a => a.platform === 'meta' && a.is_active);
-    const campaignCount = ctx.repos?.campaignsRepo?.findAll?.({ userId })?.data?.length || 0;
-    const ruleCount = ctx.repos?.rulesRepo?.countEnabled?.(userId) || 0;
+    // Use ctx.deps (set by bot middleware) — ctx.repos is never populated.
+    const deps = ctx.deps || {};
+    const hasMetaAccount = deps.repos?.platformAccountsRepo?.findByUserId?.(ctx.userId)?.some(a => a.platform === 'meta' && a.is_active);
+    const campaignCount = deps.repos?.campaignsRepo?.findAll?.({ userId: ctx.userId })?.data?.length || 0;
+    const ruleCount = deps.repos?.rulesRepo?.countEnabled?.(ctx.userId) || 0;
 
     let message;
     if (!hasMetaAccount && campaignCount === 0) {
