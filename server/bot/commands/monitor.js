@@ -1,5 +1,5 @@
 import { METRICS, METRIC_CATEGORIES } from '../../lib/rule-metrics.js';
-import { RULE_TEMPLATES, ConditionGroup, Condition, RuleAction } from '../../lib/rule-builder.js';
+import { RULE_TEMPLATES, ConditionGroup, Condition, RuleAction, OPERATORS } from '../../lib/rule-builder.js';
 
 const MONITOR_HEADER =
   '⚡ *Campaign Monitor*\n\n' +
@@ -327,7 +327,9 @@ function createRule(ctx, deps, actionType, intervalMinutes = 15) {
       { reply_markup: { inline_keyboard: [[{ text: '⬅️ Cancel', callback_data: 'menu:monitor' }]] } }
     );
   }
-  const condition = ConditionGroup.and().add(new Condition(rb.metric, rb.operator, parseFloat(rb.value)));
+  // rb.operator comes from callbacks as 'gt'/'lt'/'gte'/'lte'; Condition needs '>'/'<'/'>='/'<='
+  const opSymbol = OPERATORS[rb.operator] || rb.operator;
+  const condition = ConditionGroup.and().add(new Condition(rb.metric, opSymbol, parseFloat(rb.value)));
   const action = new RuleAction(actionType);
   try {
     deps.repos.rulesRepo.create({

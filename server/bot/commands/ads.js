@@ -65,6 +65,9 @@ function escHtml(s) {
 }
 
 // ── /ads entry ──────────────────────────────────────────────
+// Multi-platform Ads Manager: always show ALL platforms with connection
+// status (connected accounts per platform + connect/manage actions).
+// Clicking a connected platform drills into its ad accounts.
 export function handleAds(deps) {
   return async (ctx) => {
     const platformAccountsRepo = deps.repos?.platformAccountsRepo;
@@ -74,52 +77,52 @@ export function handleAds(deps) {
     const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [] };
     const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE').length;
 
-    if (active.length === 0) {
-      // No connected account — show read-only campaign list with connect CTA
-      if (campaigns.length > 0) {
-        const lines = campaigns.slice(0, 10).map((c, i) => `${i + 1}. ${escHtml(c.name)} — ${c.status === 'ACTIVE' ? '✅ ON' : '⏸ OFF'}`);
-        const more = campaigns.length > 10 ? `\n... and ${campaigns.length - 10} more` : '';
-        return ctx.reply(
-          `📊 *Campaigns* (${activeCampaigns} active / ${campaigns.length} total)\n\n${lines.join('\n')}${more}\n\n` +
-          `⚠️ *Connect your ad account to manage these campaigns.*\n\n` +
-          `• Tap /start → Connect Account, or\n` +
-          `• /settings → Connect`,
-          {
-            parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [[{ text: '🔗 Connect Account', callback_data: 'menu:connect' }]],
-            },
-          }
-        );
+    // Platform labels (same registry as Platforms page)
+    const PLATFORM_LABELS = {
+      meta: 'Meta (FB/IG)', google: 'Google Ads', tiktok: 'TikTok Ads', linkedin: 'LinkedIn Ads',
+      twitter: 'Twitter/X', snapchat: 'Snapchat', pinterest: 'Pinterest', microsoft: 'Microsoft/Bing',
+      reddit: 'Reddit', yandex: 'Yandex', amazon: 'Amazon Ads', apple: 'Apple Search',
+      taboola: 'Taboola', criteo: 'Criteo', thetradedesk: 'The Trade Desk', spotify: 'Spotify',
+      kakao: 'Kakao', line: 'LINE', whatsapp: 'WhatsApp', baidu: 'Baidu',
+    };
+    const ALL_PLATFORMS = Object.keys(PLATFORM_LABELS);
+
+    // Group active accounts by platform
+    const byPlatform = {};
+    for (const a of active) {
+      if (!byPlatform[a.platform]) byPlatform[a.platform] = [];
+      byPlatform[a.platform].push(a);
+    }
+
+    const rows = [];
+    for (const key of ALL_PLATFORMS) {
+      const accts = byPlatform[key] || [];
+      if (accts.length > 0) {
+        const names = accts.slice(0, 2).map(a => a.account_name || key).join(', ');
+        rows.push([{
+          text: `✅ ${PLATFORM_LABELS[key]} — ${names}`,
+          callback_data: `ads:platform:${key}`,
+        }]);
+      } else {
+        rows.push([{
+          text: `🔗 ${PLATFORM_LABELS[key]}`,
+          callback_data: `connect:${key}`,
+        }]);
       }
-      return ctx.reply(
-        '🔌 *No ad account connected*\n\nConnect your ad account first:',
-        {
-          parse_mode: 'HTML',
-          reply_markup: {
-            inline_keyboard: [[{ text: '🔗 Connect Account', callback_data: 'menu:connect' }]],
-          },
-        }
-      );
     }
-
-    if (active.length === 1) {
-      const platform = active[0].platform;
-      return showPlatformAccounts(ctx, deps, platform);
-    }
-
-    const rows = active.map(a => [{
-      text: `${a.platform.toUpperCase()} - ${a.account_name}`,
-      callback_data: `ads:platform:${a.platform}`,
-    }]);
     rows.push([{ text: '⬅️ Menu', callback_data: 'quick:menu' }]);
-    return ctx.reply(
-      '📣 *Ads Manager*\n\nSelect a platform to manage:',
-      {
-        parse_mode: 'Markdown',
-        reply_markup: { inline_keyboard: rows },
-      }
-    );
+
+    const connectedCount = active.length;
+    const summary =
+      `📣 *Ads Manager*\n\n` +
+      `Multiple ad platforms — ${connectedCount} connected\n` +
+      `Campaigns: ${activeCampaigns} active / ${campaigns.length} total\n\n` +
+      `Tap ✅ to manage a connected platform, 🔗 to connect one:`;
+
+    return ctx.reply(summary, {
+      parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: rows },
+    });
   };
 }
 

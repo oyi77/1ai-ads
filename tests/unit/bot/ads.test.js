@@ -28,12 +28,14 @@ function makeCtx(userId = 'u1') {
   const replies = [];
   return {
     userId,
-    reply: async (msg) => { replies.push(msg); return { message: msg }; },
+    reply: async (msg, opts) => { replies.push({ msg, opts }); return { message: msg }; },
     answerCbQuery: async () => {},
     scene: { enter: (name, data) => { replies.push(`SCENE:${name}:${JSON.stringify(data)}`); } },
     _replies: replies,
   };
 }
+const txt = (r) => (typeof r === 'string' ? r : (r && r.msg) || '');
+const kbOf = (r) => (r && r.opts && r.opts.reply_markup && r.opts.reply_markup.inline_keyboard) || [];
 
 function makeDeps({ accessToken = null, storedId = 'acc1', connected = null } = {}) {
   const repo = {
@@ -63,26 +65,34 @@ describe('per-user ads handlers (multi-platform)', () => {
     mockUpdateCampaign.mockResolvedValue({ success: true });
   });
 
-  it('handleAds shows connect prompt when no connected platforms', async () => {
+  it('handleAds shows multi-platform overview when no platforms connected', async () => {
     const ctx = makeCtx();
     await handleAds(makeDeps({ accessToken: null }))(ctx);
-    const text = ctx._replies[0];
-    expect(text).toContain('No ad account connected');
+    const text = txt(ctx._replies[0]);
+    // AdForge is multi-platform: always show Ads Manager overview, with
+    // connect buttons for every platform (never a Meta-only prompt).
+    expect(text).toContain('Ads Manager');
+    expect(text).toContain('Multiple ad platforms');
   });
 
-  it('handleAds lists ad accounts when single platform connected', async () => {
+  it('handleAds shows multi-platform overview with connected platform marked', async () => {
     const ctx = makeCtx();
     await handleAds(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx);
-    const text = ctx._replies[1];
-    expect(text).toContain('META Ad Accounts');
-    expect(text).toContain('Selow ID 1340');
-    expect(mockGetAdAccounts).toHaveBeenCalled();
+    const text = txt(ctx._replies[0]);
+    expect(text).toContain('Ads Manager');
+    expect(text).toContain('1 connected');
+    // Connected Meta listed with ✅; others shown as 🔗 connect
+    const flat = kbOf(ctx._replies[0]).flat().map(b => b.text);
+    expect(flat.some(t => t.includes('✅') && t.includes('Meta'))).toBe(true);
+    expect(flat.some(t => t.includes('Google Ads'))).toBe(true);
+    // Does NOT auto-drill into Meta accounts (drill happens on tap)
+    expect(mockGetAdAccounts).not.toHaveBeenCalled();
   });
 
   it('handleAdsSelect reads campaigns for the chosen account', async () => {
     const ctx = makeCtx();
     await handleAdsSelect(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', '1181078009580337');
-    const text = ctx._replies[1];
+    const text = txt(ctx._replies[1]);
     expect(text).toContain('Campaigns (2)');
     expect(text).toContain('Camp A');
     expect(mockGetCampaigns).toHaveBeenCalledWith('1181078009580337');
@@ -92,13 +102,13 @@ describe('per-user ads handlers (multi-platform)', () => {
     const ctx = makeCtx();
     await handleAdsToggle(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', '1181078009580337', 'c1', 'pause');
     expect(mockUpdateCampaign).toHaveBeenCalledWith('c1', { status: 'PAUSED' });
-    expect(ctx._replies[1]).toContain('paused');
+    expect(txt(ctx._replies[1])).toContain('paused');
   });
 
   it('handleAdsToggle resumes a paused campaign', async () => {
     const ctx = makeCtx();
     await handleAdsToggle(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', '1181078009580337', 'c2', 'resume');
     expect(mockUpdateCampaign).toHaveBeenCalledWith('c2', { status: 'ACTIVE' });
-    expect(ctx._replies[1]).toContain('resumed');
+    expect(txt(ctx._replies[1])).toContain('resumed');
   });
 });
