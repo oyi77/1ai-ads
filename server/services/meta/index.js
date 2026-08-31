@@ -290,12 +290,17 @@ export class MetaAdsAPI extends BasePlatformApiClient {
 
   async createCampaign(accountId, { name, objective, status = 'PAUSED', dailyBudget, specialAdCategories = [] }) {
     this.log.info('Creating Meta campaign', { accountId, name, objective });
+    // Campaign-level budget (daily_budget) is mutually exclusive with ad-set
+    // budget sharing — Meta rejects the combo with error_subcode 4834002.
+    // When a campaign budget is set, disable sharing; otherwise leave it off.
     const body = {
       name,
       objective,
       status,
       special_ad_categories: specialAdCategories,
-      is_adset_budget_sharing_enabled: !!dailyBudget
+      // Campaign-level budget with default CBO (do NOT set the sharing flag —
+      // explicit is_adset_budget_sharing_enabled:true + daily_budget is rejected
+      // with error_subcode 4834002).
     };
     if (dailyBudget) body.daily_budget = Math.round(dailyBudget * 100); // Meta expects cents
     const data = await this._post(`/${accountId}/campaigns`, body);
@@ -307,14 +312,19 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     const body = {
       name,
       campaign_id: campaignId,
-      daily_budget: Math.round(dailyBudget * 100),
       billing_event: billingEvent,
       optimization_goal: optimizationGoal,
-      bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+      // When the ad set carries no budget (campaign-level CBO), LOWEST_COST
+      // strategies demand a bid_amount (error_subcode 1815857) — use the bid-cap
+      // strategy with a minimal bid. When the ad set owns its budget,
+      // LOWEST_COST_WITHOUT_CAP with daily_budget is valid.
+      bid_strategy: dailyBudget ? 'LOWEST_COST_WITHOUT_CAP' : 'LOWEST_COST_WITH_BID_CAP',
       // v22 requires explicit advantage_audience toggle
       targeting: { ...(targeting || { geo_locations: { countries: ['ID'] }, age_min: 18 }), targeting_automation: { advantage_audience: 0 } },
       status: 'PAUSED',
     };
+    if (dailyBudget) body.daily_budget = Math.round(dailyBudget * 100);
+    else body.bid_amount = 500; // minimal bid (IDR) — required without ad-set budget
     if (startTime) body.start_time = startTime;
     const data = await this._post(`/${accountId}/adsets`, body);
     return { id: data.id };

@@ -217,9 +217,16 @@ async function handleCreateGo(ctx) {
   if (!acct?.access_token) return ctx.reply('🔌 Connect a Meta account first via /settings.');
   const api = MetaAdsAPI.withToken(acct.access_token);
 
-  await ctx.reply('🔄 Creating campaign...');
+  await ctx.reply('🔄 Resolving ad account & creating campaign...');
   try {
-    const campaign = await api.createCampaign(d.accountId, {
+    // Resolve the REAL Meta ad account ID (d.accountId is internal UUID, not Meta's)
+    let realAccountId = acct.credentials?.ad_account_id;
+    if (!realAccountId) {
+      const adAccounts = await api.getAdAccounts();
+      if (!adAccounts.length) throw new Error('No ad accounts found for this token');
+      realAccountId = adAccounts[0].id;
+    }
+    const campaign = await api.createCampaign(realAccountId, {
       name: d.name,
       objective: d.objective,
       status: 'PAUSED',
@@ -236,9 +243,11 @@ async function handleCreateGo(ctx) {
     } catch { /* handled below */ }
 
     const targeting = d.targeting || {};
-    const adSet = await api.createAdSet(d.accountId, campaign.id, {
+    // Campaign already has a budget — ad set must NOT carry its own budget
+    // (Meta rejects combo with error_subcode 4834002).
+    const adSet = await api.createAdSet(realAccountId, campaign.id, {
       name: `${d.name} - Ad Set`,
-      dailyBudget: d.dailyBudget * 100,
+      dailyBudget: 0,
       targeting: {
         geo_locations: { countries: targeting.countries || ['ID'] },
         age_min: targeting.ageMin || 18,
@@ -250,18 +259,18 @@ async function handleCreateGo(ctx) {
     });
 
     if (d.postId) {
-      const data = await api._post(`/${d.accountId}/adcreatives`, {
+      const data = await api._post(`/${realAccountId}/adcreatives`, {
         name: `${d.name} - Creative`,
         object_story_id: d.postId,
       });
-      await api.createAd(d.accountId, {
+      await api.createAd(realAccountId, {
         adsetId: adSet.id,
         creativeId: data.id,
         name: `${d.name} - Ad`,
         status: 'PAUSED',
       });
     } else {
-      const creative = await api.createAdCreative(d.accountId, {
+      const creative = await api.createAdCreative(realAccountId, {
         name: `${d.name} - Creative`,
         pageId,
         message: d.name,
@@ -270,7 +279,7 @@ async function handleCreateGo(ctx) {
         linkUrl: 'https://example.com',
         ctaType: 'LEARN_MORE',
       });
-      await api.createAd(d.accountId, {
+      await api.createAd(realAccountId, {
         adsetId: adSet.id,
         creativeId: creative.id,
         name: `${d.name} - Ad`,
@@ -287,7 +296,21 @@ async function handleCreateGo(ctx) {
     );
   } catch (err) {
     log.error('create campaign failed', { userId: ctx.userId, error: err.message });
-    await ctx.reply(`⚠️ Failed: ${esc(err.message).slice(0, 200)}`);
+    // err.data = {error: {message, error_user_msg, ...}} — safeFetch wraps
+    // the JSON body at err.data, and Meta bodies carry {error: {...}}.
+    const metaErr = err.data?.error || {};
+    const raw = `${err.message || ''} ${metaErr.error_user_msg || ''}`.toLowerCase();
+    if (raw.includes('mode') && (raw.includes('perkembangan') || raw.includes('development'))) {
+      await ctx.reply(
+        '⚠️ *Creative gagal dibuat.*\n\n' +
+        'Meta App kamu masih dalam *mode pengembangan* (development mode).\n' +
+        'Creative (post/iklan) hanya bisa dibuat jika App sudah *publik* —\n' +
+        'buka Meta App Dashboard → Settings → App Mode → *Live*.\n\n' +
+        'Campaign + Ad Set sudah terbuat (PAUSED). Setelah App live, buat ulang iklannya.'
+      );
+    } else {
+      await ctx.reply(`⚠️ Failed: ${esc(err.message).slice(0, 200)}`);
+    }
   }
   try { await ctx.scene.leave(); } catch { /* ok */ }
 }
