@@ -4,7 +4,7 @@
  */
 import config from '../../config/index.js';
 import { buildPlatformKeyboard, buildPlatformAccountKeyboard } from '../nav.js';
-import { getUserMetaAccount, makeApi, isExpiredToken } from './ads.js';
+import { getUserMetaAccount, makeApi, isExpiredToken, handleAdsReport } from './ads.js';
 import { resolveScaleDefault } from '../../lib/scale-defaults.js';
 import { handleMonitor } from './monitor.js';
 import { handleAds } from './ads.js';
@@ -124,7 +124,7 @@ async function sendPlatformChoice(ctx) {
 
 async function handleReportsAction(ctx, deps) {
   if (deps) return handleAdsReport(deps)(ctx);
-  return ctx.reply('📈 Reports feature — use the dashboard at /app for detailed analytics.');
+  return ctx.reply('📈 Reports feature — use /menu → Mini App or Open in Browser for detailed analytics.');
 }
 
 async function handleOptimizeAction(ctx, deps, scope) {
@@ -305,8 +305,8 @@ async function proposeOptimization(ctx, deps, suggestion) {
   if (!draft) {
     return ctx.reply(
       '🤖 *AI Optimization*\n\n' +
-      'AI auto-apply sedang nonaktif. Nyalakan persetujuan di /app → Settings, ' +
-      'atau gunakan dashboard: /app',
+      'AI auto-apply sedang nonaktif. Nyalakan persetujuan di /menu → Settings, ' +
+      'atau gunakan dashboard: /menu → Mini App',
       { parse_mode: 'Markdown' }
     );
   }

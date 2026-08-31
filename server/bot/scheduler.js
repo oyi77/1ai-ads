@@ -61,6 +61,21 @@ async function safeSend(bot, text, extra) {
 export function evaluateRuleForCampaign(rule, campaign) {
   const condition = rule.condition;
   if (!condition || typeof condition !== 'object') return false;
+  // Supports both the bot schema {type:'leaf', metric, operator, value} /
+  // {type:'group', logic, children} and the legacy/web schema
+  // {type:'<metric>', operator, value} and {type:'status', ...}.
+  if (condition.type === 'group') {
+    if (!condition.children || !condition.children.length) return false;
+    const logic = condition.logic === 'or' ? 'some' : 'every';
+    return condition.children[logic](c => evaluateRuleForCampaign({ condition: c }, campaign));
+  }
+  if (condition.type === 'leaf') {
+    const metric = condition.metric;
+    if (metric === 'status') return campaign.status === condition.value;
+    const value = campaign[metric] ?? campaign.stats?.[metric] ?? 0;
+    return compare(value, condition.operator, condition.value);
+  }
+  // legacy/web schema: type is the metric column name
   if (condition.type === 'status') return campaign.status === condition.value;
   const metric = campaign[condition.type] ?? campaign.stats?.[condition.type] ?? 0;
   return compare(metric, condition.operator, condition.value);
@@ -322,7 +337,7 @@ export function initScheduler(bot, deps) {
 
           const telegramId = deps.repos?.usersRepo?.getTelegramIdByUserId?.(rule.user_id);
           if (!telegramId) {
-            await safeSend(bot, `⚠️ *${campaign.name}* matched rule *${rule.name}* — draft awaiting approval in /app`);
+            await safeSend(bot, `⚠️ *${campaign.name}* matched rule *${rule.name}* — draft awaiting approval in /menu → Mini App`);
             continue;
           }
           const text = `⚠️ Rule *${rule.name}* matched *${campaign.name}*\nProposed action: *${action.type}*\n\nApprove or reject:`;
@@ -337,7 +352,7 @@ export function initScheduler(bot, deps) {
             });
           } catch (err) {
             log.error('Failed to send approval prompt to owner', { telegramId, error: err.message });
-            await safeSend(bot, `⚠️ *${campaign.name}* matched rule *${rule.name}* — draft awaiting approval in /app`);
+            await safeSend(bot, `⚠️ *${campaign.name}* matched rule *${rule.name}* — draft awaiting approval in /menu → Mini App`);
           }
         }
       }

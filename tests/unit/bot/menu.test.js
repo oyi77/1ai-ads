@@ -118,7 +118,7 @@ describe('menu:optimize — AI Optimization (P3)', () => {
 
     expect(ctx._replies).toHaveLength(1);
     expect(ctx._replies[0].msg).toContain('nonaktif');
-    expect(ctx._replies[0].msg).toContain('/app');
+    expect(ctx._replies[0].msg).toContain('/menu → Mini App');
     expect(ctx._replies[0].opts.reply_markup).toBeUndefined();
   });
 

@@ -78,11 +78,11 @@ export function createAutonomousRouter(settingsRepo, platformAccountsRepo, campa
         return res.status(400).json({ success: false, error: 'User ID required' });
       }
 
-      const results = await autonomousAgent.checkCampaigns(userId);
+      const matched = await autonomousAgent.checkCampaigns(userId);
       res.json({
         success: true,
-        data: results,
-        message: `Checked ${results.length} campaigns, ${results.filter(r => r.result).length} actions taken`,
+        data: { matched },
+        message: `Checked campaigns, ${matched} rules matched`,
       });
     } catch (err) {
       log.error('Check campaigns error', { error: err.message });

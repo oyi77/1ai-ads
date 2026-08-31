@@ -296,7 +296,7 @@ function showActionPicker(ctx) {
     [{ text: '⬅️ Back', callback_data: `rule:add:metric:${rb.metric}` }],
   ];
   return ctx.reply(
-    `🎯 *Create Rule*\n\nMetric: *${m.name}*\nOperator: ${rb.operator}\nValue: ${rb.value || '?'}\n\nChoose an action:`,
+    `🎯 *Create Rule*\n\nMetric: *${m.name}*\nOperator: ${OPERATORS[rb.operator] || rb.operator}\nValue: ${rb.value || '?'}\n\nChoose an action:`,
     { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } }
   );
 }
@@ -312,8 +312,15 @@ function showIntervalPicker(ctx) {
     [{ text: '⏱ Follow FB pacing', callback_data: 'rule:add:interval:0' }],
     [{ text: '⬅️ Back', callback_data: `rule:add:action:${rb.actionType || 'notify'}` }],
   ];
+  const ACTION_LABELS = {
+    pause: 'Pause campaign', resume: 'Resume campaign',
+    increase_budget: 'Increase budget', decrease_budget: 'Decrease budget',
+    duplicate_campaign: 'Duplicate campaign', scale_budget: 'Scale budget',
+    notify: 'Notify', notify_and_pause: 'Notify + Pause',
+  };
+  const opSymbol = OPERATORS[rb.operator] || rb.operator;
   return ctx.reply(
-    `🎯 *Create Rule*\n\nMetric: *${METRICS[rb.metric]?.name}*\nAction: ${rb.actionType}\n\n⏱ *Evaluation Interval*\n\nHow often should this rule be checked?`,
+    `🎯 *Create Rule*\n\nMetric: *${METRICS[rb.metric]?.name}*\nCondition: ${METRICS[rb.metric]?.name} ${opSymbol} ${rb.value || '?'}\nAction: ${ACTION_LABELS[rb.actionType] || rb.actionType}\n\n⏱ *Evaluation Interval*\n\nHow often should this rule be checked?`,
     { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } }
   );
 }
@@ -345,7 +352,7 @@ function createRule(ctx, deps, actionType, intervalMinutes = 15) {
     });
     delete ctx.session.ruleBuilder;
     return ctx.reply(
-      `✅ Rule created!\n\n${rb.metric} ${rb.operator} ${rb.value} → ${actionType}\n⏱ Check every ${INTERVAL_LABELS[intervalMinutes] || intervalMinutes + ' min'}`,
+      `✅ Rule created!\n\n${rb.metric} ${OPERATORS[rb.operator] || rb.operator} ${rb.value} → ${actionType}\n⏱ ${intervalMinutes === 0 ? 'Follows FB pacing' : 'Checks every ' + (INTERVAL_LABELS[intervalMinutes] || intervalMinutes + ' min')}`,
       { reply_markup: { inline_keyboard: [[{ text: '📋 View Rules', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
     );
   } catch (err) {

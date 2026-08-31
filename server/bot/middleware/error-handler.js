@@ -70,7 +70,7 @@ function detectDomain(ctx) {
 
 function getRecoveryMessage(domain) {
   const messages = {
-    Settings: '⚠️ Settings action failed. Try again or use the dashboard: /app',
+    Settings: '⚠️ Settings action failed. Try again via /menu → Settings.',
     Monitor: '⚠️ Monitor action failed. Your campaigns are still running. Use /status to check.',
     Menu: '⚠️ Menu error. Try /start to restart.',
     General: '😅 Something went wrong. Use /menu to try again.',

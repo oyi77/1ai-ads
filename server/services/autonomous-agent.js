@@ -89,9 +89,9 @@ export class AutonomousAgent {
       const account = await this.platformAccountsRepo.getByPlatform(user.id, platform);
       if (!account?.access_token) continue;
 
-      const results = await this.checkCampaigns(user.id);
-      if (results.length > 0) {
-        log.info('Autonomous actions executed', { userId: user.id, platform, actions: results.length });
+      const matched = await this.checkCampaigns(user.id);
+      if (matched > 0) {
+        log.info('Autonomous actions executed', { userId: user.id, platform, actions: matched });
       }
     }
   }

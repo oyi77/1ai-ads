@@ -230,7 +230,7 @@ async function handleCreateGo(ctx) {
       name: d.name,
       objective: d.objective,
       status: 'PAUSED',
-      dailyBudget: d.dailyBudget * 100,
+      dailyBudget: d.dailyBudget,
     });
 
     if (!campaign?.id) throw new Error('No campaign ID returned');
