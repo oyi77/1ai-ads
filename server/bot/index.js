@@ -59,11 +59,13 @@ export function initBot(app, deps) {
   bot.use(session());
   const stage = new Scenes.Stage([connectScene, connectOAuthScene, manageMetaAppScene, createCampaignScene]);
 
-  // Clear stuck scene state
+  // Escape-hatch for stuck scenes: clear only on top-level text commands
+  // (NOT on callback queries — callbacks must reach the active scene's action
+  // handlers, e.g. create:acct / create:obj in the create-campaign wizard).
+  // /skip is reserved for wizard "skip this optional field" steps.
   bot.use(async (ctx, next) => {
     const text = ctx.message?.text || '';
-    const cbData = ctx.callbackQuery?.data || '';
-    if (ctx.session?.__scenes && (text.startsWith('/') && text !== '/skip' || cbData)) {
+    if (ctx.session?.__scenes && text.startsWith('/') && text !== '/skip') {
       ctx.session.__scenes = {};
     }
     return next();
