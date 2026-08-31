@@ -1,9 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Megaphone, Trash2 } from 'lucide-react';
+import { Megaphone } from 'lucide-react';
 import { api } from '../lib/api';
-import type { CSSProperties } from 'react';
-import { DataTable } from '../components/DataTable';
-import type { Column } from '../components/DataTable';
+
+import { DataTable, type Column } from '../components/DataTable';
 
 interface Ad {
   id: string;

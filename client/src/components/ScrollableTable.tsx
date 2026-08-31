@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { CSSProperties, ReactNode, ThHTMLAttributes, TdHTMLAttributes } from 'react';
+import type { CSSProperties, ReactNode, ThHTMLAttributes } from 'react';
 
 /** Scrollable wrapper for tables — adds overflow-x scroll on small screens */
 export function ScrollableTable({ children }: { children: ReactNode }) {

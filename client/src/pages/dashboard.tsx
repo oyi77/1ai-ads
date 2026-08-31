@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState, useCallback } from 'react';
-import type { CSSProperties } from 'react';
-import { DollarSign, TrendingUp, Activity, Megaphone, Wifi, WifiOff, Rocket } from 'lucide-react';
+import { useState } from 'react';
+
+import { DollarSign, TrendingUp, Activity, Megaphone, Wifi, WifiOff } from 'lucide-react';
 import { api } from '../lib/api';
 import { GettingStarted } from '../components/GettingStarted';
 import { useRealtime } from '../hooks/useRealtime';

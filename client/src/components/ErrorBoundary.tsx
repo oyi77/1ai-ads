@@ -8,6 +8,8 @@ interface State {
   hasError: boolean;
 }
 
+function logError(error: unknown) { /* logged to console in dev only */ if (import.meta.env?.DEV) console.error(error); }
+
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
 
@@ -16,7 +18,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error) {
-    console.error('ErrorBoundary caught:', error);
+    logError(error);
   }
 
   render() {
