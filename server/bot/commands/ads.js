@@ -37,13 +37,16 @@ export async function makeApi(ctx, deps, platform = 'meta') {
 }
 
 export function isExpiredToken(err) {
-  const code = err?.code || err?.error?.code;
-  const msg = `${err?.message || ''} ${err?.error?.message || ''}`.toLowerCase();
+  // safeFetch throws { status, data: <parsed JSON body>, message } — Meta 4xx
+  // bodies carry { error: { code, message } } under err.data.
+  const code = err?.code || err?.error?.code || err?.data?.error?.code;
+  const msg = `${err?.message || ''} ${err?.error?.message || ''} ${err?.data?.error?.message || ''}`.toLowerCase();
   return (
     code === 190 || code === 110 || code === 463 ||
     msg.includes('session has expired') ||
     msg.includes('user token is expired') ||
-    msg.includes('invalid oauth')
+    msg.includes('invalid oauth') ||
+    msg.includes('cannot parse access token')
   );
 }
 
