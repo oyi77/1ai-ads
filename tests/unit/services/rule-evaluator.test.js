@@ -70,6 +70,18 @@ describe('RuleEvaluator', () => {
     expect(evaluator).toBeDefined();
   });
 
+  it('_applyAction is wired for DraftService executor (services.js setExecutor)', async () => {
+    // Regression: services.js calls draftService.setExecutor((action, campaign) =>
+    // _ruleEvaluator._applyAction(action, campaign)). Before the alias existed this
+    // threw 'Execution failed: _ruleEvaluator._applyAction is not a function' on
+    // every approved rule/ai_optimize draft.
+    expect(typeof evaluator._applyAction).toBe('function');
+    // It delegates to the same handler pipeline (notify action logs only, no mutation).
+    await expect(
+      evaluator._applyAction({ type: 'notify', params: { message: 'executor-proof' } }, { id: 'c-proof' })
+    ).resolves.not.toThrow();
+  });
+
   it('should create a rule via repository', () => {
     evaluator.createRule('u1', {
       name: 'Test Rule',

@@ -114,6 +114,12 @@ export class RuleEvaluator {
     await handler.call(this, action.params || {}, campaign);
   }
 
+  // Alias used by DraftService executor wiring (services.js setExecutor).
+  // Draft approval replays the deferred mutation via this name.
+  async _applyAction(action, campaign) {
+    return this._executeAction(action, campaign);
+  }
+
   async _scaleCampaign(campaignId, multiplier, direction) {
     const campaign = this.campaignsRepo.findById(campaignId);
     if (!campaign) return;
