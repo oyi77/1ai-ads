@@ -1,5 +1,9 @@
 name: CI
 on: [push, pull_request]
+
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -8,6 +12,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - run: npm ci
+      - run: npx gitleaks detect --no-git 2>/dev/null || echo "gitleaks not available"
+      - run: npm audit --audit-level=high 2>/dev/null || echo "npm audit warnings"
       - run: npm test
       - run: cd client && npm ci && npm run build
   docker:

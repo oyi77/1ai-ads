@@ -49,8 +49,8 @@ async function loadApprovals() {
         <td>${escapeHtml(d.proposedBy || '—')}</td>
         <td style="font-family:var(--font-mono);font-size:0.8rem">${(d.createdAt||'').replace('T',' ').slice(0,19)}</td>
         <td>
-          <button class="btn btn-sm btn-outline" onclick="act('${d.id}','approve')"><i class="bi bi-check-lg"></i> Approve</button>
-          <button class="btn btn-sm btn-outline" onclick="act('${d.id}','reject')"><i class="bi bi-x-lg"></i> Reject</button>
+          <button class="btn btn-sm btn-outline" onclick="act('${encodeURIComponent(d.id)}','approve')"><i class="bi bi-check-lg"></i> Approve</button>
+          <button class="btn btn-sm btn-outline" onclick="act('${encodeURIComponent(d.id)}','reject')"><i class="bi bi-x-lg"></i> Reject</button>
           ${detail ? `<button class="btn btn-sm btn-outline" onclick="showDetail('${encodeURIComponent(detail)}')"><i class="bi bi-info-circle"></i></button>` : ''}
         </td>
       </tr>`;

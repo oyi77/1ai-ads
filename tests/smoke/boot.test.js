@@ -93,7 +93,8 @@ describe('Smoke Tests', () => {
   it('dist/index.html exists (production build)', () => {
     // Skip if no build has been run (CI runs build separately)
     if (!existsSync('dist/index.html')) {
-      return; // no build artifact, skip silently
+      console.warn('SKIP: dist/index.html not found — no production build detected');
+      return;
     }
   });
 });
