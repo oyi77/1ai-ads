@@ -147,8 +147,9 @@ async function showAccountReport(ctx, deps, accountId) {
 
     // Get account insights via Meta API using the REAL ad account id (not internal UUID)
     let insights = null;
-    const token = account.access_token || account.credentials?.access_token;
+    const token = account.credentials?.access_token || account.access_token;
     let realAccountId = account.credentials?.ad_account_id;
+    let tokenOk = false;
     if (token) {
       try {
         const api = MetaAdsAPI.withToken(token);
@@ -157,10 +158,11 @@ async function showAccountReport(ctx, deps, accountId) {
           if (adAccounts.length > 0) realAccountId = adAccounts[0].id;
         }
         if (realAccountId) {
+          tokenOk = true;
           insights = await api.getAccountInsights(realAccountId, { datePreset: 'last_30d' });
         }
       } catch (e) {
-        // Token expired or API error
+        // Token expired or API error → tokenOk stays false
       }
     }
 
@@ -174,8 +176,10 @@ async function showAccountReport(ctx, deps, accountId) {
       message += `📈 ROAS: ${roas}x\n`;
       message += `👆 Clicks: ${(insights.clicks || 0).toLocaleString('id-ID')}\n`;
       message += `👁 Impressions: ${(insights.impressions || 0).toLocaleString('id-ID')}`;
+    } else if (!tokenOk) {
+      message += `\n⚠️ Connect a valid token to see detailed insights.`;
     } else {
-      message += `\n⚠️ Connect token to see detailed insights.`;
+      message += `\n📭 No ad activity in the last 30 days.`;
     }
 
     await ctx.reply(message, {
