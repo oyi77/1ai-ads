@@ -29,15 +29,19 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   router.post('/create', async (req, res) => {
     const { accountId, pageId, product, target, keunggulan, objective, targeting, dailyBudget, landingUrl } = req.body;
 
-    if (!accountId || !product || !dailyBudget) {
-      return res.status(400).json({ success: false, error: 'accountId, product, and dailyBudget are required' });
+    if (!accountId || !product) {
+      return res.status(400).json({ success: false, error: 'accountId and product are required' });
+    }
+    const budget = Number(dailyBudget);
+    if (!Number.isFinite(budget) || budget <= 0) {
+      return res.status(400).json({ success: false, error: 'dailyBudget must be a positive number' });
     }
 
     try {
       const result = await orchestrator.createFullCampaign({
         accountId, pageId, product, target, keunggulan,
         objective: objective || 'OUTCOME_TRAFFIC',
-        targeting, dailyBudget: parseFloat(dailyBudget),
+        targeting, dailyBudget: budget,
         landingUrl,
       }, resolveUserMetaApi(req));
 
@@ -49,7 +53,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
           userId: req.user?.id,
           name: `${product} - ${objective || 'TRAFFIC'}`,
           status: 'paused',
-          budget: parseFloat(dailyBudget),
+          budget,
           spend: 0,
           impressions: 0,
           clicks: 0,
@@ -112,8 +116,9 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   router.put('/:id/budget', async (req, res) => {
     try {
       const { dailyBudget } = req.body;
-      if (!dailyBudget) return res.status(400).json({ success: false, error: 'dailyBudget is required' });
-      await orchestrator.scaleBudget(req.params.id, parseFloat(dailyBudget), resolveUserMetaApi(req));
+      const budget = Number(dailyBudget);
+      if (!Number.isFinite(budget) || budget <= 0) return res.status(400).json({ success: false, error: 'dailyBudget must be a positive number' });
+      await orchestrator.scaleBudget(req.params.id, budget, resolveUserMetaApi(req));
       res.json({ success: true, data: { id: req.params.id, dailyBudget } });
     } catch (err) {
       res.status(err.status || 500).json({ success: false, error: err.message });

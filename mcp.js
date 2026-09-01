@@ -24,13 +24,15 @@ const aiAgent = new AiAgent(repos.settingsRepo, repos.adsRepo, repos.campaignsRe
 const competitorSpy = new CompetitorSpy(llmClient);
 const autoOptimizer = new AutoOptimizer(repos.settingsRepo, repos.rulesRepo, repos.campaignsRepo);
 
+// .env.example documents CONTENT_BRIDGE_URL / SOCIAL_BRIDGE_URL (server config
+// names). Accept both spellings so an env configured per docs still works.
 const contentBridge = new ContentBridge(
-  process.env.CONTENT_SERVICE_URL || 'http://localhost:3000',
-  process.env.CONTENT_API_KEY || ''
+  process.env.CONTENT_SERVICE_URL || process.env.CONTENT_BRIDGE_URL || 'http://localhost:3000',
+  process.env.CONTENT_API_KEY || process.env.CONTENT_BRIDGE_API_KEY || ''
 );
 
 const socialBridge = new SocialBridge(
-  process.env.SOCIAL_SERVICE_URL || 'http://localhost:8200',
+  process.env.SOCIAL_SERVICE_URL || process.env.SOCIAL_BRIDGE_URL || 'http://localhost:8200',
   process.env.SOCIAL_WEBHOOK_SECRET || ''
 );
 

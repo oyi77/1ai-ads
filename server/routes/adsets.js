@@ -7,7 +7,9 @@ export function createAdsetsRouter(adsetsRepo) {
   router.get('/', async (req, res) => {
     try {
       const { campaignId: cid, status, page = 1, limit = 50 } = req.query;
-      const result = adsetsRepo.findAll({ campaignId: cid, status, userId: req.user?.id, page: +page, limit: +limit });
+      const pg = Number(page) || 1;
+      const lim = Number(limit) || 50;
+      const result = adsetsRepo.findAll({ campaignId: cid, status, userId: req.user?.id, page: pg, limit: lim });
       res.json({ success: true, data: result.data, total: result.total, page: result.page, limit: result.limit });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -30,8 +32,10 @@ export function createAdsetsRouter(adsetsRepo) {
     try {
       const { campaignId, name, status, dailyBudget, targeting, optimizationGoal, billingEvent } = req.body;
       if (!campaignId || !name) return res.status(400).json({ success: false, error: 'campaignId and name are required' });
+      const budget = dailyBudget === undefined || dailyBudget === null ? 0 : Number(dailyBudget);
+      if (!Number.isFinite(budget) || budget < 0) return res.status(400).json({ success: false, error: 'dailyBudget must be a non-negative number' });
       const adset = adsetsRepo.create({
-        campaignId, name, status, dailyBudget,
+        campaignId, name, status, dailyBudget: budget,
         targeting: targeting || {},
         optimizationGoal, billingEvent,
         userId: req.user?.id,

@@ -78,11 +78,12 @@ export function createSelowRouter(settingsRepo) {
       if (!client) return res.status(401).json({ error: 'SELOW not configured' });
 
       const { amount, merchant } = req.body;
-      if (!amount || amount <= 0) {
-        return res.status(400).json({ error: 'Amount must be positive' });
+      const amt = Number(amount);
+      if (!Number.isFinite(amt) || amt <= 0) {
+        return res.status(400).json({ error: 'Amount must be a positive number' });
       }
 
-      const result = await client.topupBalance(req.params.id, amount, merchant || 'bri');
+      const result = await client.topupBalance(req.params.id, amt, merchant || 'bri');
       res.json(result);
     } catch (err) {
       log.error('Failed to topup SELOW account', { id: req.params.id, error: err.message });

@@ -107,7 +107,8 @@ export function createWhatsappApiRouter(whatsAppIntelligence) {
   // POST /conversations/push-leads — push high-intent conversations to 1ai-social
   router.post('/conversations/push-leads', async (req, res) => {
     try {
-      const result = await whatsAppIntelligence.pushUnpushedLeads(req.body.limit || 10);
+      const limit = Number(req.body.limit) || 10;
+      const result = await whatsAppIntelligence.pushUnpushedLeads(limit);
       res.json({ status: 'ok', ...result });
     } catch (err) {
       log.error('push_leads_error', { error: err.message });
@@ -118,10 +119,9 @@ export function createWhatsappApiRouter(whatsAppIntelligence) {
   // POST /conversations/auto-followup — trigger follow-up cycle for stale conversations
   router.post('/conversations/auto-followup', async (req, res) => {
     try {
-      const result = await whatsAppIntelligence.processFollowUps(
-        req.body.daysSinceLastContact || 3,
-        req.body.limit || 10,
-      );
+      const days = Number(req.body.daysSinceLastContact) || 3;
+      const limit = Number(req.body.limit) || 10;
+      const result = await whatsAppIntelligence.processFollowUps(days, limit);
       res.json({ status: 'ok', ...result });
     } catch (err) {
       log.error('auto_followup_error', { error: err.message });
@@ -132,7 +132,8 @@ export function createWhatsappApiRouter(whatsAppIntelligence) {
   // POST /conversations/auto-label — trigger auto-labeling for unscored conversations
   router.post('/conversations/auto-label', async (req, res) => {
     try {
-      const result = await whatsAppIntelligence.processAutoLabeling(req.body.limit || 20);
+      const limit = Number(req.body.limit) || 20;
+      const result = await whatsAppIntelligence.processAutoLabeling(limit);
       res.json({ status: 'ok', ...result });
     } catch (err) {
       log.error('auto_label_error', { error: err.message });

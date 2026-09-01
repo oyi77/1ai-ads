@@ -104,7 +104,7 @@ describe('Campaigns Router', () => {
     it('returns 400 when required fields are missing', async () => {
       const res = await request(app).post('/api/campaigns/create').send({ product: 'Widget' });
       expect(res.status).toBe(400);
-      expect(res.body.error).toMatch(/accountId, product, and dailyBudget/);
+      expect(res.body.error).toMatch(/accountId and product/);
     });
 
     it('creates a full campaign and saves to repo', async () => {

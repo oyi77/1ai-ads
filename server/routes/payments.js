@@ -113,12 +113,13 @@ export function createPaymentsRouter(paymentService) {
   router.post('/initiate', async (req, res) => {
     try {
       const { amount, currency, provider, metadata } = req.body;
-      if (!amount || amount <= 0) {
-        return res.status(400).json({ success: false, error: 'amount is required and must be positive' });
+      const amt = Number(amount);
+      if (!Number.isFinite(amt) || amt <= 0) {
+        return res.status(400).json({ success: false, error: 'amount is required and must be a positive number' });
       }
       const payment = await paymentService.initiatePayment({
         userId: req.user.id,
-        amount,
+        amount: amt,
         currency,
         provider,
         metadata,
