@@ -63,7 +63,9 @@ export function createWebhookRouter(webhookEventsRepo) {
             }
             webhookEventsRepo.create({
               source: event.field || 'meta',
-              eventType: event.entryId || '',
+              // event.field is the friendly name (e.g. 'campaign_status_change') —
+              // NOT event.entryId (a Meta numeric id that never matches EVENT_HANDLERS).
+              eventType: event.field || '',
               payload: event.value || {},
             });
           }

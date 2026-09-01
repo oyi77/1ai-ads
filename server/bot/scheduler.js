@@ -9,6 +9,7 @@ import cron from 'node-cron';
 import { createLogger } from '../lib/logger.js';
 import config from '../config/index.js';
 import {
+  detectRoasDrop,
   evaluateStoploss,
   evaluateScaleEligibility,
   generateReport,
@@ -124,6 +125,21 @@ export function initScheduler(bot, deps) {
           alreadyReducedBudget: campaign.budget_reduced || false,
           currentDailyBudget: campaign.budget || 0,
         });
+
+        // Persist stoploss state so the cascade can escalate across runs.
+        // evaluateStoploss returns {action, newBudget, reason} — the drop
+        // detection must be computed here so we can track consecutive_drops.
+        const prevDrops = campaign.consecutive_drops || 0;
+        const dropResult = detectRoasDrop(roas, campaign.previous_roas || roas);
+        const newDrops = dropResult.dropped ? prevDrops + 1 : 0;
+        const stateUpdate = {
+          previous_roas: roas,
+          consecutive_drops: newDrops,
+          budget_reduced: stoploss.action === 'REDUCE_BUDGET' ? 1 : (campaign.budget_reduced ? 1 : 0),
+        };
+        try {
+          deps.repos?.campaignsRepo?.update?.(campaign.id, stateUpdate);
+        } catch { /* best-effort state persist */ }
 
         if (stoploss.action === 'KILL' || stoploss.action === 'REDUCE_BUDGET') {
           // Dedup: max 1 alert per campaign per day
@@ -274,10 +290,24 @@ export function initScheduler(bot, deps) {
             }
             checked++;
             await verify.call(api);
-          } catch {
+            // Success — clear any stale 'expired' flag so one transient blip
+            // doesn't permanently mark the account dead.
+            if (account.health_status !== 'ok' || account.last_error) {
+              try {
+                platformAccountsRepo.update?.(account.id, { health_status: 'ok', last_error: null });
+              } catch { /* best-effort DB update */ }
+            }
+          } catch (err) {
+            const message = String(err?.message || err);
+            const transient = /timeout|timedout|ETIMEDOUT|ECONNRESET|EAI_AGAIN|socket|429|too many|5\d\d|temporarily|unavailable/i.test(message);
+            if (transient) {
+              // Network/provider hiccup — NOT token expiry. Log, don't flag.
+              log.warn('Token health check transient failure', { platform, account: account.user_id, error: message });
+              continue;
+            }
             expired++;
             const label = account.account_name || account.user_id;
-            log.warn('Token expired', { platform, account: label });
+            log.warn('Token expired', { platform, account: label, error: message });
             await safeSend(bot, `🔴 Token expired for *${label}*`, { parse_mode: 'Markdown' });
             try {
               platformAccountsRepo.update?.(account.id, { health_status: 'expired' });

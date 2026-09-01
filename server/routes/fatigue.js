@@ -12,7 +12,11 @@ export function createFatigueRouter(fatigueDetector, platformAccountsRepo) {
       // Scope to the requesting user (multi-tenant). Fatigue detector is Meta-centric.
       const active = platformAccountsRepo.getByPlatform(userId, 'meta');
       if (!active) return res.json({ success: true, data: [] });
-      const result = await fatigueDetector.detectFatigue(active.id, { ownerId: userId });
+      // Snapshots store campaign_id = the Meta ad_account_id (act_xxx), NOT the
+      // internal platform_accounts UUID — pass the real account id so
+      // findByAccountId matches stored rows.
+      const metaAccountId = active.credentials?.ad_account_id || active.ad_account_id || active.id;
+      const result = await fatigueDetector.detectFatigue(metaAccountId, { ownerId: userId });
       res.json({ success: true, data: result });
     } catch {
       res.json({ success: true, data: [] });

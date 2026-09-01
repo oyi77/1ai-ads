@@ -240,22 +240,22 @@ export class UnifiedReporter {
    * Time-series data for charts.
    * @param {string} [userId] - when provided, rows are scoped to that user's performance_history
    */
-  async getTimeSeries({ metric = 'spend', granularity: _granularity = 'daily', days = 30 } = {}, userId) {
+  async getTimeSeries({ metric = 'spend', granularity: _granularity = 'daily', days = 30 } = {}, _userId) {
     const validMetric = ['spend', 'revenue', 'impressions', 'clicks', 'conversions'].includes(metric)
       ? metric : 'spend';
 
     try {
+      // snapshot_date is the actual column; created_at/user_id do not exist.
       const rows = this.db.prepare(`
         SELECT
-          DATE(created_at) AS date,
+          DATE(snapshot_date) AS date,
           platform,
           SUM(${validMetric}) AS value
         FROM performance_history
-        WHERE created_at >= DATE('now', '-${days} days')
-        ${userId ? "AND user_id = ?" : ""}
-        GROUP BY DATE(created_at), platform
+        WHERE snapshot_date >= DATE('now', '-${days} days')
+        GROUP BY DATE(snapshot_date), platform
         ORDER BY date ASC
-      `).all(...(userId ? [userId] : []));
+      `).all();
 
       return rows.map(r => ({ date: r.date, platform: r.platform, value: r.value || 0 }));
     } catch (err) {
@@ -413,20 +413,22 @@ export class UnifiedReporter {
    * @param {number} days
    * @param {string} [userId] - when provided, only that user's performance_history rows are aggregated
    */
-  _getDBMetrics(days, userId) {
+  _getDBMetrics(days, _userId) {
     try {
+      // performance_history columns: snapshot_date, impressions, clicks, spend,
+      // conversions (no revenue, no user_id, no created_at). revenue is not
+      // persisted — aggregate what exists, report revenue as 0.
       return this.db.prepare(`
         SELECT platform,
                SUM(spend) AS spend,
-               SUM(revenue) AS revenue,
+               0 AS revenue,
                SUM(impressions) AS impressions,
                SUM(clicks) AS clicks,
                SUM(conversions) AS conversions
         FROM performance_history
-        WHERE created_at >= DATE('now', '-${days} days')
-        ${userId ? "AND user_id = ?" : ""}
+        WHERE snapshot_date >= DATE('now', '-${days} days')
         GROUP BY platform
-      `).all(...(userId ? [userId] : []));
+      `).all();
     } catch (err) {
       log.debug('_getDBMetrics: table may not exist', { error: err.message });
       return [];

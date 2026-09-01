@@ -62,8 +62,10 @@ export function createUserWebhookRouter(userMetaAppsRepo, webhookEventsRepo) {
             if (webhookEventsRepo) {
               webhookEventsRepo.create({
                 source: 'meta_user',
-                eventType: event.entryId || '',
-                payload: { userId, field: event.field, value: event.value },
+                // event.field is the friendly name — not event.entryId (Meta numeric id).
+                // Flat payload so handlers can read campaign_id/status directly.
+                eventType: event.field || '',
+                payload: { userId, ...(event.value || {}) },
               });
             }
           }
