@@ -14,31 +14,55 @@ export class CampaignOrchestrator {
     this.creative = creativeStudio;
   }
 
-  /**
-   * Create campaign, adset, creative, ad — assigning each ID to result
-   * immediately so cleanup can access them if a later step fails.
-   */
   async _runAndAssign(steps, name, result, key, fn, extra = {}) {
-    const data = await this._runStep(steps, name, fn);
-    this._assignStepId(steps, result, key, data.id, extra);
-    return data;
+    steps.push({ step: name, status: 'running' });
+    const data = await fn();
+    const id = typeof data === 'object' && data !== null ? data.id : data;
+    result[key] = id;
+    steps[steps.length - 1].status = 'done';
+    steps[steps.length - 1].data = { id, ...extra };
+    return id;
   }
 
   async _stepCreative(accountId, pageId, product, bestAd, landingUrl, objective, result, meta = this.meta) {
-    // Upload a generic placeholder image to get an image_hash — avoids
-    // page-post creation which fails when the Meta app is in dev mode.
+    // Try to use an existing page photo (avoids /adimages upload which is
+    // blocked in dev mode with error (#3) "Application does not have the
+    // capability to make this API call"). Falls back to placeholder upload,
+    // then to no-image creative if both fail.
     let imageHash;
+
+    // Strategy 1: Use an existing photo from the page
+    if (pageId) {
+      try {
+        const photosRes = await meta._get(`/${pageId}/photos`, { fields: 'images,id', limit: '1' });
+        const photos = photosRes.data || [];
+        if (photos.length > 0) {
+          const photoId = photos[0].id;
+          return this._runAndAssign(result.steps, 'create_creative', result, 'creativeId',
+            () => meta.createAdCreativeWithPhoto(accountId, {
+              name: `${product} Creative`, pageId,
+              message: `${bestAd.hook}\n\n${bestAd.body}`, headline: bestAd.cta || product,
+              description: product, linkUrl: landingUrl || 'https://example.com',
+              photoId,
+              ctaType: this._objectiveToCTA(objective),
+            }));
+        }
+      } catch (photoErr) {
+        log.warn('Page photo fetch failed — trying placeholder upload', { error: photoErr.message });
+      }
+    }
+
+    // Strategy 2: Upload a placeholder image (fails in dev mode)
     try {
-      // Use the per-user meta instance (not this.meta — the system token) so
-      // the placeholder upload uses the calling user's credentials.
       const imgData = await meta._post(`/${accountId}/adimages`, {
         url: `https://placehold.co/1080x1080/6366f1/ffffff?text=${encodeURIComponent((bestAd.hook || product).slice(0, 25))}`,
       });
       const imgs = imgData.images || {};
       const firstKey = Object.keys(imgs)[0];
       if (firstKey) imageHash = imgs[firstKey].hash;
-    } catch { /* non-fatal — try without hash */ }
+    } catch { /* non-fatal — try without image */ }
 
+    // Strategy 3: Create creative with image_hash (or without image)
     return this._runAndAssign(result.steps, 'create_creative', result, 'creativeId',
       () => meta.createAdCreative(accountId, {
         name: `${product} Creative`, pageId,
@@ -52,36 +76,37 @@ export class CampaignOrchestrator {
   async _createCampaignStep(accountId, pageId, product, objective, dailyBudget, landingUrl, aiResult, bestAd, result, meta = this.meta) {
     const steps = result.steps;
     const campaignName = `${product} - ${objective} - ${new Date().toISOString().split('T')[0]}`;
-    const campaign = await this._runAndAssign(steps, 'create_campaign', result, 'campaignId',
+    const campaignId = await this._runAndAssign(steps, 'create_campaign', result, 'campaignId',
       () => meta.createCampaign(accountId, { name: campaignName, objective, status: 'PAUSED' }),
       { name: campaignName });
 
     const adsetName = `${product} - ${bestAd.hook || product}`;
-    const adset = await this._runAndAssign(steps, 'create_adset', result, 'adsetId',
-      () => meta.createAdSet(accountId, campaign.id, {
-        name: adsetName, dailyBudget, targeting: this._buildDefaultTargeting(aiResult.targetingSuggestions),
+    const adsetId = await this._runAndAssign(steps, 'create_adset', result, 'adsetId',
+      () => meta.createAdSet(accountId, campaignId, {
+        name: adsetName, dailyBudget, isCbo: false,
+        targeting: this._buildDefaultTargeting(aiResult.targetingSuggestions),
         optimizationGoal: this._objectiveToOptimization(objective),
       }), { name: adsetName });
 
-    const creative = await this._stepCreative(accountId, pageId, product, bestAd, landingUrl, objective, result, meta);
-    await this._runAndAssign(steps, 'create_ad', result, 'adId',
-      () => meta.createAd(accountId, {
-        adsetId: adset.id, creativeId: creative.id,
-        name: `${product} Ad - ${bestAd.model_name || 'AI'}`, status: 'PAUSED',
-      }));
-  }
+    // Creative step is non-fatal: if it fails (dev-mode app, no page), the
+    // campaign + ad set still exist — user adds creative from the library.
+    let creativeId = null;
+    try {
+      creativeId = await this._stepCreative(accountId, pageId, product, bestAd, landingUrl, objective, result, meta);
+    } catch (creativeErr) {
+      log.warn('Creative creation failed — campaign/adset still created, add creative later', { error: creativeErr.message });
+      result.steps.push({ step: 'create_creative', status: 'failed', error: creativeErr.message });
+    }
 
-  async _generateCreative(product, target, keunggulan, platform, format, steps) {
-    const aiResult = await this._runStep(steps, 'ai_creative', () =>
-      this.creative.generateAdPackage(product, target, keunggulan, platform, format));
-    const bestAd = this._pickBestAd(aiResult, product, keunggulan);
-    steps[steps.length - 1].data = { model: bestAd.model_name, hook: bestAd.hook };
-    return { aiResult, bestAd };
-  }
-
-  _assignStepId(steps, result, key, id, extra = {}) {
-    result[key] = id;
-    steps[steps.length - 1].data = { id, ...extra };
+    if (creativeId) {
+      await this._runAndAssign(result.steps, 'create_ad', result, 'adId',
+        () => meta.createAd(accountId, {
+          adsetId, creativeId,
+          name: `${product} Ad - ${bestAd.model_name || 'AI'}`, status: 'PAUSED',
+        }));
+    } else {
+      result.steps.push({ step: 'create_ad', status: 'skipped', error: 'No creative — add from library' });
+    }
   }
 
   async createFullCampaign({
@@ -118,6 +143,14 @@ export class CampaignOrchestrator {
     } catch (err) {
       return this._handleCampaignError(err, steps, result, meta);
     }
+  }
+
+  async _generateCreative(product, target, keunggulan, platform, format, steps) {
+    const aiResult = await this._runStep(steps, 'ai_creative', () =>
+      this.creative.generateAdPackage(product, target, keunggulan, platform, format));
+    const bestAd = this._pickBestAd(aiResult, product, keunggulan);
+    steps[steps.length - 1].data = { model: bestAd.model_name, hook: bestAd.hook };
+    return { aiResult, bestAd };
   }
 
   _pickBestAd(aiResult, product, keunggulan) {
@@ -176,28 +209,19 @@ export class CampaignOrchestrator {
 
   async createAndActivate(params, { autoActivate = false, delayMs = 5 * 60 * 1000 } = {}) {
     const result = await this.createFullCampaign(params);
-    
-    if (autoActivate && result.status === 'created' && result.campaignId) {
-      log.info('Auto-activation scheduled', { campaignId: result.campaignId, delayMs });
+    if (result.status === 'created' && autoActivate) {
+      const activateAt = Date.now() + delayMs;
       result.autoActivateScheduled = true;
-      result.autoActivateAt = new Date(Date.now() + delayMs).toISOString();
-      
-      setTimeout(async () => {
-        try {
-          await this.activateCampaign(result.campaignId, params.metaApi);
-          log.info('Campaign auto-activated', { campaignId: result.campaignId });
-        } catch (err) {
+      result.autoActivateAt = activateAt;
+      setTimeout(() => {
+        this.activateCampaign(result.campaignId).catch(err => {
           log.error('Auto-activation failed', { campaignId: result.campaignId, error: err.message });
-        }
+        });
       }, delayMs);
     }
-    
     return result;
   }
 
-  /**
-   * Scale campaign budget up or down.
-   */
   async scaleBudget(campaignId, newDailyBudget, metaApi = null) {
     const meta = metaApi || this.meta;
     return meta.updateCampaign(campaignId, { dailyBudget: newDailyBudget });
@@ -205,22 +229,21 @@ export class CampaignOrchestrator {
 
   _objectiveToOptimization(objective) {
     const map = {
-      'OUTCOME_TRAFFIC': 'LINK_CLICKS',
-      'OUTCOME_ENGAGEMENT': 'POST_ENGAGEMENT',
-      'OUTCOME_SALES': 'OFFSITE_CONVERSIONS',
-      'OUTCOME_LEADS': 'LEAD_GENERATION',
-      'OUTCOME_AWARENESS': 'REACH',
+      OUTCOME_TRAFFIC: 'LINK_CLICKS',
+      OUTCOME_SALES: 'OFFSITE_CONVERSIONS',
+      OUTCOME_LEADS: 'LEAD_GENERATION',
+      OUTCOME_ENGAGEMENT: 'POST_ENGAGEMENT',
+      OUTCOME_AWARENESS: 'REACH',
     };
     return map[objective] || 'LINK_CLICKS';
   }
 
   _objectiveToCTA(objective) {
     const map = {
-      'OUTCOME_TRAFFIC': 'LEARN_MORE',
-      'OUTCOME_ENGAGEMENT': 'LIKE_PAGE',
-      'OUTCOME_SALES': 'SHOP_NOW',
-      'OUTCOME_LEADS': 'SIGN_UP',
-      'OUTCOME_AWARENESS': 'LEARN_MORE',
+      OUTCOME_TRAFFIC: 'LEARN_MORE',
+      OUTCOME_SALES: 'SHOP_NOW',
+      OUTCOME_LEADS: 'SIGN_UP',
+      OUTCOME_ENGAGEMENT: 'LEARN_MORE',
     };
     return map[objective] || 'LEARN_MORE';
   }
@@ -228,11 +251,9 @@ export class CampaignOrchestrator {
   _buildDefaultTargeting(suggestions) {
     return {
       geo_locations: { countries: ['ID'] },
-      age_min: 25,
+      age_min: 18,
       age_max: 55,
-      ...(suggestions?.interests?.length > 0 && {
-        flexible_spec: [{ interests: suggestions.interests.map(i => ({ id: i.id, name: i.name })) }],
-      }),
+      targeting_automation: { advantage_audience: 0 },
     };
   }
 }

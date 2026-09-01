@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Check, ArrowLeft, ArrowRight, Rocket, Link2 } from 'lucide-react';
+import { Loader2, Check, ArrowLeft, ArrowRight, Rocket, Link2, AlertTriangle } from 'lucide-react';
 import { api } from '../lib/api';
 import type { CSSProperties } from 'react';
 
@@ -40,6 +39,7 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
   const [creating, setCreating] = useState(false);
   const [connectToken, setConnectToken] = useState('');
   const [showManualConnect, setShowManualConnect] = useState(false);
+  const [creativeStatus, setCreativeStatus] = useState<'complete' | 'partial'>('complete');
 
   const queryClient = useQueryClient();
   const connectMutation = useMutation({
@@ -72,12 +72,28 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
   async function handleCreate() {
     setCreating(true); setError('');
     try {
-      const res = await api.post<{ campaignId?: string }>('/campaigns/create', {
+      const res = await api.post<{ campaignId?: string; data?: { campaignId?: string; status?: string; message?: string; steps?: Array<{ step: string; status: string; error?: string }> } }>('/campaigns/create', {
         accountId, pageId, product, target, keunggulan,
         objective, dailyBudget: Number(dailyBudget), landingUrl,
       });
-      setStep(4);
-      onDone(res?.campaignId || '');
+      const data = res?.data || res;
+      const creativeFailed = data?.steps?.some(s => s.step === 'create_creative' && s.status === 'failed');
+      const adSkipped = data?.steps?.some(s => s.step === 'create_ad' && s.status === 'skipped');
+      const campaignId = data?.campaignId;
+
+      if (data?.status === 'created') {
+        setStep(4);
+        // Store creative status for step 4 display
+        if (creativeFailed || adSkipped) {
+          setCreativeStatus('partial');
+        } else {
+          setCreativeStatus('complete');
+        }
+        onDone(campaignId || '');
+      } else {
+        setError(data?.error || 'Failed to create campaign');
+        setCreating(false);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create campaign');
       setCreating(false);
@@ -121,7 +137,6 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
                   Tidak ada ad account Meta terhubung.
                 </p>
 
-                {/* OAuth button — works once FB_APP_ID is set in container env */}
                 {!showManualConnect ? (
                   <div style={{ textAlign: 'center', padding: '8px 0' }}>
                     <a
@@ -132,16 +147,10 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
                           const res = await api.get<{ data: { fb_url: string } }>('/auth/facebook/login');
                           const fbUrl = res?.data?.fb_url;
                           if (fbUrl) {
-                            const popup = window.open(fbUrl, 'metaOAuth', 'width=600,height=700');
-                            const timer = setInterval(() => {
-                              if (popup?.closed) {
-                                clearInterval(timer);
-                                window.location.reload();
-                              }
-                            }, 1000);
+                            // Navigate directly — popup is blocked by browsers
+                            window.location.href = fbUrl;
                           }
                         } catch {
-                          // OAuth not configured (FB_APP_ID missing) — show manual fallback
                           setShowManualConnect(true);
                         }
                       }}
@@ -285,11 +294,33 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
 
         {step === 4 && (
           <div style={{ textAlign: 'center', padding: 16 }}>
-            <Check size={40} color="var(--green)" />
-            <h3 style={{ margin: '12px 0 6px', fontSize: '1rem' }}>Campaign dibuat!</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: 20 }}>
-              Status: JEDA (PAUSED). Buka daftar campaign untuk mengaktifkan.
-            </p>
+            {creativeStatus === 'partial' ? (
+              <>
+                <AlertTriangle size={40} color="#fb923c" />
+                <h3 style={{ margin: '12px 0 6px', fontSize: '1rem' }}>Campaign dibuat — kreatif tertunda</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: 10 }}>
+                  ✅ Campaign + Ad Set berhasil dibuat (PAUSED).
+                </p>
+                <p style={{ color: '#fb923c', fontSize: '0.78rem', marginBottom: 10 }}>
+                  ⚠️ Kreatif gagal dibuat otomatis — Meta App masih dalam proses review. <br/>
+                  Anda bisa menambahkan kreatif secara manual dari Creative Library.
+                </p>
+                <p style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginBottom: 16 }}>
+                  🚀 Fitur pembuatan kreatif otomatis akan segera hadir setelah App Review selesai.
+                </p>
+              </>
+            ) : (
+              <>
+                <Check size={40} color="var(--green)" />
+                <h3 style={{ margin: '12px 0 6px', fontSize: '1rem' }}>Campaign dibuat!</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: 10 }}>
+                  Status: JEDA (PAUSED). Buka daftar campaign untuk mengaktifkan.
+                </p>
+                <p style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginBottom: 16 }}>
+                  Semua kreatif berhasil dibuat otomatis.
+                </p>
+              </>
+            )}
             <button onClick={() => onDone('')} style={{ ...btnStyle, width: '100%', justifyContent: 'center' }}>Lihat Daftar Campaign</button>
           </div>
         )}

@@ -290,11 +290,12 @@ export class MetaAdsAPI extends BasePlatformApiClient {
 
   async createCampaign(accountId, { name, objective, status = 'PAUSED', dailyBudget, specialAdCategories = [], isAdsetBudgetSharing }) {
     this.log.info('Creating Meta campaign', { accountId, name, objective });
-    // Campaign-level budget (daily_budget) is mutually exclusive with ad-set
-    // budget sharing — Meta rejects the combo with error_subcode 4834002.
-    // When a campaign budget is set, disable sharing; otherwise leave it off.
     // Meta v22+ requires is_adset_budget_sharing_enabled to be explicit
     // (error_subcode 4834011) — never omit it.
+    // When is_adset_budget_sharing_enabled is FALSE, the ad set owns its
+    // budget — do NOT set daily_budget on the campaign (rejected with
+    // error_subcode 4834002). When TRUE, set daily_budget on the campaign
+    // (CBO) and NOT on the ad set.
     const body = {
       name,
       objective,
@@ -302,13 +303,12 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       special_ad_categories: specialAdCategories,
       is_adset_budget_sharing_enabled: isAdsetBudgetSharing ?? false,
     };
-    if (dailyBudget) body.daily_budget = Math.round(dailyBudget * 100); // Meta expects cents
+    if (isAdsetBudgetSharing && dailyBudget) body.daily_budget = Math.round(dailyBudget * 100);
     const data = await this._post(`/${accountId}/campaigns`, body);
     this.log.info('Campaign created successfully', { campaignId: data.id });
     return { id: data.id };
   }
-
-  async createAdSet(accountId, campaignId, { name, dailyBudget, targeting, billingEvent = 'IMPRESSIONS', optimizationGoal = 'LINK_CLICKS', startTime }) {
+  async createAdSet(accountId, campaignId, { name, dailyBudget, targeting, billingEvent = 'IMPRESSIONS', optimizationGoal = 'LINK_CLICKS', startTime, isCbo }) {
     const body = {
       name,
       campaign_id: campaignId,
@@ -318,26 +318,26 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       // strategies demand a bid_amount (error_subcode 1815857) — use the bid-cap
       // strategy with a minimal bid. When the ad set owns its budget,
       // LOWEST_COST_WITHOUT_CAP with daily_budget is valid.
-      bid_strategy: dailyBudget ? 'LOWEST_COST_WITHOUT_CAP' : 'LOWEST_COST_WITH_BID_CAP',
+      bid_strategy: dailyBudget && !isCbo ? 'LOWEST_COST_WITHOUT_CAP' : 'LOWEST_COST_WITH_BID_CAP',
       // v22 requires explicit advantage_audience toggle
       targeting: { ...(targeting || { geo_locations: { countries: ['ID'] }, age_min: 18 }), targeting_automation: { advantage_audience: 0 } },
       status: 'PAUSED',
     };
-    if (dailyBudget) body.daily_budget = Math.round(dailyBudget * 100);
+    if (dailyBudget && !isCbo) body.daily_budget = Math.round(dailyBudget * 100);
     else body.bid_amount = 500; // minimal bid (IDR) — required without ad-set budget
     if (startTime) body.start_time = startTime;
     const data = await this._post(`/${accountId}/adsets`, body);
     return { id: data.id };
   }
 
-  async createAdCreative(accountId, { name, pageId, message, headline, description, linkUrl, imageHash, ctaType = 'LEARN_MORE' }) {
+  async createAdCreativeWithPhoto(accountId, { name, pageId, message, headline, description, linkUrl, photoId, ctaType = 'LEARN_MORE' }) {
+    // Use an existing page photo (avoids /adimages upload which is blocked in dev mode)
     const linkData = {
       message,
       link: linkUrl,
       name: headline,
     };
     if (description) linkData.description = description;
-    if (imageHash) linkData.image_hash = imageHash;
     if (ctaType) {
       linkData.call_to_action = { type: ctaType, value: { link: linkUrl } };
     }
@@ -348,9 +348,12 @@ export class MetaAdsAPI extends BasePlatformApiClient {
         page_id: pageId,
         link_data: linkData,
       },
+      // Reference existing page photo instead of uploading
+      photo_id: photoId,
     });
     return { id: data.id };
   }
+
 
   async createAd(accountId, { adsetId, creativeId, name, status = 'PAUSED' }) {
     const data = await this._post(`/${accountId}/ads`, {
