@@ -35,3 +35,4 @@ DROP TABLE ad_sets;
 ALTER TABLE ad_sets_new RENAME TO ad_sets;
 CREATE INDEX IF NOT EXISTS idx_ad_sets_campaign ON ad_sets(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_ad_sets_platform ON ad_sets(platform);
+CREATE INDEX IF NOT EXISTS idx_ad_sets_user ON ad_sets(user_id);
