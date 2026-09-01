@@ -297,6 +297,41 @@ describe('MetaAdsAPI', () => {
       const body = JSON.parse(callArgs[2].body);
       expect(body.daily_budget).toBe(1.50);
     });
+
+    it('sends is_adset_budget_sharing_enabled:false by default (Meta v22+ requires it, subcode 4834011)', async () => {
+      mockSafeFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ id: 'camp_new' }),
+      });
+
+      const result = await api.createCampaign('act_123', {
+        name: 'New Campaign',
+        objective: 'OUTCOME_SALES',
+        status: 'PAUSED',
+      });
+
+      expect(result.id).toBe('camp_new');
+      const callArgs = mockSafeFetch.mock.calls[0];
+      const body = JSON.parse(callArgs[2]?.body || '{}');
+      expect(body.is_adset_budget_sharing_enabled).toBe(false);
+    });
+
+    it('honors explicit isAdsetBudgetSharing value', async () => {
+      mockSafeFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ id: 'camp_new' }),
+      });
+
+      await api.createCampaign('act_123', {
+        name: 'New Campaign',
+        objective: 'OUTCOME_SALES',
+        isAdsetBudgetSharing: true,
+      });
+
+      const callArgs = mockSafeFetch.mock.calls[0];
+      const body = JSON.parse(callArgs[2]?.body || '{}');
+      expect(body.is_adset_budget_sharing_enabled).toBe(true);
+    });
   });
 
   describe('createAdSet', () => {

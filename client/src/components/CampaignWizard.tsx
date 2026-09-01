@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Loader2, Check, ArrowLeft, ArrowRight, Rocket } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Loader2, Check, ArrowLeft, ArrowRight, Rocket, Link2 } from 'lucide-react';
 import { api } from '../lib/api';
 import type { CSSProperties } from 'react';
 
@@ -38,6 +38,19 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
   const [landingUrl, setLandingUrl] = useState('');
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
+  const [connectToken, setConnectToken] = useState('');
+  const queryClient = useQueryClient();
+  const connectMutation = useMutation({
+    mutationFn: (token: string) =>
+      api.post<{ data: { ad_accounts_count?: number; ad_accounts?: { id: string; name: string }[] } }>(
+        '/settings/accounts/connect-token',
+        { platform: 'meta', access_token: token },
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['wizard-accounts'] });
+      setConnectToken('');
+    },
+  });
 
   const accountsQuery = useQuery({
     queryKey: ['wizard-accounts'],
@@ -100,11 +113,44 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
                 </button>
               ))}
             </div>
-
             {accountList.length === 0 && !accountsQuery.isLoading ? (
-              <p style={{ color: '#ef4444', fontSize: '0.8rem', marginBottom: 12 }}>
-                Tidak ada ad account pada token Meta kamu. Hubungkan akun dengan ad account aktif.
-              </p>
+              <div style={{ marginBottom: 12 }}>
+                <p style={{ color: '#ef4444', fontSize: '0.8rem', marginBottom: 8 }}>
+                  Tidak ada ad account pada token Meta kamu. Hubungkan akun dengan ad account aktif untuk melanjutkan.
+                </p>
+                <label style={labelStyle}>Meta Access Token</label>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    type="password"
+                    placeholder="EAA... (token akses Meta)"
+                    value={connectToken}
+                    onChange={e => setConnectToken(e.target.value)}
+                    style={{ ...inputStyle, flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => connectMutation.mutate(connectToken)}
+                    disabled={!connectToken || connectMutation.isPending}
+                    style={{ ...btnStyle, opacity: !connectToken || connectMutation.isPending ? 0.5 : 1, whiteSpace: 'nowrap' }}
+                  >
+                    {connectMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />}
+                    {connectMutation.isPending ? 'Menghubungkan…' : 'Hubungkan'}
+                  </button>
+                </div>
+                {connectMutation.isError && (
+                  <p style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: 6 }}>
+                    Gagal menghubungkan: {connectMutation.error instanceof Error ? connectMutation.error.message : 'Token tidak valid'}
+                  </p>
+                )}
+                {connectMutation.isSuccess && (
+                  <p style={{ color: 'var(--green)', fontSize: '0.72rem', marginTop: 6 }}>
+                    ✅ Terhubung! Memuat ad account…
+                  </p>
+                )}
+                <p style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', marginTop: 6 }}>
+                  Dapatkan token dari <a href="https://developers.facebook.com/tools/explorer" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>Graph API Explorer</a> dengan izin <code>ads_management</code>, <code>pages_show_list</code>.
+                </p>
+              </div>
             ) : (
               <>
                 <label style={labelStyle}>Ad Account</label>

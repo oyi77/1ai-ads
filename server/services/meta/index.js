@@ -288,19 +288,19 @@ export class MetaAdsAPI extends BasePlatformApiClient {
 
   // --- Campaign WRITE Operations ---
 
-  async createCampaign(accountId, { name, objective, status = 'PAUSED', dailyBudget, specialAdCategories = [] }) {
+  async createCampaign(accountId, { name, objective, status = 'PAUSED', dailyBudget, specialAdCategories = [], isAdsetBudgetSharing }) {
     this.log.info('Creating Meta campaign', { accountId, name, objective });
     // Campaign-level budget (daily_budget) is mutually exclusive with ad-set
     // budget sharing — Meta rejects the combo with error_subcode 4834002.
     // When a campaign budget is set, disable sharing; otherwise leave it off.
+    // Meta v22+ requires is_adset_budget_sharing_enabled to be explicit
+    // (error_subcode 4834011) — never omit it.
     const body = {
       name,
       objective,
       status,
       special_ad_categories: specialAdCategories,
-      // Campaign-level budget with default CBO (do NOT set the sharing flag —
-      // explicit is_adset_budget_sharing_enabled:true + daily_budget is rejected
-      // with error_subcode 4834002).
+      is_adset_budget_sharing_enabled: isAdsetBudgetSharing ?? false,
     };
     if (dailyBudget) body.daily_budget = Math.round(dailyBudget * 100); // Meta expects cents
     const data = await this._post(`/${accountId}/campaigns`, body);
