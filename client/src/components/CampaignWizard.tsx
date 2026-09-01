@@ -40,8 +40,8 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
   const [connectToken, setConnectToken] = useState('');
   const [showManualConnect, setShowManualConnect] = useState(false);
   const [creativeStatus, setCreativeStatus] = useState<'complete' | 'partial'>('complete');
+  const [creativeErrorMsg, setCreativeErrorMsg] = useState('');
 
-  const queryClient = useQueryClient();
   const connectMutation = useMutation({
     mutationFn: (token: string) =>
       api.post<{ data: { ad_accounts_count?: number } }>('/settings/accounts/connect-token', {
@@ -72,7 +72,7 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
   async function handleCreate() {
     setCreating(true); setError('');
     try {
-      const res = await api.post<{ campaignId?: string; data?: { campaignId?: string; status?: string; message?: string; steps?: Array<{ step: string; status: string; error?: string }> } }>('/campaigns/create', {
+      const res = await api.post<{ campaignId?: string; data?: { campaignId?: string; status?: string; message?: string; error?: string; steps?: Array<{ step: string; status: string; error?: string }> } }>('/campaigns/create', {
         accountId, pageId, product, target, keunggulan,
         objective, dailyBudget: Number(dailyBudget), landingUrl,
       });
@@ -83,14 +83,17 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
 
       if (data?.status === 'created') {
         setStep(4);
-        // Store creative status for step 4 display
         if (creativeFailed || adSkipped) {
           setCreativeStatus('partial');
+          // Get the creative error message from steps (mapped from Meta error)
+          const creativeStep = data?.steps?.find(s => s.step === 'create_creative');
+          setCreativeErrorMsg(creativeStep?.error || 'Kreatif gagal dibuat — tambahkan dari Creative Library.');
         } else {
           setCreativeStatus('complete');
         }
         onDone(campaignId || '');
       } else {
+        // Show user-friendly error from server (already mapped from Meta error codes)
         setError(data?.error || 'Failed to create campaign');
         setCreating(false);
       }
@@ -298,12 +301,8 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
               <>
                 <AlertTriangle size={40} color="#fb923c" />
                 <h3 style={{ margin: '12px 0 6px', fontSize: '1rem' }}>Campaign dibuat — kreatif tertunda</h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: 10 }}>
-                  ✅ Campaign + Ad Set berhasil dibuat (PAUSED).
-                </p>
                 <p style={{ color: '#fb923c', fontSize: '0.78rem', marginBottom: 10 }}>
-                  ⚠️ Kreatif gagal dibuat otomatis — Meta App masih dalam proses review. <br/>
-                  Anda bisa menambahkan kreatif secara manual dari Creative Library.
+                  ⚠️ {creativeErrorMsg || 'Kreatif gagal dibuat otomatis — Meta App masih dalam proses review. Anda bisa menambahkan kreatif secara manual dari Creative Library.'}
                 </p>
                 <p style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginBottom: 16 }}>
                   🚀 Fitur pembuatan kreatif otomatis akan segera hadir setelah App Review selesai.

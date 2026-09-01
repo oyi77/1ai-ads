@@ -41,6 +41,39 @@ function throwApiError(platformName, status, parsedError) {
   const apiError = new Error(`${platformName} API returned ${status}`);
   apiError.status = status;
   apiError.data = parsedError;
+
+  // Extract Meta error details for user-friendly messaging
+  const metaErr = parsedError?.error || {};
+  const subcode = metaErr.error_subcode;
+  const code = metaErr.code;
+  const userMsg = metaErr.error_user_msg || metaErr.message || '';
+
+  // Map known Meta errors to actionable guidance
+  if (code === 100 && subcode === 1885183) {
+    // Dev mode: creative creation blocked
+    apiError.userMessage = 'Kreatif tidak bisa dibuat — Meta App masih dalam mode pengembangan. Campaign & ad set berhasil dibuat (PAUSED). Tambahkan kreatif dari Creative Library setelah App Review selesai.';
+    apiError.code = 'META_DEV_MODE';
+  } else if (code === 100 && subcode === 4834011) {
+    apiError.userMessage = 'Parameter campaign tidak lengkap — hubungi support.';
+    apiError.code = 'META_PARAM_ERROR';
+  } else if (code === 100 && subcode === 4834002) {
+    apiError.userMessage = 'Budget conflict — campaign tidak bisa punya budget di level campaign dan ad set bersamaan.';
+    apiError.code = 'META_BUDGET_CONFLICT';
+  } else if (code === 3) {
+    // App capability missing
+    apiError.userMessage = 'Fitur belum tersedia — Meta App membutuhkan izin tambahan. Campaign & ad set berhasil dibuat, tambahkan kreatif dari library.';
+    apiError.code = 'META_APP_CAPABILITY';
+  } else if (code === 190) {
+    apiError.userMessage = 'Token Meta tidak valid atau sudah expired — hubungkan ulang akun Meta kamu.';
+    apiError.code = 'META_TOKEN_EXPIRED';
+  } else if (status === 429) {
+    apiError.userMessage = 'Terlalu banyak request ke Meta — coba lagi dalam 30 detik.';
+    apiError.code = 'META_RATE_LIMIT';
+  } else {
+    apiError.userMessage = userMsg || `Meta API error (${code || status})`;
+    apiError.code = 'META_API_ERROR';
+  }
+
   throw apiError;
 }
 

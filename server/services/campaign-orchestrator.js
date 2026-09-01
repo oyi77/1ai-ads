@@ -25,34 +25,7 @@ export class CampaignOrchestrator {
   }
 
   async _stepCreative(accountId, pageId, product, bestAd, landingUrl, objective, result, meta = this.meta) {
-    // Try to use an existing page photo (avoids /adimages upload which is
-    // blocked in dev mode with error (#3) "Application does not have the
-    // capability to make this API call"). Falls back to placeholder upload,
-    // then to no-image creative if both fail.
     let imageHash;
-
-    // Strategy 1: Use an existing photo from the page
-    if (pageId) {
-      try {
-        const photosRes = await meta._get(`/${pageId}/photos`, { fields: 'images,id', limit: '1' });
-        const photos = photosRes.data || [];
-        if (photos.length > 0) {
-          const photoId = photos[0].id;
-          return this._runAndAssign(result.steps, 'create_creative', result, 'creativeId',
-            () => meta.createAdCreativeWithPhoto(accountId, {
-              name: `${product} Creative`, pageId,
-              message: `${bestAd.hook}\n\n${bestAd.body}`, headline: bestAd.cta || product,
-              description: product, linkUrl: landingUrl || 'https://example.com',
-              photoId,
-              ctaType: this._objectiveToCTA(objective),
-            }));
-        }
-      } catch (photoErr) {
-        log.warn('Page photo fetch failed — trying placeholder upload', { error: photoErr.message });
-      }
-    }
-
-    // Strategy 2: Upload a placeholder image (fails in dev mode)
     try {
       const imgData = await meta._post(`/${accountId}/adimages`, {
         url: `https://placehold.co/1080x1080/6366f1/ffffff?text=${encodeURIComponent((bestAd.hook || product).slice(0, 25))}`,
@@ -60,9 +33,8 @@ export class CampaignOrchestrator {
       const imgs = imgData.images || {};
       const firstKey = Object.keys(imgs)[0];
       if (firstKey) imageHash = imgs[firstKey].hash;
-    } catch { /* non-fatal — try without image */ }
+    } catch { /* non-fatal */ }
 
-    // Strategy 3: Create creative with image_hash (or without image)
     return this._runAndAssign(result.steps, 'create_creative', result, 'creativeId',
       () => meta.createAdCreative(accountId, {
         name: `${product} Creative`, pageId,
@@ -95,7 +67,9 @@ export class CampaignOrchestrator {
       creativeId = await this._stepCreative(accountId, pageId, product, bestAd, landingUrl, objective, result, meta);
     } catch (creativeErr) {
       log.warn('Creative creation failed — campaign/adset still created, add creative later', { error: creativeErr.message });
-      result.steps.push({ step: 'create_creative', status: 'failed', error: creativeErr.message });
+      // Surface user-friendly message from platform-client error mapping
+      const msg = creativeErr.userMessage || creativeErr.message || 'Kreatif gagal dibuat';
+      result.steps.push({ step: 'create_creative', status: 'failed', error: msg });
     }
 
     if (creativeId) {
@@ -165,7 +139,8 @@ export class CampaignOrchestrator {
     log.error('Campaign creation failed', { error: err.message });
     this._markStepFailed(steps, err.message);
     result.status = 'failed';
-    result.error = err.message;
+    // Surface user-friendly message from platform-client error mapping
+    result.error = err.userMessage || err.message;
     this._cleanupPartialCampaign(result.campaignId, meta);
     return result;
   }

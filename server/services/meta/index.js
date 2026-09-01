@@ -330,14 +330,14 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     return { id: data.id };
   }
 
-  async createAdCreativeWithPhoto(accountId, { name, pageId, message, headline, description, linkUrl, photoId, ctaType = 'LEARN_MORE' }) {
-    // Use an existing page photo (avoids /adimages upload which is blocked in dev mode)
+  async createAdCreative(accountId, { name, pageId, message, headline, description, linkUrl, imageHash, ctaType = 'LEARN_MORE' }) {
     const linkData = {
       message,
       link: linkUrl,
       name: headline,
     };
     if (description) linkData.description = description;
+    if (imageHash) linkData.image_hash = imageHash;
     if (ctaType) {
       linkData.call_to_action = { type: ctaType, value: { link: linkUrl } };
     }
@@ -348,8 +348,6 @@ export class MetaAdsAPI extends BasePlatformApiClient {
         page_id: pageId,
         link_data: linkData,
       },
-      // Reference existing page photo instead of uploading
-      photo_id: photoId,
     });
     return { id: data.id };
   }
