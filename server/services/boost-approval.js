@@ -126,6 +126,7 @@ export class BoostApprovalService {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+      signal: AbortSignal.timeout(5000),
     });
   }
 

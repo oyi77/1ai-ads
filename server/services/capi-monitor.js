@@ -54,31 +54,32 @@ export class CapiMonitor {
     let eventCount = 0;
     const errors = [];
 
-    try {
-      // Try Meta CAPI diagnostics endpoint
-      const diagnostics = await api.apiGet(`/${accountId}/events`, {
-        fields: 'event_stats,event_value',
-        access_token: api._getToken?.() || '',
-      });
-
-      if (diagnostics?.data) {
-        eventCount = diagnostics.data.length || 0;
+    // CAPI events live under Dataset/Pixel IDs — NOT ad accounts. An ad
+    // account has no `/events` sub-resource and no pixel_id/capi_enabled
+    // fields, so those old calls always failed silently and the monitor
+    // permanently reported no_data with false-positive alerts. Only query
+    // dataset-level endpoints when a dataset/pixel id is actually provided.
+    const datasetId = opts.datasetId || opts.pixelId;
+    if (datasetId) {
+      try {
+        const diagnostics = await api.apiGet(`/${datasetId}/events`, {
+          fields: 'event_stats,event_value',
+          access_token: api._getToken?.() || '',
+        });
+        if (diagnostics?.data) eventCount = diagnostics.data.length || 0;
+      } catch (err) {
+        log.debug('checkHealth: dataset events endpoint unavailable', { error: err.message });
       }
-    } catch (err) {
-      log.debug('checkHealth: events endpoint unavailable', { error: err.message });
-    }
-
-    try {
-      // Try dataset/CAPI health endpoint (requires Marketing API)
-      const datasetInfo = await api.apiGet(`/${accountId}`, {
-        fields: 'pixel_id,capi_enabled',
-      });
-
-      if (datasetInfo?.capi_enabled) {
-        status = 'active';
+      try {
+        const datasetInfo = await api.apiGet(`/${datasetId}`, {
+          fields: 'capi_config,activity_status',
+        });
+        if (datasetInfo?.capi_config || datasetInfo?.activity_status === 'ACTIVE') {
+          status = 'active';
+        }
+      } catch {
+        // Endpoint may not be available
       }
-    } catch {
-      // Endpoint may not be available
     }
 
     // Fallback: check recent conversion events via campaign insights
@@ -203,8 +204,9 @@ export class CapiMonitor {
     for (const entry of accountIds) {
       const accountId = typeof entry === 'string' ? entry : entry.accountId;
       const ownerApi = entry && entry.token ? MetaAdsAPI.withToken(entry.token) : this.meta;
+      const datasetId = entry && (entry.datasetId || entry.pixelId);
       try {
-        const health = await this.checkHealth(accountId, { api: ownerApi });
+        const health = await this.checkHealth(accountId, { api: ownerApi, datasetId });
         if (health.status === 'no_data' && health.eventCount === 0) {
           log.warn('CAPI health alert: no events detected', { accountId });
         }

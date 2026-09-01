@@ -319,7 +319,7 @@ export function AccountReportsPage() {
           })()}
 
           {/* Anomaly banner */}
-          {(report.anomalies?.length ?? deriveAnomalies(report).length) > 0 && (
+          {(report.anomalies?.length || deriveAnomalies(report).length) > 0 && (
             <div style={{ background: 'rgba(251,146,60,0.08)', border: '1px solid rgba(251,146,60,0.35)', borderRadius: 12, padding: '14px 18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <AlertTriangle size={15} color="#fb923c" />
@@ -333,7 +333,7 @@ export function AccountReportsPage() {
 
           {/* View tabs */}
           <div style={{ display: 'flex', gap: 4, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 4, width: 'fit-content' }}>
-            {(['overview', 'hours'] as const).map(v => (
+            {(['overview', 'hours', 'builder'] as const).map(v => (
               <button key={v} onClick={() => setView(v)}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', border: 'none', borderRadius: 6, cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '0.78rem', fontWeight: 700,
                   background: view === v ? 'var(--accent-soft)' : 'transparent', color: view === v ? 'var(--accent)' : 'var(--text-secondary)' }}>

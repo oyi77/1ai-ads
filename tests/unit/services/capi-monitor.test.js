@@ -49,9 +49,9 @@ describe('CapiMonitor', () => {
     it('should return active status when CAPI is enabled', async () => {
       mockMetaApi.apiGet
         .mockResolvedValueOnce({ data: [{ event: 'purchase' }] })
-        .mockResolvedValueOnce({ capi_enabled: true });
+        .mockResolvedValueOnce({ capi_config: { enabled: true }, activity_status: 'ACTIVE' });
 
-      const result = await monitor.checkHealth('act_123');
+      const result = await monitor.checkHealth('act_123', { datasetId: 'ds_1' });
       expect(result.accountId).toBe('act_123');
       expect(result.status).toBe('active');
       expect(result.eventCount).toBeGreaterThan(0);
@@ -63,7 +63,7 @@ describe('CapiMonitor', () => {
         .mockRejectedValueOnce(new Error('Not available'));
       mockMetaApi.getAccountInsights.mockResolvedValueOnce({ conversions: 5 });
 
-      const result = await monitor.checkHealth('act_123');
+      const result = await monitor.checkHealth('act_123', { datasetId: 'ds_1' });
       expect(result.status).toBe('likely_active');
     });
 
@@ -71,7 +71,7 @@ describe('CapiMonitor', () => {
       mockMetaApi.apiGet.mockRejectedValue(new Error('fail'));
       mockMetaApi.getAccountInsights.mockRejectedValue(new Error('fail'));
 
-      const result = await monitor.checkHealth('act_123');
+      const result = await monitor.checkHealth('act_123', { datasetId: 'ds_1' });
       expect(result.status).toBe('no_data');
     });
 
@@ -79,7 +79,7 @@ describe('CapiMonitor', () => {
       mockMetaApi.apiGet.mockRejectedValue(new Error('fail'));
       mockMetaApi.getAccountInsights.mockRejectedValue(new Error('fail'));
 
-      await monitor.checkHealth('act_123');
+      await monitor.checkHealth('act_123', { datasetId: 'ds_1' });
       expect(mockDb.prepare).toHaveBeenCalled();
       expect(mockPrepare.run).toHaveBeenCalled();
     });
@@ -128,7 +128,8 @@ describe('CapiMonitor', () => {
       mockMetaApi.apiGet.mockRejectedValue(new Error('fail'));
       mockMetaApi.getAccountInsights.mockRejectedValue(new Error('fail'));
 
-      await monitor._checkAll(() => ['act_1', 'act_2']);
+      // Entries carry a datasetId so checkHealth exercises the dataset endpoints.
+      await monitor._checkAll(() => [{ accountId: 'act_1', datasetId: 'ds_1' }, { accountId: 'act_2', datasetId: 'ds_2' }]);
       // Each account calls checkHealth which calls apiGet twice + getAccountInsights once
       expect(mockMetaApi.apiGet).toHaveBeenCalled();
     });

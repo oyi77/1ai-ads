@@ -479,9 +479,12 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
       if (!handler) throw new Error(`Unknown tool: ${name}`);
       return await handler(args);
     } catch (error) {
-      log.error('MCP tool error', { tool: name, error: error.message });
+      // A handler may throw a non-Error (e.g. a raw string) — normalize before
+      // touching .message so the error surface itself can't throw.
+      const message = error instanceof Error ? error.message : String(error);
+      log.error('MCP tool error', { tool: name, error: message });
       return {
-        content: [{ type: "text", text: `Error: ${error.message}` }],
+        content: [{ type: "text", text: `Error: ${message}` }],
         isError: true,
       };
     }
