@@ -201,7 +201,21 @@ export const api = {
     return envelope.data;
   },
 
-  logout: () => {
+  logout: async () => {
+    // Revoke the server-side refresh token before clearing local state, so a
+    // stolen refresh token does not stay valid after the user logs out.
+    const refreshToken = localStorage.getItem(REFRESH_KEY);
+    if (refreshToken) {
+      try {
+        await fetch(`${API_BASE}/auth/logout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        });
+      } catch {
+        // Best-effort — local clear still proceeds even if the server is down.
+      }
+    }
     clearAuth();
     window.location.href = '/login';
   },

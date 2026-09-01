@@ -46,7 +46,7 @@ export class ContentSchedulerQueueRepository {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
-      item.id, item.pageId, item.platform, item.filePath,
+      item.id, item.userId || null, item.pageId, item.platform, item.filePath,
       item.caption || '', JSON.stringify(item.hashtags || []),
       item.hook || '', item.cta || '', item.status,
       item.scheduledAt, item.createdAt,

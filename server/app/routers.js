@@ -103,7 +103,7 @@ export function createRouters({ app, repos, services }) {
   // ── Payment webhook (public, signature verified) ─────────
   app.use('/api/payments/notify', createPaymentsWebhookRouter(services.paymentService));
   // ── Per-user Meta webhook (verify token = userId, signed w/ user app_secret) ──
-  app.use('/webhooks/u', createUserWebhookRouter(repos.userMetaAppsRepo));
+  app.use('/webhooks/u', createUserWebhookRouter(repos.userMetaAppsRepo, repos.webhookEventsRepo));
   // ── Per-user Meta App Creds (REST) ──────────────────────────
   app.use('/api/meta-app', createMetaAppRouter(repos.userMetaAppsRepo));
 

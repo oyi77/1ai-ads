@@ -15,7 +15,7 @@ const log = createLogger('webhooks-user');
  * The bot/REST subscription helper (see lib/meta-subscribe.js) points each
  * user's Meta app at https://<host>/webhooks/u/<userId>.
  */
-export function createUserWebhookRouter(userMetaAppsRepo) {
+export function createUserWebhookRouter(userMetaAppsRepo, webhookEventsRepo) {
   const router = Router();
   const handler = new WebhookHandler();
 
@@ -59,7 +59,13 @@ export function createUserWebhookRouter(userMetaAppsRepo) {
         // Persist under the user's namespace so downstream processing stays scoped.
         try {
           for (const event of events) {
-            log.info('webhook_user_event', { userId, field: event.field });
+            if (webhookEventsRepo) {
+              webhookEventsRepo.create({
+                source: 'meta_user',
+                eventType: event.entryId || '',
+                payload: { userId, field: event.field, value: event.value },
+              });
+            }
           }
         } catch (err) {
           log.error('webhook_user_store_error', { userId, error: err.message });

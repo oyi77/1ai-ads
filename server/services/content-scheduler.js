@@ -14,6 +14,7 @@
 import fs from 'fs';
 import { createLogger } from '../lib/logger.js';
 import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
 
 const log = createLogger('content-scheduler');
 
@@ -90,6 +91,15 @@ export class ContentScheduler {
   queueContent({ pageId, filePath, caption, hashtags, hook, cta, scheduleAt, category, style, productDesc, userId }) {
     if (!pageId || !filePath) {
       return { success: false, queueId: null, error: 'pageId and filePath are required' };
+    }
+    // Validate filePath: must be inside a controlled uploads directory (no
+    // path traversal to arbitrary server files). Reject absolute paths and
+    // parent-dir traversal, then allow only common media extensions.
+    const resolved = path.resolve(filePath);
+    const allowed = path.resolve(process.env.UPLOADS_DIR || 'uploads/');
+    const validExts = /\.(mp4|mov|avi|jpg|jpeg|png|gif|mp3|pdf)$/i;
+    if (!resolved.startsWith(allowed) || !validExts.test(filePath)) {
+      return { success: false, queueId: null, error: 'filePath must be a valid media file inside the uploads directory' };
     }
 
     const id = uuidv4();

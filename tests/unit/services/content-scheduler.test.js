@@ -21,6 +21,7 @@ describe('ContentScheduler', () => {
   let mockQueueRepo;
 
   beforeEach(() => {
+    process.env.UPLOADS_DIR = '/tmp/';
     vi.clearAllMocks();
     vi.useFakeTimers();
 
