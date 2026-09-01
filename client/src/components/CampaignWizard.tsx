@@ -113,10 +113,11 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
                   onClick={async (e) => {
                     e.preventDefault();
                     try {
-                      const res = await api.get<{ data: { authUrl: string } }>('/oauth/meta/url');
-                      const authUrl = res?.data?.authUrl;
-                      if (authUrl) {
-                        const popup = window.open(authUrl, 'metaOAuth', 'width=600,height=700');
+                      // Use the existing Facebook OAuth flow (auth.js)
+                      const res = await api.get<{ data: { fb_url: string } }>('/auth/facebook/login');
+                      const fbUrl = res?.data?.fb_url;
+                      if (fbUrl) {
+                        const popup = window.open(fbUrl, 'metaOAuth', 'width=600,height=700');
                         const timer = setInterval(() => {
                           if (popup?.closed) {
                             clearInterval(timer);
@@ -125,7 +126,7 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
                         }, 1000);
                       }
                     } catch {
-                      window.location.href = '/api/oauth/meta/url';
+                      window.location.href = '/api/auth/facebook/login';
                     }
                   }}
                   style={{ ...btnStyle, width: '100%', justifyContent: 'center', textDecoration: 'none' }}

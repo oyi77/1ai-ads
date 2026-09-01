@@ -82,7 +82,7 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
 
       const isLocal = (req.get('host') || '').includes('localhost');
       const frontendUrl = isLocal ? 'http://localhost:5173' : `https://${req.get('host')}`;
-      res.redirect(`${frontendUrl}/settings?fb_connected=true`);
+      res.redirect(`${frontendUrl}/campaigns?connected=meta`);
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
