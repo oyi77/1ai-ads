@@ -53,6 +53,19 @@ export class WebhookProcessor {
     ad_review_rejected: 'handleAdReview',
   };
 
+  // Meta's change.field values are NOT the same as our handler keys:
+  //   leadgen  → lead
+  //   ad_review_complete → ad_review_approved / ad_review_rejected (by status)
+  // Normalize here at dispatch time so handleLead/handleAdReview actually fire.
+  static NORMALIZE_FIELD(field, payload) {
+    if (field === 'leadgen') return 'lead';
+    if (field === 'ad_review_complete') {
+      const status = String(payload?.status || '').toLowerCase();
+      return status === 'approved' ? 'ad_review_approved' : 'ad_review_rejected';
+    }
+    return field;
+  }
+
   async processEvent(event) {
     let payload;
     try {
@@ -62,9 +75,10 @@ export class WebhookProcessor {
       return;
     }
 
-    const handler = this.constructor.EVENT_HANDLERS[event.event_type];
+    const normalizedType = this.constructor.NORMALIZE_FIELD(event.event_type, payload);
+    const handler = this.constructor.EVENT_HANDLERS[normalizedType];
     if (handler) {
-      await this[handler](event.event_type, payload);
+      await this[handler](normalizedType, payload);
     }
   }
 
@@ -89,7 +103,9 @@ export class WebhookProcessor {
   }
 
   async handleLead(_eventType, payload) {
-    log.info('Lead received', { leadId: payload.lead_id, formId: payload.form_id });
+    // Meta leadgen value carries leadgen_id (not lead_id) and form_id
+    const leadId = payload.leadgen_id || payload.lead_id;
+    log.info('Lead received', { leadId, formId: payload.form_id });
     if (payload.campaign_id) {
       try {
         const campaign = this._resolveCampaign(payload.campaign_id);
@@ -105,8 +121,9 @@ export class WebhookProcessor {
   }
 
   async handleAdReview(eventType, payload) {
-    log.info('Ad review event', { adId: payload.ad_id, status: eventType });
-    if (eventType === 'ad_review_rejected' && payload.campaign_id) {
+    const status = String(payload?.status || eventType).toLowerCase();
+    log.info('Ad review event', { adId: payload.ad_id, status });
+    if ((status === 'ad_review_rejected' || status === 'rejected' || status === 'disapproved') && payload.campaign_id) {
       try {
         const campaign = this._resolveCampaign(payload.campaign_id);
         if (campaign) {
