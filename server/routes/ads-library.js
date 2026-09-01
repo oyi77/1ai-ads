@@ -14,6 +14,7 @@
 
 import { Router } from 'express';
 import config from '../config/index.js';
+import { requireAuth } from '../middleware/auth.js';
 import { createUnifiedAdsLibraryService } from '../services/unified-ads-library.js';
 import { createLogger } from '../lib/logger.js';
 
@@ -230,7 +231,7 @@ export function createAdsLibraryRouter() {
    * Query params:
    * - platform: Platform filter ('meta', 'google', 'tiktok') (optional)
    */
-  router.delete('/cache', async (req, res) => {
+  router.delete('/cache', requireAuth, async (req, res) => {
     try {
       const platform = req.query.platform;
 
