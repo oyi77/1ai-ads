@@ -141,17 +141,19 @@ export class BoostApprovalService {
     if (approveMatch) {
       const id  = parseInt(approveMatch[1], 10);
       const rec = this.boostRepo.findById(id);
-      if (!rec) return { handled: true, action: 'approved', rec_id: id, success: false };
+      // 'attempted' is the command the user sent; success=false means the
+      // record wasn't found, so no mutation happened.
+      if (!rec) return { handled: true, attempted: 'approve', action: 'approved', rec_id: id, success: false };
       this.approve(id, 'telegram');
-      return { handled: true, action: 'approved', rec_id: id, success: true };
+      return { handled: true, attempted: 'approve', action: 'approved', rec_id: id, success: true };
     }
 
     if (rejectMatch) {
       const id  = parseInt(rejectMatch[1], 10);
       const rec = this.boostRepo.findById(id);
-      if (!rec) return { handled: true, action: 'rejected', rec_id: id, success: false };
+      if (!rec) return { handled: true, attempted: 'reject', action: 'rejected', rec_id: id, success: false };
       this.reject(id, 'telegram');
-      return { handled: true, action: 'rejected', rec_id: id, success: true };
+      return { handled: true, attempted: 'reject', action: 'rejected', rec_id: id, success: true };
     }
 
     return { handled: false };

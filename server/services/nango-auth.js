@@ -75,7 +75,11 @@ export class NangoAuthService {
   }
 
   /**
-   * Get fresh token (auto-refreshes if refresh_token available).
+   * Get the current access token for a user's connection via Nango.
+   * NOTE: Nango's getConnection() does NOT auto-refresh — it returns the
+   * stored token, which may be stale. Callers needing a genuinely fresh
+   * token must call nango.refreshToken() separately (or fall back to local
+   * token management).
    * Returns null if Nango is not configured or token cannot be obtained.
    * @param {string} userId — internal user id
    * @param {string} platform — meta, google, tiktok, etc.

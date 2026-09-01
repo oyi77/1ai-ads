@@ -54,13 +54,13 @@ export async function recordToTreasury(entry) {
     });
 
     if (!res.ok) {
-      log.warn({ status: res.status, entry }, '[treasuryClient] Hub rejected entry');
+      log.warn('[treasuryClient] Hub rejected entry', { status: res.status, entry });
       return false;
     }
     return true;
   } catch (err) {
     if (err.name !== 'AbortError') {
-      log.warn({ err, entry }, '[treasuryClient] Failed to reach hub');
+      log.warn('[treasuryClient] Failed to reach hub', { err, entry });
     }
     return false;
   } finally {
@@ -101,7 +101,7 @@ export async function checkWf5Enabled() {
     return true;
   } catch (err) {
     if (err.name !== 'AbortError') {
-      log.debug({ err }, '[treasuryClient] wf5 health check unreachable — failing open');
+      log.debug('[treasuryClient] wf5 health check unreachable — failing open', { err });
     }
     return true; // unreachable → fail-open
   } finally {
