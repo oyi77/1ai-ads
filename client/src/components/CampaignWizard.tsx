@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Check, ArrowLeft, ArrowRight, Rocket, Link2 } from 'lucide-react';
 import { api } from '../lib/api';
 import type { CSSProperties } from 'react';
@@ -38,6 +38,21 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
   const [landingUrl, setLandingUrl] = useState('');
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
+  const [connectToken, setConnectToken] = useState('');
+  const [showManualConnect, setShowManualConnect] = useState(false);
+
+  const queryClient = useQueryClient();
+  const connectMutation = useMutation({
+    mutationFn: (token: string) =>
+      api.post<{ data: { ad_accounts_count?: number } }>('/settings/accounts/connect-token', {
+        platform: 'meta',
+        access_token: token,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['wizard-accounts'] });
+      setConnectToken('');
+    },
+  });
 
   const accountsQuery = useQuery({
     queryKey: ['wizard-accounts'],
@@ -101,41 +116,90 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
               ))}
             </div>
             {accountList.length === 0 && !accountsQuery.isLoading ? (
-              <div style={{ marginBottom: 12, textAlign: 'center', padding: '18px 0' }}>
-                <p style={{ color: '#ef4444', fontSize: '0.8rem', marginBottom: 12 }}>
+              <div style={{ marginBottom: 12 }}>
+                <p style={{ color: '#ef4444', fontSize: '0.8rem', marginBottom: 10 }}>
                   Tidak ada ad account Meta terhubung.
                 </p>
-                <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: 14 }}>
-                  Hubungkan akun Meta kamu untuk mulai membuat campaign.
-                </p>
-                <a
-                  href="#"
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    try {
-                      // Use the existing Facebook OAuth flow (auth.js)
-                      const res = await api.get<{ data: { fb_url: string } }>('/auth/facebook/login');
-                      const fbUrl = res?.data?.fb_url;
-                      if (fbUrl) {
-                        const popup = window.open(fbUrl, 'metaOAuth', 'width=600,height=700');
-                        const timer = setInterval(() => {
-                          if (popup?.closed) {
-                            clearInterval(timer);
-                            window.location.reload();
+
+                {/* OAuth button — works once FB_APP_ID is set in container env */}
+                {!showManualConnect ? (
+                  <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                    <a
+                      href="#"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        try {
+                          const res = await api.get<{ data: { fb_url: string } }>('/auth/facebook/login');
+                          const fbUrl = res?.data?.fb_url;
+                          if (fbUrl) {
+                            const popup = window.open(fbUrl, 'metaOAuth', 'width=600,height=700');
+                            const timer = setInterval(() => {
+                              if (popup?.closed) {
+                                clearInterval(timer);
+                                window.location.reload();
+                              }
+                            }, 1000);
                           }
-                        }, 1000);
-                      }
-                    } catch {
-                      window.location.href = '/api/auth/facebook/login';
-                    }
-                  }}
-                  style={{ ...btnStyle, width: '100%', justifyContent: 'center', textDecoration: 'none' }}
-                >
-                  <Link2 size={15} /> Hubungkan Akun Meta
-                </a>
-                <p style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', marginTop: 10 }}>
-                  Kamu akan diarahkan ke Facebook untuk mengizinkan AdForge.
-                </p>
+                        } catch {
+                          // OAuth not configured (FB_APP_ID missing) — show manual fallback
+                          setShowManualConnect(true);
+                        }
+                      }}
+                      style={{ ...btnStyle, width: '100%', justifyContent: 'center', textDecoration: 'none' }}
+                    >
+                      <Link2 size={15} /> Hubungkan via Facebook
+                    </a>
+                    <p style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', marginTop: 8 }}>
+                      Kamu akan diarahkan ke Facebook untuk mengizinkan AdForge.
+                    </p>
+                    <button
+                      onClick={() => setShowManualConnect(true)}
+                      style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '0.68rem', cursor: 'pointer', marginTop: 6 }}
+                    >
+                      Atau paste token manual
+                    </button>
+                  </div>
+                ) : (
+                  /* Manual token paste fallback */
+                  <div>
+                    <label style={labelStyle}>Meta Access Token</label>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input
+                        type="password"
+                        placeholder="EAA... (token akses Meta)"
+                        value={connectToken}
+                        onChange={e => setConnectToken(e.target.value)}
+                        style={{ ...inputStyle, flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => connectMutation.mutate(connectToken)}
+                        disabled={!connectToken || connectMutation.isPending}
+                        style={{ ...btnStyle, opacity: !connectToken || connectMutation.isPending ? 0.5 : 1, whiteSpace: 'nowrap' }}
+                      >
+                        {connectMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />}
+                        {connectMutation.isPending ? 'Menghubungkan…' : 'Hubungkan'}
+                      </button>
+                    </div>
+                    {connectMutation.isError && (
+                      <p style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: 6 }}>
+                        Gagal: {connectMutation.error instanceof Error ? connectMutation.error.message : 'Token tidak valid'}
+                      </p>
+                    )}
+                    {connectMutation.isSuccess && (
+                      <p style={{ color: 'var(--green)', fontSize: '0.72rem', marginTop: 6 }}>
+                        ✅ Terhubung! Memuat ad account…
+                      </p>
+                    )}
+                    <p style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', marginTop: 6 }}>
+                      Dapatkan token dari{' '}
+                      <a href="https://developers.facebook.com/tools/explorer" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>
+                        Graph API Explorer
+ </a>{' '}
+                      dengan izin <code>ads_management</code>, <code>pages_show_list</code>.
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <>
