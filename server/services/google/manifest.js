@@ -16,4 +16,5 @@ export default {
     { key: 'refresh_token', label: 'Refresh Token', type: 'string', required: true },
     { key: 'customer_id', label: 'Customer ID', type: 'string', required: true },
   ],
+  routePath: 'google-ads',
 };

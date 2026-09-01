@@ -29,7 +29,9 @@ export const createCampaignScene = new Scenes.WizardScene(
   async (ctx) => {
     ctx.wizard.state.data = {};
     const repo = ctx.deps?.repos?.platformAccountsRepo;
-    const accounts = repo?.findByUserId?.(ctx.userId)?.filter(a => a.is_active) || [];
+    // Only Meta accounts are supported by the bot's campaign creation wizard;
+    // filtering avoids showing platforms whose tokens can't be used here.
+    const accounts = repo?.findByUserId?.(ctx.userId)?.filter(a => a.is_active && a.platform === 'meta') || [];
     if (accounts.length === 0) {
       await ctx.reply('🔌 No ad accounts connected. Connect one first via /settings.');
       return ctx.scene.leave();
@@ -229,11 +231,13 @@ async function handleCreateGo(ctx) {
       if (!adAccounts.length) throw new Error('No ad accounts found for this token');
       realAccountId = adAccounts[0].id;
     }
+    // Budget goes on the AD SET, not the campaign — CBO-enabled accounts reject
+    // campaign-level daily_budget (error_subcode 4834002). Matches the canonical
+    // campaign-orchestrator.js pattern.
     const campaign = await api.createCampaign(realAccountId, {
       name: d.name,
       objective: d.objective,
       status: 'PAUSED',
-      dailyBudget: d.dailyBudget,
     });
 
     if (!campaign?.id) throw new Error('No campaign ID returned');
@@ -250,7 +254,7 @@ async function handleCreateGo(ctx) {
     // (Meta rejects combo with error_subcode 4834002).
     const adSet = await api.createAdSet(realAccountId, campaign.id, {
       name: `${d.name} - Ad Set`,
-      dailyBudget: 0,
+      dailyBudget: d.dailyBudget,
       targeting: {
         geo_locations: { countries: targeting.countries || ['ID'] },
         age_min: targeting.ageMin || 18,

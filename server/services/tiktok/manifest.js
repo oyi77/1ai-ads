@@ -13,4 +13,5 @@ export default {
     { key: 'access_token', label: 'Access Token', type: 'string', required: true },
     { key: 'advertiser_id', label: 'Advertiser ID', type: 'string', required: true },
   ],
+  routePath: 'tiktok-ads',
 };

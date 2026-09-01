@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Megaphone, LogOut, Menu,
   Library, Activity, FlaskConical, BarChart3, Zap, Eye, GitBranch, LayoutGrid,
@@ -39,7 +39,6 @@ const navItems = [
 const MOBILE_BREAKPOINT = 768;
 
 export function Shell() {
-  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= MOBILE_BREAKPOINT);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
 
@@ -125,7 +124,7 @@ export function Shell() {
             <PlanBadge />
           </div>
           <button
-            onClick={() => { localStorage.clear(); navigate('/login'); }}
+            onClick={() => api.logout()}
             style={{
               display: 'flex', alignItems: 'center', gap: 8, width: '100%',
               padding: '8px 0', background: 'none', border: 'none',

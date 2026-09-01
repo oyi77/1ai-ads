@@ -17,4 +17,5 @@ export default {
     { key: 'ad_account_id', label: 'Ad Account ID', type: 'string', required: true },
     { key: 'business_id', label: 'Business Manager ID', type: 'string', required: false },
   ],
+  routePath: 'meta',
 };

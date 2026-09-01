@@ -81,7 +81,8 @@ export function DataTable<T>({
       const bv = (b as Record<string, unknown>)[sortCol];
       const an = Number(av) || 0;
       const bn = Number(bv) || 0;
-      if (typeof av === 'number' || typeof bv === 'number') {
+      // Detect numeric strings too — '1000' must sort after '200'.
+      if (typeof av === 'number' || typeof bv === 'number' || (!isNaN(an) && !isNaN(bn))) {
         return sortDir === 'asc' ? an - bn : bn - an;
       }
       const as = String(av || '').toLowerCase();

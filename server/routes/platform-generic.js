@@ -83,8 +83,9 @@ export function createGenericPlatformRouter(platformKey, platformLabel, settings
     try {
       const api = await clientFor(req);
       const { campaignId } = req.params;
-      const { accountId: _accountId, ...body } = req.body;
-      const result = await api.updateCampaign(campaignId, body);
+      const { accountId, ...body } = req.body;
+      // updateCampaign contract is (accountId, campaignId, data) — pass accountId
+      const result = await api.updateCampaign(accountId, campaignId, body);
       res.json({ success: true, data: result });
     } catch (err) {
       log.error(`${platformLabel} campaign update failed`, { error: err.message });

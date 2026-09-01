@@ -17,4 +17,5 @@ export default {
     { key: 'access_token', label: 'Access Token', type: 'string', required: true },
     { key: 'ad_account_id', label: 'Ad Account ID', type: 'string', required: true },
   ],
+  routePath: 'linkedin-ads',
 };
