@@ -127,19 +127,16 @@ export class RealtimeService {
           const ids = campaignIds.map(c => c.campaign_id).filter(Boolean);
           if (!ids.length) continue;
           // campaigns table has no account_id column (it's in platform_accounts.
-          // credentials.ad_account_id). When accountId is unavailable, fall back
-          // to per-campaign insights calls (slower but correct).
+          // credentials.ad_account_id). When accountId is unavailable, the
+          // batched insights call is skipped and the group produces no metrics
+          // (all-zero). The proper fix requires resolving account_id from the
+          // owner's platform accounts — tracked separately.
           const insightsMap = accountId
             ? await api.getMultiCampaignInsights(ids, { datePreset: 'today', accountId })
             : {};
           for (const campaign of campaignIds) {
             const cid = campaign.campaign_id;
-            let insights = insightsMap[cid] || {};
-            // Fallback: per-campaign call when the batched path didn't resolve.
-            if (!Object.keys(insights).length) {
-              try { insights = await api.getCampaignInsights(cid, { datePreset: 'today' }) || {}; }
-              catch { /* skip — campaign may be paused or inaccessible */ }
-            }
+            const insights = insightsMap[cid] || {};
             const metric = this._buildMetricFromInsights(campaign, insights);
             this.metrics.set(cid, metric);
             this._broadcast({ type: 'metric_update', data: metric });
