@@ -22,8 +22,12 @@ const PLATFORM_CONFIG = {
     tokenUrl: 'https://www.linkedin.com/oauth/v2/accessToken',
     scopes: ['r_ads', 'rw_ads', 'r_ads_reporting', 'r_organization_admin'],
   },
+  meta: {
+    authUrl: `https://www.facebook.com/${process.env.META_API_VERSION || 'v22.0'}/dialog/oauth`,
+    tokenUrl: `https://graph.facebook.com/${process.env.META_API_VERSION || 'v22.0'}/oauth/access_token`,
+    scopes: ['ads_management', 'pages_show_list', 'pages_read_engagement', 'business_management'],
+  },
 };
-
 function generateState(userId, platform) {
   const payload = `${userId}:${platform}:${Date.now()}:${crypto.randomBytes(16).toString('hex')}`;
   return Buffer.from(payload).toString('base64url');
@@ -72,9 +76,12 @@ export function createOAuthRouter(settingsRepo, platformAccountsRepo) {
         response_type: 'code',
         scope: config.scopes.join(' '),
         state,
-        access_type: 'offline',
-        prompt: 'consent',
       });
+      // Google-specific params
+      if (platform === 'google') {
+        params.set('access_type', 'offline');
+        params.set('prompt', 'consent');
+      }
 
       const authUrl = `${config.authUrl}?${params.toString()}`;
       res.json({ success: true, data: { authUrl, state } });
@@ -137,11 +144,67 @@ export function createOAuthRouter(settingsRepo, platformAccountsRepo) {
       if (!access_token) {
         return res.redirect(`${process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com'}/settings/connections?error=no_access_token`);
       }
-
       // Store the tokens
       const repo = platformAccountsRepo;
+      const userId = req.user.id;
+
+      // Meta: auto-detect ad accounts and save them (like connect-token does)
+      if (platform === 'meta') {
+        let userName = 'Meta Account';
+        let adAccounts = [];
+        try {
+          const meRes = await fetch(`https://graph.facebook.com/${process.env.META_API_VERSION || 'v22.0'}/me?access_token=${encodeURIComponent(access_token)}&fields=id,name`);
+          const meData = await meRes.json();
+          if (meData.name) userName = meData.name;
+          const accRes = await fetch(`https://graph.facebook.com/${process.env.META_API_VERSION || 'v22.0'}/me/adaccounts?access_token=${encodeURIComponent(access_token)}&fields=name,account_id,account_status,currency&limit=50`);
+          const accData = await accRes.json();
+          if (accData.data) {
+            adAccounts = accData.data.filter(a => a.account_status === 1).map(a => ({
+              id: `act_${a.account_id}`,
+              name: a.name,
+              account_id: a.account_id,
+              currency: a.currency,
+              status: 'active',
+            }));
+          }
+        } catch (e) {
+          log.error('Meta auto-detect failed', { error: e.message });
+        }
+
+        const existingAccounts = repo.getAccounts ? repo.getAccounts('meta').filter(a => a.user_id === userId) : [];
+        const existing = existingAccounts.find(a => a.account_name === userName || a.credentials?.access_token === access_token);
+        let mainId;
+        if (existing) {
+          repo.updateAccount(existing.id, { credentials: { access_token, user_name: userName }, is_active: 1 });
+          mainId = existing.id;
+        } else {
+          const created = repo.create({
+            user_id: userId,
+            platform: 'meta',
+            account_name: userName,
+            credentials: { access_token, user_name: userName },
+            is_active: existingAccounts.length === 0 ? 1 : 0,
+          });
+          mainId = created.id;
+        }
+        for (const adAcc of adAccounts) {
+          const adExisting = existingAccounts.find(a => a.account_name === adAcc.id || a.account_name === adAcc.name);
+          if (!adExisting) {
+            repo.create({
+              user_id: userId,
+              platform: 'meta',
+              account_name: adAcc.id,
+              credentials: { access_token, ad_account_id: adAcc.account_id, ad_account_name: adAcc.name },
+              is_active: 0,
+            });
+          }
+        }
+        log.info('Meta connected via OAuth', { userId, adAccounts: adAccounts.length, mainId });
+        return res.redirect(`${process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com'}/campaigns/wizard?connected=meta`);
+      }
+
       const created = repo.create({
-        user_id: req.user.id,
+        user_id: userId,
         platform,
         account_name: `${platform.charAt(0).toUpperCase() + platform.slice(1)} Account`,
         credentials: {
@@ -153,9 +216,9 @@ export function createOAuthRouter(settingsRepo, platformAccountsRepo) {
       });
 
       // Set as active account for this user/platform
-      repo.setActiveAccountForUser(platform, created.id, req.user.id);
+      repo.setActiveAccountForUser(platform, created.id, userId);
 
-      log.info('Platform connected via OAuth', { userId: req.user.id, platform, accountId: created.id });
+      log.info('Platform connected via OAuth', { userId, platform, accountId: created.id });
 
       res.redirect(`${process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com'}/settings/connections?connected=${platform}`);
     } catch (err) {

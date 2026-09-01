@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CSSProperties } from 'react';
 import { Loader2, Download, Megaphone, Plus } from 'lucide-react';
@@ -48,6 +49,18 @@ export function CampaignsPage() {
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [rowBusy, setRowBusy] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+
+  // Auto-open the campaign wizard when returning from Meta OAuth
+  useEffect(() => {
+    if (searchParams.get('connected') === 'meta') {
+      setShowWizard(true);
+      // Clean the URL without triggering navigation
+      const url = new URL(window.location.href);
+      url.searchParams.delete('connected');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams]);
 
   const { data, isLoading, error } = useQuery<CampaignsResponse>({
     queryKey: ['campaigns'],
