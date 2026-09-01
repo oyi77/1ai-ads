@@ -16,7 +16,6 @@ import { createAiGroupRouter } from '../routes/_ai.js';
 import { createReportingGroupRouter } from '../routes/_reporting.js';
 import { createAutomationGroupRouter } from '../routes/_automation.js';
 import { createMcpGroupRouter } from '../routes/_mcp.js';
-import { createPaymentsWebhookRouter } from '../routes/webhooks-payments.js';
 import { createWebhookRouter } from '../routes/webhooks.js';
 import { createUserWebhookRouter } from '../routes/webhooks-user.js';
 import { createApiKeysRouter } from '../routes/api-keys.js';
@@ -100,8 +99,6 @@ export function createRouters({ app, repos, services }) {
   app.use('/', createWhatsappIntelligenceGroupRouter(deps));
   // ── Meta webhook (public, no auth) ───────────────────────
   app.use('/webhooks', createWebhookRouter(repos.webhookEventsRepo));
-  // ── Payment webhook (public, signature verified) ─────────
-  app.use('/api/payments/notify', createPaymentsWebhookRouter(services.paymentService));
   // ── Per-user Meta webhook (verify token = userId, signed w/ user app_secret) ──
   app.use('/webhooks/u', createUserWebhookRouter(repos.userMetaAppsRepo, repos.webhookEventsRepo));
   // ── Per-user Meta App Creds (REST) ──────────────────────────

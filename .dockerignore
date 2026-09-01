@@ -22,3 +22,5 @@ secrets
 outputs
 *.pem
 *.key
+
+client/node_modules

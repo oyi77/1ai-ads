@@ -31,7 +31,7 @@ export function generateRefreshToken(payload) {
 
 export function verifyToken(token) {
   try {
-    return jwt.verify(token, secret);
+    return jwt.verify(token, secret, { algorithms: ['HS256'] });
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
       throw new Error('Token expired');
