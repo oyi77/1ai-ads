@@ -98,7 +98,9 @@ export class ContentScheduler {
     const resolved = path.resolve(filePath);
     const allowed = path.resolve(process.env.UPLOADS_DIR || 'uploads/');
     const validExts = /\.(mp4|mov|avi|jpg|jpeg|png|gif|mp3|pdf)$/i;
-    if (!resolved.startsWith(allowed) || !validExts.test(filePath)) {
+    // Use path.sep suffix to prevent partial-prefix bypass: if allowed=/app/uploads,
+    // resolved=/app/uploads_evil/... must NOT pass. Also accept exact match for the dir itself.
+    if ((resolved !== allowed && !resolved.startsWith(allowed + path.sep)) || !validExts.test(filePath)) {
       return { success: false, queueId: null, error: 'filePath must be a valid media file inside the uploads directory' };
     }
 
