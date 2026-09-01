@@ -372,7 +372,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
                   req.user?.id
                 );
               }
-            } catch { /* skip individual adset errors */ }
+            } catch (err) { log.error('Failed to store adset', { adsetId: as.id, error: err.message }); }
           }
         } catch (err) {
           log.error('Failed to get adsets', { accountId: account.id, error: err.message });

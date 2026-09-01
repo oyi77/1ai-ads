@@ -26,7 +26,7 @@ export function errorHandler(err, ctx) {
   } catch (fatal) {
     log.error('FATAL in error handler', { error: fatal.message });
     try {
-      ctx.reply('😅 Something went wrong. Try /start to restart.').catch(() => {});
+      ctx.reply('😅 Something went wrong. Try /start to restart.').catch(err => log.warn('fatal error handler reply failed', { error: err.message }));
     } catch {
       // Last resort — nothing we can do
     }
@@ -55,7 +55,7 @@ function handleError(err, ctx) {
     reply_markup: {
       inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]],
     },
-  }).catch(() => {});
+  }).catch(err => log.warn('user recovery message failed', { error: err.message }));
 
   // Rate-limited admin alert (max 1 per user per 5 mins)
   sendAdminAlert(userId, error, domain);
@@ -97,7 +97,7 @@ function sendAdminAlert(userId, error, domain) {
 Domain: ${esc(domain)}
 Error: ${esc(errText)}`,
         { parse_mode: 'HTML' }
-      ).catch(() => {});
+      ).catch(err => log.warn('admin alert send failed', { error: err.message }));
     }
   } catch { /* best effort */ }
   log.warn('Bot error (admin alert)', { userId, error, domain });

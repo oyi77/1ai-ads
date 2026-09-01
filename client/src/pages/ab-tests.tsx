@@ -119,7 +119,7 @@ export function ABTestsPage() {
             ))}
           </tbody>
         </table>
-        {t.confidence !== null && (
+        {t.confidence !== null && t.confidence !== undefined && (
           <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginTop: 4 }}>
             Confidence: <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{(t.confidence ?? 0).toFixed(1)}%</span>
           </div>

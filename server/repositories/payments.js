@@ -127,8 +127,46 @@ export class PaymentsRepository {
     return this.db.prepare('SELECT * FROM team_members WHERE user_id = ?').all(userId);
   }
 
-  acceptTeamInvite(memberId, userId) {
-    this.db.prepare("UPDATE team_members SET status = 'active', user_id = ?, accepted_at = datetime('now'), invite_token = NULL WHERE id = ?").run(userId, memberId);
-    return this.db.prepare('SELECT * FROM team_members WHERE id = ?').get(memberId);
-  }
-}
+ 
+   // Usage meters (usage_meters table, migration 035)
+   getCurrentPeriodMeters(userId) {
+     return this.db.prepare(
+       'SELECT * FROM usage_meters WHERE user_id = ? ORDER BY period_start DESC'
+     ).all(userId);
+   }
+ 
+   getUsageMetersByUser(userId, start, end) {
+     return this.db.prepare(
+       'SELECT * FROM usage_meters WHERE user_id = ? AND period_start >= ? AND period_end <= ? ORDER BY period_start ASC'
+     ).all(userId, start, end);
+   }
+ 
+   incrementUsageMeter(userId, meterKey, periodStart, periodEnd) {
+     this.db.prepare(`
+       INSERT INTO usage_meters (id, user_id, meter_key, period_start, period_end, count)
+       VALUES (?, ?, ?, ?, ?, 1)
+       ON CONFLICT(user_id, meter_key, period_start, period_end)
+       DO UPDATE SET count = count + 1, updated_at = CURRENT_TIMESTAMP
+     `).run(uuidv4(), userId, meterKey, periodStart, periodEnd);
+     return this.db.prepare(
+       'SELECT * FROM usage_meters WHERE user_id = ? AND meter_key = ? AND period_start = ?'
+     ).get(userId, meterKey, periodStart);
+   }
+ 
+   // Milestones (milestones table, migration 035)
+   getUnlockedMilestones(userId) {
+     return this.db.prepare(
+       'SELECT * FROM milestones WHERE user_id = ? ORDER BY achieved_at ASC'
+     ).all(userId);
+   }
+ 
+   recordMilestone(userId, key, metadata = {}) {
+     this.db.prepare(`
+       INSERT OR IGNORE INTO milestones (id, user_id, milestone_key, metadata)
+       VALUES (?, ?, ?, ?)
+     `).run(uuidv4(), userId, key, typeof metadata === 'string' ? metadata : JSON.stringify(metadata));
+     return this.db.prepare(
+       'SELECT * FROM milestones WHERE user_id = ? AND milestone_key = ?'
+     ).get(userId, key);
+   }
+ }

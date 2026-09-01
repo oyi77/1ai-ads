@@ -68,7 +68,8 @@ export class DraftService {
         return draft;
       } catch (err) {
         log.error('Draft execution failed; draft left pending', { draftId: id, error: err.message });
-        this._notify({ ...existing, summary: `Execution failed: ${existing.summary}` }, 'failed').catch(() => {});
+        this._notify({ ...existing, summary: `Execution failed: ${existing.summary}` }, 'failed').catch(err =>
+          log.error('draft notification failed', { draftId: id, error: err.message }));
         throw new ValidationError(`Execution failed: ${err.message}`);
       }
     }
