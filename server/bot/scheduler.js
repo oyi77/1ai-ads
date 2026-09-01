@@ -87,6 +87,32 @@ export function evaluateRuleForCampaign(rule, campaign) {
  * @param {import('telegraf').Telegraf} bot — Telegram bot instance
  * @param {{ repos: object, services: object }} deps
  */
+// Prevent overlapping runs: node-cron does NOT await async callbacks, so a slow
+// job (Meta API, LLM, DB writes) can still be running when the next tick fires,
+// double-processing rows. Wrap with a per-job in-flight lock; a second tick while
+// one is running is logged and skipped.
+const runningJobs = new Set();
+function noOverlap(name, fn) {
+  return async () => {
+    if (runningJobs.has(name)) {
+      log.warn('Scheduler job skipped — previous run still in flight', { job: name });
+      return;
+    }
+    runningJobs.add(name);
+    try {
+      await fn();
+    } finally {
+      runningJobs.delete(name);
+    }
+  };
+}
+// Wrapper that delegates to cron.schedule with the noOverlap guard.
+// The caller passes the same async arrow function; the closing \`});\` stays
+// unchanged (arrow close + scheduleJob close = same as arrow + cron.schedule).
+function scheduleJob(expr, name, fn) {
+  cron.schedule(expr, noOverlap(name, fn));
+}
+
 export function initScheduler(bot, deps) {
   // ────────────────────────────────────────────────────────────
   // 1. Campaign Monitor — every 6 hours
@@ -178,7 +204,7 @@ export function initScheduler(bot, deps) {
   //    Check adset bid_amount against BID_MIN..BID_MAX range.
   //    Log adjustments needed.
   // ────────────────────────────────────────────────────────────
-  cron.schedule('*/5 * * * *', async () => {
+  scheduleJob('*/5 * * * *', 'bid-satpam', async () => {
     log.info('Running bid satpam job');
     try {
       const BID_MIN = parseInt(process.env.BID_SATPAM_MIN || '130', 10);
@@ -328,7 +354,7 @@ export function initScheduler(bot, deps) {
   //    Approve/Reject inline keyboard.
   //    Dedup: skip if pending draft already exists for this rule+campaign.
   // ────────────────────────────────────────────────────────────
-  cron.schedule('*/5 * * * *', async () => {
+  scheduleJob('*/5 * * * *', 'rule-guard', async () => {
     try {
       const rules = deps.repos?.rulesRepo?.findAll?.() || [];
       const activeRules = rules.filter(r => r.enabled);
@@ -486,7 +512,7 @@ export function initScheduler(bot, deps) {
   //     detect anomalies, push to the owner's Telegram.
   //     Dedup: max 1 alert per account/day.
   // ────────────────────────────────────────────────────────────
-  cron.schedule('0 * * * *', async () => {
+  scheduleJob('0 * * * *', 'hourly-anomaly', async () => {
     try {
       const repo = deps.repos?.platformAccountsRepo;
       const settingsRepo = deps.repos?.settingsRepo;
@@ -638,7 +664,7 @@ export function initScheduler(bot, deps) {
   // 8. Meta Campaign Sync — every 6h at :30
   //    Sync remote campaigns from Meta API → local DB.
   // ────────────────────────────────────────────────────────────
-  cron.schedule('30 */6 * * *', async () => {
+  scheduleJob('30 */6 * * *', 'meta-sync', async () => {
     log.info('Running multi-platform campaign sync');
     try {
       const platformAccountsRepo = deps.repos?.platformAccountsRepo;

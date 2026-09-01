@@ -94,7 +94,7 @@ export function scoreCreative(metrics) {
   const breakdown = {
     engagement: Math.min(100, Math.round(ctr * 20)),        // CTR 5% = 100
     efficiency: Math.max(0, Math.round(100 - cpc)),          // CPC 0 = 100
-    profitability: Math.min(100, Math.round(roas * 25)),     // ROAS 4x = 100
+    profitability: Math.max(0, Math.min(100, Math.round((roas - 1) * 33.33))), // 0 at break-even (ROAS 1), 100 at ROAS 4x; losses clamp to 0
     scale: Math.min(100, Math.round(Math.log10(Math.max(1, impressions)) * 15)),
   };
 

@@ -211,11 +211,14 @@ function parseInterests(rawResult, currentInterests) {
 
 export function discoverBudgetCap(currentBudget, roasIsDropping) {
   if (roasIsDropping) return { nextBudget: currentBudget, reason: 'ROAS dropping — hold budget' };
-  const currentIdx = BUDGET_LADDER.findIndex(b => b >= currentBudget);
-  if (currentIdx === -1 || currentIdx >= BUDGET_LADDER.length - 1) {
+  // findIndex(b > currentBudget) → first rung strictly ABOVE current, so a
+  // 300k budget picks 500k (not 1M) and a 500k budget picks 1M. The old
+  // b >= current + ladder[idx+1] double-advanced (300k → 1M, skipping 500k).
+  const nextIdx = BUDGET_LADDER.findIndex(b => b > currentBudget);
+  if (nextIdx === -1) {
     return { nextBudget: currentBudget, reason: 'Already at max budget ladder step' };
   }
-  const nextBudget = BUDGET_LADDER[currentIdx + 1];
+  const nextBudget = BUDGET_LADDER[nextIdx];
   return { nextBudget, reason: `Scale up: Rp ${currentBudget.toLocaleString('id-ID')} → Rp ${nextBudget.toLocaleString('id-ID')}` };
 }
 
