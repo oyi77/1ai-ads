@@ -12,7 +12,7 @@ export class AdspirerMcpClient {
     this._clients = new Map(); // userId → { client, transport }
   }
 
-  async callTool(userId, toolName, args = {}) {
+  async callTool(userId, toolName, args = {}, retry = false) {
     const client = await this._getClient(userId);
     log.info('Calling Adspirer tool', { userId, toolName });
     try {
@@ -22,13 +22,18 @@ export class AdspirerMcpClient {
       try { return JSON.parse(text); } catch { return text; }
     } catch (err) {
       if (err.message?.includes('401') || err.message?.includes('Unauthorized')) {
-        // Force token refresh and retry once
+        if (retry) {
+          // Second 401 after a forced refresh — token is genuinely bad.
+          log.error('Adspirer 401 after refresh', { userId, toolName });
+          throw err;
+        }
+        // Force token refresh and retry exactly once (no unbounded loop)
         this._clients.delete(userId);
         const account = this.repo.findActiveByUserAndPlatform(userId, 'adspirer');
         if (account) {
           const creds = JSON.parse(account.credentials);
           await this._refreshToken(userId, account, creds);
-          return this.callTool(userId, toolName, args);
+          return this.callTool(userId, toolName, args, true);
         }
       }
       throw err;

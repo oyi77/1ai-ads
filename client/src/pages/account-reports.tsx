@@ -170,14 +170,14 @@ export function AccountReportsPage() {
   const accountList = Array.isArray(accounts) ? accounts : [];
   const selected = accountId || String(accountList[0]?.id ?? '');
 
+  const [attrWindow, setAttrWindow] = useState('');
   const { data: report, isLoading, error, isFetching } = useQuery({
-    queryKey: ['account-report', selected, refreshKey],
+    queryKey: ['account-report', selected, refreshKey, attrWindow],
     queryFn: () => api.get<Report>(`/reporting/accounts/${selected}/report${attrWindow ? `?aw=${attrWindow}` : ''}`),
     enabled: !!selected,
   });
 
   const [view, setView] = useState<'overview' | 'hours' | 'builder'>('overview');
-  const [attrWindow, setAttrWindow] = useState('');
   const [preset, setPreset] = useState('last_7d');
   const [builderMetrics, setBuilderMetrics] = useState<string[]>(['spend', 'roas', 'purchases']);
   const [builderWindows, setBuilderWindows] = useState<string[]>(['today', 'last_7d']);

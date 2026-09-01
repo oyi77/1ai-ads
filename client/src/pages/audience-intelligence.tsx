@@ -44,6 +44,9 @@ export function AudienceIntelligencePage() {
 
   const { data: audiences, isLoading, error, refetch } = useQuery<AudienceCard[]>({
     queryKey: ['audience', 'intelligence', query],
+    // Only run on explicit refetch() (Enter / Analyze button) — otherwise every
+    // keystroke changes the key and fires an API call.
+    enabled: false,
     queryFn: async () => {
       if (!query.trim()) return [];
       const res = await api.get<any>(

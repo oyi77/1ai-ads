@@ -78,6 +78,7 @@ export function CreativeLibraryPage() {
 
   return (
     <div>
+      {_tabsUi}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 4 }}>Creative Library</h1>

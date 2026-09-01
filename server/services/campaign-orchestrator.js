@@ -29,7 +29,9 @@ export class CampaignOrchestrator {
     // page-post creation which fails when the Meta app is in dev mode.
     let imageHash;
     try {
-      const imgData = await this.meta._post(`/${accountId}/adimages`, {
+      // Use the per-user meta instance (not this.meta — the system token) so
+      // the placeholder upload uses the calling user's credentials.
+      const imgData = await meta._post(`/${accountId}/adimages`, {
         url: `https://placehold.co/1080x1080/6366f1/ffffff?text=${encodeURIComponent((bestAd.hook || product).slice(0, 25))}`,
       });
       const imgs = imgData.images || {};
