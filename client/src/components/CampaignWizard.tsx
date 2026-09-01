@@ -51,6 +51,7 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
         platform: 'meta',
         access_token: token,
       }),
+    onMutate: () => setConnectError(''),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wizard-accounts'] });
       setConnectToken('');
