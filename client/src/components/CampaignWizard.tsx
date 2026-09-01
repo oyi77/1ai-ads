@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Check, ArrowLeft, ArrowRight, Rocket, Link2, AlertTriangle } from 'lucide-react';
 import { api } from '../lib/api';
 import type { CSSProperties } from 'react';
@@ -41,7 +42,9 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
   const [showManualConnect, setShowManualConnect] = useState(false);
   const [creativeStatus, setCreativeStatus] = useState<'complete' | 'partial'>('complete');
   const [creativeErrorMsg, setCreativeErrorMsg] = useState('');
+  const [connectError, setConnectError] = useState('');
 
+  const queryClient = useQueryClient();
   const connectMutation = useMutation({
     mutationFn: (token: string) =>
       api.post<{ data: { ad_accounts_count?: number } }>('/settings/accounts/connect-token', {
@@ -52,7 +55,11 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
       queryClient.invalidateQueries({ queryKey: ['wizard-accounts'] });
       setConnectToken('');
     },
+    onError: (e) => {
+      setConnectError(e instanceof Error ? e.message : 'Gagal menghubungkan akun — coba lagi nanti.');
+    },
   });
+
 
   const accountsQuery = useQuery({
     queryKey: ['wizard-accounts'],
@@ -70,35 +77,39 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
   const canNext1 = Boolean(objective && accountId && Number(dailyBudget) >= 10000);
 
   async function handleCreate() {
-    setCreating(true); setError('');
+    let data: { campaignId?: string; status?: string; message?: string; error?: string; steps?: Array<{ step: string; status: string; error?: string }> } | undefined;
     try {
       const res = await api.post<{ campaignId?: string; data?: { campaignId?: string; status?: string; message?: string; error?: string; steps?: Array<{ step: string; status: string; error?: string }> } }>('/campaigns/create', {
         accountId, pageId, product, target, keunggulan,
         objective, dailyBudget: Number(dailyBudget), landingUrl,
       });
-      const data = res?.data || res;
-      const creativeFailed = data?.steps?.some(s => s.step === 'create_creative' && s.status === 'failed');
-      const adSkipped = data?.steps?.some(s => s.step === 'create_ad' && s.status === 'skipped');
-      const campaignId = data?.campaignId;
-
-      if (data?.status === 'created') {
-        setStep(4);
-        if (creativeFailed || adSkipped) {
-          setCreativeStatus('partial');
-          // Get the creative error message from steps (mapped from Meta error)
-          const creativeStep = data?.steps?.find(s => s.step === 'create_creative');
-          setCreativeErrorMsg(creativeStep?.error || 'Kreatif gagal dibuat — tambahkan dari Creative Library.');
-        } else {
-          setCreativeStatus('complete');
-        }
-        onDone(campaignId || '');
-      } else {
-        // Show user-friendly error from server (already mapped from Meta error codes)
-        setError(data?.error || 'Failed to create campaign');
-        setCreating(false);
-      }
+      data = res?.data || res;
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to create campaign');
+      // Show user-friendly error — server maps Meta error codes to readable messages
+      const msg = e instanceof Error ? e.message : 'Failed to create campaign';
+      setError(msg);
+      setCreating(false);
+      return;
+    }
+
+    const creativeFailed = data?.steps?.some((s: { step: string; status: string }) => s.step === 'create_creative' && s.status === 'failed');
+    const adSkipped = data?.steps?.some((s: { step: string; status: string }) => s.step === 'create_ad' && s.status === 'skipped');
+    const campaignId = data?.campaignId;
+
+
+    if (data?.status === 'created') {
+      setStep(4);
+      if (creativeFailed || adSkipped) {
+        setCreativeStatus('partial');
+        // Get the creative error message from steps (mapped from Meta error)
+        const creativeStep = data?.steps?.find(s => s.step === 'create_creative');
+        setCreativeErrorMsg(creativeStep?.error || 'Kreatif gagal dibuat — tambahkan dari Creative Library.');
+      } else {
+        setCreativeStatus('complete');
+      }
+      onDone(campaignId || '');
+    } else {
+      setError(data?.error || 'Failed to create campaign');
       setCreating(false);
     }
   }
@@ -193,11 +204,12 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
                         {connectMutation.isPending ? 'Menghubungkan…' : 'Hubungkan'}
                       </button>
                     </div>
-                    {connectMutation.isError && (
+                    {connectError && (
                       <p style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: 6 }}>
-                        Gagal: {connectMutation.error instanceof Error ? connectMutation.error.message : 'Token tidak valid'}
+                        {connectError}
                       </p>
                     )}
+
                     {connectMutation.isSuccess && (
                       <p style={{ color: 'var(--green)', fontSize: '0.72rem', marginTop: 6 }}>
                         ✅ Terhubung! Memuat ad account…
