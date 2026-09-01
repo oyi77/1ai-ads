@@ -77,7 +77,7 @@ export const createCampaignScene = new Scenes.WizardScene(
   // Step 3: Name → budget
   async (ctx) => {
     const text = (ctx.message?.text || '').trim();
-    if (!text || text.length > 80) {
+    if (!text || text.length > 80 || text === '/skip') {
       await ctx.reply('⚠️ Name must be 1-80 characters. Try again:');
       return;
     }

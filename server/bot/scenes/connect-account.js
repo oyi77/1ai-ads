@@ -86,10 +86,11 @@ export const connectScene = new Scenes.WizardScene(
       });
       // Enforce single-active invariant: only the newly connected account stays active.
       repo.setActiveAccountForUser(platform, created.id, ctx.userId);
-      // Record first_sync milestone
-      if (repo.recordMilestone) {
-        repo.recordMilestone(ctx.userId, 'first_sync', { platform, accountId: created.id });
-      }
+      // Record first_sync milestone via the payments repo (the method lives on
+      // PaymentsRepository, not PlatformAccountsRepository).
+      try {
+        ctx.deps?.repos?.paymentsRepo?.recordMilestone?.(ctx.userId, 'first_sync', { platform, accountId: created.id });
+      } catch { /* milestone recording is best-effort */ }
       log.info('Platform account connected via bot', {
         userId: ctx.userId,
         platform,
