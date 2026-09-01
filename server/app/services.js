@@ -166,12 +166,7 @@ export function createServices({ db, repos, params }) {
     draftService, facebookSystemUserService, campaignMonitorService,
     abTestService, fatigueDetector, unifiedReporter, bulkOperations,
     imageGenerator, audienceIntelligence, creativeScorer, whiteLabelService,
-    capiMonitor, waIntelligence, autonomousAgent, autoOptimizer,
-    webhookProcessor, dataCleanup, adIntelligenceService, competitorSpyService,
-    draftService, facebookSystemUserService, campaignMonitorService,
-    abTestService, fatigueDetector, unifiedReporter, bulkOperations,
-    imageGenerator, audienceIntelligence, creativeScorer, whiteLabelService,
-    capiMonitor, waIntelligence, alertingService, boostApproval, targeting,
+    alertingService, boostApproval, targeting,
     creativeLibraryRepo, dashboardWidgetsRepo, accountReportService, nangoAuth,
   };
 }

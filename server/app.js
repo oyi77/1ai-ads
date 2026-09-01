@@ -118,6 +118,30 @@ export function createApp(params) {
     next();
   });
 
+  // Central 5xx error sanitizer — per-route catch blocks return err.message
+  // verbatim (e.g. res.status(500).json({ success:false, error: err.message })).
+  // In production those leak internal details (SQLite constraint text, file
+  // paths, provider errors). Wrap res.json so any 5xx error response with a
+  // string error field is replaced with the same generic message the central
+  // error handler uses. Development/test keep err.message for debugging.
+  app.use((_req, res, next) => {
+    const originalJson = res.json.bind(res);
+    res.json = (body) => {
+      if (
+        res.statusCode >= 500 &&
+        body &&
+        typeof body === 'object' &&
+        body.success === false &&
+        typeof body.error === 'string' &&
+        config.nodeEnv === 'production'
+      ) {
+        body = { ...body, error: 'Internal Server Error' };
+      }
+      return originalJson(body);
+    };
+    next();
+  });
+
   // Correlation ID middleware — extract or generate X-Correlation-ID
   app.use((req, res, next) => {
     const corrId = req.headers['x-correlation-id'] || crypto.randomUUID();

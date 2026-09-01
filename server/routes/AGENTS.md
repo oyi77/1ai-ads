@@ -14,8 +14,6 @@ HTTP endpoint definitions for the Express API. Routes are thin controllers that 
 | `platform-client.js` | Platform account management endpoints — connect/disconnect ad platforms |
 | `rate-limiter.js` | Rate limiting middleware configuration for API endpoints |
 | `validate.js` | Request validation middleware — body schema, params, query checks |
-| `google-ads.js` | Google Ads API routes — accounts, campaigns CRUD, performance, sync |
-| `tiktok-ads.js` | TikTok Ads API routes — accounts, campaigns CRUD, insights, ads, sync |
 
 ## For AI Agents
 
