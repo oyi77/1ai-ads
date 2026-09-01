@@ -227,8 +227,8 @@ async function handleOptimizeAction(ctx, deps, scope) {
 async function runOptimize(ctx, deps, campaigns) {
   const llmClient = deps?.services?.llmClient;
   if (llmClient) {
-    const llmSuggestion = await tryLlmSuggestion(llmClient, campaigns);
-    if (llmSuggestion) return await proposeOptimization(ctx, deps, llmSuggestion);
+    const llmSuggestions = await tryLlmSuggestions(llmClient, campaigns);
+    if (llmSuggestions) return await proposeOptimizations(ctx, deps, llmSuggestions);
   }
 
   // Deterministic fallback: pause the worst performer (lowest ROAS).
@@ -247,11 +247,16 @@ async function runOptimize(ctx, deps, campaigns) {
 }
 
 const OPTIMIZE_SYSTEM_PROMPT = `You are an AI advertising optimization assistant.
-Analyze the given Meta ad campaigns and recommend ONE optimization as a JSON object:
-{ "campaign_id": string, "type": "pause"|"scale_up"|"scale_down", "amount": number (optional, MULTIPLIER: scale_up → budget × amount, e.g. 1.5 = +50% (amount > 1 raises budget, amount < 1 lowers it); scale_down → budget ÷ amount, e.g. 1.25 = −20% (amount > 1 lowers budget, amount < 1 raises it); omit or use 1 for pause; 0 < amount ≤ 5), "rationale": string }
-Only reference campaigns present in the data. Return ONLY the JSON object, no other text.`;
+Analyze the given Meta ad campaigns and recommend the TOP 1-3 most impactful optimizations as a JSON ARRAY:
+[ { "campaign_id": string, "type": "pause"|"scale_up"|"scale_down", "amount": number (optional, MULTIPLIER: scale_up → budget × amount, e.g. 1.5 = +50% (amount > 1 raises budget, amount < 1 lowers it); scale_down → budget ÷ amount, e.g. 1.25 = −20% (amount > 1 lowers budget, amount < 1 raises it); omit or use 1 for pause; 0 < amount ≤ 5), "rationale": string }, ... ]
+Rules:
+- Only reference campaigns present in the data (by exact campaign_id).
+- Prefer pausing clearly losing campaigns (ROAS below break-even for 3+ days).
+- Scale up strong winners; scale down mediocre spenders.
+- Max 3 items; distinct campaigns; return [] if nothing worth changing.
+Return ONLY the JSON array, no other text.`;
 
-async function tryLlmSuggestion(llmClient, campaigns) {
+async function tryLlmSuggestions(llmClient, campaigns) {
   try {
     const context = campaigns.map(c => ({
       id: c.id,
@@ -264,27 +269,80 @@ async function tryLlmSuggestion(llmClient, campaigns) {
     }));
     const response = await llmClient.call(
       OPTIMIZE_SYSTEM_PROMPT,
-      `Recommend the best optimization for these Meta campaigns:\n${JSON.stringify(context)}`
+      `Recommend the best optimizations for these Meta campaigns:\n${JSON.stringify(context)}`
     );
     if (typeof response !== 'string' || !response.trim()) return null;
     const clean = String(response).replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
     const parsed = JSON.parse(clean);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || !parsed.campaign_id) return null;
-    const campaign = campaigns.find(c => c.id === parsed.campaign_id);
-    if (!campaign) return null;
-    const type = ['pause', 'scale_up', 'scale_down'].includes(parsed.type) ? parsed.type : 'pause';
-    const raw = parsed.amount;
-    const coerced = raw === null || raw === undefined || raw === '' ? null : Number(raw);
-    const amount = coerced !== null && Number.isFinite(coerced) ? coerced : null;
-    return {
-      campaign,
-      type,
-      amount: type === 'pause' ? null : amount,
-      rationale: typeof parsed.rationale === 'string' ? parsed.rationale.slice(0, 200) : '',
-    };
+    // Accept either a single object (backward compat) or an array.
+    const list = Array.isArray(parsed) ? parsed : [parsed];
+    if (list.length === 0) return null;
+    const out = [];
+    for (const item of list) {
+      if (!item || typeof item !== 'object' || !item.campaign_id) continue;
+      const campaign = campaigns.find(c => c.id === item.campaign_id);
+      if (!campaign) continue;
+      const type = ['pause', 'scale_up', 'scale_down'].includes(item.type) ? item.type : 'pause';
+      const raw = item.amount;
+      const coerced = raw === null || raw === undefined || raw === '' ? null : Number(raw);
+      const amount = coerced !== null && Number.isFinite(coerced) ? coerced : null;
+      out.push({
+        campaign,
+        type,
+        amount: type === 'pause' ? null : amount,
+        rationale: typeof item.rationale === 'string' ? item.rationale.slice(0, 200) : '',
+      });
+    }
+    return out.length > 0 ? out : null;
   } catch {
     return null;
   }
+}
+
+async function proposeOptimizations(ctx, deps, suggestions) {
+  const created = [];
+  for (const suggestion of suggestions) {
+    const draft = await createOptimizeDraft(ctx, deps, suggestion);
+    if (draft) created.push({ draft, suggestion });
+  }
+  if (created.length === 0) {
+    return ctx.reply(
+      '🤖 *AI Optimization*\n\nTidak ada saran yang bisa dibuat. Coba lagi nanti.',
+      { parse_mode: 'Markdown' }
+    );
+  }
+  // One summary message with per-draft Apply/Dismiss buttons.
+  const lines = created.map(({ suggestion }) => {
+    const { type, campaign } = suggestion;
+    const label = type === 'pause' ? '⏸ pause' : (type === 'scale_up' ? '📈 naikkan budget' : '📉 turunkan budget');
+    return `• ${label} *${campaign.name || campaign.id}*`;
+  });
+  const keyboard = created.map(({ draft }) => ([
+    { text: '✅ Apply', callback_data: `approval:approve:${draft.id}` },
+    { text: '❌ Dismiss', callback_data: `approval:reject:${draft.id}` },
+  ]));
+  return ctx.reply(
+    `🤖 *Saran AI (${created.length})*\n\n${lines.join('\n')}\n\nSetujui atau tolak masing-masing:`,
+    { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } }
+  );
+}
+
+async function createOptimizeDraft(ctx, deps, suggestion) {
+  return deps?.services?.draftService?.guardAutonomousChange?.({
+    type: 'ai_optimize',
+    summary: suggestion.type === 'pause'
+      ? `AI menyarankan pause untuk ${suggestion.campaign.name || suggestion.campaign.id}${suggestion.rationale ? ` — ${suggestion.rationale}` : ''}`
+      : `AI menyarankan ${suggestion.type === 'scale_up' ? 'naikkan' : 'turunkan'} budget ${suggestion.campaign.name || suggestion.campaign.id}${suggestion.rationale ? ` — ${suggestion.rationale}` : ''}`,
+    details: {
+      action: suggestion.type === 'pause'
+        ? { type: 'pause' }
+        : { type: suggestion.type, amount: suggestion.amount || resolveScaleDefault(suggestion.type, deps?.repos?.settingsRepo) },
+      campaign: suggestion.campaign,
+    },
+    proposedBy: 'ai',
+    userId: ctx.userId,
+    campaignId: suggestion.campaign.id,
+  });
 }
 
 async function proposeOptimization(ctx, deps, suggestion) {
