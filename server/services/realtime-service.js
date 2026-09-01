@@ -114,10 +114,18 @@ export class RealtimeService {
       for (const campaign of activeCampaigns) {
         const ownerId = campaign?.user_id || campaign?.created_by;
         if (!ownerId) continue;
-        const key = `${ownerId}:${campaign.account_id || ''}`;
+        // campaigns rows don't carry account_id — it lives in
+        // platform_accounts.credentials.ad_account_id. Resolve it per owner so
+        // the batched insights call gets a real account.
+        let accountId = campaign.account_id || '';
+        if (!accountId && this.platformAccountsRepo) {
+          const acct = this.platformAccountsRepo.getByPlatform?.(ownerId, 'meta');
+          accountId = acct?.credentials?.ad_account_id || acct?.ad_account_id || '';
+        }
+        const key = `${ownerId}:${accountId}`;
         if (!byOwner.has(key)) {
           const api = this._metaApiForOwner(campaign);
-          byOwner.set(key, { api, accountId: campaign.account_id, campaignIds: [] });
+          byOwner.set(key, { api, accountId, campaignIds: [] });
         }
         byOwner.get(key).campaignIds.push(campaign);
       }
