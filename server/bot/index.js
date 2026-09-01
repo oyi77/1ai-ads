@@ -118,7 +118,8 @@ export function initBot(app, deps) {
   });
   bot.action(/^platform:(.+):(.+)$/, async (ctx) => {
     await ctx.answerCbQuery();
-    await handlePlatformAction(ctx, deps, ctx.match[0]);
+    // ctx.match[1]=platform, match[2]=action — reconstruct scope without 'platform:' prefix
+    await handlePlatformAction(ctx, deps, ctx.match[1] + ':' + ctx.match[2]);
   });
   bot.action(/^settings:(.+)$/, handleSettingsCallback(deps));
   bot.action(/^ads:select:(.+):(.+)$/, async (ctx) => {
@@ -139,8 +140,8 @@ export function initBot(app, deps) {
   });
   bot.action(/^ads:repacc:(.+):(.+)$/, async (ctx) => {
     await ctx.answerCbQuery();
-    const [, _platform, accountId] = ctx.match;
-    await handleAdsAccountReport(deps)(ctx, accountId);
+    const [, platform, accountId] = ctx.match;
+    await handleAdsAccountReport(deps)(ctx, accountId, platform);
   });
   bot.action(/^ads:nop$/, (ctx) => ctx.answerCbQuery());
   bot.action(/^ads:accts:(.+):(\d+)$/, async (ctx) => {

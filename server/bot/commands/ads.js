@@ -300,7 +300,8 @@ export function handleAdsToggle(deps) {
 export function handleAdsReport(deps) {
   return async (ctx, platformOrAccountId, accountIdOrUndefined) => {
     const platform = accountIdOrUndefined ? platformOrAccountId : 'meta';
-    const accountId = accountIdOrUndefined || platformOrAccountId;
+    // When no accountId, platform is the platform name, NOT an accountId
+    const accountId = accountIdOrUndefined || null;
 
     const { api } = await makeApi(ctx, deps, platform);
     if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first.`);
@@ -469,8 +470,8 @@ function fmtRoas(v) { return v === null || v === undefined ? '—' : `${Number(v
 function fmtCpr(v) { return v === null || v === undefined ? '—' : fmtCurrency(v); }
 
 export function handleAdsAccountReport(deps) {
-  return async (ctx, accountId) => {
-    const { api } = await makeApi(ctx, deps, 'meta');
+  return async (ctx, accountId, platform = 'meta') => {
+    const { api } = await makeApi(ctx, deps, platform || 'meta');
     if (!api) return ctx.reply('🔌 Connect a Meta account first via /start.');
     const reportService = deps?.services?.accountReportService;
     if (!reportService) return ctx.reply('⚠️ Report service belum tersedia.');

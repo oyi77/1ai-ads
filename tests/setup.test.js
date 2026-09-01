@@ -4,7 +4,10 @@ import { makeAd, makeLandingPage, makeCampaign } from './helpers/fixtures.js';
 
 describe('Test setup', () => {
   it('vitest runs and globals work', () => {
-    expect(true).toBe(true);
+    const db = createTestDb();
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
+    expect(tables.length).toBeGreaterThanOrEqual(4);
+    db.close();
   });
 
   it('createTestDb creates in-memory database with all 4 tables', () => {

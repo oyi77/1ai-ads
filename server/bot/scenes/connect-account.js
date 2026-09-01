@@ -72,7 +72,7 @@ export const connectScene = new Scenes.WizardScene(
       return;
     }
     const { platform, accountName } = ctx.wizard.state;
-    const repo = ctx.deps?.repos?.platformAccountsRepo || ctx.repos?.platformAccountsRepo;
+    const repo = ctx.deps?.repos?.platformAccountsRepo;
     if (!repo) {
       await ctx.reply('⚠️ Storage unavailable. Please try again later.');
       return ctx.scene.leave();

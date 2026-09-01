@@ -131,6 +131,9 @@ export const createCampaignScene = new Scenes.WizardScene(
   },
   // Step 6: Post ID → confirm
   async (ctx) => {
+    // After the confirmation screen is shown, stray text must not re-enter
+    // Post-ID parsing — require the user to use the create/cancel buttons.
+    if (ctx.wizard.state.confirmShown) return;
     const text = (ctx.message?.text || '').trim();
     if (text !== '/skip') {
       const postId = text.replace(/[^0-9]/g, '');

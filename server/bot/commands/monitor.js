@@ -259,14 +259,14 @@ Example: for CTR > 5, send \`5\``,
       const ruleId = action.split(':')[1];
       const rule = deps.repos.rulesRepo.getById(ruleId);
       if (!rule) return ctx.reply('⚠️ Rule not found.');
-      if (rule.user_id && rule.user_id !== ctx.userId) return ctx.reply('⚠️ Rule not found.');
+      if (rule.userId && rule.userId !== ctx.userId) return ctx.reply('⚠️ Rule not found.');
       deps.repos.rulesRepo.update(ruleId, { enabled: !rule.enabled });
       return ctx.reply(`✅ Rule *${rule.name}* ${rule.enabled ? 'disabled' : 'enabled'}.`, {
         parse_mode: 'Markdown',
         reply_markup: { inline_keyboard: [[{ text: '📋 My Rules', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
       });
     }
-    if (action === 'templates') return showTemplates(ctx);
+    if (action === 'templates') { delete ctx.session.ruleBuilder; return showTemplates(ctx); }
     if (action.startsWith('template:')) return applyTemplate(ctx, deps, action.split(':')[1]);
     if (action === 'view:all') {
       const { text, keyboard } = renderMyRules(deps, ctx.userId);
@@ -422,7 +422,7 @@ export function handleMonitorText(deps) {
     const rb = ctx.session?.ruleBuilder;
     if (!rb || !rb.awaitingValue) return false;
     const text = (ctx.message?.text || '').trim();
-    if (!text || !/^[0-9.]+$/.test(text)) {
+    if (!text || !/^\d+(\.\d+)?$/.test(text)) {
       await ctx.reply(`⚠️ Please send a valid number for the threshold (e.g. 5 or 1.5).`);
       return true;
     }

@@ -248,6 +248,7 @@ CREATE INDEX IF NOT EXISTS idx_ads_campaign ON ads(platform, status);
 CREATE INDEX IF NOT EXISTS idx_ads_platform ON ads(platform);
 CREATE INDEX IF NOT EXISTS idx_ads_status ON ads(status);
 CREATE INDEX IF NOT EXISTS idx_campaigns_platform ON campaigns(platform);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_campaigns_platform_external_id ON campaigns(platform, campaign_id);
 CREATE INDEX IF NOT EXISTS idx_automation_rules_campaign ON automation_rules(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_perf_history_campaign ON performance_history(campaign_id, snapshot_date);
 
