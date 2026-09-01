@@ -1,14 +1,20 @@
 import { verifyToken } from '../lib/auth.js';
 import { AuthError } from '../lib/errors.js';
+import { ACCESS_COOKIE } from '../lib/auth-cookies.js';
 
 export function requireAuth(req, res, next) {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
+  // 1. httpOnly access cookie (SPA — tokens never touch localStorage).
+  let token = req.cookies?.[ACCESS_COOKIE];
+  // 2. Fallback to Bearer header (API clients, service-to-service, backward compat).
+  if (!token) {
+    const header = req.headers.authorization;
+    if (header && header.startsWith('Bearer ')) token = header.slice(7);
+  }
+  if (!token) {
     throw new AuthError('Unauthorized');
   }
 
   try {
-    const token = header.slice(7);
     const payload = verifyToken(token);
     // SECURITY NOTE: We intentionally do NOT do a DB lookup here to check is_active.
     // The JWT signature is sufficient for authentication. A DB lookup on every

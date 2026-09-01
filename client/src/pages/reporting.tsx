@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Download, DollarSign, TrendingUp, Activity, BarChart3 } from 'lucide-react';
-import { api, getToken } from '../lib/api';
+import { api } from '../lib/api';
 import { DataTable } from '../components/DataTable';
 import type { Column } from '../components/DataTable';
 
@@ -39,8 +39,8 @@ export function ReportingPage() {
   const handleExport = async () => {
     setExportError(null);
     try {
-      const token = getToken();
-      const res = await fetch('/api/reports/export/csv', { headers: { Authorization: `Bearer ${token}` } });
+      // Auth is via httpOnly cookies — credentials:'include' sends them.
+      const res = await fetch('/api/reports/export/csv', { credentials: 'include' });
       if (!res.ok) throw new Error('Export failed');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

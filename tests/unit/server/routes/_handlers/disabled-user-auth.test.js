@@ -11,8 +11,11 @@ function makeRes() {
   const res = {
     statusCode: 200,
     body: null,
+    cookies: {},
     status(code) { this.statusCode = code; return this; },
     json(data) { this.body = data; return this; },
+    cookie(name, value) { this.cookies[name] = value; return this; },
+    clearCookie(name) { delete this.cookies[name]; return this; },
   };
   return res;
 }

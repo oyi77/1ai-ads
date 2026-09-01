@@ -4,6 +4,7 @@
  */
 
 import { hashPassword, verifyPassword, generateToken, generateRefreshToken, verifyToken } from '../../lib/auth.js';
+import { setAuthCookies, clearAuthCookies, REFRESH_COOKIE } from '../../lib/auth-cookies.js';
 import { createLogger } from '../../lib/logger.js';
 import config from '../../config/index.js';
 import {
@@ -54,6 +55,7 @@ export function handleRegister(usersRepo, refreshTokensRepo) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
       refreshTokensRepo.upsert(userId, refreshToken, expiresAt.toISOString());
+      setAuthCookies(res, accessToken, refreshToken);
 
       res.json({ success: true, data: { user: { id: userId, username, email, role: 'user', plan: 'free', email_verified: !needsVerification }, accessToken, refreshToken, verificationSent } });
     } catch (err) {
@@ -87,6 +89,7 @@ export function handleLogin(usersRepo, refreshTokensRepo) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
       refreshTokensRepo.upsert(user.id, refreshToken, expiresAt.toISOString());
+      setAuthCookies(res, accessToken, refreshToken);
 
       res.json({ success: true, data: { user: { id: user.id, username: user.username, email: user.email, role: user.role || 'user', plan: user.plan || 'free' }, accessToken, refreshToken } });
     } catch (err) {
@@ -101,7 +104,8 @@ export function handleLogin(usersRepo, refreshTokensRepo) {
 export function handleRefreshToken(usersRepo, refreshTokensRepo) {
   return async (req, res) => {
     try {
-      const { refreshToken } = req.body;
+      // Accept the refresh token from the httpOnly cookie (SPA) or body (API clients)
+      const refreshToken = req.cookies?.[REFRESH_COOKIE] || req.body?.refreshToken;
       if (!refreshToken) return res.status(400).json({ success: false, error: 'Refresh token required' });
 
       const payload = verifyToken(refreshToken);
@@ -128,6 +132,7 @@ export function handleRefreshToken(usersRepo, refreshTokensRepo) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
       refreshTokensRepo.upsert(user.id, newRefreshToken, expiresAt.toISOString());
+      setAuthCookies(res, newAccessToken, newRefreshToken);
 
       res.json({ success: true, data: { accessToken: newAccessToken, refreshToken: newRefreshToken } });
     } catch {
@@ -141,8 +146,10 @@ export function handleRefreshToken(usersRepo, refreshTokensRepo) {
  */
 export function handleLogout(refreshTokensRepo) {
   return (req, res) => {
-    const { refreshToken } = req.body;
+    // Revoke whichever refresh token we can see (cookie or body), then clear cookies.
+    const refreshToken = req.cookies?.[REFRESH_COOKIE] || req.body?.refreshToken;
     if (refreshToken) refreshTokensRepo.deleteByToken(refreshToken);
+    clearAuthCookies(res);
     res.json({ success: true });
   };
 }

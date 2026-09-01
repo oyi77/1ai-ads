@@ -7,6 +7,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import config from './config/index.js';
 import { createLogger } from './lib/logger.js';
+import { csrfProtection } from './middleware/csrf.js';
 import { createRepositories } from './app/repositories.js';
 import { createServices } from './app/services.js';
 import { createRouters } from './app/routers.js';
@@ -171,6 +172,8 @@ export function createApp(params) {
   app.use(metricsMiddleware);
   app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
   app.use(cookieParser());
+  // CSRF origin check for httpOnly-cookie-authenticated mutating requests.
+  app.use(csrfProtection);
 
   // EJS template engine for server-rendered dashboard pages
   app.set('view engine', 'ejs');

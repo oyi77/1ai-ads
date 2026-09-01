@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // Regression: client MUST read auth envelope tokens from body.data.*
-// and persist them under 1ai-ads_* localStorage keys. api.ts never
-// returns an unauthenticated state when the server nests tokens in data.
+// (never top-level), store ONLY the user profile in localStorage, and
+// NEVER persist access/refresh JWTs to localStorage (they live in httpOnly
+// cookies after the auth rewrite — XSS-exfiltration surface removed).
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const TOKEN_KEY = '1ai-ads_token';
@@ -51,7 +52,7 @@ describe('client auth envelope contract', () => {
     localStorage.setItem('1ai-ads_api_base', API_BASE);
   });
 
-  it('login reads envelope.data.* and stores under 1ai-ads_* keys', async () => {
+  it('login reads envelope.data.* and stores only the user profile (tokens stay in httpOnly cookies)', async () => {
     const { api } = await import('../../../client/src/lib/api.ts');
     installEnvelope({
       success: true,
@@ -62,14 +63,18 @@ describe('client auth envelope contract', () => {
 
     await api.login('tester', 'secret123');
 
-    expect(localStorage.getItem(TOKEN_KEY)).toBe(DATA_ACCESS);
-    expect(localStorage.getItem(REFRESH_KEY)).toBe(DATA_REFRESH);
+    // User profile IS stored for synchronous display.
     expect(localStorage.getItem(USER_KEY)).toBe(JSON.stringify(USER));
-    // Must ignore top-level tokens (historical bug class).
+    // Access + refresh JWTs MUST NOT be persisted to localStorage — they live
+    // in httpOnly cookies (adforge_access / adforge_refresh) after the rewrite.
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+    expect(localStorage.getItem(REFRESH_KEY)).toBeNull();
+    // Must ignore top-level tokens (historical bug class) — even if a top-level
+    // token were present, the client never writes it to localStorage.
     expect(localStorage.getItem(TOKEN_KEY)).not.toBe(TOP_ACCESS);
   });
 
-  it('telegramLogin reads envelope.data.* and stores under 1ai-ads_* keys', async () => {
+  it('telegramLogin reads envelope.data.* and stores only the user profile', async () => {
     const { api } = await import('../../../client/src/lib/api.ts');
     installEnvelope({
       success: true,
@@ -78,8 +83,8 @@ describe('client auth envelope contract', () => {
 
     await api.telegramLogin('mock-init-data');
 
-    expect(localStorage.getItem(TOKEN_KEY)).toBe(DATA_ACCESS);
-    expect(localStorage.getItem(REFRESH_KEY)).toBe(DATA_REFRESH);
     expect(localStorage.getItem(USER_KEY)).toBe(JSON.stringify(USER));
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+    expect(localStorage.getItem(REFRESH_KEY)).toBeNull();
   });
 });

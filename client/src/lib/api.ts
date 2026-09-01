@@ -9,25 +9,16 @@
 
 // ── Config ────────────────────────────────────────────────────
 
-const TOKEN_KEY = '1ai-ads_token';
-const REFRESH_KEY = '1ai-ads_refresh_token';
+// Tokens live in httpOnly cookies (adforge_access / adforge_refresh) — never in
+// localStorage. USER_KEY is kept for synchronous user profile display (non-sensitive).
 const USER_KEY = '1ai-ads_user';
 const API_BASE = '/api';
 
 // ── Token helpers ─────────────────────────────────────────────
 
-export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-function setTokens(accessToken: string, refreshToken: string): void {
-  localStorage.setItem(TOKEN_KEY, accessToken);
-  localStorage.setItem(REFRESH_KEY, refreshToken);
-}
+// Tokens are in httpOnly cookies — no JS-side getToken/setTokens needed.
 
 function clearAuth(): void {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_KEY);
   localStorage.removeItem(USER_KEY);
 }
 
@@ -40,21 +31,18 @@ async function tryRefreshToken(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
-    const refreshToken = localStorage.getItem(REFRESH_KEY);
-    if (!refreshToken) return false;
-
     try {
+      // Refresh token is sent automatically via the httpOnly refresh cookie
+      // (Path=/api/auth). No body needed — the server reads the cookie.
       const response = await fetch(`${API_BASE}/auth/refresh-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
+        credentials: 'include',
       });
 
       if (!response.ok) return false;
 
-      const envelope = await response.json();
-      setTokens(envelope.data.accessToken, envelope.data.refreshToken);
-      // refresh envelope carries no user payload; preserve existing USER_KEY
+      // Tokens arrive in Set-Cookie headers — nothing to store locally.
       return true;
     } catch {
       return false;
@@ -69,17 +57,15 @@ async function tryRefreshToken(): Promise<boolean> {
 // ── Core request ──────────────────────────────────────────────
 
 async function request<T>(method: string, path: string, body?: unknown, retried = false): Promise<T> {
-  const token = getToken();
-
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (token) headers.Authorization = `Bearer ${token}`;
 
   const response = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
+    credentials: 'include',  // send httpOnly auth cookies automatically
   });
 
   // A 401 on the login endpoint means bad credentials, NOT an expired token —
@@ -165,8 +151,9 @@ export const api = {
       };
     }>('POST', '/auth/login', { username, password });
 
-    const { accessToken, refreshToken, user } = envelope.data;
-    setTokens(accessToken, refreshToken);
+    // Tokens arrive via Set-Cookie (httpOnly). Only store the user profile
+    // for synchronous display (name, role, plan — not a credential).
+    const { user } = envelope.data;
     localStorage.setItem(USER_KEY, JSON.stringify(user));
     return envelope.data;
   },
@@ -180,8 +167,8 @@ export const api = {
       };
     }>('POST', '/auth/register', { username, password, email });
 
-    const { accessToken, refreshToken, user } = envelope.data;
-    setTokens(accessToken, refreshToken);
+    // Tokens arrive via Set-Cookie (httpOnly). Only store the user profile.
+    const { user } = envelope.data;
     localStorage.setItem(USER_KEY, JSON.stringify(user));
     return envelope.data;
   },
@@ -196,31 +183,30 @@ export const api = {
       };
     }>('POST', '/auth/telegram-webapp', { initData });
 
-    setTokens(envelope.data.accessToken, envelope.data.refreshToken);
+    // Tokens arrive via Set-Cookie (httpOnly). Only store the user profile.
     localStorage.setItem(USER_KEY, JSON.stringify(envelope.data.user));
     return envelope.data;
   },
 
   logout: async () => {
-    // Revoke the server-side refresh token before clearing local state, so a
-    // stolen refresh token does not stay valid after the user logs out.
-    const refreshToken = localStorage.getItem(REFRESH_KEY);
-    if (refreshToken) {
-      try {
-        await fetch(`${API_BASE}/auth/logout`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken }),
-        });
-      } catch {
-        // Best-effort — local clear still proceeds even if the server is down.
-      }
+    // Revoke the server-side refresh token (sent automatically via the httpOnly
+    // refresh cookie on Path=/api/auth), then clear local state.
+    try {
+      await fetch(`${API_BASE}/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+    } catch {
+      // Best-effort — local clear still proceeds even if the server is down.
     }
     clearAuth();
     window.location.href = '/login';
   },
 
-  isAuthenticated: (): boolean => !!localStorage.getItem(TOKEN_KEY),
+  // USER_KEY is set on login/register/telegram and cleared on logout.
+  // The actual auth is the httpOnly cookie — this is a synchronous UX proxy.
+  isAuthenticated: (): boolean => !!localStorage.getItem(USER_KEY),
 
   getUser: (): User | null => {
     const raw = localStorage.getItem(USER_KEY);
