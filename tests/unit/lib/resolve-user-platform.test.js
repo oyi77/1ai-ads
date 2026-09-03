@@ -8,6 +8,10 @@ function makePlatformAccountsRepo(row) {
       if (row && row.userId === userId && row.platform === platform) return row;
       return null;
     },
+    findAllActiveByUserAndPlatform(userId, platform) {
+      if (row && row.userId === userId && row.platform === platform) return [row];
+      return [];
+    },
   };
 }
 function makeSettingsRepo(creds) {

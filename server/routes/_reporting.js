@@ -21,15 +21,25 @@ export function createReportingGroupRouter({ repos, services }) {
   router.get('/reporting/accounts/:accountId/report', requireAuth, async (req, res) => {
     try {
       const userId = req.user?.id;
-      const acct = repos.platformAccountsRepo.getByPlatform(userId, 'meta');
-      if (!acct?.access_token) {
+      const accounts = repos.platformAccountsRepo.findAllActiveByUserAndPlatform(userId, 'meta');
+      if (!accounts.length) {
         return res.status(400).json({ success: false, error: 'Meta account is not connected. Connect it in Settings first.' });
       }
       const { MetaAdsAPI } = await import('../services/meta/index.js');
-      const api = MetaAdsAPI.withToken(acct.access_token);
-      // Verify the account actually belongs to this token (tenant isolation)
-      const accounts = await api.getAdAccounts();
-      const owned = accounts.find(a => String(a.id).replace(/^act_/, '') === String(req.params.accountId).replace(/^act_/, ''));
+      // Multi-tenant: iterate all tokens to find the one that owns this account
+      let owned = null;
+      let api = null;
+      for (const acct of accounts) {
+        if (!acct?.access_token) continue;
+        const candidateApi = MetaAdsAPI.withToken(acct.access_token);
+        const adAccounts = await candidateApi.getAdAccounts();
+        const found = adAccounts.find(a => String(a.id).replace(/^act_/, '') === String(req.params.accountId).replace(/^act_/, ''));
+        if (found) {
+          owned = found;
+          api = candidateApi;
+          break;
+        }
+      }
       if (!owned) return res.status(404).json({ success: false, error: 'Account not found for your Meta token' });
       const ALLOWED_AW = new Set(['1d_click', '7d_click', '28d_click', '1d_view', '7d_view']);
       const aw = String(req.query.aw || '')
@@ -50,14 +60,26 @@ export function createReportingGroupRouter({ repos, services }) {
   // Hour-of-day breakdown (dayparting heatmap) for one owned ad account
   router.get('/reporting/accounts/:accountId/hourly', requireAuth, async (req, res) => {
     try {
-      const acct = repos.platformAccountsRepo.getByPlatform(req.user?.id, 'meta');
-      if (!acct?.access_token) {
+      const userId = req.user?.id;
+      const accounts = repos.platformAccountsRepo.findAllActiveByUserAndPlatform(userId, 'meta');
+      if (!accounts.length) {
         return res.status(400).json({ success: false, error: 'Meta account is not connected. Connect it in Settings first.' });
       }
       const { MetaAdsAPI } = await import('../services/meta/index.js');
-      const api = MetaAdsAPI.withToken(acct.access_token);
-      const accounts = await api.getAdAccounts();
-      const owned = accounts.find(a => String(a.id).replace(/^act_/, '') === String(req.params.accountId).replace(/^act_/, ''));
+      // Multi-tenant: iterate all tokens to find the one that owns this account
+      let owned = null;
+      let api = null;
+      for (const acct of accounts) {
+        if (!acct?.access_token) continue;
+        const candidateApi = MetaAdsAPI.withToken(acct.access_token);
+        const adAccounts = await candidateApi.getAdAccounts();
+        const found = adAccounts.find(a => String(a.id).replace(/^act_/, '') === String(req.params.accountId).replace(/^act_/, ''));
+        if (found) {
+          owned = found;
+          api = candidateApi;
+          break;
+        }
+      }
       if (!owned) return res.status(404).json({ success: false, error: 'Account not found for your Meta token' });
       const datePreset = ['today', 'yesterday', 'last_7d', 'last_14d', 'last_30d'].includes(String(req.query.preset)) ? String(req.query.preset) : 'last_7d';
       const hours = await api.getAccountInsightsByHour(owned.id, { datePreset });
@@ -71,10 +93,7 @@ export function createReportingGroupRouter({ repos, services }) {
   // Custom report builder — pick metrics × windows for one owned account.
   router.post('/reporting/accounts/:accountId/custom', requireAuth, async (req, res) => {
     try {
-      const acct = repos.platformAccountsRepo.getByPlatform(req.user?.id, 'meta');
-      if (!acct?.access_token) {
-        return res.status(400).json({ success: false, error: 'Meta account is not connected.' });
-      }
+      const userId = req.user?.id;
       const { metrics, windows } = req.body || {};
       const ALLOWED_METRICS = ['spend', 'impressions', 'clicks', 'linkClicks', 'ctr', 'cpc', 'purchases', 'cpr', 'revenue', 'roas'];
       const ALLOWED_WINDOWS = ['today', 'yesterday', 'last_7d', 'last_14d', 'last_30d'];
@@ -84,10 +103,25 @@ export function createReportingGroupRouter({ repos, services }) {
       const wins = (Array.isArray(windows) && windows.length ? windows : ['today']).filter(w => ALLOWED_WINDOWS.includes(w));
       if (!wins.length) return res.status(400).json({ success: false, error: `windows must be a subset of: ${ALLOWED_WINDOWS.join(', ')}` });
 
+      const accounts = repos.platformAccountsRepo.findAllActiveByUserAndPlatform(userId, 'meta');
+      if (!accounts.length) {
+        return res.status(400).json({ success: false, error: 'Meta account is not connected.' });
+      }
       const { MetaAdsAPI } = await import('../services/meta/index.js');
-      const api = MetaAdsAPI.withToken(acct.access_token);
-      const accounts = await api.getAdAccounts();
-      const owned = accounts.find(a => String(a.id).replace(/^act_/, '') === String(req.params.accountId).replace(/^act_/, ''));
+      // Multi-tenant: iterate all tokens to find the one that owns this account
+      let owned = null;
+      let api = null;
+      for (const acct of accounts) {
+        if (!acct?.access_token) continue;
+        const candidateApi = MetaAdsAPI.withToken(acct.access_token);
+        const adAccounts = await candidateApi.getAdAccounts();
+        const found = adAccounts.find(a => String(a.id).replace(/^act_/, '') === String(req.params.accountId).replace(/^act_/, ''));
+        if (found) {
+          owned = found;
+          api = candidateApi;
+          break;
+        }
+      }
       if (!owned) return res.status(404).json({ success: false, error: 'Account not found for your Meta token' });
 
       const results = {};

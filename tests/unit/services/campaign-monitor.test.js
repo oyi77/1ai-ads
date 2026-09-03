@@ -60,6 +60,7 @@ describe('CampaignMonitorService', () => {
     mockPlatformAccountsRepo = {
       getDistinctUserPlatforms: vi.fn().mockResolvedValue([{ user_id: 'user1', platform: 'tiktok' }]),
       getByPlatform: vi.fn().mockResolvedValue({ id: 'pa_123', access_token: 'tok', user_id: 'user1' }),
+      findAllActiveByUserAndPlatform: vi.fn().mockResolvedValue([{ id: 'pa_123', access_token: 'tok', user_id: 'user1' }]),
     };
 
     // Configure the platform mock to return sample data

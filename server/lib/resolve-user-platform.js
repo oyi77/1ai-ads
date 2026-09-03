@@ -15,10 +15,11 @@
  */
 export function resolveUserPlatformToken(platform, req, platformAccountsRepo, _settingsRepo) {
   const userId = req.user?.id;
-  if (userId && platformAccountsRepo?.getByPlatform) {
+  if (userId && platformAccountsRepo?.findAllActiveByUserAndPlatform) {
     try {
-      const acct = platformAccountsRepo.getByPlatform(userId, platform);
-      if (acct?.access_token) return acct.access_token;
+      const accounts = platformAccountsRepo.findAllActiveByUserAndPlatform(userId, platform);
+      const found = accounts.find(a => a?.access_token);
+      if (found) return found.access_token;
     } catch {
       // no bound account → strict per-user isolation: do NOT borrow system token
     }

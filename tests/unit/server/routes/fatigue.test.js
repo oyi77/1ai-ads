@@ -10,7 +10,8 @@ vi.mock('../../../../server/lib/logger.js', () => ({
 // ── Mock platform-accounts repo (parity with meta/campaigns tests) ──
 function createMockPlatformAccountsRepo() {
   return {
-    getByPlatform: vi.fn(() => null), // default: no user-bound account
+    getByPlatform: vi.fn(() => null),
+    findAllActiveByUserAndPlatform: vi.fn(() => []), // default: no user-bound account
   };
 }
 
@@ -43,6 +44,7 @@ describe('fatigue router — per-user scoping', () => {
 
   it('scopes fatigue detection to the requesting user when a Meta account is bound', async () => {
     platformAccountsRepo.getByPlatform.mockReturnValue({ id: 'acct-1', access_token: 'USER_TOKEN' });
+    platformAccountsRepo.findAllActiveByUserAndPlatform.mockReturnValue([{ id: 'acct-1', access_token: 'USER_TOKEN' }]);
     const app = createApp(platformAccountsRepo, { id: 'user-1' });
 
     const res = await request(app).get('/api/creative/fatigue');
@@ -50,19 +52,20 @@ describe('fatigue router — per-user scoping', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     // Must scope by req.user.id, NOT a global active-account scan
-    expect(platformAccountsRepo.getByPlatform).toHaveBeenCalledWith('user-1', 'meta');
-    expect(res.body.data).toEqual({ fatigued: false });
+    expect(platformAccountsRepo.findAllActiveByUserAndPlatform).toHaveBeenCalledWith('user-1', 'meta');
+    expect(res.body.data).toEqual([{ fatigued: false }]);
   });
 
   it('does NOT run detection for a different user account (no cross-user leak)', async () => {
     // A globally-active account exists but belongs to ANOTHER user
     platformAccountsRepo.getByPlatform.mockReturnValue(null); // requesting user has none bound
+    platformAccountsRepo.findAllActiveByUserAndPlatform.mockReturnValue([]);
     const app = createApp(platformAccountsRepo, { id: 'user-1' });
 
     const res = await request(app).get('/api/creative/fatigue');
 
     expect(res.status).toBe(200);
-    expect(platformAccountsRepo.getByPlatform).toHaveBeenCalledWith('user-1', 'meta');
+    expect(platformAccountsRepo.findAllActiveByUserAndPlatform).toHaveBeenCalledWith('user-1', 'meta');
     // No leak: never falls back to a different user's account
     expect(res.body.data).toEqual([]);
   });
@@ -73,7 +76,7 @@ describe('fatigue router — per-user scoping', () => {
     const res = await request(app).get('/api/creative/fatigue');
 
     expect(res.status).toBe(200);
-    expect(platformAccountsRepo.getByPlatform).not.toHaveBeenCalled();
+    expect(platformAccountsRepo.findAllActiveByUserAndPlatform).not.toHaveBeenCalled();
     expect(res.body.data).toEqual([]);
   });
 });

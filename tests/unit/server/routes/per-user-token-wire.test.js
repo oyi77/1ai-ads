@@ -19,6 +19,8 @@ function makeRepos() {
     platformAccountsRepo: {
       getByPlatform: (userId, platform) =>
         userId === 'u1' ? { id: 'acc-1', access_token: USER_TOK } : null,
+      findAllActiveByUserAndPlatform: (userId, platform) =>
+        userId === 'u1' ? [{ id: 'acc-1', access_token: USER_TOK }] : [],
       getAccounts: () => [],
     },
   };

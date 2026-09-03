@@ -7,11 +7,10 @@ const BACKEND = process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com';
 
 export function getUserPlatformAccount(ctx, deps, platform = 'meta') {
   const repo = deps?.repos?.platformAccountsRepo;
-  if (!repo) return null;
-  const acct = repo.getByPlatform(ctx.userId, platform);
-  if (!acct) return null;
-  if (!acct.access_token) return null;
-  return acct;
+  if (!repo) return [];
+  const accounts = repo.findAllActiveByUserAndPlatform(ctx.userId, platform);
+  if (!accounts?.length) return [];
+  return accounts.filter(a => a.access_token);
 }
 
 export function getUserMetaAccount(ctx, deps) {
@@ -19,21 +18,26 @@ export function getUserMetaAccount(ctx, deps) {
 }
 
 export async function makeApi(ctx, deps, platform = 'meta') {
-  const acct = getUserPlatformAccount(ctx, deps, platform);
-  if (!acct?.access_token) return { api: null, acct };
-  let api;
-  if (platform === 'meta') {
-    api = MetaAdsAPI.withToken(acct.access_token);
-  } else {
-    try {
-      const { getPlatform } = await import('../../platforms/index.js');
-      api = await getPlatform(platform, deps.repos?.settingsRepo);
-      api.setActiveAccount(null, acct.access_token, true);
-    } catch {
-      api = null;
+  const accounts = getUserPlatformAccount(ctx, deps, platform);
+  if (!accounts.length) return { api: null, acct: null, all: [] };
+  const all = [];
+  for (const acct of accounts) {
+    let api = null;
+    if (platform === 'meta') {
+      api = MetaAdsAPI.withToken(acct.access_token);
+    } else {
+      try {
+        const { getPlatform } = await import('../../platforms/index.js');
+        api = await getPlatform(platform, deps.repos?.settingsRepo);
+        api.setActiveAccount(null, acct.access_token, true);
+      } catch {
+        api = null;
+      }
     }
+    all.push({ api, acct });
   }
-  return { api, acct };
+  const first = all[0];
+  return { api: first.api, acct: first.acct, all };
 }
 
 export function isExpiredToken(err) {

@@ -18,10 +18,11 @@ export function resolveOwnerPlatformToken(platform, ownerId, repos) {
   const platformAccountsRepo = repos?.platformAccountsRepo;
   const settingsRepo = repos?.settingsRepo;
 
-  if (ownerId && platformAccountsRepo?.getByPlatform) {
+  if (ownerId && platformAccountsRepo?.findAllActiveByUserAndPlatform) {
     try {
-      const acct = platformAccountsRepo.getByPlatform(ownerId, platform);
-      if (acct?.access_token) return acct.access_token;
+      const accounts = platformAccountsRepo.findAllActiveByUserAndPlatform(ownerId, platform);
+      const found = accounts.find(a => a?.access_token);
+      if (found) return found.access_token;
     } catch {
       // fall through to system token
     }

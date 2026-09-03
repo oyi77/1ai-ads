@@ -86,10 +86,9 @@ export class AutonomousAgent {
 
     const platforms = ['meta', 'google', 'tiktok'];
     for (const platform of platforms) {
-      const account = await this.platformAccountsRepo.getByPlatform(user.id, platform);
-      if (!account?.access_token) continue;
-
-      const matched = await this.checkCampaigns(user.id);
+      const accounts = await this.platformAccountsRepo.findAllActiveByUserAndPlatform(user.id, platform);
+      const hasValidToken = accounts.some(a => a?.access_token);
+      if (!hasValidToken) continue;
       if (matched > 0) {
         log.info('Autonomous actions executed', { userId: user.id, platform, actions: matched });
       }

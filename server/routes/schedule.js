@@ -98,23 +98,32 @@ export function createOptimizeRouter(campaignsRepo, llmClient) {
     const userId = req.user?.id;
 
     try {
-      const metaAccounts = userId ? platformAccountsRepo?.getByPlatform(userId, 'meta') : null;
-      if (metaAccounts?.credentials?.access_token) {
-        results.meta = { synced: true };
+      const metaAccounts = userId ? await platformAccountsRepo?.findAllActiveByUserAndPlatform(userId, 'meta') : [];
+      for (const acct of metaAccounts) {
+        if (acct?.credentials?.access_token) {
+          results.meta = { synced: true };
+          break;
+        }
       }
     } catch (e) { results.meta = { error: e.message }; }
 
     try {
-      const googleAccounts = userId ? platformAccountsRepo?.getByPlatform(userId, 'google') : null;
-      if (googleAccounts?.credentials?.developer_token) {
-        results.google = { synced: true };
+      const googleAccounts = userId ? await platformAccountsRepo?.findAllActiveByUserAndPlatform(userId, 'google') : [];
+      for (const acct of googleAccounts) {
+        if (acct?.credentials?.developer_token) {
+          results.google = { synced: true };
+          break;
+        }
       }
     } catch (e) { results.google = { error: e.message }; }
 
     try {
-      const tiktokAccounts = userId ? platformAccountsRepo?.getByPlatform(userId, 'tiktok') : null;
-      if (tiktokAccounts?.credentials?.access_token) {
-        results.tiktok = { synced: true };
+      const tiktokAccounts = userId ? await platformAccountsRepo?.findAllActiveByUserAndPlatform(userId, 'tiktok') : [];
+      for (const acct of tiktokAccounts) {
+        if (acct?.credentials?.access_token) {
+          results.tiktok = { synced: true };
+          break;
+        }
       }
     } catch (e) { results.tiktok = { error: e.message }; }
 

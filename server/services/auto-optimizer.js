@@ -32,9 +32,12 @@ export class AutoOptimizer {
   _metaForOwner(campaign) {
     const ownerId = campaign?.user_id || campaign?.created_by || (campaign && campaign.user && campaign.user.id);
     if (ownerId && this.platformAccountsRepo) {
-      const acct = this.platformAccountsRepo.getByPlatform(ownerId, 'meta');
-      const token = acct?.access_token || (this.settingsRepo && this.settingsRepo.getCredentials('meta')?.access_token);
-      if (token) return new MetaAdsAPI(token);
+      const accounts = this.platformAccountsRepo.findAllActiveByUserAndPlatform(ownerId, 'meta');
+      for (const acct of accounts) {
+        if (acct?.access_token) return new MetaAdsAPI(acct.access_token);
+      }
+      const fallback = this.settingsRepo && this.settingsRepo.getCredentials('meta')?.access_token;
+      if (fallback) return new MetaAdsAPI(fallback);
     }
     return this.meta;
   }

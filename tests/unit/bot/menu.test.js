@@ -37,6 +37,7 @@ function makeDeps(overrides = {}) {
       },
       platformAccountsRepo: {
         getByPlatform: vi.fn(() => null),
+        findAllActiveByUserAndPlatform: vi.fn(() => []),
         findByUserId: vi.fn(() => []),
         ...(overrides.repos?.platformAccountsRepo ?? {}),
       },
@@ -355,7 +356,9 @@ describe('menu:optimize — AI Optimization (P3)', () => {
     const bareCtx = makeCtx('u1', ['menu:optimize', 'optimize']);
     const bareDeps = makeDeps({
       repos: {
-        platformAccountsRepo: { getByPlatform: vi.fn(() => null), findByUserId: vi.fn(() => []) },
+        platformAccountsRepo: { getByPlatform: vi.fn(() => null),
+    findAllActiveByUserAndPlatform: vi.fn(() => []),
+    findByUserId: vi.fn(() => []) },
       },
     });
 
@@ -368,6 +371,7 @@ describe('menu:optimize — AI Optimization (P3)', () => {
   it('shows an ads-account picker with Global and Back buttons when no scope is given', async () => {
     const bareCtx = makeCtx('u1', ['menu:optimize', 'optimize']);
     deps.repos.platformAccountsRepo.getByPlatform.mockReturnValue({ access_token: 'tok' });
+    deps.repos.platformAccountsRepo.findAllActiveByUserAndPlatform.mockReturnValue([{ access_token: 'tok' }]);
     mockGetAdAccounts.mockResolvedValue([{ id: 'acc1', name: 'Acc One' }]);
 
     await handleMenuButton(deps)(bareCtx);
@@ -388,6 +392,7 @@ describe('menu:optimize — AI Optimization (P3)', () => {
   it('optimizes a single scoped ads account via the Meta API', async () => {
     const bareCtx = makeCtx('u1', ['menu:optimize:acc1', 'optimize:acc1']);
     deps.repos.platformAccountsRepo.getByPlatform.mockReturnValue({ access_token: 'tok' });
+    deps.repos.platformAccountsRepo.findAllActiveByUserAndPlatform.mockReturnValue([{ access_token: 'tok' }]);
     mockGetCampaigns.mockResolvedValue([{ id: 'c1', name: 'C1', status: 'active', dailyBudget: 10000 }]);
     mockGetMultiCampaignInsights.mockResolvedValue({ c1: { spend: 100, revenue: 40 } });
 

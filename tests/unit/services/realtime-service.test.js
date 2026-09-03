@@ -142,7 +142,7 @@ describe('RealtimeService', () => {
     let settingsRepo;
 
     beforeEach(() => {
-      acctRepo = { getByPlatform: vi.fn() };
+      acctRepo = { getByPlatform: vi.fn(), findAllActiveByUserAndPlatform: vi.fn() };
       settingsRepo = { getCredentials: vi.fn() };
     });
 
@@ -150,35 +150,38 @@ describe('RealtimeService', () => {
       const metaApi = { getCampaignInsights: vi.fn() };
       const service = new RealtimeService(metaApi, { findAll: vi.fn(() => ({ data: [] })) }, { platformAccountsRepo: acctRepo, settingsRepo });
       acctRepo.getByPlatform.mockReturnValue({ user_id: 'owner-1', platform: 'meta', access_token: 'owner-tok-rt' });
+      acctRepo.findAllActiveByUserAndPlatform.mockReturnValue([{ user_id: 'owner-1', platform: 'meta', access_token: 'owner-tok-rt' }]);
 
       const api = service._metaApiForOwner({ id: 'c1', user_id: 'owner-1', platform: 'meta' });
 
       expect(api).not.toBe(metaApi);
       expect(api).toBeInstanceOf(MetaAdsAPI);
       expect(api.setActiveAccount).toHaveBeenCalledWith(null, 'owner-tok-rt');
-      expect(acctRepo.getByPlatform).toHaveBeenCalledWith('owner-1', 'meta');
+      expect(acctRepo.findAllActiveByUserAndPlatform).toHaveBeenCalledWith('owner-1', 'meta');
     });
 
     it('resolves owner via created_by when user_id is absent', () => {
       const metaApi = { getCampaignInsights: vi.fn() };
       const service = new RealtimeService(metaApi, { findAll: vi.fn(() => ({ data: [] })) }, { platformAccountsRepo: acctRepo, settingsRepo });
       acctRepo.getByPlatform.mockReturnValue({ user_id: 'owner-2', platform: 'meta', access_token: 'owner-tok-rt2' });
+      acctRepo.findAllActiveByUserAndPlatform.mockReturnValue([{ user_id: 'owner-2', platform: 'meta', access_token: 'owner-tok-rt2' }]);
 
       const api = service._metaApiForOwner({ id: 'c2', created_by: 'owner-2', platform: 'meta' });
 
       expect(api).not.toBe(metaApi);
-      expect(acctRepo.getByPlatform).toHaveBeenCalledWith('owner-2', 'meta');
+      expect(acctRepo.findAllActiveByUserAndPlatform).toHaveBeenCalledWith('owner-2', 'meta');
     });
 
     it('falls back to the system meta when no owner token is bound', () => {
       const metaApi = { getCampaignInsights: vi.fn() };
       const service = new RealtimeService(metaApi, { findAll: vi.fn(() => ({ data: [] })) }, { platformAccountsRepo: acctRepo, settingsRepo });
       acctRepo.getByPlatform.mockReturnValue(null);
+      acctRepo.findAllActiveByUserAndPlatform.mockReturnValue([]);
 
       const api = service._metaApiForOwner({ id: 'c3', user_id: 'owner-3', platform: 'meta' });
 
       expect(api).toBe(metaApi);
-      expect(acctRepo.getByPlatform).toHaveBeenCalledWith('owner-3', 'meta');
+      expect(acctRepo.findAllActiveByUserAndPlatform).toHaveBeenCalledWith('owner-3', 'meta');
     });
 
     it('falls back to system meta when no platformAccountsRepo is wired', () => {
@@ -190,7 +193,7 @@ describe('RealtimeService', () => {
 
     it('polls each active campaign via the owner-scoped client (no cross-user system token)', async () => {
       const metaApi = { getCampaignInsights: vi.fn() };
-      const acctRepo = { getByPlatform: vi.fn().mockReturnValue({ user_id: 'owner-9', platform: 'meta', access_token: 'owner-tok-rt9' }) };
+      const acctRepo = { getByPlatform: vi.fn().mockReturnValue({ user_id: 'owner-9', platform: 'meta', access_token: 'owner-tok-rt9' }), findAllActiveByUserAndPlatform: vi.fn().mockReturnValue([{ user_id: 'owner-9', platform: 'meta', access_token: 'owner-tok-rt9' }]) };
       const service = new RealtimeService(metaApi, {
         findAll: vi.fn(() => ({ data: [{ id: 'c9', campaign_id: 'camp-9', platform: 'meta', status: 'ACTIVE', user_id: 'owner-9' }] })),
       }, { platformAccountsRepo: acctRepo, settingsRepo });
@@ -201,7 +204,7 @@ describe('RealtimeService', () => {
       expect(metaApi.getCampaignInsights).not.toHaveBeenCalled();
       // Owner-scoped instance was constructed and used.
       expect(MetaAdsAPI).toHaveBeenCalled();
-      expect(acctRepo.getByPlatform).toHaveBeenCalledWith('owner-9', 'meta');
+      expect(acctRepo.findAllActiveByUserAndPlatform).toHaveBeenCalledWith('owner-9', 'meta');
     });
   });
 });

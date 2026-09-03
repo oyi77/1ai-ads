@@ -14,9 +14,10 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     const userId = req.user?.id;
     if (userId && platformAccountsRepo) {
       try {
-        const acct = platformAccountsRepo.getByPlatform(userId, 'meta');
-        if (acct && acct.access_token) {
-          return MetaAdsAPI.withToken(acct.access_token);
+        const accounts = platformAccountsRepo.findAllActiveByUserAndPlatform(userId, 'meta');
+        const found = accounts.find(a => a?.access_token);
+        if (found) {
+          return MetaAdsAPI.withToken(found.access_token);
         }
       } catch (err) {
         log.error('resolveUserMetaApi failed', { userId, error: err.message });

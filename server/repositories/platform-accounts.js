@@ -55,6 +55,14 @@ export class PlatformAccountsRepository {
     return { ...row, credentials: decryptCredentials(row.credentials) };
   }
 
+  /** Multi-tenant: find ALL active accounts for a user+platform (not just LIMIT 1). */
+  findAllActiveByUserAndPlatform(userId, platform) {
+    const rows = this.db.prepare(
+      'SELECT * FROM platform_accounts WHERE user_id = ? AND platform = ? AND is_active = 1 ORDER BY created_at DESC'
+    ).all(userId, platform);
+    return rows.map(r => ({ ...row, credentials: decryptCredentials(r.credentials) }));
+  }
+
   findByUserId(userId) {
     return this.db.prepare(
       'SELECT * FROM platform_accounts WHERE user_id = ? ORDER BY created_at DESC'

@@ -10,14 +10,17 @@ export function createFatigueRouter(fatigueDetector, platformAccountsRepo) {
       const userId = req.user?.id;
       if (!userId) return res.json({ success: true, data: [] });
       // Scope to the requesting user (multi-tenant). Fatigue detector is Meta-centric.
-      const active = platformAccountsRepo.getByPlatform(userId, 'meta');
-      if (!active) return res.json({ success: true, data: [] });
-      // Snapshots store campaign_id = the Meta ad_account_id (act_xxx), NOT the
-      // internal platform_accounts UUID — pass the real account id so
-      // findByAccountId matches stored rows.
-      const metaAccountId = active.credentials?.ad_account_id || active.ad_account_id || active.id;
-      const result = await fatigueDetector.detectFatigue(metaAccountId, { ownerId: userId });
-      res.json({ success: true, data: result });
+      const accounts = await platformAccountsRepo.findAllActiveByUserAndPlatform(userId, 'meta');
+      if (!accounts || accounts.length === 0) return res.json({ success: true, data: [] });
+      // Run fatigue detection across ALL of the user's active Meta accounts and aggregate results.
+      const results = [];
+      for (const acct of accounts) {
+        const metaAccountId = acct.credentials?.ad_account_id || acct.ad_account_id || acct.id;
+        const result = await fatigueDetector.detectFatigue(metaAccountId, { ownerId: userId });
+        if (Array.isArray(result)) results.push(...result);
+        else if (result) results.push(result);
+      }
+      res.json({ success: true, data: results });
     } catch {
       res.json({ success: true, data: [] });
     }

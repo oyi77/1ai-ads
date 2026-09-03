@@ -117,17 +117,27 @@ export class RealtimeService {
         // campaigns rows don't carry account_id — it lives in
         // platform_accounts.credentials.ad_account_id. Resolve it per owner so
         // the batched insights call gets a real account.
-        let accountId = campaign.account_id || '';
-        if (!accountId && this.platformAccountsRepo) {
-          const acct = this.platformAccountsRepo.getByPlatform?.(ownerId, 'meta');
-          accountId = acct?.credentials?.ad_account_id || acct?.ad_account_id || '';
+        // Multi-tenancy: resolve ALL Meta accounts for this owner so each
+        // account gets its own batched insights call. Campaigns without
+        // account_id are polled against all of the owner's accounts.
+        const accountIds = [];
+        if (campaign.account_id) {
+          accountIds.push(campaign.account_id);
+        } else if (this.platformAccountsRepo) {
+          const accounts = this.platformAccountsRepo.findAllActiveByUserAndPlatform?.(ownerId, 'meta') || [];
+          for (const acct of accounts) {
+            const id = acct?.credentials?.ad_account_id || acct?.ad_account_id || '';
+            if (id) accountIds.push(id);
+          }
         }
-        const key = `${ownerId}:${accountId}`;
-        if (!byOwner.has(key)) {
-          const api = this._metaApiForOwner(campaign);
-          byOwner.set(key, { api, accountId, campaignIds: [] });
+        for (const acctId of accountIds) {
+          const key = `${ownerId}:${acctId}`;
+          if (!byOwner.has(key)) {
+            const api = this._metaApiForOwner(campaign);
+            byOwner.set(key, { api, accountId: acctId, campaignIds: [] });
+          }
+          byOwner.get(key).campaignIds.push(campaign);
         }
-        byOwner.get(key).campaignIds.push(campaign);
       }
 
       for (const [, { api, accountId, campaignIds }] of byOwner) {

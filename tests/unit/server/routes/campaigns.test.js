@@ -65,7 +65,7 @@ function createMockAdsetsRepo() {
 }
 
 function createMockPlatformAccountsRepo() {
-  return { getByPlatform: vi.fn(() => ({ access_token: 'test-token' })) };
+  return { getByPlatform: vi.fn(() => ({ access_token: 'test-token' })), findAllActiveByUserAndPlatform: vi.fn(() => [{ access_token: 'test-token' }]) };
 }
 
 function createMockDraftsRepo() {
@@ -451,6 +451,7 @@ describe('Campaigns Router', () => {
     it('uses the requesting user’s bound token when present', async () => {
       const userTokenApi = { getAdAccounts: vi.fn(async () => [{ id: 'act_user', name: 'User Acct' }]) };
       platformAccountsRepo.getByPlatform = vi.fn(() => ({ access_token: 'USER_TOKEN' }));
+      platformAccountsRepo.findAllActiveByUserAndPlatform = vi.fn(() => [{ access_token: 'USER_TOKEN' }]);
       // Stub MetaAdsAPI.withToken to return the per-user api
       const metaApiMod = await import('../../../../server/services/meta/index.js');
       const origWithToken = metaApiMod.MetaAdsAPI.withToken;
@@ -468,6 +469,7 @@ describe('Campaigns Router', () => {
 
     it('returns 400 when user has no bound account (no system fallback for user routes)', async () => {
       platformAccountsRepo.getByPlatform = vi.fn(() => null);
+      platformAccountsRepo.findAllActiveByUserAndPlatform = vi.fn(() => []);
       const res = await request(app).get('/api/campaigns/accounts');
       expect(res.status).toBe(400);
     });

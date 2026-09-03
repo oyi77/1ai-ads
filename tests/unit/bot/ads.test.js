@@ -41,6 +41,8 @@ function makeDeps({ accessToken = null, storedId = 'acc1', connected = null } = 
   const repo = {
     getByPlatform: (userId, platform) =>
       accessToken ? { id: storedId, user_id: userId, platform, access_token: accessToken, is_active: 1 } : null,
+    findAllActiveByUserAndPlatform: (userId, platform) =>
+      accessToken ? [{ id: storedId, user_id: userId, platform, access_token: accessToken, is_active: 1 }] : [],
     findByUserId: () => connected || (accessToken ? [{ id: storedId, platform: 'meta', access_token: accessToken, is_active: 1, account_name: 'Test' }] : []),
     findById: () => null,
     update: vi.fn(() => ({ id: storedId })),

@@ -448,51 +448,55 @@ export function initScheduler(bot, deps) {
 
         for (const row of accounts) {
           try {
-            const pa = repo.getByPlatform(row.user_id, platform);
-            if (!pa?.access_token) continue;
+            const userAccounts = repo.findAllActiveByUserAndPlatform(row.user_id, platform);
+            if (!userAccounts.length) continue;
             const user = usersRepo.findById(row.user_id);
             if (!user?.telegram_id) continue;
 
-            const token = resolveOwnerPlatformToken(platform, row.user_id, {
-              platformAccountsRepo: repo,
-              settingsRepo,
-            });
-            if (!token || token.startsWith('demo-') || token.startsWith('demo-meta-token')) continue;
+            for (const pa of userAccounts) {
+              if (!pa?.access_token) continue;
 
-            const api = getPlatformSync(platform, settingsRepo);
-            api.setActiveAccount(null, token, true);
+              const token = resolveOwnerPlatformToken(platform, row.user_id, {
+                platformAccountsRepo: repo,
+                settingsRepo,
+              });
+              if (!token || token.startsWith('demo-') || token.startsWith('demo-meta-token')) continue;
 
-            // Feature-detect account enumeration. Meta has getAdAccounts,
-            // others may have getAccounts or neither.
-            const getAccounts = api.getAdAccounts || api.getAccounts;
-            if (typeof getAccounts !== 'function') {
-              log.debug('Platform lacks account enumeration', { platform, user: row.user_id });
-              continue;
-            }
+              const api = getPlatformSync(platform, settingsRepo);
+              api.setActiveAccount(null, token, true);
 
-            const lastAt = settingsRepo?.get(`last_report_at_${row.user_id}_${platform}`);
-            const sinceDate = lastAt ? new Date(lastAt).toISOString().slice(0, 10) : null;
-
-            const owned = await getAccounts.call(api);
-            for (const acc of owned.slice(0, 5)) {
-              const report = await svc.buildReport(api, acc.id, acc.name, { sinceDate, platform });
-              // Skip unsupported platforms (no getAccountInsights) and dormant accounts
-              if (!report.supported) continue;
-              const s = report.summary;
-              const sl = report.sinceLastReport;
-              if (sinceDate && s.spend === 0 && (!sl || sl.spend === 0)) continue;
-
-              const lines = [
-                `📊 <b>Digest Harian — ${esc(acc.name)} (${platform})</b>`,
-                `💰 Belanja: ${fmtRp(s.spend)} · ROAS ${fmtRoas2(s.roas)} · Purchase ${s.purchases}`,
-              ];
-              if (sl && sinceDate) {
-                lines.push(`↩️ Sejak digest lalu (${sinceDate}): ${fmtRp(sl.spend)} · ROAS ${fmtRoas2(sl.roas)} · Purchase ${sl.purchases}`);
+              // Feature-detect account enumeration. Meta has getAdAccounts,
+              // others may have getAccounts or neither.
+              const getAccounts = api.getAdAccounts || api.getAccounts;
+              if (typeof getAccounts !== 'function') {
+                log.debug('Platform lacks account enumeration', { platform, user: row.user_id });
+                continue;
               }
-              if (report.ai?.actions) lines.push(`🔧 ${esc(report.ai.actions)}`);
-              if (report.anomalies?.length) lines.push(...report.anomalies.map(a => `🚨 ${esc(a)}`));
-              await bot.telegram.sendMessage(user.telegram_id, lines.join('\n'), { parse_mode: 'HTML' });
-              sent++;
+
+              const lastAt = settingsRepo?.get(`last_report_at_${row.user_id}_${platform}`);
+              const sinceDate = lastAt ? new Date(lastAt).toISOString().slice(0, 10) : null;
+
+              const owned = await getAccounts.call(api);
+              for (const acc of owned.slice(0, 5)) {
+                const report = await svc.buildReport(api, acc.id, acc.name, { sinceDate, platform });
+                // Skip unsupported platforms (no getAccountInsights) and dormant accounts
+                if (!report.supported) continue;
+                const s = report.summary;
+                const sl = report.sinceLastReport;
+                if (sinceDate && s.spend === 0 && (!sl || sl.spend === 0)) continue;
+
+                const lines = [
+                  `📊 <b>Digest Harian — ${esc(acc.name)} (${platform})</b>`,
+                  `💰 Belanja: ${fmtRp(s.spend)} · ROAS ${fmtRoas2(s.roas)} · Purchase ${s.purchases}`,
+                ];
+                if (sl && sinceDate) {
+                  lines.push(`↩️ Sejak digest lalu (${sinceDate}): ${fmtRp(sl.spend)} · ROAS ${fmtRoas2(sl.roas)} · Purchase ${sl.purchases}`);
+                }
+                if (report.ai?.actions) lines.push(`🔧 ${esc(report.ai.actions)}`);
+                if (report.anomalies?.length) lines.push(...report.anomalies.map(a => `🚨 ${esc(a)}`));
+                await bot.telegram.sendMessage(user.telegram_id, lines.join('\n'), { parse_mode: 'HTML' });
+                sent++;
+              }
             }
             settingsRepo?.set(`last_report_at_${row.user_id}_${platform}`, new Date().toISOString());
           } catch (err) {
@@ -536,45 +540,49 @@ export function initScheduler(bot, deps) {
 
         for (const row of accounts) {
           try {
-            const pa = repo.getByPlatform(row.user_id, platform);
-            if (!pa?.access_token) continue;
+            const userAccounts = repo.findAllActiveByUserAndPlatform(row.user_id, platform);
+            if (!userAccounts.length) continue;
             const user = usersRepo.findById(row.user_id);
             if (!user?.telegram_id) continue;
 
-            // dedup per account per day (account id = pa.id)
-            const dedupKey = `anomaly_alerted_${pa.id}_${today}`;
-            if (settingsRepo.get(dedupKey)) continue;
+            for (const pa of userAccounts) {
+              if (!pa?.access_token) continue;
 
-            const token = resolveOwnerPlatformToken(platform, row.user_id, {
-              platformAccountsRepo: repo,
-              settingsRepo,
-            });
-            if (!token || token.startsWith('demo-') || token.startsWith('demo-meta-token')) continue;
+              // dedup per account per day (account id = pa.id)
+              const dedupKey = `anomaly_alerted_${pa.id}_${today}`;
+              if (settingsRepo.get(dedupKey)) continue;
 
-            const api = getPlatformSync(platform, settingsRepo);
-            api.setActiveAccount(null, token, true);
+              const token = resolveOwnerPlatformToken(platform, row.user_id, {
+                platformAccountsRepo: repo,
+                settingsRepo,
+              });
+              if (!token || token.startsWith('demo-') || token.startsWith('demo-meta-token')) continue;
 
-            // Feature-detect account enumeration
-            const getAccounts = api.getAdAccounts || api.getAccounts;
-            if (typeof getAccounts !== 'function') continue;
+              const api = getPlatformSync(platform, settingsRepo);
+              api.setActiveAccount(null, token, true);
 
-            const ownedAccounts = await getAccounts.call(api);
-            if (!ownedAccounts.length) continue;
-            const acc0 = ownedAccounts[0];
-            const report = await svc.buildReport(api, acc0.id, acc0.name, { platform });
-            // Unsupported platform → no anomalies, skip silently
-            if (!report.supported || !report.anomalies?.length) continue;
+              // Feature-detect account enumeration
+              const getAccounts = api.getAdAccounts || api.getAccounts;
+              if (typeof getAccounts !== 'function') continue;
 
-            const lines = [
-              `🚨 <b>Anomali Terdeteksi — ${esc(report.accountName)} (${platform})</b>`,
-              `💰 Spend hari ini: ${fmtRp(report.summary.spend)} · ROAS ${fmtRoas2(report.summary.roas)}`,
-              ...report.anomalies.map(a => `⚠️ ${esc(a)}`),
-              '',
-              `<i>Cek /reports di Mini App untuk detail.</i>`,
-            ];
-            await bot.telegram.sendMessage(user.telegram_id, lines.join('\n'), { parse_mode: 'HTML' });
-            settingsRepo.set(dedupKey, new Date().toISOString());
-            pushed++;
+              const ownedAccounts = await getAccounts.call(api);
+              if (!ownedAccounts.length) continue;
+              const acc0 = ownedAccounts[0];
+              const report = await svc.buildReport(api, acc0.id, acc0.name, { platform });
+              // Unsupported platform → no anomalies, skip silently
+              if (!report.supported || !report.anomalies?.length) continue;
+
+              const lines = [
+                `🚨 <b>Anomali Terdeteksi — ${esc(report.accountName)} (${platform})</b>`,
+                `💰 Spend hari ini: ${fmtRp(report.summary.spend)} · ROAS ${fmtRoas2(report.summary.roas)}`,
+                ...report.anomalies.map(a => `⚠️ ${esc(a)}`),
+                '',
+                `<i>Cek /reports di Mini App untuk detail.</i>`,
+              ];
+              await bot.telegram.sendMessage(user.telegram_id, lines.join('\n'), { parse_mode: 'HTML' });
+              settingsRepo.set(dedupKey, new Date().toISOString());
+              pushed++;
+            }
           } catch (err) {
             log.warn('Anomaly push failed', { platform, userId: row.user_id, error: err.message });
           }
