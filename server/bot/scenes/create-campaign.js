@@ -36,6 +36,25 @@ function userMetaApi(ctx) {
 }
 
 /**
+ * Fetch the token's direct (personal, non-BM) ad accounts — old behavior.
+ */
+async function fetchPersonalAccounts(ctx) {
+  const api = userMetaApi(ctx);
+  if (!api) return [];
+  try {
+    const accounts = await api.getAdAccounts();
+    return accounts.map(a => ({
+      id: a.id,
+      name: a.name || a.id,
+      status: a.status === 'active' ? 'active' : 'unknown',
+    }));
+  } catch (err) {
+    log.error('Failed to fetch personal accounts', { userId: ctx.userId, error: err.message });
+    return [];
+  }
+}
+
+/**
  * Fetch ad accounts owned by a Business Manager via the
  * /{businessId}/owned_ad_accounts edge — fallback to personal accts.
  */
@@ -70,7 +89,7 @@ async function fetchBmAccounts(ctx, businessId) {
 
 export const createCampaignScene = new Scenes.WizardScene(
   'create-campaign',
-  // Step 0: Select Business Manager
+  // Step 0: Select Business Manager (fallback: direct accounts when no BM)
   async (ctx) => {
     ctx.wizard.state.data = {};
     ctx.wizard.state.confirmShown = false;
@@ -86,9 +105,27 @@ export const createCampaignScene = new Scenes.WizardScene(
         log.error('Failed to fetch businesses', { userId: ctx.userId, error: err.message });
       }
     }
+    // No Business Managers on this token (or fetch failed) — fall back to the
+    // token's direct ad accounts so users without a BM aren't dead-ended.
     if (businesses.length === 0) {
-      await ctx.reply('🔌 No Business Managers found. Connect a Meta account first via /settings.');
-      return ctx.scene.leave();
+      const accounts = await fetchPersonalAccounts(ctx);
+      if (accounts.length === 0) {
+        await ctx.reply('🔌 No ad accounts found. Connect a Meta account first via /settings.');
+        return ctx.scene.leave();
+      }
+      ctx.wizard.state.accounts = accounts;
+      const keyboard = accounts.map(a => [{
+        text: `📘 ${a.name || a.id}`,
+        callback_data: `create:acct:${a.id}`,
+      }]);
+      keyboard.push(CANCEL_ROW);
+      await ctx.reply('📋 *Select an ad account* to run the campaign in:', {
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: keyboard },
+      });
+      // Jump past the BM guard (step 1) — no BM was selected.
+      ctx.wizard.state.data.businessId = 'none';
+      return ctx.wizard.selectStep(2);
     }
     ctx.wizard.state.businesses = businesses;
     const keyboard = businesses.map(b => [{
