@@ -2,6 +2,10 @@
  * Create Campaign WizardScene — full flow per user feedback:
  * select Business Manager → select ad account → objective → name → budget →
  * audience targeting → post ID → confirm → create
+ *
+ * Multi-tenant: reads ALL active Meta tokens for the user, aggregates
+ * Business Managers and ad accounts across every token, and tracks which
+ * token the user's selection belongs to.
  */
 import { Scenes } from 'telegraf';
 import { createLogger } from '../../lib/logger.js';
@@ -25,41 +29,42 @@ const fmtRp = n => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
 const CANCEL_ROW = [{ text: '❌ Batal', callback_data: 'create:cancel' }];
 
 /**
- * Fetch the Meta API for the requesting user (their own bound token).
- * Returns null when no active Meta account token exists.
+ * Get all active Meta tokens for the user.
+ * Returns array of { account, access_token, api }.
  */
-function userMetaApi(ctx) {
+function getAllMetaTokens(ctx) {
   const repo = ctx.deps?.repos?.platformAccountsRepo;
-  const acct = repo?.getByPlatform?.(ctx.userId, 'meta');
-  if (!acct?.access_token) return null;
-  return MetaAdsAPI.withToken(acct.access_token);
+  if (!repo) return [];
+  const rows = repo.findByUserId?.(ctx.userId) || [];
+  return rows
+    .filter(r => r.platform === 'meta' && r.is_active === 1 && r.access_token)
+    .map(r => ({ account: r, access_token: r.access_token, api: MetaAdsAPI.withToken(r.access_token) }));
 }
 
-/**
- * Fetch the token's direct (personal, non-BM) ad accounts — old behavior.
- */
-async function fetchPersonalAccounts(ctx) {
-  const api = userMetaApi(ctx);
+/** Fetch /me/businesses for a single token. */
+async function fetchBusinessesForToken(api) {
   if (!api) return [];
   try {
-    const accounts = await api.getAdAccounts();
-    return accounts.map(a => ({
-      id: a.id,
-      name: a.name || a.id,
-      status: a.status === 'active' ? 'active' : 'unknown',
-    }));
-  } catch (err) {
-    log.error('Failed to fetch personal accounts', { userId: ctx.userId, error: err.message });
+    const data = await api.getBusinesses();
+    return (data || []).map(b => ({ id: b.id, name: b.name || b.id, verificationStatus: b.verificationStatus }));
+  } catch {
     return [];
   }
 }
 
-/**
- * Fetch ad accounts owned by a Business Manager via the
- * /{businessId}/owned_ad_accounts edge — fallback to personal accts.
- */
-async function fetchBmAccounts(ctx, businessId) {
-  const api = userMetaApi(ctx);
+/** Fetch /me/adaccounts for a single token. */
+async function fetchAccountsForToken(api) {
+  if (!api) return [];
+  try {
+    const accounts = await api.getAdAccounts();
+    return (accounts || []).map(a => ({ id: a.id, name: a.name || a.id, status: a.status === 'active' ? 'active' : 'unknown' }));
+  } catch {
+    return [];
+  }
+}
+
+/** Fetch ad accounts owned by a BM from a specific token, with personal fallback. */
+async function fetchBmAccountsForToken(api, businessId) {
   if (!api) return [];
   try {
     const data = await api._get(`/${businessId}/owned_ad_accounts`, {
@@ -71,99 +76,105 @@ async function fetchBmAccounts(ctx, businessId) {
       name: a.name || a.id,
       status: a.account_status === 1 ? 'active' : 'unknown',
     }));
-    // Backward-compat fallback: a BM may own no accounts while the token has
-    // personal (non-BM) ad accounts. Never dead-end those users — fall back
-    // to the flat /me/adaccounts list (old behavior).
     if (owned.length > 0) return owned;
-    const personal = await api.getAdAccounts();
-    return personal.map(a => ({
-      id: a.id,
-      name: a.name || a.id,
-      status: a.status === 'active' ? 'active' : 'unknown',
-    }));
-  } catch (err) {
-    log.error('Failed to fetch accounts for BM', { userId: ctx.userId, businessId, error: err.message });
-    return [];
+    // Fallback: BM owns no accounts, use token's personal accounts
+    return fetchAccountsForToken(api);
+  } catch {
+    return fetchAccountsForToken(api);
   }
 }
 
 export const createCampaignScene = new Scenes.WizardScene(
   'create-campaign',
-  // Step 0: Select Business Manager (fallback: direct accounts when no BM)
+  // Step 0: Aggregate tokens → show BM picker (or account fallback)
   async (ctx) => {
     ctx.wizard.state.data = {};
     ctx.wizard.state.confirmShown = false;
-    ctx.wizard.state.businesses = [];
-    ctx.wizard.state.accounts = [];
 
-    const api = userMetaApi(ctx);
-    let businesses = [];
-    if (api) {
-      try {
-        businesses = await api.getBusinesses();
-      } catch (err) {
-        log.error('Failed to fetch businesses', { userId: ctx.userId, error: err.message });
-      }
+    const tokens = getAllMetaTokens(ctx);
+    if (tokens.length === 0) {
+      await ctx.reply('🔌 No Meta accounts connected. Connect one first via /settings.');
+      return ctx.scene.leave();
     }
-    // No Business Managers on this token (or fetch failed) — fall back to the
-    // token's direct ad accounts so users without a BM aren't dead-ended.
-    if (businesses.length === 0) {
-      const accounts = await fetchPersonalAccounts(ctx);
-      if (accounts.length === 0) {
-        await ctx.reply('🔌 No ad accounts found. Connect a Meta account first via /settings.');
-        return ctx.scene.leave();
-      }
-      ctx.wizard.state.accounts = accounts;
-      const keyboard = accounts.map(a => [{
-        text: `📘 ${a.name || a.id}`,
-        callback_data: `create:acct:${a.id}`,
-      }]);
+
+    // Aggregate businesses and accounts across ALL tokens
+    const businessesByToken = []; // [{ token, business }]
+    const accountsByToken = [];   // [{ token, account }]
+    for (const t of tokens) {
+      const businesses = await fetchBusinessesForToken(t.api);
+      businesses.forEach(b => businessesByToken.push({ token: t, business: b }));
+      const accounts = await fetchAccountsForToken(t.api);
+      accounts.forEach(a => accountsByToken.push({ token: t, account: a }));
+    }
+
+    // Store for later steps
+    ctx.wizard.state.tokens = tokens;
+    ctx.wizard.state.businessesByToken = businessesByToken;
+    ctx.wizard.state.accountsByToken = accountsByToken;
+
+    const multiToken = tokens.length > 1;
+
+    if (businessesByToken.length > 0) {
+      // Show BM picker (with token prefix if user has multiple tokens)
+      const keyboard = businessesByToken.map(({ token, business }) => {
+        const prefix = multiToken ? `[${token.account.account_name}] ` : '';
+        return [{
+          text: `🏢 ${prefix}${business.name}`,
+          callback_data: `create:bm:${business.id}`,
+        }];
+      });
       keyboard.push(CANCEL_ROW);
-      await ctx.reply('📋 *Select an ad account* to run the campaign in:', {
+      await ctx.reply('📋 *Select Business Manager*\n\nWhich Business Manager owns the ad account you want to use?', {
         parse_mode: 'Markdown',
         reply_markup: { inline_keyboard: keyboard },
       });
-      // Jump past the BM guard (step 1) — no BM was selected.
-      ctx.wizard.state.data.businessId = 'none';
-      return ctx.wizard.selectStep(2);
+      return ctx.wizard.next();
     }
-    ctx.wizard.state.businesses = businesses;
-    const keyboard = businesses.map(b => [{
-      text: `🏢 ${b.name || b.id}`,
-      callback_data: `create:bm:${b.id}`,
-    }]);
+
+    // No BMs across any token → fall back to personal accounts
+    if (accountsByToken.length === 0) {
+      await ctx.reply('🔌 No ad accounts found. Connect a Meta account first via /settings.');
+      return ctx.scene.leave();
+    }
+
+    ctx.wizard.state.accounts = accountsByToken.map(a => a.account);
+    const keyboard = accountsByToken.map(({ token, account }) => {
+      const prefix = multiToken ? `[${token.account.account_name}] ` : '';
+      return [{
+        text: `📘 ${prefix}${account.name}`,
+        callback_data: `create:acct:${account.id}`,
+      }];
+    });
     keyboard.push(CANCEL_ROW);
-    await ctx.reply('📋 *Select Business Manager*\n\nWhich Business Manager owns the ad account you want to use?', {
+    await ctx.reply('📋 *Select an ad account* to run the campaign in:', {
       parse_mode: 'Markdown',
       reply_markup: { inline_keyboard: keyboard },
     });
-    return ctx.wizard.next();
+    // No BM selected — mark and jump to step 2 (account guard)
+    ctx.wizard.state.data.businessId = 'none';
+    return ctx.wizard.selectStep(2);
   },
-  // Step 1: Stray-text guard — a BM button press is required first
+  // Step 1: Stray-text guard — BM button press is required
   async (ctx) => {
     if (!ctx.wizard.state.data.businessId) {
       await ctx.reply('⚠️ Please select a Business Manager using the buttons above.');
       return;
     }
-    // businessId is set but cursor is at 1 (shouldn't happen in normal flow).
-    // The BM picker is already on screen; just prod the user.
     await ctx.reply('⚠️ Please select a Business Manager using the buttons above.');
   },
-  // Step 2: Stray-text guard — an ad account button press is required next
+  // Step 2: Stray-text guard — account button press is required
   async (ctx) => {
     if (!ctx.wizard.state.data.accountId) {
       await ctx.reply('⚠️ Please select an ad account using the buttons above.');
       return;
     }
-    // (objective prompt is rendered by the create:acct action)
   },
-  // Step 3: Stray-text guard — an objective button press is required next
+  // Step 3: Stray-text guard — objective button press is required
   async (ctx) => {
     if (!ctx.wizard.state.data.objective) {
       await ctx.reply('⚠️ Select an objective using the buttons above.');
       return;
     }
-    // (name prompt is rendered by the create:obj action)
   },
   // Step 4: Name → budget
   async (ctx) => {
@@ -224,8 +235,6 @@ export const createCampaignScene = new Scenes.WizardScene(
   },
   // Step 7: Post ID → confirm
   async (ctx) => {
-    // After the confirmation screen is shown, stray text must not re-enter
-    // Post-ID parsing — require the user to use the create/cancel buttons.
     if (ctx.wizard.state.confirmShown) return;
     const text = (ctx.message?.text || '').trim();
     if (text !== '/skip') {
@@ -266,27 +275,39 @@ export const createCampaignScene = new Scenes.WizardScene(
 // Wire scene callbacks: BM picker → account picker → objective picker → name prompt
 createCampaignScene.action(/^create:bm:(.+)$/, async (ctx) => {
   await ctx.answerCbQuery();
-  ctx.wizard.state.data.businessId = ctx.match[1];
-  const bmName = (ctx.wizard.state.businesses || []).find(b => b.id === ctx.match[1])?.name || ctx.match[1];
+  const businessId = ctx.match[1];
+  ctx.wizard.state.data.businessId = businessId;
+
+  // Find which token owns this BM
+  const entry = (ctx.wizard.state.businessesByToken || []).find(b => b.business.id === businessId);
+  if (entry) {
+    ctx.wizard.state.data.selectedToken = entry.token;
+  }
+
+  const bmName = entry?.business?.name || businessId;
   await ctx.reply(`✅ Business Manager selected: *${esc(bmName)}*`, { parse_mode: 'Markdown' });
 
-  // Fetch + render the account picker for this BM immediately.
-  const accounts = await fetchBmAccounts(ctx, ctx.match[1]);
+  // Fetch + render account picker for this BM from the owning token
+  const token = entry?.token || ctx.wizard.state.tokens?.[0];
+  const accounts = await fetchBmAccountsForToken(token?.api, businessId);
   if (accounts.length === 0) {
     await ctx.reply('🔌 No ad accounts found for this Business Manager. Connect one first via /settings.');
     return ctx.scene.leave();
   }
   ctx.wizard.state.accounts = accounts;
-  const keyboard = accounts.map(a => [{
-    text: `📘 ${a.name || a.id}`,
-    callback_data: `create:acct:${a.id}`,
-  }]);
+  const multiToken = (ctx.wizard.state.tokens?.length || 0) > 1;
+  const keyboard = accounts.map(a => {
+    const prefix = multiToken && token ? `[${token.account.account_name}] ` : '';
+    return [{
+      text: `📘 ${prefix}${a.name}`,
+      callback_data: `create:acct:${a.id}`,
+    }];
+  });
   keyboard.push(CANCEL_ROW);
   await ctx.reply('📋 *Select an ad account* to run the campaign in:', {
     parse_mode: 'Markdown',
     reply_markup: { inline_keyboard: keyboard },
   });
-  // Guard step 2 handles stray text; the create:acct action advances from there.
   ctx.wizard.selectStep(2);
 });
 
@@ -294,6 +315,13 @@ createCampaignScene.action(/^create:acct:(.+)$/, async (ctx) => {
   await ctx.answerCbQuery();
   const accountId = ctx.match[1];
   ctx.wizard.state.data.accountId = accountId;
+
+  // Find which token owns this account (for multi-token tracking)
+  const entry = (ctx.wizard.state.accountsByToken || []).find(a => a.account.id === accountId);
+  if (entry) {
+    ctx.wizard.state.data.selectedToken = entry.token;
+  }
+
   const name = (ctx.wizard.state.accounts || []).find(a => a.id === accountId)?.name || accountId;
   await ctx.reply(`✅ Account selected: *${esc(name)}*`, { parse_mode: 'Markdown' });
   await ctx.reply('🎯 *Campaign Objective*\n\nWhat is the goal of this campaign?', {
@@ -302,7 +330,7 @@ createCampaignScene.action(/^create:acct:(.+)$/, async (ctx) => {
       inline_keyboard: [...OBJECTIVES.map(o => [{ text: o.label, callback_data: `create:obj:${o.id}` }]), CANCEL_ROW],
     },
   });
-  ctx.wizard.selectStep(3); // guard step 3 handles stray text; create:obj advances from there
+  ctx.wizard.selectStep(3);
 });
 
 createCampaignScene.action(/^create:obj:(.+)$/, async (ctx) => {
@@ -315,7 +343,7 @@ createCampaignScene.action(/^create:obj:(.+)$/, async (ctx) => {
     parse_mode: 'Markdown',
     reply_markup: { inline_keyboard: [CANCEL_ROW] },
   });
-  ctx.wizard.selectStep(4); // step 4 consumes the name text
+  ctx.wizard.selectStep(4);
 });
 
 createCampaignScene.action(/^create:go$/, async (ctx) => handleCreateGo(ctx));
@@ -333,29 +361,14 @@ async function handleCreateGo(ctx) {
     return ctx.reply('⚠️ Incomplete data. Start again with /create.');
   }
 
-  // Get the user's Meta API
-  const api = userMetaApi(ctx);
+  // Use the token that owns the selected account/BM
+  const selectedToken = d.selectedToken || ctx.wizard.state.tokens?.[0];
+  const api = selectedToken?.api;
   if (!api) return ctx.reply('🔌 Connect a Meta account first via /settings.');
 
   await ctx.reply('🔄 Creating campaign...');
   try {
-    // d.accountId is the REAL Meta ad account ID selected from
-    // owned_ad_accounts. Fall back to the bound token's ad account only if
-    // it was never set (shouldn't happen in the BM-first flow).
-    let realAccountId = d.accountId;
-    if (!realAccountId) {
-      const repo = ctx.deps?.repos?.platformAccountsRepo;
-      const acct = repo?.getByPlatform(ctx.userId, 'meta');
-      realAccountId = acct?.credentials?.ad_account_id;
-    }
-    if (!realAccountId) {
-      const adAccounts = await api.getAdAccounts();
-      if (!adAccounts.length) throw new Error('No ad accounts found for this token');
-      realAccountId = adAccounts[0].id;
-    }
-    // Budget goes on the AD SET, not the campaign — CBO-enabled accounts reject
-    // campaign-level daily_budget (error_subcode 4834002). Matches the canonical
-    // campaign-orchestrator.js pattern.
+    const realAccountId = d.accountId;
     const campaign = await api.createCampaign(realAccountId, {
       name: d.name,
       objective: d.objective,
@@ -364,7 +377,6 @@ async function handleCreateGo(ctx) {
 
     if (!campaign?.id) throw new Error('No campaign ID returned');
 
-    // Resolve a page owned by the token for creatives
     let pageId = '';
     try {
       const pages = await api.getPages ? await api.getPages() : [];
@@ -423,8 +435,6 @@ async function handleCreateGo(ctx) {
     );
   } catch (err) {
     log.error('create campaign failed', { userId: ctx.userId, error: err.message });
-    // err.data = {error: {message, error_user_msg, ...}} — safeFetch wraps
-    // the JSON body at err.data, and Meta bodies carry {error: {...}}.
     const metaErr = err.data?.error || {};
     const raw = `${err.message || ''} ${metaErr.error_user_msg || ''}`.toLowerCase();
     if (raw.includes('mode') && (raw.includes('perkembangan') || raw.includes('development'))) {
