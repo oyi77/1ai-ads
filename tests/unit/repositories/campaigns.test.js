@@ -43,7 +43,7 @@ describe('CampaignsRepository', () => {
     expect(metrics.total_revenue).toBeNull();
   });
 
-  it('findAll scopes by userId and includes system rows', () => {
+  it('findAll scopes strictly by userId (no cross-user/system leak)', () => {
     repo.upsert(makeCampaign({ user_id: 'userA', campaign_id: 'a1' }));
     repo.upsert(makeCampaign({ user_id: 'userB', campaign_id: 'b1' }));
     repo.upsert(makeCampaign({ user_id: 'system', campaign_id: 's1' }));
@@ -51,8 +51,8 @@ describe('CampaignsRepository', () => {
     const a = repo.findAll({ userId: 'userA' });
     const ids = a.data.map((c) => c.campaign_id);
     expect(ids).toContain('a1');
-    expect(ids).toContain('s1');
     expect(ids).not.toContain('b1');
+    expect(ids).not.toContain('s1');
   });
 
   it('findAll without userId returns all campaigns', () => {

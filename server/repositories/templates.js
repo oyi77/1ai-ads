@@ -22,8 +22,8 @@ export class TemplatesRepository {
       params.push(searchTerm, searchTerm);
     }
     if (userId) {
-      conditions.push('(user_id = ? OR user_id = ?)');
-      params.push(userId, 'system');
+      conditions.push('user_id = ?');
+      params.push(userId);
     }
     if (conditions.length) {
       whereClause = `WHERE ${conditions.join(' AND ')}`;

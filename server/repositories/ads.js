@@ -11,7 +11,7 @@ export class AdsRepository {
 
     if (platform) { where.push('platform = ?'); params.push(platform); }
     if (status) { where.push('status = ?'); params.push(status); }
-    if (userId) { where.push('(user_id = ? OR user_id = ?)'); params.push(userId, 'system'); }
+    if (userId) { where.push('user_id = ?'); params.push(userId); }
 
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const total = this.db.prepare(`SELECT COUNT(*) as count FROM ads ${whereClause}`).get(...params).count;

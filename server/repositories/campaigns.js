@@ -7,10 +7,10 @@ export class CampaignsRepository {
 
   findAll({ platform, userId } = {}) {
     if (platform && userId) {
-      const data = this.db.prepare('SELECT * FROM campaigns WHERE platform = ? AND (user_id = ? OR user_id = ?) ORDER BY created_at DESC').all(platform, userId, 'system');
+      const data = this.db.prepare('SELECT * FROM campaigns WHERE platform = ? AND user_id = ? ORDER BY created_at DESC').all(platform, userId);
       return { data, total: data.length };
     } else if (userId) {
-      const data = this.db.prepare('SELECT * FROM campaigns WHERE user_id = ? OR user_id = ? ORDER BY created_at DESC').all(userId, 'system');
+      const data = this.db.prepare('SELECT * FROM campaigns WHERE user_id = ? ORDER BY created_at DESC').all(userId);
       return { data, total: data.length };
     } else if (platform) {
       const data = this.db.prepare('SELECT * FROM campaigns WHERE platform = ? ORDER BY created_at DESC').all(platform);
@@ -49,9 +49,9 @@ export class CampaignsRepository {
         COALESCE(SUM(conversions), 0) as total_conversions
       FROM campaigns`;
     if (userId) {
-      sql += ' WHERE user_id = ? OR user_id = ?';
+      sql += ' WHERE user_id = ?';
     }
-    const row = this.db.prepare(sql).get(...(userId ? [userId, 'system'] : []));
+    const row = this.db.prepare(sql).get(...(userId ? [userId] : []));
 
     const total_spend = row.total_spend;
     const total_revenue = row.total_revenue; // null if no revenue data
@@ -80,12 +80,12 @@ export class CampaignsRepository {
         COALESCE(SUM(conversions), 0) as conversions
       FROM campaigns`;
     if (userId) {
-      sql += ' WHERE (user_id = ? OR user_id = ?)';
+      sql += ' WHERE user_id = ?';
     }
     sql += `
       GROUP BY platform
       ORDER BY spend DESC`;
-    const params = userId ? [userId, 'system'] : [];
+    const params = userId ? [userId] : [];
     return this.db.prepare(sql).all(...params).map(row => ({
       platform: row.platform,
       spend: row.spend,
@@ -102,21 +102,21 @@ export class CampaignsRepository {
       FROM campaigns
       WHERE spend > 0 AND revenue > 0`;
     if (userId) {
-      sql += ' AND (user_id = ? OR user_id = ?)';
+      sql += ' AND user_id = ?';
     }
     sql += `
       ORDER BY roas DESC
       LIMIT ?`;
-    const params = userId ? [userId, 'system', limit] : [limit];
+    const params = userId ? [userId, limit] : [limit];
     return this.db.prepare(sql).all(...params);
   }
 
   findById(id, userId) {
     let sql = 'SELECT * FROM campaigns WHERE id = ?';
     if (userId) {
-      sql += ' AND (user_id = ? OR user_id = ?)';
+      sql += ' AND user_id = ?';
     }
-    const params = userId ? [id, userId, 'system'] : [id];
+    const params = userId ? [id, userId] : [id];
     const row = this.db.prepare(sql).get(...params);
     if (!row) return null;
     const stats = this.db.prepare(`
@@ -182,7 +182,7 @@ export class CampaignsRepository {
     let sql = `UPDATE campaigns SET ${fields.join(', ')} WHERE id = ?`;
     values.push(id);
     if (userId) {
-      sql += ` AND (user_id = ? OR user_id = 'system')`;
+      sql += ` AND user_id = ?`;
       values.push(userId);
     }
     const result = this.db.prepare(sql).run(...values);
