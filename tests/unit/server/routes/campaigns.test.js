@@ -30,6 +30,7 @@ function createMockMetaApi() {
     getTargetingOptions: vi.fn(async () => [{ id: '1', name: 'Marketing', audience_size: 50000 }]),
     getPages: vi.fn(async () => [{ id: 'p1', name: 'My Page' }]),
     getAdAccounts: vi.fn(async () => [{ id: 'act_123', name: 'Test Ad Account' }]),
+    getBusinesses: vi.fn(async () => [{ id: 'bm_1', name: 'PT Maju', verificationStatus: 'verified' }]),
     getCampaigns: vi.fn(async () => []),
     getMultiCampaignInsights: vi.fn(async () => ({})),
     getCampaignInsights: vi.fn(async () => ({ impressions: 1000, clicks: 50 })),
@@ -240,6 +241,24 @@ describe('Campaigns Router', () => {
     });
   });
 
+  // ─── GET /businesses ────────────────────────────────────────────────
+
+  describe('GET /businesses', () => {
+    it('returns business managers', async () => {
+      const res = await request(app).get('/api/campaigns/businesses');
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([{ id: 'bm_1', name: 'PT Maju', verificationStatus: 'verified' }]);
+      expect(metaApi.getBusinesses).toHaveBeenCalled();
+    });
+
+    it('returns 500 on error', async () => {
+      metaApi.getBusinesses.mockRejectedValue(new Error('Token expired'));
+      const res = await request(app).get('/api/campaigns/businesses');
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe('Token expired');
+    });
+  });
+
   // ─── GET /accounts ─────────────────────────────────────────────────
 
   describe('GET /accounts', () => {
@@ -247,6 +266,29 @@ describe('Campaigns Router', () => {
       const res = await request(app).get('/api/campaigns/accounts');
       expect(res.status).toBe(200);
       expect(res.body.data).toEqual([{ id: 'act_123', name: 'Test Ad Account' }]);
+    });
+
+    it('filters accounts by businessId via owned_ad_accounts edge', async () => {
+      metaApi._get.mockResolvedValue({
+        data: [
+          { id: 'act_own1', name: 'Owned One', account_status: 1 },
+          { id: 'act_own2', name: 'Owned Two', account_status: 2 },
+        ],
+      });
+      const res = await request(app).get('/api/campaigns/accounts?businessId=bm_1');
+      expect(res.status).toBe(200);
+      expect(metaApi._get).toHaveBeenCalledWith('/bm_1/owned_ad_accounts', expect.objectContaining({ fields: expect.stringContaining('name') }));
+      expect(res.body.data).toEqual([
+        { id: 'act_own1', name: 'Owned One', status: 'active', currency: undefined, balance: 0, amountSpent: 0 },
+        { id: 'act_own2', name: 'Owned Two', status: 'disabled', currency: undefined, balance: 0, amountSpent: 0 },
+      ]);
+      expect(metaApi.getAdAccounts).not.toHaveBeenCalled();
+    });
+
+    it('falls back to flat ad accounts when no businessId given', async () => {
+      const res = await request(app).get('/api/campaigns/accounts');
+      expect(metaApi.getAdAccounts).toHaveBeenCalled();
+      expect(metaApi._get).not.toHaveBeenCalledWith('/undefined/owned_ad_accounts', expect.anything());
     });
 
     it('returns 500 on error', async () => {

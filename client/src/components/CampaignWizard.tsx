@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import type { CSSProperties } from 'react';
 
 interface Account { id: string; name: string; status: string }
+interface Business { id: string; name: string; verificationStatus?: string }
 interface Page { id: string; name: string }
 
 const OBJECTIVES = [
@@ -43,6 +44,11 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
   const [creativeStatus, setCreativeStatus] = useState<'complete' | 'partial'>('complete');
   const [creativeErrorMsg, setCreativeErrorMsg] = useState('');
   const [connectError, setConnectError] = useState('');
+  const [selectedBusinessId, setSelectedBusinessId] = useState('');
+  const businessesQuery = useQuery({
+    queryKey: ['wizard-businesses'],
+    queryFn: () => api.get('/campaigns/businesses'),
+  });
 
   const queryClient = useQueryClient();
   const connectMutation = useMutation({
@@ -63,17 +69,22 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
 
 
   const accountsQuery = useQuery({
-    queryKey: ['wizard-accounts'],
-    queryFn: () => api.get<Account[]>('/campaigns/accounts'),
+    queryKey: ['wizard-accounts', selectedBusinessId],
+    queryFn: () => api.get('/campaigns/accounts' + (selectedBusinessId ? `?businessId=${selectedBusinessId}` : '')),
   });
   const pagesQuery = useQuery({
     queryKey: ['wizard-pages'],
     queryFn: () => api.get<Page[]>('/campaigns/pages'),
     enabled: step >= 2,
   });
-  const accountList: Account[] = Array.isArray(accountsQuery.data) ? accountsQuery.data : [];
-  const pageList: Page[] = Array.isArray(pagesQuery.data) ? pagesQuery.data : [];
+  const rawAccounts = accountsQuery.data as unknown;
+  const accountList: Account[] = Array.isArray(rawAccounts) ? rawAccounts : Array.isArray((rawAccounts as { data?: unknown })?.data) ? (rawAccounts as { data: Account[] }).data : [];
+  const rawPages = pagesQuery.data as unknown;
+  const pageList: Page[] = Array.isArray(rawPages) ? rawPages : Array.isArray((rawPages as { data?: unknown })?.data) ? (rawPages as { data: Page[] }).data : [];
   const pagesLoading = pagesQuery.isLoading;
+  const rawBusinesses = businessesQuery.data as unknown;
+  const businessList = Array.isArray(rawBusinesses) ? rawBusinesses : Array.isArray((rawBusinesses as { data?: unknown })?.data) ? (rawBusinesses as { data: Business[] }).data : [];
+  const businessesLoading = businessesQuery.isLoading;
 
   const canNext1 = Boolean(objective && accountId && Number(dailyBudget) >= 10000);
 
@@ -136,6 +147,17 @@ export function CampaignWizard({ onDone, onClose }: { onDone: (_campaignId: stri
 
         {step === 1 && (
           <div>
+            {!businessesLoading && businessList.length > 0 && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={labelStyle}>Business Manager</label>
+                <select value={selectedBusinessId} onChange={e => setSelectedBusinessId(e.target.value)} style={{ ...inputStyle }}>
+                  <option value="">— pilih Business Manager —</option>
+                  {businessList.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginTop: 4 }}>Akun iklan ditampilkan sesuai Business Manager pilihan.</div>
+              </div>
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 14 }}>
               {OBJECTIVES.map(o => (
                 <button key={o.id} type="button" onClick={() => setObjective(o.id)}

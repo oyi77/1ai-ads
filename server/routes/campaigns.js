@@ -191,6 +191,18 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     }
   });
 
+  // GET /businesses — list Business Managers
+  router.get('/businesses', async (req, res) => {
+    try {
+      const api = resolveUserMetaApi(req);
+      const businesses = await api.getBusinesses();
+      res.json({ success: true, data: businesses });
+    } catch (err) {
+      log.error('Failed to get businesses', { error: err.message });
+      res.status(err.status || 500).json({ success: false, error: err.message });
+    }
+  });
+
   // GET /performance — ad-level creative performance across owned accounts.
   // ONE batched account-level call per account (level=ad) instead of
   // per-ad fan-out — hundreds of sequential Meta calls would time out.
@@ -250,13 +262,30 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     }
   });
 
-  // GET /accounts — list Meta ad accounts
+  // GET /accounts — list Meta ad accounts, optionally filtered by businessId
   router.get('/accounts', async (req, res) => {
     try {
       const api = resolveUserMetaApi(req);
+      const { businessId } = req.query;
       let accounts;
       try {
-        accounts = await api.getAdAccounts();
+        if (businessId) {
+          // Fetch accounts owned by the specified Business Manager
+          const data = await api._get(`/${businessId}/owned_ad_accounts`, {
+            fields: 'id,name,account_status,currency,balance,amount_spent',
+            limit: '50',
+          });
+          accounts = (data.data || []).map(a => ({
+            id: a.id,
+            name: a.name,
+            status: a.account_status === 1 ? 'active' : a.account_status === 2 ? 'disabled' : 'unknown',
+            currency: a.currency,
+            balance: parseFloat(a.balance || 0),
+            amountSpent: parseFloat(a.amount_spent || 0),
+          }));
+        } else {
+          accounts = await api.getAdAccounts();
+        }
         // Token proven to work — record health so the UI can show token state.
         try { platformAccountsRepo.updateHealthByPlatform(req.user?.id, 'meta', 'ok', null); } catch { /* non-fatal */ }
       } catch (err) {

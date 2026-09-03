@@ -124,6 +124,24 @@ export class MetaAdsAPI extends BasePlatformApiClient {
   /** Alias for getAdAccounts — satisfies the platform interface contract. */
   async getAccounts() { return this.getAdAccounts(); }
 
+  /**
+   * GET /me/businesses — list Business Managers for the authenticated user.
+   * Returns { id, name, verification_status } for each BM.
+   */
+  async getBusinesses() {
+    const data = await this._get('/me/businesses', {
+      fields: 'id,name,verification_status',
+      limit: '50',
+    });
+    return (data.data || []).map(b => ({
+      id: b.id,
+      name: b.name || b.id,
+      verificationStatus: b.verification_status,
+    }));
+  }
+
+  // --- Campaign Management ---
+
 
   // --- Campaign Management ---
 
