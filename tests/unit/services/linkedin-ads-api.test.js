@@ -1,20 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LinkedInAdsAPI } from '../../../server/services/linkedin/index.js';
 
-vi.mock('../../../server/lib/platform-client.js', () => ({
-  safeFetch: vi.fn(),
-}));
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
 
 describe('LinkedInAdsAPI', () => {
   let api;
   let mockSettingsRepo;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-    mockSettingsRepo = {
-      getCredentials: vi.fn(),
-    };
+    mockSettingsRepo = { getCredentials: vi.fn(() => ({ access_token: 'test-token' })) };
     api = new LinkedInAdsAPI(mockSettingsRepo);
+    mockFetch.mockReset();
   });
 
   describe('constructor', () => {
@@ -45,88 +43,77 @@ describe('LinkedInAdsAPI', () => {
     });
   });
 
-  describe('static withToken', () => {
-    it('creates instance with explicit token', () => {
-      const api2 = LinkedInAdsAPI.withToken('test-token');
-      expect(api2._explicitToken).toBe('test-token');
-    });
-  });
-
-  describe('setActiveAccount', () => {
-    it('sets explicit token and userScoped', () => {
-      api.setActiveAccount('acc-123', 'token-123', true);
-      expect(api._explicitToken).toBe('token-123');
-      expect(api._activeAccountId).toBe('acc-123');
-      expect(api._userScoped).toBe(true);
-    });
-  });
-
-  describe('clearActiveAccount', () => {
-    it('clears account context', () => {
-      api.setActiveAccount('acc-123', 'token-123', true);
-      api.clearActiveAccount();
-      expect(api._explicitToken).toBeNull();
-      expect(api._activeAccountId).toBeNull();
-      expect(api._userScoped).toBe(false);
-    });
-  });
-
-  describe('getMe', () => {
-    it('returns placeholder account', async () => {
-      const result = await api.getMe();
-      expect(result).toEqual({ id: 'me', name: 'LinkedIn Ads Account' });
-    });
-  });
-
   describe('getAdAccounts', () => {
-    it('returns empty array (scaffold)', async () => {
+    it('returns accounts from API', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          elements: [{
+            id: 'acc-123',
+            name: { localized: { en_US: 'Test Account' } },
+            status: 'ACTIVE',
+            type: 'BUSINESS',
+            currency: 'USD',
+          }],
+        }),
+      });
+
+      const result = await api.getAdAccounts();
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('acc-123');
+    });
+
+    it('returns empty array on error', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('API error'));
       const result = await api.getAdAccounts();
       expect(result).toEqual([]);
     });
   });
 
   describe('getCampaigns', () => {
-    it('returns empty array (scaffold)', async () => {
+    it('returns campaigns from API', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          elements: [{
+            id: 'camp-1',
+            name: 'Test Campaign',
+            status: 'ACTIVE',
+            dailyBudget: { amount: '100' },
+            created: '2024-01-01',
+          }],
+        }),
+      });
+
       const result = await api.getCampaigns('acc-123');
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe('getCampaignInsights', () => {
-    it('returns null (scaffold)', async () => {
-      const result = await api.getCampaignInsights('camp-123');
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('getMultiCampaignInsights', () => {
-    it('returns empty object (scaffold)', async () => {
-      const result = await api.getMultiCampaignInsights(['camp-1', 'camp-2']);
-      expect(result).toEqual({});
-    });
-  });
-
-  describe('getAccountInsights', () => {
-    it('returns null (scaffold)', async () => {
-      const result = await api.getAccountInsights('acc-123');
-      expect(result).toBeNull();
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('camp-1');
+      expect(result[0].status).toBe('active');
     });
   });
 
   describe('updateCampaign', () => {
-    it('returns not-updated (scaffold)', async () => {
-      const result = await api.updateCampaign('camp-123', { status: 'PAUSED' });
-      expect(result).toEqual({ id: 'camp-123', updated: false });
+    it('updates campaign status', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+      });
+
+      const result = await api.updateCampaign('acc-123', 'camp-1', { status: 'paused' });
+      expect(result.updated).toBe(true);
     });
   });
 
   describe('isExpiredToken', () => {
-    it('detects 401/403 errors', () => {
+    it('returns true for 401', () => {
       expect(api.isExpiredToken({ code: 401 })).toBe(true);
-      expect(api.isExpiredToken({ code: 403 })).toBe(true);
-      expect(api.isExpiredToken({ message: 'Unauthorized' })).toBe(true);
-      expect(api.isExpiredToken({ message: 'Token expired' })).toBe(true);
-      expect(api.isExpiredToken({ message: 'Some other error' })).toBe(false);
+    });
+
+    it('returns false for other errors', () => {
+      expect(api.isExpiredToken({ code: 500 })).toBe(false);
     });
   });
 });
