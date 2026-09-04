@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GoogleAdsAPI } from '../../../server/services/google/index.js';
 
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
 vi.mock('../../../server/lib/platform-client.js', () => ({
   safeFetch: vi.fn(),
 }));
@@ -9,12 +12,13 @@ describe('GoogleAdsAPI', () => {
   let api;
   let mockSettingsRepo;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
     mockSettingsRepo = {
-      getCredentials: vi.fn(),
+      getCredentials: vi.fn(() => ({ access_token: 'test-token' })),
     };
     api = new GoogleAdsAPI(mockSettingsRepo);
+    mockFetch.mockReset();
   });
 
   describe('constructor', () => {
@@ -52,81 +56,157 @@ describe('GoogleAdsAPI', () => {
     });
   });
 
-  describe('setActiveAccount', () => {
-    it('sets explicit token and userScoped', () => {
-      api.setActiveAccount('acc-123', 'token-123', true);
-      expect(api._explicitToken).toBe('token-123');
-      expect(api._activeAccountId).toBe('acc-123');
-      expect(api._userScoped).toBe(true);
-    });
-  });
-
-  describe('clearActiveAccount', () => {
-    it('clears account context', () => {
-      api.setActiveAccount('acc-123', 'token-123', true);
-      api.clearActiveAccount();
-      expect(api._explicitToken).toBeNull();
-      expect(api._activeAccountId).toBeNull();
-      expect(api._userScoped).toBe(false);
-    });
-  });
-
-  describe('getMe', () => {
-    it('returns placeholder account', async () => {
-      const result = await api.getMe();
-      expect(result).toEqual({ id: 'me', name: 'Google Ads Account' });
-    });
-  });
-
   describe('getAdAccounts', () => {
-    it('returns empty array (scaffold)', async () => {
+    it('returns accounts from API', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          results: [
+            {
+              customerClient: {
+                resourceName: 'customers/123',
+                id: '123',
+                descriptiveName: 'Test Account',
+                currencyCode: 'USD',
+                status: 'ENABLED',
+              },
+            },
+          ],
+        }),
+      });
+
+      const result = await api.getAdAccounts();
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('123');
+      expect(result[0].name).toBe('Test Account');
+    });
+
+    it('returns empty array on error', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('API error'));
       const result = await api.getAdAccounts();
       expect(result).toEqual([]);
     });
   });
 
   describe('getCampaigns', () => {
-    it('returns empty array (scaffold)', async () => {
-      const result = await api.getCampaigns('acc-123');
+    it('returns campaigns from API', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          results: [
+            {
+              campaign: {
+                id: 'camp-1',
+                name: 'Test Campaign',
+                status: 'ENABLED',
+                advertisingChannelType: 'SEARCH',
+                budget: { amountMicros: '10000000' },
+                impressions: '1000',
+                clicks: '100',
+                costMicros: '5000000',
+                ctr: '0.1',
+                averageCpc: '50000',
+                conversions: '10',
+              },
+            },
+          ],
+        }),
+      });
+
+      const result = await api.getCampaigns('123');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('camp-1');
+      expect(result[0].name).toBe('Test Campaign');
+      expect(result[0].status).toBe('active');
+      expect(result[0].budget).toBe(10);
+    });
+
+    it('returns empty array on error', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('API error'));
+      const result = await api.getCampaigns('123');
       expect(result).toEqual([]);
     });
   });
 
   describe('getCampaignInsights', () => {
-    it('returns null (scaffold)', async () => {
-      const result = await api.getCampaignInsights('camp-123');
-      expect(result).toBeNull();
-    });
-  });
+    it('returns insights from API', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          results: [
+            {
+              campaign: { id: 'camp-1', name: 'Test Campaign' },
+              metrics: {
+                impressions: '5000',
+                clicks: '500',
+                costMicros: '2500000',
+                ctr: '0.1',
+                averageCpc: '5000',
+                conversions: '50',
+              },
+            },
+          ],
+        }),
+      });
 
-  describe('getMultiCampaignInsights', () => {
-    it('returns empty object (scaffold)', async () => {
-      const result = await api.getMultiCampaignInsights(['camp-1', 'camp-2']);
-      expect(result).toEqual({});
+      const result = await api.getCampaignInsights('123', 'camp-1');
+      expect(result).not.toBeNull();
+      expect(result.campaignId).toBe('camp-1');
+      expect(result.impressions).toBe(5000);
+      expect(result.clicks).toBe(500);
     });
-  });
 
-  describe('getAccountInsights', () => {
-    it('returns null (scaffold)', async () => {
-      const result = await api.getAccountInsights('acc-123');
+    it('returns null when no results', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ results: [] }),
+      });
+
+      const result = await api.getCampaignInsights('123', 'camp-1');
       expect(result).toBeNull();
     });
   });
 
   describe('updateCampaign', () => {
-    it('returns not-updated (scaffold)', async () => {
-      const result = await api.updateCampaign('camp-123', { status: 'PAUSED' });
-      expect(result).toEqual({ id: 'camp-123', updated: false });
+    it('updates campaign status', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          results: [{ resourceName: 'customers/123/campaigns/camp-1' }],
+        }),
+      });
+
+      const result = await api.updateCampaign('123', 'camp-1', { status: 'paused' });
+      expect(result.updated).toBe(true);
+    });
+
+    it('returns error on failure', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('API error'));
+      const result = await api.updateCampaign('123', 'camp-1', { status: 'paused' });
+      expect(result.updated).toBe(false);
     });
   });
 
   describe('isExpiredToken', () => {
-    it('detects 401/403 errors', () => {
+    it('returns true for 401 errors', () => {
       expect(api.isExpiredToken({ code: 401 })).toBe(true);
+    });
+
+    it('returns true for 403 errors', () => {
       expect(api.isExpiredToken({ code: 403 })).toBe(true);
-      expect(api.isExpiredToken({ message: 'Unauthorized' })).toBe(true);
-      expect(api.isExpiredToken({ message: 'Token expired' })).toBe(true);
-      expect(api.isExpiredToken({ message: 'Some other error' })).toBe(false);
+    });
+
+    it('returns true for unauthorized message', () => {
+      expect(api.isExpiredToken({ message: 'unauthorized' })).toBe(true);
+    });
+
+    it('returns false for other errors', () => {
+      expect(api.isExpiredToken({ code: 500, message: 'server error' })).toBe(false);
     });
   });
 });

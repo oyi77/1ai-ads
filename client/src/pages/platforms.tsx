@@ -160,7 +160,7 @@ export function PlatformsPage() {
                 </div>
               </div>
 
-              {/* Manual Token Flow — Primary option (no Facebook App needed) */}
+              {/* Manual Token Flow — Primary option */}
               <div style={{ 
                 marginTop: 8, 
                 padding: 16, 
@@ -182,6 +182,16 @@ export function PlatformsPage() {
                       Open Graph Explorer <ExternalLink size={12} />
                     </a>
                   )}
+                  {p.key === 'google' && (
+                    <a 
+                      href="https://console.cloud.google.com/apis/credentials" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{ fontSize: '0.7rem', color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+                    >
+                      Google Cloud Console <ExternalLink size={12} />
+                    </a>
+                  )}
                 </div>
                 {p.key === 'meta' && (
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 10, lineHeight: 1.5 }}>
@@ -192,6 +202,18 @@ export function PlatformsPage() {
                       <li>Klik <strong>"Generate Access Token"</strong></li>
                       <li>Pilih permissions: <code style={{ background: 'var(--bg-elevated)', padding: '1px 4px', borderRadius: 3 }}>ads_management, ads_read, business_management, pages_show_list</code></li>
                       <li>Paste token di bawah ini</li>
+                    </ol>
+                  </div>
+                )}
+                {p.key === 'google' && (
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 10, lineHeight: 1.5 }}>
+                    <strong>How to get Google Ads token:</strong>
+                    <ol style={{ margin: '6px 0 0 16px', padding: 0 }}>
+                      <li>Go to Google Cloud Console link above</li>
+                      <li>Create OAuth2 credentials</li>
+                      <li>Use OAuth2 Playground to generate access token</li>
+                      <li>Select scope: https://www.googleapis.com/auth/adwords</li>
+                      <li>Paste token below</li>
                     </ol>
                   </div>
                 )}

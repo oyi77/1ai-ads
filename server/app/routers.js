@@ -11,6 +11,7 @@ import { createAuthGroupRouter } from '../routes/_auth.js';
 import { createSettingsGroupRouter } from '../routes/_settings.js';
 import { createCampaignsGroupRouter } from '../routes/_campaigns.js';
 import { createPlatformsGroupRouter } from '../routes/_platforms.js';
+import { createGoogleAdsRouter } from '../routes/google-ads.js';
 import { createCreativeGroupRouter } from '../routes/_creative.js';
 import { createAiGroupRouter } from '../routes/_ai.js';
 import { createReportingGroupRouter } from '../routes/_reporting.js';
@@ -61,8 +62,7 @@ export function createRouters({ app, repos, services }) {
 
   // ── Platform Integrations ────────────────────────────────────
   app.use('/api', createPlatformsGroupRouter(deps));
-
-  // ── Intelligence & Research + Creative Suite ─────────────────
+  app.use('/api/google', requireAuth, createGoogleAdsRouter(repos.settingsRepo, repos.platformAccountsRepo, repos.campaignsRepo));
   app.use('/api', createCreativeGroupRouter(deps));
   app.use('/api', createAiGroupRouter(deps));
 
