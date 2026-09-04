@@ -61,8 +61,7 @@ const navGroups: NavGroup[] = [
   {
     title: 'Research',
     items: [
-      { to: '/meta-ai', label: 'Meta AI', icon: Bot },
-      { to: '/audience-intelligence', label: 'Audience Intel', icon: Bookmark },
+      { to: '/audiences', label: 'Audience Intel', icon: Bookmark },
     ],
     defaultOpen: false,
   },
