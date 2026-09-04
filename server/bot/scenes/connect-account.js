@@ -56,12 +56,25 @@ export const connectScene = new Scenes.WizardScene(
       return;
     }
     ctx.wizard.state.accountName = text;
-    await ctx.reply(
-      `Got it — *${text}*.\n\n` +
-      'Now paste the access token / API key for this account. ' +
-      'It is encrypted at rest and scoped to your Telegram user only.',
-      { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
-    );
+    const platform = ctx.wizard.state.platform;
+    const isMeta = platform === 'meta';
+    
+    let msg = `Got it — *${text}*.\n\n`;
+    
+    if (isMeta) {
+      msg +=
+        '🔑 *How to get your Meta token:*\n' +
+        '1. Open https://developers.facebook.com/tools/explorer/\n' +
+        '2. Select your app (or create one)\n' +
+        '3. Click "Generate Access Token"\n' +
+        '4. Select permissions: ads_management, ads_read, business_management, pages_show_list\n' +
+        '5. Paste the token below\n\n' +
+        'Token is encrypted at rest and scoped to your Telegram user only.';
+    } else {
+      msg += 'Now paste the access token / API key for this account. It is encrypted at rest and scoped to your Telegram user only.';
+    }
+    
+    await ctx.reply(msg, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
     return ctx.wizard.next();
   },
   // Step 2 — capture token, persist, confirm
