@@ -1,283 +1,224 @@
-import { safeFetch } from '../../lib/platform-client.js';
 import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
 import { ConfigurationError } from '../../lib/errors.js';
+import { createLogger } from '../../lib/logger.js';
 
-const BASE = 'https://campaign.api.bingads.microsoft.com';
+const log = createLogger('microsoft-ads-api');
 
 export class MicrosoftAdsAPI extends BasePlatformApiClient {
-  constructor(settingsRepo) {
-    super('microsoft', settingsRepo, { baseUrl: BASE });
+  constructor(settingsRepoOrToken, options = {}) {
+    const settingsRepo = typeof settingsRepoOrToken === 'string' ? null : settingsRepoOrToken;
+    super('microsoft', settingsRepo, { baseUrl: 'https://campaign.api.bingads.microsoft.com/v13' });
+    if (typeof settingsRepoOrToken === 'string') {
+      this._explicitToken = settingsRepoOrToken;
+    }
+    this.developerToken = options.developerToken || '';
+    this.customerId = options.customerId || '';
+    this.accountId = options.accountId || '';
   }
 
-  /**
-   * Resolve OAuth token from settings.
-   */
+  static withToken(token, options = {}) {
+    return new MicrosoftAdsAPI(token, options);
+  }
+
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
     if (!this._userScoped && this.settingsRepo) {
       const creds = this.settingsRepo.getCredentials('microsoft');
-      if (creds?.oauth_token) return creds.oauth_token;
+      if (creds?.access_token) return creds.access_token;
     }
-    throw new ConfigurationError(
-      'Microsoft Ads OAuth token not configured. Complete OAuth flow in Settings.'
-    );
+    throw new ConfigurationError('Microsoft Ads access token not configured.');
   }
 
-  /**
-   * Resolve developer token from settings.
-   */
-  _getDevToken() {
-    if (this.settingsRepo) {
-      const creds = this.settingsRepo.getCredentials('microsoft');
-      if (creds?.developer_token) return creds.developer_token;
-    }
-    throw new ConfigurationError(
-      'Microsoft Ads developer token not configured. Go to Settings > Microsoft Ads. Get one at Microsoft Advertising > Tools > API Center.'
-    );
-  }
-
-  /**
-   * Build standard auth headers for Microsoft Advertising API.
-   */
-  _buildHeaders(accountId) {
-    const headers = {
-      'Authorization': `Bearer ${this._getToken()}`,
-      'Microsoft-Ads-Developer-Token': this._getDevToken(),
-      'Content-Type': 'application/json',
+  _msHeaders() {
+    return {
+      'AuthenticationToken': this._getToken(),
+      'DeveloperToken': this.developerToken,
+      'CustomerId': this.customerId,
+      'AccountId': this.accountId,
     };
-    if (accountId) headers['CustomerId'] = String(accountId);
-    if (this._activeAccountId && !accountId) headers['CustomerId'] = String(this._activeAccountId);
-    return headers;
   }
 
-  async _get(path, params = {}, extraHeaders = {}) {
-    const accountId = extraHeaders['CustomerId'] || this._activeAccountId;
-    const url = new URL(`${this._baseUrl}${path}`);
-    for (const [k, v] of Object.entries(params)) {
-      url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
-    }
-    const res = await safeFetch('microsoft', url.toString(), {
-      headers: { ...this._buildHeaders(accountId), ...extraHeaders },
-    });
-    return await res.json();
-  }
-
-  async _post(path, body = {}, extraHeaders = {}) {
-    const accountId = extraHeaders['CustomerId'] || this._activeAccountId;
-    const res = await safeFetch('microsoft', `${this._baseUrl}${path}`, {
-      method: 'POST',
-      headers: { ...this._buildHeaders(accountId), ...extraHeaders },
-      body: JSON.stringify(body),
-    });
-    return await res.json();
-  }
-
-  /**
-   * List all accounts accessible to the authenticated user.
-   * POST /CustomerManagement/GetAccountsInfo
-   */
-  async listAccounts() {
-    this.log.debug('Fetching Microsoft Ads accounts');
-    const data = await this._post('/CustomerManagement/GetAccountsInfo', {});
-    return (data.AccountInfo || data || []).map(a => ({
-      id: a.Id,
-      name: a.Name,
-      number: a.Number,
-      accountLifeCycleStatus: a.AccountLifeCycleStatus,
-    }));
-  }
-
-  /** Alias — satisfies the platform interface contract. */
-  async getAccounts() { return this.listAccounts(); }
-
-
-  /**
-   * Sync all accounts: campaigns + performance for each.
-   */
-  async syncAllAccounts() {
-    const accounts = await this.listAccounts();
-    const results = [];
-    for (const acct of accounts) {
-      results.push(await this._syncSingleAccount(acct));
-    }
-    return results;
-  }
-
-  async _syncSingleAccount(account) {
+  async _request(method, path, data = null) {
     try {
-      const campaigns = await this.getCampaigns(account.id);
-      const performance = await this.getCampaignPerformance(account.id);
+      const response = await fetch(`${this._baseUrl}${path}`, {
+        method,
+        headers: { ...this._msHeaders(), 'Content-Type': 'application/json' },
+        body: data ? JSON.stringify(data) : undefined,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(`Microsoft Ads API error ${response.status}: ${error?.message || response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (err) {
+      log.error('Microsoft Ads API request failed', { error: err.message, path });
+      throw err;
+    }
+  }
+
+  async getAdAccounts() {
+    try {
+      const data = await this._request('GetAccountsInfo', '/CustomerManagement/v13/AccountsInfo');
+      return (data?.AccountsInfo || []).map(item => ({
+        item: item.AccountId,
+        name: item.AccountName,
+        status: item.AccountStatus,
+        currency: item.CurrencyCode,
+      }));
+    } catch (err) {
+      log.error('Failed to list Microsoft ad accounts', { error: err.message });
+      return [];
+    }
+  }
+
+  async getAccounts() { return this.getAdAccounts(); }
+
+  async getCampaigns(accountId, { limit = 50 } = {}) {
+    try {
+      const data = await this._request('GetCampaignsByAccountId', `/CampaignManagement/v13/Campaigns/${accountId}`, {
+        AccountId: accountId,
+        CampaignType: 'Search Shopping',
+      });
+      return (data?.Campaigns || []).map(item => ({
+        item: item.Campaign.Id,
+        name: item.Campaign.Name,
+        status: this._mapStatus(item.Campaign.Status),
+        budget: item.Campaign.DailyBudget || 0,
+      }));
+    } catch (err) {
+      log.error('Failed to get Microsoft campaigns', { error: err.message });
+      return [];
+    }
+  }
+
+  async getCampaignInsights(accountId, campaignId, { startDate, endDate } = {}) {
+    try {
+      const data = await this._request('GetCampaignMetrics', `/Reporting/v13/CampaignMetrics`, {
+        AccountId: accountId,
+        CampaignId: campaignId,
+        StartDate: startDate,
+        EndDate: endDate,
+      });
+      if (!data?.CampaignMetrics || data.CampaignMetrics.length === 0) return null;
+      const row = data.CampaignMetrics[0];
       return {
-        account,
-        campaigns: campaigns.map(c => this._mapCampaign(c)),
-        insights: performance.map(p => this._mapPerformance(p)),
-        syncedAt: new Date().toISOString(),
+        campaignId,
+        impressions: row.Impressions || 0,
+        clicks: row.Clicks || 0,
+        cost: row.Spend || 0,
+        conversions: row.Conversions || 0,
+        ctr: row.Ctr || 0,
+        averageCpc: row.AverageCpc || 0,
       };
     } catch (err) {
-      return {
-        account,
-        error: err.message,
-        syncedAt: new Date().toISOString(),
-      };
+      log.error('Failed to get Microsoft campaign insights', { error: err.message });
+      return null;
     }
   }
 
-  _mapCampaign(c) {
-    return {
-      id: c.Id,
-      name: c.Name,
-      status: (c.Status || '').toLowerCase(),
-      budget: c.DailyBudget,
-      campaignType: c.CampaignType,
-      bidStrategyType: c.BidStrategyType,
-    };
+  async getMultiCampaignInsights(accountId, campaignIds, { startDate, endDate } = {}) {
+    if (!campaignIds || campaignIds.length === 0) return {};
+    const insights = {};
+    for (const id of campaignIds) {
+      insights[id] = await this.getCampaignInsights(accountId, id, { startDate, endDate });
+    }
+    return insights;
   }
 
-  _mapPerformance(p) {
-    return {
-      campaign_id: p.CampaignId,
-      impressions: parseInt(p.Impressions) || 0,
-      clicks: parseInt(p.Clicks) || 0,
-      spend: parseFloat(p.Spend) || 0,
-      conversions: parseFloat(p.Conversions) || 0,
-      ctr: parseFloat(p.Ctr) || 0,
-      cpc: parseFloat(p.AverageCpc) || 0,
-    };
-  }
-
-  /**
-   * Get campaigns for an account.
-   * POST /Campaigns/GetByCondition
-   */
-  async getCampaigns(accountId, opts = {}) {
-    this.log.debug('Fetching Microsoft Ads campaigns', { accountId });
-    const fields = opts.fields || ['Id', 'Name', 'Status', 'DailyBudget', 'CampaignType', 'BidStrategyType'];
-    const data = await this._post('/Campaigns/GetByCondition', {
-      Field: fields,
-      Ordering: [{ Field: 'Name', Order: 'Ascending' }],
-      PageInfo: { Index: 0, Size: opts.pageSize || 100 },
-      Predicates: [
-        { Field: 'Status', Operator: 'NotEquals', Values: ['Deleted'] },
-      ],
-    }, { 'CustomerId': accountId });
-    return data.Campaigns || data.CampaignValues || [];
-  }
-
-  /**
-   * Get campaign performance report.
-   * POST /Reporting/SubmitCampaignPerformanceReportRequest
-   */
-  async getCampaignPerformance(accountId, { days = 30 } = {}) {
-    this.log.debug('Fetching Microsoft Ads campaign performance', { accountId, days });
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - days);
-
-    const reportRequest = {
-      ReportRequest: {
-        ReportName: 'CampaignPerformanceReport',
-        Format: 'Json',
-        ReportType: 'CampaignPerformanceReport',
-        Time: {
-          CustomDateRangeStart: {
-            Day: startDate.getDate(),
-            Month: startDate.getMonth() + 1,
-            Year: startDate.getFullYear(),
-          },
-          CustomDateRangeEnd: {
-            Day: endDate.getDate(),
-            Month: endDate.getMonth() + 1,
-            Year: endDate.getFullYear(),
-          },
-        },
-        Columns: [
-          'CampaignId', 'CampaignName', 'CampaignStatus',
-          'Impressions', 'Clicks', 'Spend',
-          'Conversions', 'Ctr', 'AverageCpc',
-        ],
-        Scope: {
-          AccountIds: [String(accountId)],
-        },
-      },
-    };
-
-    const data = await this._post('/Reporting/SubmitCampaignPerformanceReportRequest', reportRequest, { 'CustomerId': accountId });
-
-    // The report response may contain a download URL or inline data
-    if (data.ReportDownloadUrl) {
-      const dlRes = await safeFetch('microsoft', data.ReportDownloadUrl, {
-        headers: this._buildHeaders(accountId),
+  async getAccountInsights(accountId, { startDate, endDate } = {}) {
+    try {
+      const data = await this._request('GetAccountMetrics', `/Reporting/v13/AccountMetrics`, {
+        AccountId: accountId,
+        StartDate: startDate,
+        EndDate: endDate,
       });
-      const reportData = await dlRes.json();
-      return reportData.Rows || reportData || [];
+      if (!data?.AccountMetrics || data.AccountMetrics.length === 0) return null;
+      const row = data.AccountMetrics[0];
+      return {
+        accountId,
+        impressions: row.Impressions || 0,
+        clicks: row.Clicks || 0,
+        cost: row.Spend || 0,
+        conversions: row.Conversions || 0,
+      };
+    } catch (err) {
+      log.error('Failed to get Microsoft account insights', { error: err.message });
+      return null;
     }
-
-    return data.Rows || data.ReportData?.Rows || [];
   }
 
-  /**
-   * Create a campaign.
-   * POST /Campaigns/Add
-   */
-  async createCampaign(accountId, { name, dailyBudget, campaignType = 'SEARCH', status = 'Paused' }) {
-    this.log.info('Creating Microsoft Ads campaign', { accountId, name });
-    const data = await this._post('/Campaigns/Add', {
-      Campaigns: [{
-        Name: name,
-        DailyBudget: dailyBudget,
-        CampaignType: campaignType,
-        Status: status,
-        BudgetType: 'DailyBudgetStandard',
-      }],
-    }, { 'CustomerId': accountId });
-    this.log.info('Microsoft Ads campaign created', { campaignId: data.CampaignIds?.[0] });
-    return { campaignId: data.CampaignIds?.[0] };
+  async updateCampaign(accountId, campaignId, { status, budget } = {}) {
+    try {
+      const data = await this._request('UpdateCampaign', `/CampaignManagement/v13/Campaigns/${accountId}`, {
+        AccountId: accountId,
+        Campaigns: [{ Id: campaignId, Status: this._reverseMapStatus(status) }],
+      });
+      return { id: campaignId, updated: true, data };
+    } catch (err) {
+      log.error('Failed to update Microsoft campaign', { error: err.message });
+      return { id: campaignId, updated: false, error: err.message };
+    }
   }
 
-  /**
-   * Update a campaign.
-   * POST /Campaigns/Update
-   */
-  async updateCampaign(accountId, campaignId, updates) {
-    this.log.info('Updating Microsoft Ads campaign', { accountId, campaignId });
-    const campaign = { Id: campaignId, ...updates };
-    await this._post('/Campaigns/Update', {
-      Campaigns: [campaign],
-    }, { 'CustomerId': accountId });
-    this.log.info('Microsoft Ads campaign updated', { campaignId });
-    return { campaignId };
+  async createCampaign(accountId, data = {}) {
+    try {
+      const body = {
+        AccountId: accountId,
+        Campaigns: [{
+          Name: data.name || `Campaign ${Date.now()}`,
+          Status: 'Paused',
+          DailyBudget: data.budget || 10,
+          BudgetType: 'DailyBudgetStandard',
+        }],
+      };
+      const result = await this._request('AddCampaigns', `/CampaignManagement/v13/Campaigns/${accountId}`, body);
+      return { campaignId: result?.CampaignIds?.[0], name: body.Campaigns[0].Name, status: 'paused' };
+    } catch (err) {
+      log.error('Failed to create Microsoft campaign', { error: err.message });
+      return { campaignId: null, error: err.message };
+    }
   }
 
-  /**
-   * Get ad groups for a campaign.
-   * POST /AdGroups/GetByConditions
-   */
-  async getAdGroups(accountId, campaignId) {
-    this.log.debug('Fetching Microsoft Ads ad groups', { accountId, campaignId });
-    const data = await this._post('/AdGroups/GetByConditions', {
-      Field: ['Id', 'Name', 'Status', 'CpcBid'],
-      Ordering: [{ Field: 'Name', Order: 'Ascending' }],
-      PageInfo: { Index: 0, Size: 100 },
-      Predicates: [
-        { Field: 'CampaignId', Operator: 'Equals', Values: [String(campaignId)] },
-        { Field: 'Status', Operator: 'NotEquals', Values: ['Deleted'] },
-      ],
-    }, { 'CustomerId': accountId });
-    return data.AdGroups || data.AdGroupValues || [];
+  async syncAllAccounts() {
+    try {
+      const accounts = await this.getAdAccounts();
+      const synced = [];
+      for (const account of accounts) {
+        const campaigns = await this.getCampaigns(account.id);
+        synced.push({ ...account, campaigns, campaignCount: campaigns.length });
+      }
+      return synced;
+    } catch (err) {
+      log.error('Failed to sync Microsoft accounts', { error: err.message });
+      return [];
+    }
   }
 
-  /**
-   * Get keywords for an ad group.
-   * POST /Keywords/GetByAdGroupId
-   */
-  async getKeywords(accountId, adGroupId) {
-    this.log.debug('Fetching Microsoft Ads keywords', { accountId, adGroupId });
-    const data = await this._post('/Keywords/GetByAdGroupId', {
-      AdGroupId: String(adGroupId),
-      Field: ['Id', 'Text', 'Status', 'Bid', 'MatchType'],
-      Ordering: [{ Field: 'Text', Order: 'Ascending' }],
-      PageInfo: { Index: 0, Size: 100 },
-    }, { 'CustomerId': accountId });
-    return data.Keywords || data.KeywordValues || [];
+  _mapStatus(status) {
+    const statusMap = {
+      'Active': 'active',
+      'Paused': 'paused',
+      'Deleted': 'removed',
+      'Expired': 'removed',
+    };
+    return statusMap[status] || status?.toLowerCase() || 'unknown';
+  }
+
+  _reverseMapStatus(status) {
+    const statusMap = {
+      'active': 'Active',
+      'paused': 'Paused',
+      'removed': 'Deleted',
+    };
+    return statusMap[status] || 'Paused';
+  }
+
+  isExpiredToken(err) {
+    const msg = `${err?.message || ''}`.toLowerCase();
+    return err?.code === 401 || err?.code === 403 || msg.includes('unauthorized') || msg.includes('token expired');
   }
 }
+
+export default MicrosoftAdsAPI;

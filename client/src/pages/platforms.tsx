@@ -217,6 +217,51 @@ export function PlatformsPage() {
                     </ol>
                   </div>
                 )}
+                {p.key === 'tiktok' && (
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 10, lineHeight: 1.5 }}>
+                    <strong>How to get TikTok Ads token:</strong>
+                    <ol style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                      <li>Go to <a href="https://ads.tiktok.com/marketing_api/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>TikTok Marketing API</a></li>
+                      <li>Create an app and get App ID + Secret</li>
+                      <li>Generate access token via OAuth2</li>
+                      <li>Get Advertiser ID from TikTok Ads Manager</li>
+                      <li>Paste token below</li>
+                    </ol>
+                  </div>
+                )}
+                {p.key === 'pinterest' && (
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 10, lineHeight: 1.5 }}>
+                    <strong>How to get Pinterest token:</strong>
+                    <ol style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                      <li>Go to <a href="https://developers.pinterest.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>Pinterest Developers</a></li>
+                      <li>Create an app</li>
+                      <li>Generate access token</li>
+                      <li>Paste token below</li>
+                    </ol>
+                  </div>
+                )}
+                {p.key === 'linkedin' && (
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 10, lineHeight: 1.5 }}>
+                    <strong>How to get LinkedIn token:</strong>
+                    <ol style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                      <li>Go to <a href="https://developer.linkedin.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>LinkedIn Developers</a></li>
+                      <li>Create an app</li>
+                      <li>Generate access token with ads scope</li>
+                      <li>Paste token below</li>
+                    </ol>
+                  </div>
+                )}
+                {p.key === 'microsoft' && (
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 10, lineHeight: 1.5 }}>
+                    <strong>How to get Microsoft Ads token:</strong>
+                    <ol style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                      <li>Go to <a href="https://ads.microsoft.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>Microsoft Ads</a></li>
+                      <li>Apply for Developer Token</li>
+                      <li>Generate OAuth2 refresh token</li>
+                      <li>Paste token below</li>
+                    </ol>
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <input
                     type="password"

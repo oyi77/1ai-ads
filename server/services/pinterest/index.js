@@ -1,299 +1,211 @@
-import { safeFetch } from '../../lib/platform-client.js';
 import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
-import { ConfigurationError, PlatformError } from '../../lib/errors.js';
+import { ConfigurationError } from '../../lib/errors.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('pinterest-ads-api');
 
 export class PinterestAdsAPI extends BasePlatformApiClient {
-  constructor(settingsRepo) {
+  constructor(settingsRepoOrToken) {
+    const settingsRepo = typeof settingsRepoOrToken === 'string' ? null : settingsRepoOrToken;
     super('pinterest', settingsRepo, { baseUrl: 'https://api.pinterest.com/v5' });
+    
+    if (typeof settingsRepoOrToken === 'string') {
+      this._explicitToken = settingsRepoOrToken;
+    }
   }
 
-  /**
-   * Resolve Pinterest OAuth 2.0 Bearer token.
-   * Checks explicit token > settingsRepo credentials > throws.
-   */
+  static withToken(token) {
+    return new PinterestAdsAPI(token);
+  }
+
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
     if (!this._userScoped && this.settingsRepo) {
       const creds = this.settingsRepo.getCredentials('pinterest');
       if (creds?.access_token) return creds.access_token;
     }
-    throw new ConfigurationError(
-      'Pinterest access token not configured. Go to Settings to connect your Pinterest account.'
-    );
+    throw new ConfigurationError('Pinterest Ads access token not configured.');
   }
 
-  /**
-   * Build auth headers for Pinterest API requests.
-   */
-  _authHeaders() {
-    const token = this._getToken();
-    return { 'Authorization': `Bearer ${token}` };
-  }
+  async _request(method, path, params = {}, body = null) {
+    const url = new URL(`${this._baseUrl}${path}`);
+    for (const [k, v] of Object.entries(params)) {
+      url.searchParams.set(k, String(v));
+    }
 
-  /**
-   * GET /ad_accounts — list ad accounts the token has access to.
-   * @returns {Array<{id: string, name: string, currency: string, country: string}>}
-   */
-  async getAdAccounts() {
-    this.log.debug('Fetching Pinterest ad accounts');
     try {
-      const data = await this._get('/ad_accounts', {}, this._authHeaders());
-      return (data.items || []).map(a => ({
-        id: a.id,
-        name: a.name,
-        currency: a.currency,
-        country: a.country,
-      }));
+      const response = await fetch(url.toString(), {
+        method,
+        headers: {
+          'Authorization': `Bearer ${this._getToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(`Pinterest API error ${response.status}: ${error?.message || response.statusText}`);
+      }
+
+      return await response.json();
     } catch (err) {
-      this.log.error('Failed to fetch Pinterest ad accounts', { error: err.message });
-      throw new PlatformError(`Failed to fetch ad accounts: ${err.message}`, 'pinterest');
+      log.error('Pinterest API request failed', { error: err.message, path });
+      throw err;
     }
   }
 
-  /** Alias — satisfies the platform interface contract. */
+  async getAdAccounts() {
+    try {
+      const data = await this._request('GET', '/ad_accounts');
+      return (data?.items || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        status: item.status,
+        country: item.country,
+        currency: item.currency,
+      }));
+    } catch (err) {
+      log.error('Failed to list Pinterest ad accounts', { error: err.message });
+      return [];
+    }
+  }
+
   async getAccounts() { return this.getAdAccounts(); }
 
-
-  /**
-   * GET /ad_accounts/:id/campaigns — list campaigns for an ad account.
-   * Filters by entity_status (ACTIVE, PAUSED, ARCHIVED).
-   */
-  async getCampaigns(adAccountId, { entityStatus, pageSize = 100 } = {}) {
-    this.log.debug('Fetching Pinterest campaigns', { adAccountId });
-    const params = { page_size: pageSize };
-    if (entityStatus) params.entity_statuses = entityStatus;
+  async getCampaigns(adAccountId, { limit = 50 } = {}) {
     try {
-      const data = await this._get(
-        `/ad_accounts/${adAccountId}/campaigns`,
-        params,
-        this._authHeaders(),
-      );
-      return (data.items || []).map(c => ({
-        id: c.id,
-        name: c.name,
-        status: c.status,
-        daily_spend_cap: c.daily_spend_cap,
-        lifetime_spend_cap: c.lifetime_spend_cap,
-        objective_type: c.objective_type,
-        created_time: c.created_time,
-        updated_time: c.updated_time,
-      }));
-    } catch (err) {
-      this.log.error('Failed to fetch Pinterest campaigns', { adAccountId, error: err.message });
-      throw new PlatformError(`Failed to fetch campaigns: ${err.message}`, 'pinterest');
-    }
-  }
-
-  /**
-   * GET /ad_accounts/:id/analytics — aggregate analytics for an ad account.
-   * Returns impressions, clicks, spend, conversions, CPC, CTR.
-   */
-  async getCampaignAnalytics(adAccountId, { startDate, endDate, granularity = 'TOTAL' } = {}) {
-    this.log.debug('Fetching Pinterest ad account analytics', { adAccountId });
-    const start = startDate || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-    const end = endDate || new Date().toISOString().slice(0, 10);
-    const params = {
-      start_date: start,
-      end_date: end,
-      granularity,
-      columns: 'IMPRESSIONS,CLICKS,SPEND_IN_MICRO_DOLLAR,CTR,CPC_IN_MICRO_DOLLAR,TOTAL_CONVERSIONS,ENGAGEMENT',
-    };
-    try {
-      const data = await this._get(
-        `/ad_accounts/${adAccountId}/analytics`,
-        params,
-        this._authHeaders(),
-      );
-      return (data || []).map(row => ({
-        impressions: row.IMPRESSIONS ?? 0,
-        clicks: row.CLICKS ?? 0,
-        spend: (row.SPEND_IN_MICRO_DOLLAR ?? 0) / 1_000_000,
-        ctr: row.CTR ?? 0,
-        cpc: (row.CPC_IN_MICRO_DOLLAR ?? 0) / 1_000_000,
-        conversions: row.TOTAL_CONVERSIONS ?? 0,
-        engagement: row.ENGAGEMENT ?? 0,
-      }));
-    } catch (err) {
-      this.log.error('Failed to fetch Pinterest ad account analytics', { adAccountId, error: err.message });
-      throw new PlatformError(`Failed to fetch analytics: ${err.message}`, 'pinterest');
-    }
-  }
-
-  /**
-   * GET /campaigns/:id/analytics — analytics for a specific campaign.
-   */
-  async getCampaignInsights(campaignId, { startDate, endDate, granularity = 'TOTAL' } = {}) {
-    this.log.debug('Fetching Pinterest campaign insights', { campaignId });
-    const start = startDate || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-    const end = endDate || new Date().toISOString().slice(0, 10);
-    const params = {
-      start_date: start,
-      end_date: end,
-      granularity,
-      columns: 'IMPRESSIONS,CLICKS,SPEND_IN_MICRO_DOLLAR,CTR,CPC_IN_MICRO_DOLLAR,TOTAL_CONVERSIONS,ENGAGEMENT',
-    };
-    try {
-      const data = await this._get(
-        `/campaigns/${campaignId}/analytics`,
-        params,
-        this._authHeaders(),
-      );
-      return (data || []).map(row => ({
-        campaign_id: campaignId,
-        impressions: row.IMPRESSIONS ?? 0,
-        clicks: row.CLICKS ?? 0,
-        spend: (row.SPEND_IN_MICRO_DOLLAR ?? 0) / 1_000_000,
-        ctr: row.CTR ?? 0,
-        cpc: (row.CPC_IN_MICRO_DOLLAR ?? 0) / 1_000_000,
-        conversions: row.TOTAL_CONVERSIONS ?? 0,
-        engagement: row.ENGAGEMENT ?? 0,
-      }));
-    } catch (err) {
-      this.log.error('Failed to fetch Pinterest campaign insights', { campaignId, error: err.message });
-      throw new PlatformError(`Failed to fetch campaign insights: ${err.message}`, 'pinterest');
-    }
-  }
-
-  /**
-   * POST /ad_accounts/:id/campaigns — create a new campaign.
-   */
-  async createCampaign(adAccountId, { name, status = 'PAUSED', dailySpendCap, objectiveType = 'AWARENESS' }) {
-    this.log.info('Creating Pinterest campaign', { adAccountId, name });
-    if (!name) throw new ConfigurationError('Campaign name is required');
-    const body = {
-      name,
-      status,
-      objective_type: objectiveType,
-      ...(dailySpendCap !== null && dailySpendCap !== undefined && { daily_spend_cap: dailySpendCap }),
-    };
-    try {
-      const data = await this._post(
-        `/ad_accounts/${adAccountId}/campaigns`,
-        body,
-        this._authHeaders(),
-      );
-      this.log.info('Pinterest campaign created', { campaignId: data.id });
-      return { id: data.id, name: data.name, status: data.status };
-    } catch (err) {
-      this.log.error('Failed to create Pinterest campaign', { adAccountId, error: err.message });
-      throw new PlatformError(`Failed to create campaign: ${err.message}`, 'pinterest');
-    }
-  }
-
-  /**
-   * PATCH /campaigns/:id — update an existing campaign.
-   */
-  async updateCampaign(campaignId, updates) {
-    this.log.info('Updating Pinterest campaign', { campaignId });
-    const body = {};
-    if (updates.name !== null && updates.name !== undefined) body.name = updates.name;
-    if (updates.status !== null && updates.status !== undefined) body.status = updates.status;
-    if (updates.dailySpendCap !== null && updates.dailySpendCap !== undefined) body.daily_spend_cap = updates.dailySpendCap;
-    try {
-      const res = await safeFetch('pinterest', `${this._baseUrl}/campaigns/${campaignId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...this._authHeaders() },
-        body: JSON.stringify(body),
+      const data = await this._request('GET', `/ad_accounts/${adAccountId}/campaigns`, {
+        page_size: limit,
       });
-      const data = await res.json();
-      this.log.info('Pinterest campaign updated', { campaignId });
-      return { id: data.id, name: data.name, status: data.status };
-    } catch (err) {
-      this.log.error('Failed to update Pinterest campaign', { campaignId, error: err.message });
-      throw new PlatformError(`Failed to update campaign: ${err.message}`, 'pinterest');
-    }
-  }
-
-  /**
-   * GET /campaigns/:id/ad_groups — list ad groups under a campaign.
-   */
-  async getAdGroups(adAccountId, campaignId) {
-    this.log.debug('Fetching Pinterest ad groups', { adAccountId, campaignId });
-    try {
-      const data = await this._get(
-        `/campaigns/${campaignId}/ad_groups`,
-        {},
-        this._authHeaders(),
-      );
-      return (data.items || []).map(ag => ({
-        id: ag.id,
-        name: ag.name,
-        status: ag.status,
-        campaign_id: ag.campaign_id,
-        bid_strategy_type: ag.bid_strategy_type,
+      return (data?.items || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        status: this._mapStatus(item.status),
+        budget: item.budget?.amount || 0,
+        created_time: item.created_time,
       }));
     } catch (err) {
-      this.log.error('Failed to fetch Pinterest ad groups', { campaignId, error: err.message });
-      throw new PlatformError(`Failed to fetch ad groups: ${err.message}`, 'pinterest');
+      log.error('Failed to get Pinterest campaigns', { error: err.message });
+      return [];
     }
   }
 
-  /**
-   * GET /ad_accounts/:id/targeting/keywords — targeting keywords for an ad account.
-   */
-  async getTargetingKeywords(adAccountId) {
-    this.log.debug('Fetching Pinterest targeting keywords', { adAccountId });
+  async getCampaignInsights(adAccountId, campaignId, { startDate, endDate } = {}) {
     try {
-      const data = await this._get(
-        `/ad_accounts/${adAccountId}/targeting/keywords`,
-        {},
-        this._authHeaders(),
-      );
-      return data.items || [];
+      const params = {
+        start_date: startDate,
+        end_date: endDate,
+        metrics: 'IMPRESSION,CLICK,SPEND_IN_DOLLAR,CONVERSION,COST_PER_CONVERSION',
+      };
+      const data = await this._request('GET', `/ad_accounts/${adAccountId}/campaigns/${campaignId}/analytics`, params);
+      return {
+        campaignId,
+        impressions: data?.IMPRESSION || 0,
+        clicks: data?.CLICK || 0,
+        spend: data?.SPEND_IN_DOLLAR || 0,
+        conversions: data?.CONVERSION || 0,
+      };
     } catch (err) {
-      this.log.error('Failed to fetch Pinterest targeting keywords', { adAccountId, error: err.message });
-      throw new PlatformError(`Failed to fetch targeting keywords: ${err.message}`, 'pinterest');
+      log.error('Failed to get Pinterest campaign insights', { error: err.message });
+      return null;
     }
   }
 
-  /**
-   * GET /targeting/interests — search available targeting interests.
-   */
-  async searchTargeting(interest, { limit = 25 } = {}) {
-    this.log.debug('Searching Pinterest targeting interests', { interest });
+  async getMultiCampaignInsights(adAccountId, campaignIds, { startDate, endDate } = {}) {
+    if (!campaignIds || campaignIds.length === 0) return {};
+    const insights = {};
+    for (const id of campaignIds) {
+      insights[id] = await this.getCampaignInsights(adAccountId, id, { startDate, endDate });
+    }
+    return insights;
+  }
+
+  async getAccountInsights(adAccountId, { startDate, endDate } = {}) {
     try {
-      const data = await this._get(
-        '/targeting/interests',
-        { interest, limit },
-        this._authHeaders(),
-      );
-      return data.items || [];
+      const params = {
+        start_date: startDate,
+        end_date: endDate,
+        metrics: 'IMPRESSION,CLICK,SPEND_IN_DOLLAR,CONVERSION',
+      };
+      const data = await this._request('GET', `/ad_accounts/${adAccountId}/analytics`, params);
+      return {
+        adAccountId,
+        impressions: data?.IMPRESSION || 0,
+        clicks: data?.CLICK || 0,
+        spend: data?.SPEND_IN_DOLLAR || 0,
+        conversions: data?.CONVERSION || 0,
+      };
     } catch (err) {
-      this.log.error('Failed to search Pinterest targeting interests', { interest, error: err.message });
-      throw new PlatformError(`Failed to search targeting interests: ${err.message}`, 'pinterest');
+      log.error('Failed to get Pinterest account insights', { error: err.message });
+      return null;
     }
   }
 
-  /**
-   * Sync all ad accounts: campaigns + analytics for each.
-   * @returns {Array<{account, campaigns, insights, syncedAt}>}
-   */
+  async updateCampaign(adAccountId, campaignId, { status } = {}) {
+    try {
+      const data = await this._request('PATCH', `/ad_accounts/${adAccountId}/campaigns/${campaignId}`, {}, {
+        status: this._reverseMapStatus(status),
+      });
+      return { id: campaignId, updated: true, data };
+    } catch (err) {
+      log.error('Failed to update Pinterest campaign', { error: err.message });
+      return { id: campaignId, updated: false, error: err.message };
+    }
+  }
+
+  async createCampaign(adAccountId, data = {}) {
+    try {
+      const body = {
+        name: data.name || `Campaign ${Date.now()}`,
+        status: 'ACTIVE',
+        budget: { amount: data.budget || 10 },
+      };
+      const result = await this._request('POST', `/ad_accounts/${adAccountId}/campaigns`, {}, body);
+      return { campaignId: result?.id, name: body.name, status: 'active' };
+    } catch (err) {
+      log.error('Failed to create Pinterest campaign', { error: err.message });
+      return { campaignId: null, error: err.message };
+    }
+  }
+
   async syncAllAccounts() {
-    this.log.info('Syncing all Pinterest ad accounts');
-    const accounts = await this.getAdAccounts();
-    const results = [];
-    for (const acct of accounts) {
-      results.push(await this._syncSingleAccount(acct));
+    try {
+      const accounts = await this.getAdAccounts();
+      const synced = [];
+      for (const account of accounts) {
+        const campaigns = await this.getCampaigns(account.id);
+        synced.push({ ...account, campaigns, campaignCount: campaigns.length });
+      }
+      return synced;
+    } catch (err) {
+      log.error('Failed to sync Pinterest accounts', { error: err.message });
+      return [];
     }
-    return results;
   }
 
-  async _syncSingleAccount(account) {
-    try {
-      const campaigns = await this.getCampaigns(account.id);
-      const analytics = await this.getCampaignAnalytics(account.id);
-      return {
-        account: { id: account.id, name: account.name, currency: account.currency, country: account.country },
-        campaigns,
-        insights: analytics,
-        syncedAt: new Date().toISOString(),
-      };
-    } catch (err) {
-      return {
-        account: { id: account.id, name: account.name, currency: account.currency, country: account.country },
-        error: err.message,
-        syncedAt: new Date().toISOString(),
-      };
-    }
+  _mapStatus(status) {
+    const statusMap = {
+      'ACTIVE': 'active',
+      'PAUSED': 'paused',
+      'DELETED': 'removed',
+    };
+    return statusMap[status] || status?.toLowerCase() || 'unknown';
+  }
+
+  _reverseMapStatus(status) {
+    const statusMap = {
+      'active': 'ACTIVE',
+      'paused': 'PAUSED',
+      'removed': 'DELETED',
+    };
+    return statusMap[status] || 'PAUSED';
+  }
+
+  isExpiredToken(err) {
+    const msg = `${err?.message || ''}`.toLowerCase();
+    return err?.code === 401 || err?.code === 403 || msg.includes('unauthorized') || msg.includes('token expired');
   }
 }
+
+export default PinterestAdsAPI;
