@@ -223,7 +223,7 @@ export class CampaignOrchestrator {
     return map[objective] || 'LEARN_MORE';
   }
 
-  _buildDefaultTargeting(suggestions) {
+_buildDefaultTargeting(_suggestions) {
     return {
       geo_locations: { countries: ['ID'] },
       age_min: 18,

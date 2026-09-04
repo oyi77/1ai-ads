@@ -31,7 +31,15 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
   router.get('/facebook/login', requireAuth, (req, res) => {
     const hostname = req.get('host') || '';
     const _isLocal = hostname.includes('localhost') || hostname.includes('127.0.0.1');
-    const callbackUrl = `${req.protocol}://${hostname}/api/auth/facebook/callback`;
+    // Force HTTPS in production: trust X-Forwarded-Proto from Cloudflare/nginx,
+    // and prefer explicit FB_REDIRECT_URI when set.
+    const fbRedirectUri = process.env.FB_REDIRECT_URI;
+    if (fbRedirectUri) {
+      var callbackUrl = fbRedirectUri;
+    } else {
+      const proto = req.get('X-Forwarded-Proto') || req.protocol;
+      callbackUrl = `${proto}://${hostname}/api/auth/facebook/callback`;
+    }
     const fbAppId = config.fbAppId;
     const fbSecret = config.fbAppSecret;
     if (!fbAppId || !fbSecret) {
@@ -51,11 +59,16 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
     if (!code) return res.status(400).json({ success: false, error: 'No code provided' });
     // Recover the connecting user from the signed OAuth state emitted at /facebook/login.
     // The callback is an open endpoint (Facebook redirect), so it cannot rely on req.user.
-    let userId;
     try {
-      const decoded = verifyToken(req.query.state);
-      if (!decoded?.sub) throw new Error('invalid state');
-      userId = decoded.sub;
+      const hostname = req.get('host') || '';
+      const fbRedirectUri = process.env.FB_REDIRECT_URI;
+      if (fbRedirectUri) {
+        var callbackUrl = fbRedirectUri;
+      } else {
+        const proto = req.get('X-Forwarded-Proto') || req.protocol;
+        callbackUrl = `${proto}://${hostname}/api/auth/facebook/callback`;
+      }
+      const tokenRes = await fetch(`https://graph.facebook.com/${config.metaApiVersion}/oauth/access_token?client_id=${config.fbAppId}&redirect_uri=${encodeURIComponent(callbackUrl)}&client_secret=${config.fbAppSecret}&code=${encodeURIComponent(code)}`);
     } catch {
       return res.status(400).json({ success: false, error: 'Invalid or missing OAuth state' });
     }

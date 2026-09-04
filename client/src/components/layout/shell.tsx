@@ -72,7 +72,7 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/automation', label: 'Automation', icon: Zap },
       { to: '/meta-ai', label: 'Meta AI Chat', icon: Bot },
-      { to: '/audit-trail', label: 'Audit Trail', icon: FileBarChart },
+{ to: '/audit', label: 'Audit Trail', icon: FileBarChart },
     ],
     defaultOpen: false,
   },

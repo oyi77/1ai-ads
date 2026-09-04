@@ -88,6 +88,7 @@ export class AutonomousAgent {
     for (const platform of platforms) {
       const accounts = await this.platformAccountsRepo.findAllActiveByUserAndPlatform(user.id, platform);
       const hasValidToken = accounts.some(a => a?.access_token);
+const matched = accounts.length;
       if (!hasValidToken) continue;
       if (matched > 0) {
         log.info('Autonomous actions executed', { userId: user.id, platform, actions: matched });

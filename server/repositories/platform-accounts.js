@@ -60,7 +60,7 @@ export class PlatformAccountsRepository {
     const rows = this.db.prepare(
       'SELECT * FROM platform_accounts WHERE user_id = ? AND platform = ? AND is_active = 1 ORDER BY created_at DESC'
     ).all(userId, platform);
-    return rows.map(r => ({ ...row, credentials: decryptCredentials(r.credentials) }));
+return rows.map(r => ({ ...r, credentials: decryptCredentials(r.credentials) }));
   }
 
   findByUserId(userId) {

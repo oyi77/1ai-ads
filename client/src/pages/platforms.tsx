@@ -104,7 +104,7 @@ export function PlatformsPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {PLATFORMS.map(p => {
           const existingList = connectedList.filter(a => a.platform === p.key);
-          const existing = existingList[0];
+const _existing = existingList[0];
           const token = tokenInputs[p.key] || '';
 
           return (
