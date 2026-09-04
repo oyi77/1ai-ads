@@ -2,7 +2,7 @@ import { Outlet, NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Megaphone, LogOut, Menu, X,
   Library, Activity, FlaskConical, BarChart3, Zap, Eye, GitBranch, LayoutGrid,
-  TrendingUp, Bot, FileText, Globe, Users, Link2, FileEdit, Layers, Boxes, Receipt, Bookmark, Target, FileBarChart, CreditCard,
+  TrendingUp, Bot, FileText, Globe, Users, Link2, FileEdit, Layers, Boxes, Receipt, Bookmark, Target, FileBarChart, CreditCard, Key,
   ChevronDown, ChevronRight,
 } from 'lucide-react';
 import type { CSSProperties } from 'react';
@@ -22,6 +22,7 @@ const navGroups: NavGroup[] = [
     title: 'Overview',
     items: [
       { to: '/app', label: 'Dashboard', icon: LayoutDashboard },
+      { to: '/reports', label: 'Account Reports', icon: FileBarChart },
     ],
     defaultOpen: true,
   },
@@ -29,41 +30,39 @@ const navGroups: NavGroup[] = [
     title: 'Campaigns',
     items: [
       { to: '/campaigns', label: 'Campaigns', icon: Megaphone },
-      { to: '/ads', label: 'Ads Manager', icon: Layers },
-      { to: '/adsets', label: 'Ad Sets', icon: Boxes },
-      { to: '/templates', label: 'Templates', icon: FileText },
-      { to: '/drafts', label: 'Drafts', icon: FileEdit },
+      { to: '/adsets', label: 'Ad Sets', icon: Layers },
+      { to: '/ads', label: 'Ads', icon: Boxes },
+      { to: '/landing-pages', label: 'Landing Pages', icon: Globe },
+      { to: '/audiences', label: 'Audiences', icon: Users },
+      { to: '/targeting', label: 'Targeting', icon: Target },
     ],
-    defaultOpen: true,
+    defaultOpen: false,
   },
   {
     title: 'Creative',
     items: [
-      { to: '/creative-library', label: 'Creative Library', icon: Library },
-      { to: '/creative-fatigue', label: 'Creative Fatigue', icon: Activity },
-      { to: '/landing-pages', label: 'Landing Pages', icon: Globe },
+      { to: '/creative-library', label: 'Library', icon: Library },
+      { to: '/creative-fatigue', label: 'Fatigue', icon: Activity },
+      { to: '/templates', label: 'Templates', icon: FileText },
     ],
     defaultOpen: false,
   },
   {
     title: 'Insights',
     items: [
-      { to: '/reporting', label: 'Reporting', icon: BarChart3 },
-      { to: '/reports', label: 'Account Reports', icon: FileBarChart },
+      { to: '/reporting', label: 'Reports', icon: BarChart3 },
       { to: '/ab-tests', label: 'A/B Tests', icon: FlaskConical },
       { to: '/attribution', label: 'Attribution', icon: GitBranch },
-      { to: '/widgets', label: 'Widgets', icon: LayoutGrid },
+      { to: '/competitors', label: 'Competitors', icon: Eye },
+      { to: '/trending', label: 'Trending', icon: TrendingUp },
     ],
     defaultOpen: false,
   },
   {
     title: 'Research',
     items: [
-      { to: '/competitors', label: 'Competitors', icon: Eye },
-      { to: '/trending', label: 'Trending Ads', icon: TrendingUp },
-      { to: '/audiences', label: 'Audiences', icon: Users },
-      { to: '/saved-audiences', label: 'Saved Audiences', icon: Bookmark },
-      { to: '/targeting', label: 'Advanced Targeting', icon: Target },
+      { to: '/meta-ai', label: 'Meta AI', icon: Bot },
+      { to: '/audience-intelligence', label: 'Audience Intel', icon: Bookmark },
     ],
     defaultOpen: false,
   },
@@ -71,8 +70,8 @@ const navGroups: NavGroup[] = [
     title: 'AI & Automation',
     items: [
       { to: '/automation', label: 'Automation', icon: Zap },
-      { to: '/meta-ai', label: 'Meta AI Chat', icon: Bot },
-{ to: '/audit', label: 'Audit Trail', icon: FileBarChart },
+      { to: '/drafts', label: 'Drafts', icon: FileEdit },
+      { to: '/widgets', label: 'Widgets', icon: LayoutGrid },
     ],
     defaultOpen: false,
   },
@@ -82,6 +81,7 @@ const navGroups: NavGroup[] = [
       { to: '/platforms', label: 'Platforms', icon: Link2 },
       { to: '/invoices', label: 'Invoices', icon: Receipt },
       { to: '/billing', label: 'Billing', icon: CreditCard },
+      { to: '/api-keys', label: 'API Keys', icon: Key },
       { to: '/settings', label: 'Settings', icon: LayoutGrid },
     ],
     defaultOpen: false,
@@ -102,13 +102,17 @@ function NavItem({ to, label, icon: Icon, onClick }: NavItemProps) {
       end={to === '/app'}
       onClick={onClick}
       style={({ isActive }) => ({
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '9px 14px', borderRadius: 8,
-        textDecoration: 'none', fontSize: '0.84rem', fontWeight: 500,
-        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        background: isActive ? 'rgba(139,146,168,0.12)' : 'transparent',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '8px 14px',
+        borderRadius: 6,
+        fontSize: '0.82rem',
+        fontWeight: 500,
         color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-        transition: 'background 0.15s, color 0.15s',
+        background: isActive ? 'rgba(0,168,132,0.08)' : 'transparent',
+        textDecoration: 'none',
+        transition: 'all 0.15s',
       })}
     >
       <Icon size={16} style={{ flexShrink: 0 }} />
@@ -120,148 +124,214 @@ function NavItem({ to, label, icon: Icon, onClick }: NavItemProps) {
 const MOBILE_BREAKPOINT = 768;
 
 export function Shell() {
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= MOBILE_BREAKPOINT);
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(navGroups.map(g => [g.title, g.defaultOpen]))
-  );
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeGroup, setActiveGroup] = useState<string | null>('Overview');
+  const [isMobile, setIsMobile] = useState(false);
+  const [user, setUser] = useState<{ username: string; plan: string } | null>(null);
 
   useEffect(() => {
-    const onResize = () => {
+    const checkMobile = () => {
       const mobile = window.innerWidth < MOBILE_BREAKPOINT;
       setIsMobile(mobile);
       if (mobile) setSidebarOpen(false);
-      else setSidebarOpen(true);
     };
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  useEffect(() => {
+    api.get('/auth/me').then(res => {
+      if (res?.data) setUser(res.data);
+    }).catch(() => {});
+  }, []);
 
-  const toggleGroup = (title: string) => {
-    setOpenGroups(prev => ({ ...prev, [title]: !prev[title] }));
-  };
+  function toggleGroup(title: string) {
+    setActiveGroup(prev => prev === title ? null : title);
+  }
 
-  const closeSidebar = () => { if (isMobile) setSidebarOpen(false); };
+  function handleNavClick() {
+    if (isMobile) setSidebarOpen(false);
+  }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', position: 'relative' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
       {/* Mobile overlay */}
       {isMobile && sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 99 }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 99,
+          }}
         />
       )}
 
       {/* Sidebar */}
-      <nav
+      <aside
         style={{
-          width: sidebarOpen ? 240 : 0,
-          minWidth: sidebarOpen ? 240 : 0,
+          width: sidebarOpen ? 240 : 60,
+          flexShrink: 0,
           background: 'var(--bg-elevated)',
           borderRight: '1px solid var(--border)',
-          display: 'flex', flexDirection: 'column',
+          display: 'flex',
+          flexDirection: 'column',
           position: isMobile ? 'fixed' : 'sticky',
-          top: 0, left: 0,
+          top: 0,
+          left: 0,
           height: '100vh',
           zIndex: 100,
-          transition: 'width 0.2s, min-width 0.2s',
+          transition: 'width 0.2s',
           overflow: 'hidden',
         }}
       >
-        {/* Header */}
-        <div style={{ padding: '20px 16px 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: 8, background: 'var(--accent)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--bg-deep)', fontWeight: 800, fontSize: '0.7rem', flexShrink: 0,
-            }}>AF</div>
-            {sidebarOpen && <span style={{ fontWeight: 700, fontSize: '0.95rem', whiteSpace: 'nowrap' }}>AdForge</span>}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <PlanBadge />
-            {isMobile && (
-              <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 4 }}>
-                <X size={18} />
-              </button>
-            )}
-          </div>
+        {/* Logo */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '16px 14px',
+          borderBottom: '1px solid var(--border)',
+        }}>
+          <div style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            background: 'var(--accent)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 800,
+            fontSize: '1.1rem',
+            color: '#000',
+            flexShrink: 0,
+          }}>A</div>
+          {sidebarOpen && (
+            <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>AdForge</span>
+          )}
         </div>
 
-        {/* Nav groups */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 8px' }}>
+        {/* Toggle button */}
+        {!isMobile && (
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            style={{
+              margin: '8px 14px',
+              padding: 8,
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 6,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            {sidebarOpen ? <X size={16} /> : <Menu size={16} />}
+          </button>
+        )}
+
+        {/* Nav Groups */}
+        <nav style={{ flex: 1, overflowY: 'auto', padding: '0 8px' }}>
           {navGroups.map(group => (
             <div key={group.title} style={{ marginBottom: 4 }}>
-              <button
-                onClick={() => toggleGroup(group.title)}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  width: '100%', padding: '8px 12px', marginBottom: 2,
-                  background: 'none', border: 'none', borderRadius: 6,
-                  color: 'var(--text-tertiary)', fontSize: '0.68rem', fontWeight: 700,
-                  textTransform: 'uppercase', letterSpacing: '0.5px',
-                  cursor: 'pointer', transition: 'background 0.15s',
-                }}
-              >
-                <span>{group.title}</span>
-                {openGroups[group.title] ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-              </button>
-              {openGroups[group.title] && group.items.map(item => (
-                <NavItem key={item.to} to={item.to} label={item.label} icon={item.icon} onClick={closeSidebar} />
-              ))}
+              {sidebarOpen && (
+                <button
+                  onClick={() => toggleGroup(group.title)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px 6px',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: 1,
+                    color: 'var(--text-tertiary)',
+                  }}
+                >
+                  <span>{group.title}</span>
+                  {activeGroup === group.title ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                </button>
+              )}
+              {(sidebarOpen && (activeGroup === group.title || !sidebarOpen)) && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {group.items.map(item => (
+                    <NavItem key={item.to} to={item.to} label={item.label} icon={item.icon} onClick={handleNavClick} />
+                  ))}
+                </div>
+              )}
             </div>
           ))}
-        </div>
+        </nav>
 
-        {/* Footer */}
-        <div style={{ padding: '8px', borderTop: '1px solid var(--border)' }}>
-          <button
-            onClick={() => api.logout().then(() => window.location.href = '/')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              width: '100%', padding: '9px 14px', borderRadius: 8,
-              background: 'none', border: 'none',
-              color: 'var(--text-secondary)', fontSize: '0.84rem', fontWeight: 500,
-              cursor: 'pointer',
-            }}
-          >
-            <LogOut size={16} />
-            {sidebarOpen && <span>Sign Out</span>}
-          </button>
-        </div>
-      </nav>
+        {/* User section */}
+        {sidebarOpen && user && (
+          <div style={{
+            padding: '12px 14px',
+            borderTop: '1px solid var(--border)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}>
+            <div style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              background: 'var(--accent)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              color: '#000',
+              flexShrink: 0,
+            }}>
+              {user.username.charAt(0).toUpperCase()}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user.username}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <PlanBadge plan={user.plan} />
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.removeItem('adforge_token');
+                window.location.href = '/login';
+              }}
+              style={{
+                padding: 6,
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--text-tertiary)',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+              title="Logout"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+        )}
+      </aside>
 
       {/* Main content */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        {/* Top bar */}
-        <header style={{
-          padding: '12px 20px', borderBottom: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-elevated)',
-          position: 'sticky', top: 0, zIndex: 50,
-        }}>
-          <button
-            onClick={() => setSidebarOpen(o => !o)}
-            style={{
-              background: 'none', border: 'none', color: 'var(--text-secondary)',
-              cursor: 'pointer', padding: 6, borderRadius: 6,
-            }}
-          >
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-          <div style={{ flex: 1 }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <a href="/app" style={{ fontSize: '0.78rem', color: 'var(--accent)', textDecoration: 'none' }}>Dashboard</a>
-          </div>
-        </header>
-
-        <main style={{ flex: 1, padding: 24, overflow: 'auto' }}>
-          <ErrorBoundary>
-            <Outlet />
-          </ErrorBoundary>
-        </main>
-      </div>
+      <main style={{ flex: 1, minWidth: 0 }}>
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
+      </main>
     </div>
   );
 }

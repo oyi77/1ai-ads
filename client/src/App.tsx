@@ -39,18 +39,15 @@ const AudiencesPage = lazy(() => import('./pages/audiences').then(m => ({ defaul
 const TargetingPage = lazy(() => import('./pages/targeting').then(m => ({ default: m.TargetingPage })));
 const AuditTrailPage = lazy(() => import('./pages/audit-trail').then(m => ({ default: m.AuditTrailPage })));
 const BillingPage = lazy(() => import('./pages/billing').then(m => ({ default: m.BillingPage })));
+const ApiKeysPage = lazy(() => import('./pages/api-keys').then(m => ({ default: m.ApiKeysPage })));
 const VerifyEmailPage = lazy(() => import('./pages/verify-email').then(m => ({ default: m.VerifyEmailPage })));
 const ResetPasswordPage = lazy(() => import('./pages/reset-password').then(m => ({ default: m.ResetPasswordPage })));
 const AccountReportsPage = lazy(() => import('./pages/account-reports').then(m => ({ default: m.AccountReportsPage })));
 
 function Loading() {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-secondary)',
-      fontFamily: 'var(--font)', fontSize: '0.85rem',
-    }}>
-      Loading...
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-base)' }}>
+      <div style={{ fontSize: '1.5rem', color: 'var(--text-secondary)' }}>Loading...</div>
     </div>
   );
 }
@@ -101,6 +98,7 @@ export function App() {
             <Route path="/drafts" element={<DraftsPage />} />
             <Route path="/platforms" element={<PlatformsPage />} />
             <Route path="/billing" element={<BillingPage />} />
+            <Route path="/api-keys" element={<ApiKeysPage />} />
             <Route path="/reports" element={<AccountReportsPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />

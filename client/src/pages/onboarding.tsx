@@ -7,14 +7,14 @@ import type { CSSProperties } from 'react';
 const STEPS = ['Welcome', 'Connect Platform', 'Sync Data', 'AI Setup', 'Done'];
 
 const PLATFORMS = [
-  { key: 'meta', label: 'Meta (Facebook/Instagram)', color: '#1877F2', icon: '📘' },
-  { key: 'google', label: 'Google Ads', color: '#4285F4', icon: '🔍' },
-  { key: 'tiktok', label: 'TikTok Ads', color: '#000000', icon: '🎵' },
-  { key: 'linkedin', label: 'LinkedIn Ads', color: '#0A66C2', icon: '💼' },
-  { key: 'twitter', label: 'Twitter/X Ads', color: '#1DA1F2', icon: '🐦' },
-  { key: 'snapchat', label: 'Snapchat Ads', color: '#FFFC00', icon: '👻' },
-  { key: 'pinterest', label: 'Pinterest Ads', color: '#E60023', icon: '📌' },
-  { key: 'microsoft', label: 'Microsoft/Bing Ads', color: '#00A4EF', icon: '🔷' },
+  { key: 'meta', label: 'Meta (FB/IG)', color: '#1877F2', icon: '📘', tokenUrl: 'https://developers.facebook.com/tools/explorer/' },
+  { key: 'google', label: 'Google Ads', color: '#4285F4', icon: '🔍', tokenUrl: 'https://console.developers.google.com/apis/credentials' },
+  { key: 'tiktok', label: 'TikTok', color: '#000000', icon: '🎵', tokenUrl: 'https://ads.tiktok.com/marketing_api/' },
+  { key: 'linkedin', label: 'LinkedIn', color: '#0A66C2', icon: '💼', tokenUrl: 'https://developer.linkedin.com/apps' },
+  { key: 'twitter', label: 'Twitter/X', color: '#1DA1F2', icon: '🐦', tokenUrl: 'https://developer.twitter.com/en/portal' },
+  { key: 'snapchat', label: 'Snapchat', color: '#FFFC00', icon: '👻', tokenUrl: 'https://ads.snapchat.com/' },
+  { key: 'pinterest', label: 'Pinterest', color: '#E60023', icon: '📌', tokenUrl: 'https://developers.pinterest.com/' },
+  { key: 'microsoft', label: 'Bing', color: '#00A4EF', icon: '🔷', tokenUrl: 'https://ads.microsoft.com/' },
 ];
 
 export function OnboardingPage() {
@@ -74,6 +74,8 @@ export function OnboardingPage() {
     navigate('/app');
   }
 
+  const selectedPlat = PLATFORMS.find(p => p.key === selectedPlatform);
+
   return (
     <div style={containerStyle}>
       <div style={cardStyle}>
@@ -93,8 +95,7 @@ export function OnboardingPage() {
             <div style={logoStyle}>A</div>
             <h1 style={titleStyle}>Welcome to <span style={{ color: 'var(--accent)' }}>AdForge</span></h1>
             <p style={descStyle}>
-              Your AI-powered ad management platform. Connect your ad platforms, manage campaigns,
-              and optimize performance — all from one dashboard.
+              AI-powered ad management. Connect your ad platforms, manage campaigns, optimize performance — all from one dashboard.
             </p>
             <button onClick={() => setStep(1)} style={primaryBtnStyle}>Get Started</button>
           </div>
@@ -115,16 +116,36 @@ export function OnboardingPage() {
                     background: selectedPlatform === p.key ? `${p.color}15` : 'var(--bg-surface)',
                   }}>
                   <span style={{ fontSize: '1.4rem' }}>{p.icon}</span>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 600 }}>{p.label.split('(')[0].trim()}</span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 600 }}>{p.label}</span>
                 </button>
               ))}
             </div>
 
             {selectedPlatform && (
-              <div style={{ marginBottom: 16 }}>
-                <label style={labelStyle}>
-                  {PLATFORMS.find(p => p.key === selectedPlatform)?.label} Access Token
-                </label>
+              <div style={{ marginBottom: 16, padding: 16, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <label style={{ ...labelStyle, margin: 0 }}>
+                    {selectedPlat?.label} Access Token
+                  </label>
+                  {selectedPlat?.tokenUrl && (
+                    <a href={selectedPlat.tokenUrl} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: '0.7rem', color: 'var(--accent)', textDecoration: 'none' }}>
+                      Get token →
+                    </a>
+                  )}
+                </div>
+                {selectedPlatform === 'meta' && (
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 8, lineHeight: 1.5 }}>
+                    <strong>Cara dapat token Meta:</strong>
+                    <ol style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                      <li>Buka <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>Graph Explorer</a></li>
+                      <li>Pilih app (atau buat baru)</li>
+                      <li>Klik "Generate Access Token"</li>
+                      <li>Pilih permissions: ads_management, ads_read, business_management, pages_show_list</li>
+                      <li>Paste token di bawah</li>
+                    </ol>
+                  </div>
+                )}
                 <input type="password" value={token} onChange={e => setToken(e.target.value)}
                   placeholder="Paste your access token here"
                   style={inputStyle} />
@@ -261,85 +282,135 @@ export function OnboardingPage() {
 
 function CheckItem({ text, done }: { text: string; done: boolean }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', fontSize: '0.85rem' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem' }}>
       <span style={{ color: done ? 'var(--green)' : 'var(--text-tertiary)' }}>{done ? '✓' : '○'}</span>
-      <span style={{ color: done ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>{text}</span>
+      <span style={{ color: done ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{text}</span>
     </div>
   );
 }
 
-// ── Styles ──────────────────────────────────────────────
-
 const containerStyle: CSSProperties = {
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  minHeight: '100vh', background: 'var(--bg-deep)', padding: 20,
+  minHeight: '100vh',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'var(--bg-base)',
+  padding: 20,
 };
 
 const cardStyle: CSSProperties = {
-  background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
-  borderRadius: 14, padding: 36, width: '100%', maxWidth: 520,
-  boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+  width: '100%',
+  maxWidth: 600,
+  background: 'var(--bg-elevated)',
+  border: '1px solid var(--border)',
+  borderRadius: 16,
+  padding: 32,
 };
 
 const progressBarStyle: CSSProperties = {
-  display: 'flex', gap: 4, marginBottom: 12,
+  display: 'flex',
+  gap: 4,
+  marginBottom: 24,
 };
 
 const stepStyle: CSSProperties = {
-  flex: 1, height: 4, borderRadius: 2, transition: 'background 0.3s',
+  flex: 1,
+  height: 4,
+  borderRadius: 2,
 };
 
 const stepContentStyle: CSSProperties = {
-  display: 'flex', flexDirection: 'column', alignItems: 'center',
+  textAlign: 'center',
 };
 
 const logoStyle: CSSProperties = {
-  width: 56, height: 56, borderRadius: 12, background: 'var(--accent-soft)',
-  color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-  fontSize: '1.6rem', fontWeight: 800, marginBottom: 16,
+  width: 64,
+  height: 64,
+  borderRadius: 16,
+  background: 'var(--accent)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: '2rem',
+  fontWeight: 800,
+  color: '#000',
+  margin: '0 auto 16px',
 };
 
 const titleStyle: CSSProperties = {
-  fontSize: '1.3rem', fontWeight: 700, marginBottom: 8, textAlign: 'center',
+  fontSize: '1.5rem',
+  fontWeight: 700,
+  color: 'var(--text-primary)',
+  marginBottom: 8,
 };
 
 const descStyle: CSSProperties = {
-  fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center',
-  marginBottom: 24, lineHeight: 1.5, maxWidth: 400,
-};
-
-const primaryBtnStyle: CSSProperties = {
-  padding: '10px 24px', background: 'var(--accent)', color: 'var(--bg-deep)',
-  border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer',
-  fontSize: '0.85rem', fontFamily: 'var(--font)',
-};
-
-const secondaryBtnStyle: CSSProperties = {
-  padding: '10px 24px', background: 'transparent', color: 'var(--text-secondary)',
-  border: '1px solid var(--border)', borderRadius: 6, fontWeight: 600,
-  cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'var(--font)',
-};
-
-const ghostBtnStyle: CSSProperties = {
-  padding: '10px 16px', background: 'transparent', color: 'var(--text-tertiary)',
-  border: 'none', borderRadius: 6, cursor: 'pointer',
-  fontSize: '0.8rem', fontFamily: 'var(--font)',
+  fontSize: '0.85rem',
+  color: 'var(--text-secondary)',
+  marginBottom: 24,
+  lineHeight: 1.5,
 };
 
 const platformBtnStyle: CSSProperties = {
-  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-  padding: '12px 8px', borderRadius: 8, cursor: 'pointer',
-  transition: 'all 0.2s', fontFamily: 'var(--font)',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 6,
+  padding: '12px 8px',
+  borderRadius: 8,
+  cursor: 'pointer',
+  transition: 'all 0.15s',
 };
 
 const labelStyle: CSSProperties = {
-  display: 'block', fontSize: '0.75rem', fontWeight: 600,
-  color: 'var(--text-secondary)', marginBottom: 6,
+  display: 'block',
+  fontSize: '0.78rem',
+  fontWeight: 600,
+  color: 'var(--text-primary)',
+  marginBottom: 6,
+  textAlign: 'left',
 };
 
 const inputStyle: CSSProperties = {
-  width: '100%', padding: '10px 14px', background: 'var(--bg-surface)',
-  border: '1px solid var(--border-strong)', borderRadius: 6,
-  color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '0.85rem',
-  outline: 'none', boxSizing: 'border-box',
+  width: '100%',
+  padding: '10px 14px',
+  background: 'var(--bg-base)',
+  border: '1px solid var(--border-strong)',
+  borderRadius: 6,
+  color: 'var(--text-primary)',
+  fontFamily: 'var(--font)',
+  fontSize: '0.85rem',
+  outline: 'none',
+};
+
+const primaryBtnStyle: CSSProperties = {
+  padding: '10px 24px',
+  background: 'var(--accent)',
+  color: '#000',
+  border: 'none',
+  borderRadius: 8,
+  fontWeight: 700,
+  fontSize: '0.85rem',
+  cursor: 'pointer',
+};
+
+const secondaryBtnStyle: CSSProperties = {
+  padding: '10px 24px',
+  background: 'var(--bg-surface)',
+  color: 'var(--text-primary)',
+  border: '1px solid var(--border)',
+  borderRadius: 8,
+  fontWeight: 600,
+  fontSize: '0.85rem',
+  cursor: 'pointer',
+};
+
+const ghostBtnStyle: CSSProperties = {
+  padding: '10px 24px',
+  background: 'transparent',
+  color: 'var(--text-secondary)',
+  border: 'none',
+  fontWeight: 500,
+  fontSize: '0.85rem',
+  cursor: 'pointer',
 };
