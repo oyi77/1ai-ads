@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Key, Plus, Trash2, Copy, Check, AlertTriangle, Loader2, Eye, EyeOff, Shield } from 'lucide-react';
+import { Key, Plus, Trash2, Copy, Check, AlertTriangle, Loader2, Shield } from 'lucide-react';
 import { api } from '../lib/api';
 import type { CSSProperties } from 'react';
 
@@ -133,7 +133,7 @@ export function ApiKeysPage() {
 
   function handleCopyKey() {
     if (!createdKey) return;
-    navigator.clipboard.writeText(createdKey.key).then(() => {
+    window.navigator.clipboard.writeText(createdKey.key).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });

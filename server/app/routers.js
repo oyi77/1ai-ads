@@ -16,6 +16,11 @@ import { createTikTokRouter } from '../routes/tiktok.js';
 import { createPinterestRouter } from '../routes/pinterest.js';
 import { createLinkedInRouter } from '../routes/linkedin.js';
 import { createMicrosoftRouter } from '../routes/microsoft.js';
+import { createCreativeLibraryRouter } from '../routes/creative-library.js';
+import { createCampaignWizardRouter } from '../routes/campaign-wizard.js';
+import { createReportingRouter } from '../routes/reporting.js';
+import { createAutomationRulesRouter } from '../routes/automation-rules.js';
+import { createMonitoringRouter } from '../routes/monitoring.js';
 import { createCreativeGroupRouter } from '../routes/_creative.js';
 import { createReportingGroupRouter } from '../routes/_reporting.js';
 import { createAutomationGroupRouter } from '../routes/_automation.js';
@@ -82,9 +87,20 @@ export function createRouters({ app, repos, services }) {
 
   // ── Infrastructure ───────────────────────────────────────────
   app.use('/api', createMcpGroupRouter(deps));
-
   // ── API Keys (customer self-serve) ────────────────────────
   app.use('/api/api-keys', requireAuth, createApiKeysRouter(repos.paymentsRepo));
+  // ── Creative Library ────────────────────────────────────────
+  app.use('/api/creatives', requireAuth, createCreativeLibraryRouter(repos.creativeLibraryRepo));
+  // ── Creative Group (includes A/B tests, fatigue, scoring, images) ──
+  app.use('/api', createCreativeGroupRouter(deps));
+  // ── Campaign Wizard ────────────────────────────────────────
+  app.use('/api/wizards', requireAuth, createCampaignWizardRouter(repos.campaignWizardRepo, services));
+  // ── Reporting ──────────────────────────────────────────────
+  app.use('/api/reporting', requireAuth, createReportingRouter(repos.reportingRepo));
+  // ── Automation Rules ──────────────────────────────────────
+  app.use('/api/automation/rules', requireAuth, createAutomationRulesRouter(repos.automationRulesRepo));
+  // ── Monitoring ────────────────────────────────────────────
+  app.use('/api/monitoring', requireAuth, createMonitoringRouter(repos.monitoringRepo));
   // ── Team (customer self-serve) ────────────────────────────
   app.use('/api/team', requireAuth, createTeamRouter(repos.paymentsRepo, repos.usersRepo, services.mailer));
 

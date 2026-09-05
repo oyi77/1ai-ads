@@ -48,11 +48,13 @@ import { WhatsAppAdsAPI } from '../services/whatsapp/index.js';
 import { BoostApprovalService } from '../services/boost-approval.js';
 import { TargetingService } from '../services/targeting.js';
 import { CreativeLibraryRepository } from '../repositories/creative-library.js';
+import { CampaignWizardRepository } from '../repositories/campaign-wizard.js';
+import { ReportingRepository } from '../repositories/reporting.js';
+import { AutomationRuleRepository } from '../repositories/automation-rules.js';
 import { DashboardWidgetsRepository } from '../repositories/dashboard-widgets.js';
 import { AccountReportService } from '../services/account-report-service.js';
-import { NangoAuthService } from '../services/nango-auth.js';
 import { AlertingService } from '../services/alerting.js';
-
+import { NangoAuthService } from '../services/nango-auth.js';
 export function createServices({ db, repos, params }) {
   const llmClient = (params && params.llmClient) || new LLMClient({
     url: config.llm.url,
@@ -151,7 +153,9 @@ export function createServices({ db, repos, params }) {
   const dashboardWidgetsRepo = new DashboardWidgetsRepository(db);
   const accountReportService = new AccountReportService({ llmClient });
   const nangoAuth = new NangoAuthService();
-
+  const campaignWizardRepo = new CampaignWizardRepository(db);
+  const reportingRepo = new ReportingRepository(db);
+  const automationRulesRepo = new AutomationRuleRepository(db);
   // Alerting service
   const alertingService = new AlertingService(null); // Bot will be set in app.js
 
@@ -168,5 +172,6 @@ export function createServices({ db, repos, params }) {
     imageGenerator, audienceIntelligence, creativeScorer, whiteLabelService,
     alertingService, boostApproval, targeting,
     creativeLibraryRepo, dashboardWidgetsRepo, accountReportService, nangoAuth,
+    campaignWizardRepo, reportingRepo, automationRulesRepo, monitoringRepo: repos.monitoringRepo,
   };
 }

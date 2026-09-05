@@ -35,7 +35,8 @@ let botInstance = null;
 const KNOWN_COMMANDS = [
   'start', 'menu', 'quick', 'status', 'help', 'pricing',
   'monitor', 'settings', 'ads', 'cancel', 'metaapp', 'create',
-  'fbads', 'admin_stats', 'admin_users', 'admin_broadcast'
+  'fbads', 'admin_stats', 'admin_users', 'admin_broadcast',
+  'optimize', 'platforms'
 ];
 
 /**
@@ -59,17 +60,6 @@ export function initBot(app, deps) {
   bot.use(session());
   const stage = new Scenes.Stage([connectScene, connectOAuthScene, manageMetaAppScene, createCampaignScene]);
 
-  // Escape-hatch for stuck scenes: clear only on top-level text commands
-  // (NOT on callback queries — callbacks must reach the active scene's action
-  // handlers, e.g. create:acct / create:obj in the create-campaign wizard).
-  // /skip is reserved for wizard "skip this optional field" steps.
-  bot.use(async (ctx, next) => {
-    const text = ctx.message?.text || '';
-    if (ctx.session?.__scenes && text.startsWith('/') && text !== '/skip' && text !== '/done') {
-      ctx.session.__scenes = {};
-    }
-    return next();
-  });
 
   bot.use(stage);
 
@@ -88,6 +78,8 @@ export function initBot(app, deps) {
   bot.command('fbads', handleFbAds(deps));
   bot.command('ads', handleAds(deps));
   bot.command('monitor', handleMonitor(deps));
+  bot.command('optimize', handleMonitor(deps));
+  bot.command('platforms', handleSettings(deps));
   bot.command('metaapp', (ctx) => ctx.scene.enter('manage-meta-app'));
   bot.command('create', (ctx) => ctx.scene.enter('create-campaign'));
 

@@ -1,6 +1,37 @@
 import { v4 as uuid } from 'uuid';
 import { safeParse } from '../lib/safe-parse.js';
 import { encryptToken, decryptToken } from '../lib/crypto.js';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('platform-accounts');
+
+/**
+ * Sanitize an access token by removing common UI artifacts.
+ * Removes ✅ prefix, trailing bot success messages, and extra whitespace.
+ */
+function sanitizeAccessToken(token) {
+  if (!token || typeof token !== 'string') return token;
+  let cleaned = token.trim();
+  // Remove ✅ prefix (common when users copy from bot UI)
+  cleaned = cleaned.replace(/^✅\s*/, '');
+  // Remove trailing bot success messages
+  cleaned = cleaned.replace(/\s*connected for Meta.*$/i, '');
+  cleaned = cleaned.replace(/\s*You can manage this account from the web dashboard.*$/i, '');
+  cleaned = cleaned.replace(/\s*Selesai.*cek \/status.*$/i, '');
+  return cleaned.trim();
+}
+
+/**
+ * Encrypt a credential value for storage.
+ * If ENCRYPTION_KEY is not set, stores as plain JSON (backward compatible).
+ */
+function encryptCredentials(credentials) {
+  const json = typeof credentials === 'string' ? credentials : JSON.stringify(credentials);
+  if (process.env.ENCRYPTION_KEY) {
+    return encryptToken(json);
+  }
+  return json;
+}
 
 /**
  * Decrypt a credential value from storage.
@@ -20,18 +51,6 @@ function decryptCredentials(raw) {
     if (typeof raw === 'string' && raw.length > 5) return raw;
     return null;
   }
-}
-
-/**
- * Encrypt a credential value for storage.
- * If ENCRYPTION_KEY is not set, stores as plain JSON (backward compatible).
- */
-function encryptCredentials(credentials) {
-  const json = typeof credentials === 'string' ? credentials : JSON.stringify(credentials);
-  if (process.env.ENCRYPTION_KEY) {
-    return encryptToken(json);
-  }
-  return json;
 }
 
 export class PlatformAccountsRepository {
@@ -121,7 +140,16 @@ return rows.map(r => ({ ...r, credentials: decryptCredentials(r.credentials) }))
 
   create({ user_id, platform, account_name, credentials, is_active = 1 }) {
     const id = uuid();
-    const encrypted = encryptCredentials(credentials);
+    // Sanitize access_token if present in credentials
+    let sanitizedCredentials = credentials;
+    if (credentials && typeof credentials === 'object' && credentials.access_token) {
+      const token = sanitizeAccessToken(credentials.access_token);
+      if (token !== credentials.access_token) {
+        log.info('Sanitized access token (removed UI artifacts)', { user_id, platform });
+      }
+      sanitizedCredentials = { ...credentials, access_token: token };
+    }
+    const encrypted = encryptCredentials(sanitizedCredentials);
     this.db.prepare(`
       INSERT INTO platform_accounts (id, user_id, platform, account_name, credentials, is_active)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -147,6 +175,14 @@ return rows.map(r => ({ ...r, credentials: decryptCredentials(r.credentials) }))
           value = value ? 1 : 0;
         }
         if (key === 'credentials') {
+          // Sanitize access_token if present
+          if (value && typeof value === 'object' && value.access_token) {
+            const token = sanitizeAccessToken(value.access_token);
+            if (token !== value.access_token) {
+              log.info('Sanitized access token (removed UI artifacts)', { accountId: id, platform: value.platform || 'unknown' });
+            }
+            value = { ...value, access_token: token };
+          }
           value = encryptCredentials(value);
         }
         params.push(value);

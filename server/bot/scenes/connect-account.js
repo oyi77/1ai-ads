@@ -19,7 +19,9 @@ export const PLATFORM_NAMES = {
   microsoft: 'Microsoft/Bing Ads',
 };
 
-const platformLabel = (p) => PLATFORM_NAMES[p] || p || 'Ad Platform';
+function escapeMarkdown(text) {
+  return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&');
+}
 export const CANCEL_ROW = [{ text: '❌ Batal', callback_data: 'connect:cancel' }];
 
 /** Shared scene-cancel callback — usable from any wizard via its own prefix. */
@@ -42,9 +44,9 @@ export const connectScene = new Scenes.WizardScene(
     }
     ctx.wizard.state.platform = platform;
     await ctx.reply(
-      `🔌 *Connecting ${platformLabel(platform)}*\n\n` +
+      `🔌 <b>Connecting ${escapeMarkdown(PLATFORM_NAMES[platform] || platform)}</b>\n\n` +
       'What would you like to name this connection? (e.g. "Main Google Ads")',
-      { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
   },
@@ -59,11 +61,11 @@ export const connectScene = new Scenes.WizardScene(
     const platform = ctx.wizard.state.platform;
     const isMeta = platform === 'meta';
     
-    let msg = `Got it — *${text}*.\n\n`;
+    let msg = `Got it — <b>${escapeMarkdown(text)}</b>.\n\n`;
     
     if (isMeta) {
       msg +=
-        '🔑 *How to get your Meta token:*\n' +
+        '🔑 <b>How to get your Meta token:</b>\n' +
         '1. Open https://developers.facebook.com/tools/explorer/\n' +
         '2. Select your app (or create one)\n' +
         '3. Click "Generate Access Token"\n' +
@@ -74,7 +76,7 @@ export const connectScene = new Scenes.WizardScene(
       msg += 'Now paste the access token / API key for this account. It is encrypted at rest and scoped to your Telegram user only.';
     }
     
-    await ctx.reply(msg, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
+    await ctx.reply(msg, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
     return ctx.wizard.next();
   },
   // Step 2 — capture token, persist, confirm
@@ -110,9 +112,9 @@ export const connectScene = new Scenes.WizardScene(
         accountId: created?.id,
       });
       await ctx.reply(
-        `✅ *${accountName}* connected for ${platformLabel(platform)}!\n\n` +
+        `✅ <b>${escapeMarkdown(accountName)}</b> connected for ${escapeMarkdown(PLATFORM_NAMES[platform] || platform)}!\n\n` +
         'You can manage this account from the web dashboard or /status.',
-        { parse_mode: 'Markdown' }
+        { parse_mode: 'HTML' }
       );
     } catch (err) {
       log.error('Failed to store platform account', { userId: ctx.userId, platform, error: err.message });

@@ -1,6 +1,3 @@
-import { AdsetsRepository } from '../repositories/adsets.js';
-import { InvoicesRepository } from '../repositories/invoices.js';
-import { SavedAudiencesRepository } from '../repositories/saved-audiences.js';
 import { UsersRepository } from '../repositories/users.js';
 import { RefreshTokensRepository } from '../repositories/refresh-tokens.js';
 import { SettingsRepository } from '../repositories/settings.js';
@@ -20,11 +17,13 @@ import { AttributionRepository } from '../repositories/attribution.js';
 import { ContentSchedulerQueueRepository } from '../repositories/content-scheduler-queue.js';
 import { DraftsRepository } from '../repositories/drafts.js';
 import { ShopeeCommissionsRepository } from '../repositories/shopee-commissions.js';
-import { AuditLogRepository } from '../repositories/audit-log.js';
-import { BoostRecommendationsRepository } from '../repositories/boost-recommendations.js';
 import { WaConversationsRepository } from '../repositories/wa-conversations.js';
-import { TargetingSuggestionsRepository } from '../repositories/targeting-suggestions.js';
 import { UserMetaAppsRepository } from '../repositories/user-meta-apps.js';
+import { CreativeLibraryRepository } from '../repositories/creative-library.js';
+import { CampaignWizardRepository } from '../repositories/campaign-wizard.js';
+import { ReportingRepository } from '../repositories/reporting.js';
+import { AutomationRuleRepository } from '../repositories/automation-rules.js';
+import { MonitoringRepository } from '../repositories/monitoring.js';
 
 export function createRepositories(db) {
   const scheduleRepo = new ScheduleRepository(db);
@@ -57,13 +56,12 @@ export function createRepositories(db) {
     contentSchedulerQueueRepo,
     draftsRepo: new DraftsRepository(db, settingsRepo),
     shopeeCommissionsRepo: new ShopeeCommissionsRepository(db),
-    auditRepo: new AuditLogRepository(db),
-    boostRecommendationsRepo: new BoostRecommendationsRepository(db),
-    targetingSuggestionsRepo: new TargetingSuggestionsRepository(db),
-    adsetsRepo: new AdsetsRepository(db),
-    invoicesRepo: new InvoicesRepository(db),
-    savedAudiencesRepo: new SavedAudiencesRepository(db),
     waConversationsRepo: new WaConversationsRepository(db),
     userMetaAppsRepo: new UserMetaAppsRepository(db),
+    creativeLibraryRepo: new CreativeLibraryRepository(db),
+    campaignWizardRepo: new CampaignWizardRepository(db),
+    reportingRepo: new ReportingRepository(db),
+    automationRulesRepo: new AutomationRuleRepository(db),
+    monitoringRepo: new MonitoringRepository(db),
   };
 }

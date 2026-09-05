@@ -2,7 +2,7 @@ import { Outlet, NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Megaphone, LogOut, Menu, X,
   Library, Activity, FlaskConical, BarChart3, Zap, Eye, GitBranch, LayoutGrid,
-  TrendingUp, Bot, FileText, Globe, Users, Link2, FileEdit, Layers, Boxes, Receipt, Bookmark, Target, FileBarChart, CreditCard, Key,
+  TrendingUp, FileText, Globe, Users, Link2, FileEdit, Layers, Boxes, Receipt, Bookmark, Target, FileBarChart, CreditCard, Key,
   ChevronDown, ChevronRight,
 } from 'lucide-react';
 import type { CSSProperties } from 'react';

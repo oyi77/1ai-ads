@@ -159,7 +159,15 @@ export function handleLogout(refreshTokensRepo) {
  */
 export function handleConnectMetaToken(settingsRepo) {
   return async (req, res) => {
-    const { access_token, account_name } = req.body;
+    let { access_token } = req.body;
+    const { account_name } = req.body;
+    // Sanitize token: remove ✅ prefix and any trailing bot success message
+    if (access_token) {
+      access_token = access_token.replace(/^✅\s*/, '');
+      access_token = access_token.replace(/\s*connected for Meta.*$/i, '');
+      access_token = access_token.replace(/\s*You can manage this account from the web dashboard.*$/i, '');
+      access_token = access_token.trim();
+    }
     if (!access_token) return res.status(400).json({ success: false, error: 'access_token is required' });
     if (!settingsRepo) return res.status(500).json({ success: false, error: 'Settings repository not available' });
 
@@ -167,7 +175,6 @@ export function handleConnectMetaToken(settingsRepo) {
       const meRes = await fetch(`https://graph.facebook.com/${config.metaApiVersion}/me?access_token=${encodeURIComponent(access_token)}&fields=id,name`);
       const meData = await meRes.json();
       if (meData.error) return res.status(400).json({ success: false, error: `Invalid token: ${meData.error.message}` });
-
       const userName = account_name || meData.name || 'Meta Account';
       let adAccounts = [];
       try {
@@ -182,20 +189,17 @@ export function handleConnectMetaToken(settingsRepo) {
         log.info('Ad account detection skipped', { error: e.message });
       }
 
-    const userId = req.user.id;
+      const userId = req.user.id;
       const existingAccounts = settingsRepo.getAccounts('meta').filter(a => a.user_id === userId);
       const existing = existingAccounts.find(a => a.account_name === userName || (a.credentials?.access_token === access_token));
-
       let mainId;
       if (existing) {
-        settingsRepo.updateAccount(existing.id, { credentials: { access_token, user_name: meData.name, user_id: meData.id } });
         mainId = existing.id;
       } else {
         const id = uuid();
         settingsRepo.addAccount({ id, user_id: userId, platform: 'meta', account_name: userName, credentials: { access_token, user_name: meData.name, user_id: meData.id }, is_active: existingAccounts.length === 0 ? 1 : 0 });
         mainId = id;
       }
-
       let connectedCount = 0;
       for (const adAcc of adAccounts) {
         const adExisting = existingAccounts.find(a => a.account_name === adAcc.id);
@@ -204,7 +208,6 @@ export function handleConnectMetaToken(settingsRepo) {
           connectedCount++;
         }
       }
-
       res.json({ success: true, message: `Connected as ${meData.name}! Found ${adAccounts.length} ad accounts, ${connectedCount} new connected.`, data: { id: mainId, user_name: meData.name, user_id: meData.id, ad_accounts_count: adAccounts.length, new_connected: connectedCount, ad_accounts: adAccounts } });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });

@@ -14,7 +14,7 @@ import {
   handleTelegramWebapp,
 } from './_handlers/auth-handlers.js';
 import { requireAuth } from '../middleware/auth.js';
-import { generateToken, verifyToken } from '../lib/auth.js';
+import { generateToken } from '../lib/auth.js';
 
 export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = null) {
   const router = Router();
@@ -34,8 +34,9 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
     // Force HTTPS in production: trust X-Forwarded-Proto from Cloudflare/nginx,
     // and prefer explicit FB_REDIRECT_URI when set.
     const fbRedirectUri = process.env.FB_REDIRECT_URI;
+    let callbackUrl;
     if (fbRedirectUri) {
-      var callbackUrl = fbRedirectUri;
+      callbackUrl = fbRedirectUri;
     } else {
       const proto = req.get('X-Forwarded-Proto') || req.protocol;
       callbackUrl = `${proto}://${hostname}/api/auth/facebook/callback`;
@@ -55,26 +56,19 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
 
   router.get('/facebook/callback', async (req, res) => {
     const code = req.query.code;
-    const redirect_uri = req.query.redirect_uri;
     if (!code) return res.status(400).json({ success: false, error: 'No code provided' });
-    // Recover the connecting user from the signed OAuth state emitted at /facebook/login.
-    // The callback is an open endpoint (Facebook redirect), so it cannot rely on req.user.
+    
     try {
       const hostname = req.get('host') || '';
       const fbRedirectUri = process.env.FB_REDIRECT_URI;
+      let callbackUrl;
       if (fbRedirectUri) {
-        var callbackUrl = fbRedirectUri;
+        callbackUrl = fbRedirectUri;
       } else {
         const proto = req.get('X-Forwarded-Proto') || req.protocol;
         callbackUrl = `${proto}://${hostname}/api/auth/facebook/callback`;
       }
-      const tokenRes = await fetch(`https://graph.facebook.com/${config.metaApiVersion}/oauth/access_token?client_id=${config.fbAppId}&redirect_uri=${encodeURIComponent(callbackUrl)}&client_secret=${config.fbAppSecret}&code=${encodeURIComponent(code)}`);
-    } catch {
-      return res.status(400).json({ success: false, error: 'Invalid or missing OAuth state' });
-    }
-    try {
-      const hostname = req.get('host') || '';
-      const callbackUrl = redirect_uri || `${req.protocol}://${hostname}/api/auth/facebook/callback`;
+
       const tokenRes = await fetch(`https://graph.facebook.com/${config.metaApiVersion}/oauth/access_token?client_id=${config.fbAppId}&redirect_uri=${encodeURIComponent(callbackUrl)}&client_secret=${config.fbAppSecret}&code=${encodeURIComponent(code)}`);
       const tokenData = await tokenRes.json();
       if (tokenData.error) return res.status(400).json({ success: false, error: tokenData.error.message });
@@ -84,12 +78,12 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
       const meData = await meRes.json();
 
       if (settingsRepo) {
-        const existingAccounts = settingsRepo.getAccounts('meta').filter(a => a.user_id === userId);
+        const existingAccounts = settingsRepo.getAccounts('meta').filter(a => a.user_id === req.user?.id);
         const existing = existingAccounts.find(a => a.credentials?.fb_user_id === meData.id);
         if (existing) {
           settingsRepo.updateAccount(existing.id, { credentials: { ...existing.credentials, access_token: accessToken } });
         } else {
-          settingsRepo.addAccount({ id: undefined, user_id: userId, platform: 'meta', account_name: meData.name || 'Meta Account', credentials: { access_token: accessToken, fb_user_id: meData.id, fb_user_name: meData.name }, is_active: existingAccounts.length === 0 ? 1 : 0 });
+          settingsRepo.addAccount({ id: undefined, user_id: req.user?.id, platform: 'meta', account_name: meData.name || 'Meta Account', credentials: { access_token: accessToken, fb_user_id: meData.id, fb_user_name: meData.name }, is_active: existingAccounts.length === 0 ? 1 : 0 });
         }
       }
 
