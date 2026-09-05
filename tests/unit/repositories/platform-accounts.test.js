@@ -93,4 +93,16 @@ describe('PlatformAccountsRepository', () => {
       expect(rows[0].platform).toBe('google');
     });
   });
+
+  describe('legacy contaminated tokens', () => {
+    it('returns a cleaned token without rewriting the test row first', () => {
+      const dirty = '✅ EAAlegacyToken connected for Meta (Facebook/Instagram)! You can manage this account from the web dashboard or /status.';
+      db.prepare(
+        `INSERT INTO platform_accounts (id, user_id, platform, account_name, credentials, is_active)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      ).run('legacy-row', userId, 'meta', 'Legacy Account', JSON.stringify({ access_token: dirty }), 1);
+      const found = repo.findActiveByUserAndPlatform(userId, 'meta');
+      expect(found.credentials.access_token).toBe('EAAlegacyToken');
+    });
+  });
 });

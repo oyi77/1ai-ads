@@ -2,24 +2,9 @@ import { v4 as uuid } from 'uuid';
 import { safeParse } from '../lib/safe-parse.js';
 import { encryptToken, decryptToken } from '../lib/crypto.js';
 import { createLogger } from '../lib/logger.js';
+import { sanitizeAccessToken, sanitizeCredentialAccessToken } from '../lib/token-sanitize.js';
 
 const log = createLogger('platform-accounts');
-
-/**
- * Sanitize an access token by removing common UI artifacts.
- * Removes ✅ prefix, trailing bot success messages, and extra whitespace.
- */
-function sanitizeAccessToken(token) {
-  if (!token || typeof token !== 'string') return token;
-  let cleaned = token.trim();
-  // Remove ✅ prefix (common when users copy from bot UI)
-  cleaned = cleaned.replace(/^✅\s*/, '');
-  // Remove trailing bot success messages
-  cleaned = cleaned.replace(/\s*connected for Meta.*$/i, '');
-  cleaned = cleaned.replace(/\s*You can manage this account from the web dashboard.*$/i, '');
-  cleaned = cleaned.replace(/\s*Selesai.*cek \/status.*$/i, '');
-  return cleaned.trim();
-}
 
 /**
  * Encrypt a credential value for storage.
@@ -42,13 +27,13 @@ function decryptCredentials(raw) {
   try {
     // Try encrypted format first (base64 that decrypts to JSON)
     const decrypted = decryptToken(raw);
-    return safeParse(decrypted);
+    return sanitizeCredentialAccessToken(safeParse(decrypted));
   } catch {
     // Fall back to legacy plain-text JSON
     const parsed = safeParse(raw);
-    if (parsed !== null) return parsed;
-    // If it's a plain string (like a raw access token), return as-is
-    if (typeof raw === 'string' && raw.length > 5) return raw;
+    if (parsed !== null) return sanitizeCredentialAccessToken(parsed);
+    // If it's a plain string (like a raw access token), clean UI artifacts in memory.
+    if (typeof raw === 'string' && raw.length > 5) return sanitizeAccessToken(raw);
     return null;
   }
 }

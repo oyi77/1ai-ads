@@ -5,6 +5,8 @@
  */
 import { Scenes } from 'telegraf';
 import { createLogger } from '../../lib/logger.js';
+import config from '../../config/index.js';
+import { sanitizeAccessToken } from '../../lib/token-sanitize.js';
 
 const log = createLogger('bot:scene:connect');
 
@@ -23,6 +25,18 @@ function escapeMarkdown(text) {
   return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&');
 }
 export const CANCEL_ROW = [{ text: '❌ Batal', callback_data: 'connect:cancel' }];
+
+export async function validateMetaAccessToken(accessToken, fetchImpl = fetch) {
+  const res = await fetchImpl(
+    `https://graph.facebook.com/${config.metaApiVersion}/me?access_token=${encodeURIComponent(accessToken)}&fields=id,name`,
+    { signal: AbortSignal.timeout(15000) }
+  );
+  const me = await res.json();
+  if (!me || me.error) {
+    throw new Error(me?.error?.message || 'Invalid Meta token');
+  }
+  return me;
+}
 
 /** Shared scene-cancel callback — usable from any wizard via its own prefix. */
 export function handleSceneCancel(msg = '❌ Dibatalkan.') {
@@ -79,14 +93,23 @@ export const connectScene = new Scenes.WizardScene(
     await ctx.reply(msg, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
     return ctx.wizard.next();
   },
-  // Step 2 — capture token, persist, confirm
+  // Step 2 — validate token, persist, confirm
   async (ctx) => {
-    const token = ctx.message?.text?.trim();
+    const token = sanitizeAccessToken(ctx.message?.text);
     if (!token) {
       await ctx.reply('Please paste your access token (just text).');
       return;
     }
     const { platform, accountName } = ctx.wizard.state;
+    if (platform === 'meta') {
+      try {
+        await validateMetaAccessToken(token);
+      } catch (err) {
+        log.warn('Meta token rejected before persistence', { userId: ctx.userId, error: err.message });
+        await ctx.reply('That Meta token was rejected. Please paste a fresh token from Graph API Explorer.');
+        return;
+      }
+    }
     const repo = ctx.deps?.repos?.platformAccountsRepo;
     if (!repo) {
       await ctx.reply('⚠️ Storage unavailable. Please try again later.');

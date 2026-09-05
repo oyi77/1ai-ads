@@ -13,6 +13,7 @@ import {
 } from '../../lib/mailer.js';
 import crypto from 'crypto';
 import { v4 as uuid } from 'uuid';
+import { sanitizeAccessToken } from '../../lib/token-sanitize.js';
 
 const log = createLogger('auth-handlers');
 /**
@@ -159,15 +160,8 @@ export function handleLogout(refreshTokensRepo) {
  */
 export function handleConnectMetaToken(settingsRepo) {
   return async (req, res) => {
-    let { access_token } = req.body;
     const { account_name } = req.body;
-    // Sanitize token: remove ✅ prefix and any trailing bot success message
-    if (access_token) {
-      access_token = access_token.replace(/^✅\s*/, '');
-      access_token = access_token.replace(/\s*connected for Meta.*$/i, '');
-      access_token = access_token.replace(/\s*You can manage this account from the web dashboard.*$/i, '');
-      access_token = access_token.trim();
-    }
+    const access_token = sanitizeAccessToken(req.body?.access_token);
     if (!access_token) return res.status(400).json({ success: false, error: 'access_token is required' });
     if (!settingsRepo) return res.status(500).json({ success: false, error: 'Settings repository not available' });
 
