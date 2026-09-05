@@ -17,7 +17,7 @@ describe('connect-account Meta token validation', () => {
     const fetchImpl = vi.fn(async () => ({
       json: async () => ({ error: { message: 'Invalid OAuth access token' } }),
     }));
-    await expect(validateMetaAccessToken('bad-token', fetchImpl)).rejects.toThrow('Invalid OAuth access token');
+    await expect(validateMetaAccessToken('bad-token', fetchImpl)).rejects.toThrow('Invalid Meta token');
   });
 
   it('does not accept a token when verification cannot complete', async () => {

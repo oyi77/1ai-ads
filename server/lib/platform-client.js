@@ -23,16 +23,29 @@ function parseErrorResponse(errorText) {
   catch { return errorText; }
 }
 
+export function redactSecretsForLogs(value) {
+  if (Array.isArray(value)) return value.map(redactSecretsForLogs);
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const [key, entry] of Object.entries(value)) out[key] = redactSecretsForLogs(entry);
+    return out;
+  }
+  if (typeof value !== 'string') return value;
+  return value
+    .replace(/((?:access_token|input_token|client_secret|appsecret_proof)=)[^&\s"']+/g, '$1[REDACTED]')
+    .replace(/\bEAA[A-Za-z0-9_-]{10,}\b/g, 'EAA[REDACTED]');
+}
+
 async function handleRateLimit(platformName, apiUrl, response, fetchOptions, retries) {
   const retryAfter = parseInt(response.headers.get('retry-after') || '5', 10);
-  log.warn(`[${platformName.toUpperCase()}] Rate limited, retrying after ${retryAfter}s`, { url: apiUrl });
+  log.warn(`[${platformName.toUpperCase()}] Rate limited, retrying after ${retryAfter}s`, { url: redactSecretsForLogs(apiUrl) });
   await new Promise(r => setTimeout(r, retryAfter * 1000));
   return safeFetch(platformName, apiUrl, fetchOptions, retries - 1);
 }
 
 async function handleServerError(platformName, apiUrl, fetchOptions, retries, attempt) {
   const delay = Math.pow(2, 3 - attempt) * 1000;
-  log.warn(`[${platformName.toUpperCase()}] Server error, retrying in ${delay}ms`, { url: apiUrl });
+  log.warn(`[${platformName.toUpperCase()}] Server error, retrying in ${delay}ms`, { url: redactSecretsForLogs(apiUrl) });
   await new Promise(r => setTimeout(r, delay));
   return safeFetch(platformName, apiUrl, fetchOptions, retries - 1);
 }
@@ -92,7 +105,7 @@ export async function safeFetch(platformName, apiUrl, fetchOptions = {}, retries
 
     if (!response.ok) {
       const parsedError = await response.text().then(parseErrorResponse);
-      log.error(`[${platformName.toUpperCase()} API ERROR] ${response.status} ${apiUrl} (${duration}ms)`, { error: parsedError });
+      log.error(`[${platformName.toUpperCase()} API ERROR] ${response.status} ${redactSecretsForLogs(apiUrl)} (${duration}ms)`, { error: redactSecretsForLogs(parsedError) });
 
       if (response.status >= 500 && retries > 0) {
         return handleServerError(platformName, apiUrl, fetchOptions, retries, 3 - retries + 1);
@@ -102,7 +115,7 @@ export async function safeFetch(platformName, apiUrl, fetchOptions = {}, retries
     return response;
   } catch (originalError) {
     if (originalError.status) throw originalError;
-    log.error(`[${platformName.toUpperCase()} FETCH ERROR] ${apiUrl}`, { message: originalError.message });
+    log.error(`[${platformName.toUpperCase()} FETCH ERROR] ${redactSecretsForLogs(apiUrl)}`, { message: redactSecretsForLogs(originalError.message) });
     throw originalError;
   }
 }

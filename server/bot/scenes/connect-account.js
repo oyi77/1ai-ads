@@ -33,7 +33,8 @@ export async function validateMetaAccessToken(accessToken, fetchImpl = fetch) {
   );
   const me = await res.json();
   if (!me || me.error) {
-    throw new Error(me?.error?.message || 'Invalid Meta token');
+    const code = me?.error?.code ? ` (code ${me.error.code})` : '';
+    throw new Error(`Invalid Meta token${code}`);
   }
   return me;
 }
