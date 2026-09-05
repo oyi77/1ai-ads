@@ -13,7 +13,7 @@ export class CreativeLibraryRepository {
         user_id TEXT NOT NULL,
         name TEXT NOT NULL,
         type TEXT NOT NULL DEFAULT 'image',
-        file_url TEXT NOT NULL,
+        file_url TEXT,
         thumbnail_url TEXT,
         file_size INTEGER,
         width INTEGER,
@@ -58,9 +58,18 @@ export class CreativeLibraryRepository {
     params.push(limit, offset);
     
     const data = this.db.prepare(query).all(...params);
-    const total = this.db.prepare('SELECT COUNT(*) as count FROM creative_library WHERE user_id = ?' + (type ? ' AND type = ?' : '')).get(...params);
+    const total = this.db.prepare('SELECT COUNT(*) as count FROM creative_library WHERE user_id = ?' + (type ? ' AND type = ?' : '')).get(...([userId, ...(type ? [type] : [])]));
     
-    return { data, total: total?.count || 0, page: Math.floor(offset / limit) + 1, limit };
+    return { 
+      data: (data || []).map(item => ({
+        ...item,
+        tags: typeof item.tags === 'string' ? JSON.parse(item.tags || '[]') : (item.tags || []),
+        metadata: typeof item.metadata === 'string' ? JSON.parse(item.metadata || '{}') : (item.metadata || {}),
+      })), 
+      total: total?.count || 0, 
+      page: Math.floor(offset / limit) + 1, 
+      limit 
+    };
   }
 
   findAll(userId, { type, limit = 50, offset = 0 } = {}) {
