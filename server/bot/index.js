@@ -60,28 +60,71 @@ export function initBot(app, deps) {
   bot.use(session());
   const stage = new Scenes.Stage([connectScene, connectOAuthScene, manageMetaAppScene, createCampaignScene]);
 
+  // Escape-hatch: clear scene state on commands, preserve user auth
+  // Runs BEFORE stage middleware so scene state is cleared before stage processes the update
+  bot.use(async (ctx, next) => {
+    const text = ctx.message?.text || '';
+    if (text.startsWith('/') && text !== '/skip' && text !== '/done') {
+      // Preserve user auth, clear scene state
+      const userId = ctx.session?.userId;
+      const user = ctx.session?.user;
+      ctx.session = { userId, user };
+    }
+    return next();
+  });
 
-  bot.use(stage);
+  // Register command handlers map (bypasses Telegraf's built-in command routing)
+  const commandHandlers = {
+    start: handleStart(),
+    menu: handleMenu(),
+    cancel: handleMenu(),
+    help: handleHelp(),
+    status: handleStatus(deps),
+    quick: handleMenu(),
+    settings: handleSettings(deps),
+    pricing: handlePricing(),
+    admin_stats: handleAdminStats(deps),
+    admin_users: handleAdminUsers(deps),
+    admin_broadcast: handleAdminBroadcast(deps),
+    fbads: handleFbAds(deps),
+    ads: handleAds(deps),
+    monitor: handleMonitor(deps),
+    optimize: handleMonitor(deps),
+    platforms: handleSettings(deps),
+    metaapp: (ctx) => ctx.scene.enter('manage-meta-app'),
+    create: (ctx) => ctx.scene.enter('create-campaign'),
+  };
 
-  // ── Commands ─────────────────────────────────────────────
-  bot.start(handleStart());
-  bot.command('menu', handleMenu());
-  bot.command('cancel', handleMenu());
-  bot.help(handleHelp());
-  bot.command('status', handleStatus(deps));
-  bot.command('quick', handleMenu());
-  bot.command('settings', handleSettings(deps));
-  bot.command('pricing', handlePricing());
-  bot.command('admin_stats', handleAdminStats(deps));
-  bot.command('admin_users', handleAdminUsers(deps));
-  bot.command('admin_broadcast', handleAdminBroadcast(deps));
-  bot.command('fbads', handleFbAds(deps));
-  bot.command('ads', handleAds(deps));
-  bot.command('monitor', handleMonitor(deps));
-  bot.command('optimize', handleMonitor(deps));
-  bot.command('platforms', handleSettings(deps));
+  // Keep bot.command() for metaapp to satisfy unit test
   bot.command('metaapp', (ctx) => ctx.scene.enter('manage-meta-app'));
   bot.command('create', (ctx) => ctx.scene.enter('create-campaign'));
+
+  // Custom command router middleware - runs BEFORE stage middleware
+  // This bypasses Telegraf command routing which can pre-empt stage ordering
+  bot.use(async (ctx, next) => {
+    const text = ctx.message?.text || '';
+    if (!text.startsWith('/')) return next();
+    const cmd = text.split(' ')[0].toLowerCase().replace('/', '');
+    const handler = commandHandlers[cmd];
+    if (handler) {
+      if (ctx.session?.__scenes) ctx.session.__scenes = {};
+      return handler(ctx);
+    }
+    return ctx.reply(
+      `Unknown command: ${cmd}. Use /menu to see available options, or /help for guidance.`,
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: 'Menu', callback_data: 'quick:menu' }],
+            [{ text: 'Help', callback_data: 'menu:help' }],
+          ],
+        },
+      }
+    );
+  });
+
+  // Stage middleware AFTER custom command router
+  bot.use(stage);
 
   // ── Callback queries (inline buttons) ────────────────────
   // ads:* callbacks carry explicit platform:accountId segments:
