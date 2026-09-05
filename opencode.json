@@ -1,32 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "omniroute/auto/best-reasoning",
-  "agent": {
-    "sisyphus": {
-      "model": "omniroute/auto/best-reasoning",
-      "prompt": ".opencode/agent/sisyphus.md"
-    },
-    "build": {
-      "model": "omniroute/auto/best-fast",
-      "prompt": ".opencode/agent/build.md"
-    },
-    "explore": {
-      "model": "omniroute/auto/best-fast",
-      "prompt": ".opencode/agent/explore.md"
-    },
-    "oracle": {
-      "model": "omniroute/auto/best-reasoning",
-      "prompt": ".opencode/agent/oracle.md"
-    },
-    "librarian": {
-      "model": "omniroute/auto/best-coding",
-      "prompt": ".opencode/agent/librarian.md"
-    },
-    "plan": {
-      "model": "omniroute/auto/best-reasoning",
-      "prompt": ".opencode/agent/plan.md"
-    }
-  },
   "mcp": {
     "1ai-hub": {
       "type": "remote",
@@ -40,29 +14,31 @@
     }
   },
   "permission": {
-    "default": "ask",
-    "rules": [
-      {
-        "pattern": "scripts/test_*.py",
-        "permission": "deny",
-        "reason": "Throwaway test scripts forbidden - use tests/"
+    "edit": {
+      "scripts/test_*.py": "deny",
+      "*.log": "deny",
+      "data/*.json": "deny"
+    },
+    "external_directory": {
+      "/home/openclaw/*": "deny"
+    }
+  },
+  "provider": {
+    "bk-ai": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "BK AI",
+      "options": {
+        "baseURL": "http://100.123.92.72:20128/v1",
+        "apiKey": "sk-f0c1ddf471008e76-f92ijk-07d16379"
       },
-      {
-        "pattern": "*.log",
-        "permission": "deny",
-        "reason": "Log files are gitignored"
-      },
-      {
-        "pattern": "data/*.json",
-        "permission": "deny",
-        "reason": "State files auto-regenerate, gitignored"
-      },
-      {
-        "pattern": "/home/openclaw/**",
-        "permission": "deny",
-        "reason": "Hardcoded paths forbidden - use WORKSPACE/DATA_DIR"
+      "models": {
+        "auto": { "name": "Auto (OmniRoute)" },
+        "best-chat": { "name": "Best Chat" },
+        "best-coding": { "name": "Best Coding" },
+        "best-fast": { "name": "Best Fast" },
+        "best-reasoning": { "name": "Best Reasoning" }
       }
-    ]
+    }
   },
   "hooks": {
     "pre_write": [
