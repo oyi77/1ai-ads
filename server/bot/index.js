@@ -209,8 +209,20 @@ export function initBot(app, deps) {
   bot.action(/^rule:(.+)$/, handleMonitorCallback(deps));
   bot.action(/^dash:(.+)$/, handleDashboardCallback(deps));
   bot.action(/^quick:menu$/, handleMenu());
+  // ── Navigation callbacks (nav.js NAV constant) ──────────
+  bot.action(/^nav:back(?::.+)?$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    return handleMenu()(ctx);
+  });
+  bot.action(/^nav:cancel(?::.+)?$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    return handleMenu()(ctx);
+  });
+  bot.action(/^nav:close$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    try { await ctx.deleteMessage(); } catch { /* already gone */ }
+  });
   bot.action(/^connect:cancel$/, handleSceneCancel('❌ Koneksi dibatalkan.'));
-  bot.action(/^metaapp:cancel$/, handleSceneCancel('❌ Konfigurasi Meta App dibatalkan.'));
   bot.action(/^connect:(.+)$/, async (ctx) => {
     const platform = ctx.match[1];
     const oauthPlatforms = ['google', 'tiktok', 'linkedin'];
