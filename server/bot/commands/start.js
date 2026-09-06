@@ -41,6 +41,10 @@ export function handleStart() {
         { text: '🔗 Connect Account', callback_data: 'menu:connect' },
         { text: '🌐 Platforms', callback_data: 'menu:platforms' },
       ]);
+      // Remove duplicate Platforms from main menu (row 3)
+      keyboard.inline_keyboard = keyboard.inline_keyboard.filter(
+        (row, idx) => !(idx > 0 && row.some(b => b.callback_data === 'menu:platforms'))
+      );
     } else if (hasMetaAccount && campaignCount === 0) {
       message = `👋 *Welcome back, ${escMd(name)}!*\n\n` +
         '✅ Meta account connected\n' +
@@ -50,13 +54,16 @@ export function handleStart() {
         { text: '🎯 Create Campaign', callback_data: 'menu:create' },
         { text: '📣 Ads Manager', callback_data: 'menu:ads' },
       ]);
+      // Remove duplicate Create Campaign / Ads Manager from main menu
+      keyboard.inline_keyboard = keyboard.inline_keyboard.filter(
+        (row, idx) => !(idx > 0 && row.some(b => b.callback_data === 'menu:create' || b.callback_data === 'menu:ads'))
+      );
     } else {
       message = `👋 *Welcome back, ${escMd(name)}!*\n\n` +
         `📊 ${campaignCount} campaign${campaignCount !== 1 ? 's' : ''} tracked\n` +
         `⚡ ${ruleCount} automation rule${ruleCount !== 1 ? 's' : ''} active\n\n` +
         'What would you like to do?';
     }
-
     await ctx.reply(message, {
       parse_mode: 'Markdown',
       reply_markup: keyboard,
