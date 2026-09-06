@@ -127,7 +127,4 @@ export class MonitoringRepository {
     return this.db.prepare('DELETE FROM monitoring_rules WHERE id = ? AND user_id = ?').run(id, userId);
   }
 
-  updateRuleTrigger(id) {
-    this.db.prepare('UPDATE monitoring_rules SET last_triggered = CURRENT_TIMESTAMP WHERE id = ?').run(id);
-  }
 }

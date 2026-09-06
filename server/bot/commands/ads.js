@@ -288,7 +288,7 @@ export function handleAdsToggle(deps) {
     await ctx.reply(`🔄 ${mode === 'pause' ? 'Pausing' : 'Resuming'} campaign ${campaignId}…`);
     try {
       await api.updateCampaign(campaignId, { status: mode === 'pause' ? 'PAUSED' : 'ACTIVE' });
-      return ctx.reply(`✅ Campaign *${mode === 'pause' ? 'paused' : 'resumed'}*.`, {
+      return ctx.reply(`✅ Campaign <b>${mode === 'pause' ? 'paused' : 'resumed'}</b>.`, {
         parse_mode: 'HTML',
         reply_markup: { inline_keyboard: [[{ text: '⚙️ Back to campaigns', callback_data: `ads:select:${platform}:${accountId}` }]] },
       });
@@ -319,7 +319,7 @@ export function handleAdsReport(deps) {
         if (!ins) return ctx.reply('📭 No insight data for this account.');
         const roas = ins.spend > 0 ? (ins.revenue / ins.spend).toFixed(2) : '0.00';
         const body =
-          `📊 *Report: ${acct.name} (30d)*\n\n` +
+          `📊 <b>Report: ${acct.name} (30d)</b>\n\n` +
           `Total Spend: ${fmtCurrency(ins.spend)}\n` +
           `Total Revenue: ${fmtCurrency(ins.revenue)}\n` +
           `ROAS: ${roas}x\n` +
@@ -354,13 +354,13 @@ export function handleAdsReport(deps) {
       }
       const roas = totalSpend > 0 ? (totalRev / totalSpend).toFixed(2) : '0.00';
       const body =
-        `📊 *Your ${platform.toUpperCase()} Ads Report (30d)*\n\n` +
+        `📊 <b>Your ${platform.toUpperCase()} Ads Report (30d)</b>\n\n` +
         `Total Spend: ${fmtCurrency(totalSpend)}\n` +
         `Total Revenue: ${fmtCurrency(totalRev)}\n` +
         `ROAS: ${roas}x\n` +
         `Clicks: ${totalClicks.toLocaleString('id-ID')}\n` +
         `Impressions: ${totalImpr.toLocaleString('id-ID')}\n\n` +
-        (perAcct.length ? `*Per account:*\n${perAcct.join('\n')}` : '');
+        (perAcct.length ? `<b>Per account:</b>\n${perAcct.join('\n')}` : '');
       return ctx.reply(body, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '🔄 Refresh', callback_data: `ads:report:${platform}` }]] } });
     } catch (err) {
       log.error('ads report list failed', { userId: ctx.userId, platform, error: err?.message });
@@ -425,7 +425,7 @@ export function handleAdsManage(deps) {
     if (!rows.length) {
       return ctx.reply('🔌 You have no Meta connections stored. Connect one via /settings → Connect Meta Account.');
     }
-    const lines = rows.map((r, i) => `${i + 1}. ${r.is_active ? '✅' : '⛔️'} *${r.account_name}*`).join('\n');
+    const lines = rows.map((r, i) => `${i + 1}. ${r.is_active ? '✅' : '⛔️'} <b>${escHtml(r.account_name)}</b>`).join('\n');
     await ctx.reply(
       `⚙️ *Manage Meta Connections*\n\n${lines}\n\nTap a connection to disconnect it.`,
       {
@@ -460,11 +460,11 @@ export function handleAdsDisconnectConfirm(deps, id) {
       (r) => r.platform === 'meta' && r.is_active
     );
     if (!remaining.length) {
-      return ctx.reply(`🗑 Disconnected *${row.account_name}*. You now have no active Meta connection.`);
+      return ctx.reply(`🗑 Disconnected <b>${escHtml(row.account_name)}</b>. You now have no active Meta connection.`);
     }
     const names = remaining.map((r) => `• ${r.account_name}`).join('\n');
     await ctx.reply(
-      `🗑 Disconnected *${row.account_name}*.\n\nRemaining active Meta connections:\n${names}`,
+      `🗑 Disconnected <b>${escHtml(row.account_name)}</b>.\n\nRemaining active Meta connections:\n${names}`,
       { parse_mode: 'HTML' }
     );
   };

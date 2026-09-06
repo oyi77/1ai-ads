@@ -115,8 +115,8 @@ export class CreativeLibraryRepository {
     return this.db.prepare('DELETE FROM creative_library WHERE id = ? AND user_id = ?').run(id, userId);
   }
 
-  incrementUsage(id) {
-    this.db.prepare('UPDATE creative_library SET usage_count = usage_count + 1 WHERE id = ?').run(id);
+  incrementUsage(id, userId) {
+    this.db.prepare('UPDATE creative_library SET usage_count = usage_count + 1 WHERE id = ? AND user_id = ?').run(id, userId);
   }
 
   getTopPerformers({ userId, limit = 10 } = {}) {

@@ -6,10 +6,12 @@ import { listPlatforms, getPlatformConfig } from '../platforms/index.js';
 // Standard navigation buttons
 export const NAV = {
   menu: { text: '📋 Menu', callback_data: 'quick:menu' },
-  back: (to = 'menu') => ({ text: '⬅️ Back', callback_data: `nav:back:${to}` }),
-  cancel: (to = 'menu') => ({ text: '❌ Cancel', callback_data: `nav:cancel:${to}` }),
-  close: () => ({ text: '✕ Close', callback_data: 'nav:close' }),
 };
+
+/**
+ * @deprecated Use inline buttons with explicit callback_data instead.
+ * The nav:* callback namespace is not registered in bot/index.js.
+ */
 
 /**
  * Platform keyboard with all supported platforms

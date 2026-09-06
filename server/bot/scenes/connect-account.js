@@ -21,8 +21,8 @@ export const PLATFORM_NAMES = {
   microsoft: 'Microsoft/Bing Ads',
 };
 
-function escapeMarkdown(text) {
-  return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&');
+function escapeHtml(text) {
+  return String(text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 export const CANCEL_ROW = [{ text: '❌ Batal', callback_data: 'connect:cancel' }];
 
@@ -59,7 +59,7 @@ export const connectScene = new Scenes.WizardScene(
     }
     ctx.wizard.state.platform = platform;
     await ctx.reply(
-      `🔌 <b>Connecting ${escapeMarkdown(PLATFORM_NAMES[platform] || platform)}</b>\n\n` +
+      `🔌 <b>Connecting ${escapeHtml(PLATFORM_NAMES[platform] || platform)}</b>\n\n` +
       'What would you like to name this connection? (e.g. "Main Google Ads")',
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
@@ -76,7 +76,7 @@ export const connectScene = new Scenes.WizardScene(
     const platform = ctx.wizard.state.platform;
     const isMeta = platform === 'meta';
     
-    let msg = `Got it — <b>${escapeMarkdown(text)}</b>.\n\n`;
+    let msg = `Got it — <b>${escapeHtml(text)}</b>.\n\n`;
     
     if (isMeta) {
       msg +=
@@ -136,7 +136,7 @@ export const connectScene = new Scenes.WizardScene(
         accountId: created?.id,
       });
       await ctx.reply(
-        `✅ <b>${escapeMarkdown(accountName)}</b> connected for ${escapeMarkdown(PLATFORM_NAMES[platform] || platform)}!\n\n` +
+        `✅ <b>${escapeHtml(accountName)}</b> connected for ${escapeHtml(PLATFORM_NAMES[platform] || platform)}!\n\n` +
         'You can manage this account from the web dashboard or /status.',
         { parse_mode: 'HTML' }
       );

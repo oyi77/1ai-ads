@@ -28,8 +28,8 @@ export function handleStatus(deps) {
       const totalRevenue = campaigns.reduce((s, c) => s + (c.revenue || 0), 0);
       const roas = totalSpend > 0 ? (totalRevenue / totalSpend).toFixed(2) : '0.00';
 
-      let message = `📊 *Dashboard*\n\n`;
-      message += `*Account Summary*\n`;
+      let message = `📊 <b>Dashboard</b>\n\n`;
+      message += `<b>Account Summary</b>\n`;
       message += `Campaigns: ${activeCampaigns} active / ${campaigns.length} total\n`;
       message += `Total Spend: ${fmtRp(totalSpend)}\n`;
       message += `Total Revenue: ${fmtRp(totalRevenue)}\n`;
@@ -38,7 +38,7 @@ export function handleStatus(deps) {
       // Show connected ad accounts
       const keyboard = [];
       if (activeAccounts.length > 0) {
-        message += `\n\n*Connected Ad Accounts*\n`;
+        message += `\n\n<b>Connected Ad Accounts</b>\n`;
         for (const acct of activeAccounts) {
           // Note: campaigns table has no account_id column, so show total user campaigns
           message += `• ${escHtml(acct.account_name || acct.platform)}\n`;
@@ -169,11 +169,11 @@ async function showAccountReport(ctx, deps, accountId) {
       }
     }
 
-    let message = `📊 *Report: ${escHtml(account.account_name || account.platform)}*\n\n`;
+    let message = `📊 <b>Report: ${escHtml(account.account_name || account.platform)}</b>\n\n`;
 
     if (insights) {
       const roas = insights.spend > 0 ? (insights.revenue / insights.spend).toFixed(2) : '0.00';
-      message += `*30-Day Performance*\n`;
+      message += `<b>30-Day Performance</b>\n`;
       message += `💰 Spend: ${fmtRp(insights.spend)}\n`;
       message += `💵 Revenue: ${fmtRp(insights.revenue)}\n`;
       message += `📈 ROAS: ${roas}x\n`;

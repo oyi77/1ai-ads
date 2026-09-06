@@ -193,13 +193,6 @@ export class CampaignsRepository {
     return this.db.prepare("SELECT * FROM campaigns WHERE campaign_id = ?").get(metaCampaignId) || null;
   }
 
-  getAds(campaignId) {
-    return this.db.prepare('SELECT * FROM ads WHERE campaign_id = ?').all(campaignId).map(row => ({
-      ...row,
-      stats: { spend: row.spend, revenue: row.revenue, roas: row.roas },
-    }));
-  }
-
   create(data) {
     return this.upsert(data);
   }

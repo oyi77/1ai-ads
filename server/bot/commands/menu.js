@@ -436,19 +436,6 @@ export async function handlePlatformAction(ctx, deps, scope) {
       return;
     }
 
-    if (action === 'account') {
-      return ctx.reply(
-        `🔧 *Manage ${scope.toUpperCase()} Account*\n\nFeature coming soon...`,
-        {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '⬅️ Back', callback_data: `platform:${platform}:manage` }],
-            ],
-          },
-        }
-      );
-    }
-
     return ctx.reply('Unknown platform action.', {
       reply_markup: { inline_keyboard: [[{ text: '⬅️ Menu', callback_data: 'quick:menu' }]] },
     });

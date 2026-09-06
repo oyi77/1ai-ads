@@ -456,8 +456,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   // List all campaigns
   router.get('/', async (req, res) => {
     try {
-      const userId = req.user?.id || 'system';
-      const result = campaignsRepo.findAll({ userId });
+      const result = campaignsRepo.findAll({ userId: req.user.id });
       res.json({ success: true, data: result.data, total: result.total });
     } catch (e) {
       res.json({ success: false, error: e.message });
