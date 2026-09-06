@@ -56,7 +56,8 @@ export class PlatformAccountsRepository {
       'SELECT * FROM platform_accounts WHERE user_id = ? AND platform = ? AND is_active = 1 LIMIT 1'
     ).get(userId, platform);
     if (!row) return null;
-    return { ...row, credentials: decryptCredentials(row.credentials) };
+    const creds = decryptCredentials(row.credentials);
+    return { ...row, access_token: creds?.access_token || null, credentials: creds };
   }
 
   /** Multi-tenant: find ALL active accounts for a user+platform (not just LIMIT 1). */
@@ -64,13 +65,57 @@ export class PlatformAccountsRepository {
     const rows = this.db.prepare(
       'SELECT * FROM platform_accounts WHERE user_id = ? AND platform = ? AND is_active = 1 ORDER BY created_at DESC'
     ).all(userId, platform);
-return rows.map(r => ({ ...r, credentials: decryptCredentials(r.credentials) }));
+    return rows.map(r => {
+      const creds = decryptCredentials(r.credentials);
+      return { ...r, access_token: creds?.access_token || null, credentials: creds };
+    });
   }
 
   findByUserId(userId) {
-    return this.db.prepare(
+    const rows = this.db.prepare(
       'SELECT * FROM platform_accounts WHERE user_id = ? ORDER BY created_at DESC'
     ).all(userId);
+    return rows.map(r => {
+      const creds = decryptCredentials(r.credentials);
+      return { ...r, access_token: creds?.access_token || null, credentials: creds };
+    });
+  }
+
+  /**
+   * Upsert a platform account, mapping legacy caller fields onto the
+   * canonical schema. Used by the autonomous link-account flow.
+   */
+  upsert(data) {
+    const userId = data.user_id || data.userId;
+    const platform = data.platform || 'meta';
+    const accountName = data.account_name || data.name || 'Meta Account';
+    const token = data.access_token || data.credentials?.access_token;
+    const status = data.status || (data.is_active === 0 ? 'paused' : 'active');
+    const existing = userId
+      ? this.db.prepare(
+          'SELECT * FROM platform_accounts WHERE user_id = ? AND platform = ? AND account_name = ? LIMIT 1'
+        ).get(userId, platform, accountName)
+      : null;
+    const credentials = {
+      ...(typeof data.credentials === 'object' ? data.credentials : {}),
+      ...(token ? { access_token: token } : {}),
+      ...(data.platform_id || data.accountId ? { fb_account_id: data.platform_id || data.accountId } : {}),
+      ...(data.metadata ? { legacy_metadata: data.metadata } : {}),
+    };
+    if (existing) {
+      return this.update(existing.id, {
+        credentials,
+        account_name: accountName,
+        is_active: status === 'paused' ? 0 : 1,
+      });
+    }
+    return this.create({
+      user_id: userId,
+      platform,
+      account_name: accountName,
+      credentials,
+      is_active: status === 'paused' ? 0 : 1,
+    });
   }
 
   // ── System-level lookups (no userId) ─────────────────────────
