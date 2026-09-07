@@ -28,7 +28,6 @@ export function handleStart() {
     const ruleCount = deps.repos?.rulesRepo?.countEnabled?.(ctx.userId) || 0;
 
     let message;
-    // For new users, add a prominent Connect Account button on top of the menu.
     const keyboard = mainMenuKeyboard();
     if (!hasMetaAccount && campaignCount === 0) {
       message = `👋 *Welcome to AdForge, ${escMd(name)}!*\n\n` +
@@ -39,25 +38,12 @@ export function handleStart() {
         'Tap *🔗 Connect Account* below to begin!';
       keyboard.inline_keyboard.unshift([
         { text: '🔗 Connect Account', callback_data: 'menu:connect' },
-        { text: '🌐 Platforms', callback_data: 'menu:platforms' },
       ]);
-      // Remove duplicate Platforms from main menu (row 3)
-      keyboard.inline_keyboard = keyboard.inline_keyboard.filter(
-        (row, idx) => !(idx > 0 && row.some(b => b.callback_data === 'menu:platforms'))
-      );
     } else if (hasMetaAccount && campaignCount === 0) {
       message = `👋 *Welcome back, ${escMd(name)}!*\n\n` +
         '✅ Meta account connected\n' +
         '📭 No campaigns yet\n\n' +
         'Tap *🎯 Buat Kampanye* to create your first campaign, or *📣 My Meta Ads* to sync from Meta.';
-      keyboard.inline_keyboard.unshift([
-        { text: '🎯 Create Campaign', callback_data: 'menu:create' },
-        { text: '📣 Ads Manager', callback_data: 'menu:ads' },
-      ]);
-      // Remove duplicate Create Campaign / Ads Manager from main menu
-      keyboard.inline_keyboard = keyboard.inline_keyboard.filter(
-        (row, idx) => !(idx > 0 && row.some(b => b.callback_data === 'menu:create' || b.callback_data === 'menu:ads'))
-      );
     } else {
       message = `👋 *Welcome back, ${escMd(name)}!*\n\n` +
         `📊 ${campaignCount} campaign${campaignCount !== 1 ? 's' : ''} tracked\n` +
