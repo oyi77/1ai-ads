@@ -383,6 +383,11 @@ async function handleCreateGo(ctx) {
     } catch { /* handled below */ }
 
     const targeting = d.targeting || {};
+    // NOTE (probe-verified 2026-09-07): LINK_CLICKS + IMPRESSIONS is accepted
+    // for OUTCOME_SALES. OFFSITE_CONVERSIONS without a promoted_object pixel
+    // 400s (subcode 1815430), so do NOT map per-objective here.
+    const optimizationGoal = 'LINK_CLICKS';
+    const genderVal = targeting.gender || 0;
     const adSet = await api.createAdSet(realAccountId, campaign.id, {
       name: `${d.name} - Ad Set`,
       dailyBudget: d.dailyBudget,
@@ -390,10 +395,10 @@ async function handleCreateGo(ctx) {
         geo_locations: { countries: targeting.countries || ['ID'] },
         age_min: targeting.ageMin || 18,
         age_max: targeting.ageMax || 55,
-        gender: targeting.gender || 0,
+        ...(genderVal === 1 ? { genders: [1] } : genderVal === 2 ? { genders: [2] } : {}),
       },
       billingEvent: 'IMPRESSIONS',
-      optimizationGoal: 'LINK_CLICKS',
+      optimizationGoal,
     });
 
     // Try to create creative + ad (non-fatal if it fails)
@@ -458,7 +463,8 @@ async function handleCreateGo(ctx) {
         'Campaign + Ad Set sudah terbuat (PAUSED). Setelah App live, buat ulang iklannya.'
       );
     } else {
-      await ctx.reply(`⚠️ Failed: ${esc(err.message).slice(0, 200)}`);
+      const detail = err.userMessage || err.data?.error?.error_user_msg || err.data?.error?.message || err.message;
+      await ctx.reply(`⚠️ Failed: ${esc(detail).slice(0, 300)}`);
     }
   }
   try { await ctx.scene.leave(); } catch { /* ok */ }

@@ -209,6 +209,7 @@ export class CampaignOrchestrator {
       OUTCOME_LEADS: 'LEAD_GENERATION',
       OUTCOME_ENGAGEMENT: 'POST_ENGAGEMENT',
       OUTCOME_AWARENESS: 'REACH',
+      OUTCOME_APP_PROMOTION: 'APP_INSTALLS',
     };
     return map[objective] || 'LINK_CLICKS';
   }
