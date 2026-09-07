@@ -361,7 +361,6 @@ async function handleCreateGo(ctx) {
     return ctx.reply('⚠️ Incomplete data. Start again with /create.');
   }
 
-  // Use the token that owns the selected account/BM
   const selectedToken = d.selectedToken || ctx.wizard.state.tokens?.[0];
   const api = selectedToken?.api;
   if (!api) return ctx.reply('🔌 Connect a Meta account first via /settings.');
@@ -397,40 +396,53 @@ async function handleCreateGo(ctx) {
       optimizationGoal: 'LINK_CLICKS',
     });
 
-    if (d.postId) {
-      const data = await api._post(`/${realAccountId}/adcreatives`, {
-        name: `${d.name} - Creative`,
-        object_story_id: d.postId,
-      });
-      await api.createAd(realAccountId, {
-        adsetId: adSet.id,
-        creativeId: data.id,
-        name: `${d.name} - Ad`,
-        status: 'PAUSED',
-      });
-    } else {
-      const creative = await api.createAdCreative(realAccountId, {
-        name: `${d.name} - Creative`,
-        pageId,
-        message: d.name,
-        headline: d.name,
-        description: 'Created via AdForge Bot',
-        linkUrl: 'https://example.com',
-        ctaType: 'LEARN_MORE',
-      });
-      await api.createAd(realAccountId, {
-        adsetId: adSet.id,
-        creativeId: creative.id,
-        name: `${d.name} - Ad`,
-        status: 'PAUSED',
-      });
+    // Try to create creative + ad (non-fatal if it fails)
+    try {
+      if (d.postId) {
+        const data = await api._post(`/${realAccountId}/adcreatives`, {
+          name: `${d.name} - Creative`,
+          object_story_id: d.postId,
+        });
+        await api.createAd(realAccountId, {
+          adsetId: adSet.id,
+          creativeId: data.id,
+          name: `${d.name} - Ad`,
+          status: 'PAUSED',
+        });
+      } else if (pageId) {
+        const creative = await api.createAdCreative(realAccountId, {
+          name: `${d.name} - Creative`,
+          pageId,
+          message: d.name,
+          headline: d.name,
+          description: 'Created via AdForge Bot',
+          linkUrl: 'https://example.com',
+          ctaType: 'LEARN_MORE',
+        });
+        await api.createAd(realAccountId, {
+          adsetId: adSet.id,
+          creativeId: creative.id,
+          name: `${d.name} - Ad`,
+          status: 'PAUSED',
+        });
+      } else {
+        throw new Error('No Facebook Page available. Add a Page to create creatives.');
+      }
+    } catch (creativeErr) {
+      log.warn('Creative creation failed — campaign/adset still created', { error: creativeErr.message });
+      // Creative failed but campaign + adset exist — inform user
+      await ctx.reply(
+        `⚠️ *Campaign & Ad Set created, but creative failed:*\n${esc(creativeErr.message).slice(0, 200)}\n\n` +
+        'You can add a creative later from the Creative Library.',
+        { parse_mode: 'Markdown' }
+      );
     }
 
     await ctx.reply(
       `🎉 *Campaign Created!*\n\n` +
       `📝 ${esc(d.name)}\n` +
       `💰 ${fmtRp(d.dailyBudget)}/day · Status: ⏸ PAUSED\n\n` +
-      `Activate via /ads → select account → Resume.`,
+      'Activate via /ads → select account → Resume.',
       { parse_mode: 'Markdown' }
     );
   } catch (err) {

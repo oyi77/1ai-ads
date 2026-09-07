@@ -343,6 +343,9 @@ export class MetaAdsAPI extends BasePlatformApiClient {
   }
 
   async createAdCreative(accountId, { name, pageId, message, headline, description, linkUrl, imageHash, ctaType = 'LEARN_MORE' }) {
+    if (!pageId) {
+      throw new Error('page_id is required to create an ad creative. Select a Facebook Page first.');
+    }
     const linkData = {
       message,
       link: linkUrl,
