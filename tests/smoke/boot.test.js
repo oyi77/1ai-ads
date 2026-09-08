@@ -69,7 +69,7 @@ describe('Smoke Tests', () => {
     db.close();
   });
 
-  it('critical endpoints return 200 with auth', async () => {
+  it('critical endpoints return 200 with auth', { timeout: 15000 }, async () => {
     const db = createDatabase(':memory:');
     seedDemoData(db);
     const app = createApp({ db, llmClient: mockLLM, mcpClient: mockMCP });

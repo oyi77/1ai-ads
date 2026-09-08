@@ -195,6 +195,11 @@ export const createCampaignScene = new Scenes.WizardScene(
       }
       if (step === 'preview' || step === 'done') { await ctx.reply('Tap Confirm to proceed.', { reply_markup: { inline_keyboard: [[{ text: 'Confirm', callback_data: 'create:creative:confirm' }], CANCEL_ROW] } }); return; }
     }
+    // If postId already set (from post picker callback or manual entry), advance to confirm
+    if (ctx.wizard.state.data.postId && !ctx.wizard.state.confirmShown) {
+      return ctx.wizard.selectStep(8);
+    }
+
     if (!ctx.wizard.state.data.postId && !ctx.wizard.state.creative?.headline && source !== 'skip') {
       await ctx.reply('Select an option using the buttons above.', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
     }
