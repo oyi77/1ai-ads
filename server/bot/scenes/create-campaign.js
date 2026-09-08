@@ -90,6 +90,7 @@ export const createCampaignScene = new Scenes.WizardScene(
   async (ctx) => {
     ctx.wizard.state.data = {};
     ctx.wizard.state.confirmShown = false;
+    ctx.wizard.state.postPickerShown = false;
 
     const tokens = getAllMetaTokens(ctx);
     if (tokens.length === 0) {
@@ -236,15 +237,61 @@ export const createCampaignScene = new Scenes.WizardScene(
   // Step 7: Post ID → confirm
   async (ctx) => {
     if (ctx.wizard.state.confirmShown) return;
-    const text = (ctx.message?.text || '').trim();
-    if (text !== '/skip') {
-      const postId = text.replace(/[^0-9]/g, '');
-      if (!postId || postId.length < 5) {
-        await ctx.reply('⚠️ Invalid Post ID. Enter a valid Facebook Post ID or /skip.');
-        return;
+
+    const api = (ctx.wizard.state.data.selectedToken || ctx.wizard.state.tokens?.[0])?.api;
+
+    // First entry: fetch posts from the Page and show a picker.
+    if (!ctx.wizard.state.postPickerShown) {
+      ctx.wizard.state.postPickerShown = true;
+      let pageId = '';
+      try {
+        const pages = await api?.getPages?.() || [];
+        pageId = pages[0]?.id || '';
+      } catch { /* fall through to manual */ }
+
+      if (pageId && api) {
+        try {
+          const page = (await api.getPages?.() || []).find(p => p.id === pageId);
+          const posts = await api.getPagePosts(pageId, { limit: 8, pageToken: page?.accessToken });
+          if (posts.length > 0) {
+            const rows = posts.map(p => [{
+              text: `📝 ${p.message.slice(0, 40)}`,
+              callback_data: `create:post:${p.id}`,
+            }]);
+            rows.push([{ text: '✏️ Enter custom Post ID', callback_data: 'create:post:custom' }]);
+            rows.push(CANCEL_ROW);
+            await ctx.reply(
+              '📱 *Pilih Post*\n\nPilih post yang mau dijadikan iklan, atau masukkan Post ID manual:',
+              { parse_mode: 'Markdown', reply_markup: { inline_keyboard: rows } }
+            );
+            return;
+          }
+        } catch { /* fall through to manual */ }
       }
-      ctx.wizard.state.data.postId = postId;
+      // No page/posts available — manual entry.
+      await ctx.reply(
+        '📱 *Post ID*\n\nTidak bisa memuat post dari Page. Masukkan Post ID Facebook/Instagram:\n\nContoh: `1234567890123456`\n\nAtau /skip untuk generate otomatis.',
+        { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
+      );
+      return;
     }
+
+    // Post already selected via callback → go to confirmation.
+    if (ctx.wizard.state.data.postId) {
+      // fall through to confirmation below
+    } else {
+      // Handle manual text input.
+      const text = (ctx.message?.text || '').trim();
+      if (text !== '/skip') {
+        const postId = text.replace(/[^0-9]/g, '');
+        if (!postId || postId.length < 5) {
+          await ctx.reply('⚠️ Post ID tidak valid. Masukkan Post ID yang benar atau /skip.');
+          return;
+        }
+        ctx.wizard.state.data.postId = postId;
+      }
+    }
+
     const d = ctx.wizard.state.data;
     const targeting = d.targeting || {};
     const summary =
@@ -271,6 +318,21 @@ export const createCampaignScene = new Scenes.WizardScene(
     ctx.wizard.state.confirmShown = true;
   }
 );
+
+// Post picker callback: user tapped a post or "custom".
+createCampaignScene.action(/^create:post:(.+)$/, async (ctx) => {
+  await ctx.answerCbQuery();
+  const val = ctx.match[1];
+  if (val === 'custom') {
+    ctx.wizard.state.postPickerShown = false; // re-enter step 7 for manual text
+    await ctx.reply('✏️ Masukkan Post ID Facebook/Instagram:\n\nContoh: `1234567890123456`');
+    return;
+  }
+  ctx.wizard.state.data.postId = val;
+  ctx.wizard.state.confirmShown = false;
+  // Re-enter step 7 — postId is set so it goes straight to confirmation.
+  return ctx.wizard.selectStep(7);
+});
 
 // Wire scene callbacks: BM picker → account picker → objective picker → name prompt
 createCampaignScene.action(/^create:bm:(.+)$/, async (ctx) => {

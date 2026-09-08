@@ -456,6 +456,27 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     }));
   }
 
+  async getPagePosts(pageId, { limit = 10, pageToken = null } = {}) {
+    // Fetch published posts from a Facebook Page so the user can pick one
+    // as the ad creative instead of entering a raw Post ID.
+    // NOTE: /{page}/posts requires a PAGE access token, not a user token.
+    const token = pageToken || this._getToken();
+    const url = new URL(`https://graph.facebook.com/v22.0/${pageId}/posts`);
+    url.searchParams.set('fields', 'id,message,created_time,permalink_url,full_picture,is_published');
+    url.searchParams.set('limit', String(limit));
+    url.searchParams.set('access_token', token);
+    const res = await safeFetch('meta', url.toString());
+    const data = await res.json();
+    return (data.data || []).map(post => ({
+      id: post.id,
+      message: (post.message || '').slice(0, 80) || '(no caption)',
+      createdTime: post.created_time,
+      permalinkUrl: post.permalink_url || '',
+      picture: post.full_picture || '',
+      published: post.is_published !== false,
+    }));
+  }
+
   async getTargetingOptions(query) {
     const data = await this._get('/search', {
       type: 'adinterest',
@@ -480,6 +501,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       id: p.id,
       name: p.name,
       category: p.category,
+      accessToken: p.access_token || null,
     }));
   }
 
