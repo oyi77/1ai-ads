@@ -263,6 +263,7 @@ createCampaignScene.action(/^create:post:(.+)$/, async (ctx) => {
 createCampaignScene.action(/^create:src:manual$/, async (ctx) => {
   await ctx.answerCbQuery();
   ctx.wizard.state.creativeSource = 'manual';
+  ctx.wizard.state.confirmShown = false;
   await ctx.reply('Enter Post ID (e.g. 1234567890123456):', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
 });
 
@@ -274,6 +275,7 @@ createCampaignScene.action(/^create:src:custom:(.+)$/, async (ctx) => {
   ctx.wizard.state.creativeType = ctype;
   ctx.wizard.state.creative = {};
   ctx.wizard.state.confirmShown = false;
+  ctx.wizard.state.creativeStep = ctype === 'text' ? 'headline' : 'media';
   if (ctype === 'text') {
     ctx.wizard.state.creativeStep = 'headline';
     await ctx.reply('Text-only creative. Starting with headline.');
