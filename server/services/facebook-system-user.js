@@ -100,7 +100,7 @@ export class FacebookSystemUserService {
       name: params.name,
       objective: params.objective,
       status: params.status || 'PAUSED',
-      special_ad_categories: params.special_ad_categories || [],
+      special_ad_categories: (params.special_ad_categories && params.special_ad_categories.length ? params.special_ad_categories : ['NONE']),
     });
   }
 }
