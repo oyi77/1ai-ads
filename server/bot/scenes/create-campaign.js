@@ -1,11 +1,7 @@
 /**
- * Create Campaign WizardScene — full flow per user feedback:
- * select Business Manager → select ad account → objective → name → budget →
- * audience targeting → post ID → confirm → create
- *
- * Multi-tenant: reads ALL active Meta tokens for the user, aggregates
- * Business Managers and ad accounts across every token, and tracks which
- * token the user's selection belongs to.
+ * Create Campaign WizardScene — full flow:
+ * BM -> account -> objective -> name -> budget -> audience ->
+ * creative source (post picker / custom creative / manual ID / skip) -> confirm -> create
  */
 import { Scenes } from 'telegraf';
 import { createLogger } from '../../lib/logger.js';
@@ -14,24 +10,20 @@ import { MetaAdsAPI } from '../../services/meta/index.js';
 const log = createLogger('bot:create');
 
 const OBJECTIVES = [
-  { id: 'OUTCOME_TRAFFIC', label: '🚦 Traffic' },
-  { id: 'OUTCOME_SALES', label: '🛒 Sales' },
-  { id: 'OUTCOME_LEADS', label: '📋 Leads' },
-  { id: 'OUTCOME_ENGAGEMENT', label: '💬 Engagement' },
-  { id: 'OUTCOME_AWARENESS', label: '👁 Brand Awareness' },
-  { id: 'OUTCOME_APP_PROMOTION', label: '📱 App Install' },
+  { id: 'OUTCOME_TRAFFIC', label: '\u{1F6A6} Traffic' },
+  { id: 'OUTCOME_SALES', label: '\u{1F6D2} Sales' },
+  { id: 'OUTCOME_LEADS', label: '\u{1F4CB} Leads' },
+  { id: 'OUTCOME_ENGAGEMENT', label: '\u{1F4AC} Engagement' },
+  { id: 'OUTCOME_AWARENESS', label: '\u{1F441} Brand Awareness' },
+  { id: 'OUTCOME_APP_PROMOTION', label: '\u{1F4F1} App Install' },
 ];
 
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 const fmtRp = n => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
-const CANCEL_ROW = [{ text: '❌ Batal', callback_data: 'create:cancel' }];
+const CANCEL_ROW = [{ text: '\u274C Batal', callback_data: 'create:cancel' }];
 
-/**
- * Get all active Meta tokens for the user.
- * Returns array of { account, access_token, api }.
- */
 function getAllMetaTokens(ctx) {
   const repo = ctx.deps?.repos?.platformAccountsRepo;
   if (!repo) return [];
@@ -41,531 +33,420 @@ function getAllMetaTokens(ctx) {
     .map(r => ({ account: r, access_token: r.access_token, api: MetaAdsAPI.withToken(r.access_token) }));
 }
 
-/** Fetch /me/businesses for a single token. */
 async function fetchBusinessesForToken(api) {
   if (!api) return [];
-  try {
-    const data = await api.getBusinesses();
-    return (data || []).map(b => ({ id: b.id, name: b.name || b.id, verificationStatus: b.verificationStatus }));
-  } catch {
-    return [];
-  }
+  try { const data = await api.getBusinesses(); return (data || []).map(b => ({ id: b.id, name: b.name || b.id })); }
+  catch { return []; }
 }
 
-/** Fetch /me/adaccounts for a single token. */
 async function fetchAccountsForToken(api) {
   if (!api) return [];
-  try {
-    const accounts = await api.getAdAccounts();
-    return (accounts || []).map(a => ({ id: a.id, name: a.name || a.id, status: a.status === 'active' ? 'active' : 'unknown' }));
-  } catch {
-    return [];
-  }
+  try { const accounts = await api.getAdAccounts(); return (accounts || []).map(a => ({ id: a.id, name: a.name || a.id, status: a.status === 'active' ? 'active' : 'unknown' })); }
+  catch { return []; }
 }
 
-/** Fetch ad accounts owned by a BM from a specific token, with personal fallback. */
 async function fetchBmAccountsForToken(api, businessId) {
   if (!api) return [];
   try {
-    const data = await api._get(`/${businessId}/owned_ad_accounts`, {
-      fields: 'id,name,account_status,currency,balance,amount_spent',
-      limit: '50',
-    });
-    const owned = (data.data || []).map(a => ({
-      id: a.id,
-      name: a.name || a.id,
-      status: a.account_status === 1 ? 'active' : 'unknown',
-    }));
+    const data = await api._get(`/${businessId}/owned_ad_accounts`, { fields: 'id,name,account_status,currency,balance,amount_spent', limit: '50' });
+    const owned = (data.data || []).map(a => ({ id: a.id, name: a.name || a.id, status: a.account_status === 1 ? 'active' : 'unknown' }));
     if (owned.length > 0) return owned;
-    // Fallback: BM owns no accounts, use token's personal accounts
     return fetchAccountsForToken(api);
-  } catch {
-    return fetchAccountsForToken(api);
-  }
+  } catch { return fetchAccountsForToken(api); }
 }
 
 export const createCampaignScene = new Scenes.WizardScene(
   'create-campaign',
-  // Step 0: Aggregate tokens → show BM picker (or account fallback)
+  // Step 0: BM picker
   async (ctx) => {
     ctx.wizard.state.data = {};
     ctx.wizard.state.confirmShown = false;
     ctx.wizard.state.postPickerShown = false;
-
+    ctx.wizard.state.creative = {};
+    ctx.wizard.state.creativeSource = null;
+    ctx.wizard.state.creativeType = null;
+    ctx.wizard.state.creativeStep = null;
     const tokens = getAllMetaTokens(ctx);
-    if (tokens.length === 0) {
-      await ctx.reply('🔌 No Meta accounts connected. Connect one first via /settings.');
-      return ctx.scene.leave();
-    }
-
-    // Aggregate businesses and accounts across ALL tokens
-    const businessesByToken = []; // [{ token, business }]
-    const accountsByToken = [];   // [{ token, account }]
-    for (const t of tokens) {
-      const businesses = await fetchBusinessesForToken(t.api);
-      businesses.forEach(b => businessesByToken.push({ token: t, business: b }));
-      const accounts = await fetchAccountsForToken(t.api);
-      accounts.forEach(a => accountsByToken.push({ token: t, account: a }));
-    }
-
-    // Store for later steps
-    ctx.wizard.state.tokens = tokens;
-    ctx.wizard.state.businessesByToken = businessesByToken;
-    ctx.wizard.state.accountsByToken = accountsByToken;
-
+    if (tokens.length === 0) { await ctx.reply('No Meta accounts connected. Connect first via /settings.'); return ctx.scene.leave(); }
+    const businessesByToken = []; const accountsByToken = [];
+    for (const t of tokens) { const bs = await fetchBusinessesForToken(t.api); bs.forEach(b => businessesByToken.push({ token: t, business: b })); const acs = await fetchAccountsForToken(t.api); acs.forEach(a => accountsByToken.push({ token: t, account: a })); }
+    ctx.wizard.state.tokens = tokens; ctx.wizard.state.businessesByToken = businessesByToken; ctx.wizard.state.accountsByToken = accountsByToken;
     const multiToken = tokens.length > 1;
-
     if (businessesByToken.length > 0) {
-      // Show BM picker (with token prefix if user has multiple tokens)
-      const keyboard = businessesByToken.map(({ token, business }) => {
-        const prefix = multiToken ? `[${token.account.account_name}] ` : '';
-        return [{
-          text: `🏢 ${prefix}${business.name}`,
-          callback_data: `create:bm:${business.id}`,
-        }];
-      });
+      const keyboard = businessesByToken.map(({ token, business }) => [{ text: `${multiToken ? '['+token.account.account_name+'] ' : ''}${business.name}`, callback_data: `create:bm:${business.id}` }]);
       keyboard.push(CANCEL_ROW);
-      await ctx.reply('📋 *Select Business Manager*\n\nWhich Business Manager owns the ad account you want to use?', {
-        parse_mode: 'Markdown',
-        reply_markup: { inline_keyboard: keyboard },
-      });
+      await ctx.reply('Select Business Manager:', { reply_markup: { inline_keyboard: keyboard } });
       return ctx.wizard.next();
     }
-
-    // No BMs across any token → fall back to personal accounts
-    if (accountsByToken.length === 0) {
-      await ctx.reply('🔌 No ad accounts found. Connect a Meta account first via /settings.');
-      return ctx.scene.leave();
-    }
-
+    if (accountsByToken.length === 0) { await ctx.reply('No ad accounts found. Connect first via /settings.'); return ctx.scene.leave(); }
     ctx.wizard.state.accounts = accountsByToken.map(a => a.account);
-    const keyboard = accountsByToken.map(({ token, account }) => {
-      const prefix = multiToken ? `[${token.account.account_name}] ` : '';
-      return [{
-        text: `📘 ${prefix}${account.name}`,
-        callback_data: `create:acct:${account.id}`,
-      }];
-    });
-    keyboard.push(CANCEL_ROW);
-    await ctx.reply('📋 *Select an ad account* to run the campaign in:', {
-      parse_mode: 'Markdown',
-      reply_markup: { inline_keyboard: keyboard },
-    });
-    // No BM selected — mark and jump to step 2 (account guard)
+    const kb = accountsByToken.map(({ token, account }) => [{ text: `${multiToken ? '['+token.account.account_name+'] ' : ''}${account.name}`, callback_data: `create:acct:${account.id}` }]);
+    kb.push(CANCEL_ROW);
+    await ctx.reply('Select an ad account:', { reply_markup: { inline_keyboard: kb } });
     ctx.wizard.state.data.businessId = 'none';
     return ctx.wizard.selectStep(2);
   },
-  // Step 1: Stray-text guard — BM button press is required
-  async (ctx) => {
-    if (!ctx.wizard.state.data.businessId) {
-      await ctx.reply('⚠️ Please select a Business Manager using the buttons above.');
-      return;
-    }
-    await ctx.reply('⚠️ Please select a Business Manager using the buttons above.');
-  },
-  // Step 2: Stray-text guard — account button press is required
-  async (ctx) => {
-    if (!ctx.wizard.state.data.accountId) {
-      await ctx.reply('⚠️ Please select an ad account using the buttons above.');
-      return;
-    }
-  },
-  // Step 3: Stray-text guard — objective button press is required
-  async (ctx) => {
-    if (!ctx.wizard.state.data.objective) {
-      await ctx.reply('⚠️ Select an objective using the buttons above.');
-      return;
-    }
-  },
-  // Step 4: Name → budget
+  // Step 1: BM guard
+  async (ctx) => { if (!ctx.wizard.state.data.businessId) await ctx.reply('Please select a Business Manager using the buttons above.'); },
+  // Step 2: Account guard
+  async (ctx) => { if (!ctx.wizard.state.data.accountId) await ctx.reply('Please select an ad account using the buttons above.'); },
+  // Step 3: Objective guard
+  async (ctx) => { if (!ctx.wizard.state.data.objective) await ctx.reply('Select an objective using the buttons above.'); },
+  // Step 4: Name -> budget
   async (ctx) => {
     const text = (ctx.message?.text || '').trim();
-    if (!text || text.length > 80 || text === '/skip') {
-      await ctx.reply('⚠️ Name must be 1-80 characters. Try again:');
-      return;
-    }
+    if (!text || text.length > 80 || text === '/skip') { await ctx.reply('Name must be 1-80 characters. Try again:'); return; }
     ctx.wizard.state.data.name = text;
-    await ctx.reply('💰 *Daily Budget*\n\nEnter daily budget in Rupiah (min Rp 10,000):\nExample: 50000', {
-      parse_mode: 'Markdown',
-      reply_markup: { inline_keyboard: [CANCEL_ROW] },
-    });
+    await ctx.reply('Enter daily budget in Rupiah (min Rp 10,000):', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
     return ctx.wizard.next();
   },
-  // Step 5: Budget → adset/audience
+  // Step 5: Budget -> audience
   async (ctx) => {
     const budget = parseInt((ctx.message?.text || '').replace(/[^\d]/g, ''), 10);
-    if (!Number.isFinite(budget) || budget < 10000) {
-      await ctx.reply('⚠️ Minimum budget is Rp 10,000. Try again:');
-      return;
-    }
+    if (!Number.isFinite(budget) || budget < 10000) { await ctx.reply('Minimum budget is Rp 10,000. Try again:'); return; }
     ctx.wizard.state.data.dailyBudget = budget;
-    await ctx.reply(
-      '🎯 *Audience Settings*\n\nSend your audience targeting in this format:\n\n' +
-      '`Country: ID\nAge: 18-45\nGender: all\nInterests: fashion, beauty, skincare`\n\n' +
-      'Or send /skip for default targeting (Indonesia, 18-55, all).',
-      { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
-    );
+    await ctx.reply('Send audience targeting (Country: ID\\nAge: 18-45\\nGender: all\\nInterests: fashion, beauty) or /skip:', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
     return ctx.wizard.next();
   },
-  // Step 6: Audience → post ID
+  // Step 6: Audience -> creative source picker
   async (ctx) => {
     const text = (ctx.message?.text || '').trim();
     if (text !== '/skip') {
-      const lines = text.split('\n').reduce((acc, line) => {
-        const [k, ...v] = line.split(':');
-        if (k && v.length) acc[k.trim().toLowerCase()] = v.join(':').trim();
-        return acc;
-      }, {});
-      ctx.wizard.state.data.targeting = {
-        countries: lines.country ? [lines.country.toUpperCase()] : ['ID'],
-        ageMin: parseInt(lines.age?.split('-')[0]) || 18,
-        ageMax: parseInt(lines.age?.split('-')[1]) || 55,
-        gender: lines.gender === 'male' ? 1 : lines.gender === 'female' ? 2 : 0,
-        interests: lines.interests ? lines.interests.split(',').map(s => s.trim()) : [],
-      };
+      const lines = text.split('\n').reduce((acc, line) => { const [k,...v] = line.split(':'); if (k && v.length) acc[k.trim().toLowerCase()] = v.join(':').trim(); return acc; }, {});
+      ctx.wizard.state.data.targeting = { countries: lines.country ? [lines.country.toUpperCase()] : ['ID'], ageMin: parseInt(lines.age?.split('-')[0]) || 18, ageMax: parseInt(lines.age?.split('-')[1]) || 55, gender: lines.gender === 'male' ? 1 : lines.gender === 'female' ? 2 : 0, interests: lines.interests ? lines.interests.split(',').map(s => s.trim()) : [] };
     } else {
       ctx.wizard.state.data.targeting = { countries: ['ID'], ageMin: 18, ageMax: 55, gender: 0, interests: [] };
     }
-    await ctx.reply(
-      '📱 *Post ID*\n\nEnter the Facebook/Instagram Post ID you want to use as the ad creative:\n\n' +
-      'Example: `1234567890123456`\n\n' +
-      'Or send /skip to let AI generate the creative.',
-      { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
-    );
+    await ctx.reply('Choose creative source:', { reply_markup: { inline_keyboard: [
+      [{ text: 'Pick Post from Page', callback_data: 'create:src:post' }],
+      [{ text: 'Custom Image Creative', callback_data: 'create:src:custom:image' }],
+      [{ text: 'Custom Video Creative', callback_data: 'create:src:custom:video' }],
+      [{ text: 'Text-only Creative', callback_data: 'create:src:custom:text' }],
+      [{ text: 'Enter Post ID Manual', callback_data: 'create:src:manual' }],
+      [{ text: 'Skip (AI-generate)', callback_data: 'create:src:skip' }],
+      CANCEL_ROW,
+    ] } });
     return ctx.wizard.next();
   },
-  // Step 7: Post ID → confirm
+  // Step 7: Creative handler
   async (ctx) => {
-    if (ctx.wizard.state.confirmShown) return;
-
-    const api = (ctx.wizard.state.data.selectedToken || ctx.wizard.state.tokens?.[0])?.api;
-
-    // First entry: fetch posts from the Page and show a picker.
-    if (!ctx.wizard.state.postPickerShown) {
-      ctx.wizard.state.postPickerShown = true;
-      let pageId = '';
-      try {
-        const pages = await api?.getPages?.() || [];
-        pageId = pages[0]?.id || '';
-      } catch { /* fall through to manual */ }
-
-      if (pageId && api) {
-        try {
-          const page = (await api.getPages?.() || []).find(p => p.id === pageId);
-          const posts = await api.getPagePosts(pageId, { limit: 8, pageToken: page?.accessToken });
-          if (posts.length > 0) {
-            const rows = posts.map(p => [{
-              text: `📝 ${p.message.slice(0, 40)}`,
-              callback_data: `create:post:${p.id}`,
-            }]);
-            rows.push([{ text: '✏️ Enter custom Post ID', callback_data: 'create:post:custom' }]);
-            rows.push(CANCEL_ROW);
-            await ctx.reply(
-              '📱 *Pilih Post*\n\nPilih post yang mau dijadikan iklan, atau masukkan Post ID manual:',
-              { parse_mode: 'Markdown', reply_markup: { inline_keyboard: rows } }
-            );
-            return;
-          }
-        } catch { /* fall through to manual */ }
-      }
-      // No page/posts available — manual entry.
-      await ctx.reply(
-        '📱 *Post ID*\n\nTidak bisa memuat post dari Page. Masukkan Post ID Facebook/Instagram:\n\nContoh: `1234567890123456`\n\nAtau /skip untuk generate otomatis.',
-        { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
-      );
-      return;
-    }
-
-    // Post already selected via callback → go to confirmation.
-    if (ctx.wizard.state.data.postId) {
-      // fall through to confirmation below
-    } else {
-      // Handle manual text input.
+    const source = ctx.wizard.state.creativeSource;
+    if (source === 'manual' && !ctx.wizard.state.data.postId) {
       const text = (ctx.message?.text || '').trim();
       if (text !== '/skip') {
         const postId = text.replace(/[^0-9]/g, '');
-        if (!postId || postId.length < 5) {
-          await ctx.reply('⚠️ Post ID tidak valid. Masukkan Post ID yang benar atau /skip.');
-          return;
-        }
+        if (!postId || postId.length < 5) { await ctx.reply('Invalid Post ID. Try again.'); return; }
         ctx.wizard.state.data.postId = postId;
+        return ctx.wizard.selectStep(8);
       }
     }
-
+    if (source === 'custom') {
+      const cr = ctx.wizard.state.creative || {};
+      const step = ctx.wizard.state.creativeStep;
+      const ctype = ctx.wizard.state.creativeType;
+      if (step === 'media' && (ctype === 'image' || ctype === 'video')) {
+        const msgText = (ctx.message?.text || '').trim();
+        const photo = ctx.message?.photo;
+        const video = ctx.message?.video;
+        if (ctype === 'image') {
+          if (photo) { try { const file = await ctx.telegram.getFile(photo[photo.length - 1].file_id); const link = await ctx.telegram.getFileLink(file.file_id || file); cr.mediaUrl = link.href || link.toString(); } catch { cr.mediaUrl = ''; } }
+          else if (msgText && /^https?:\/\//i.test(msgText)) { cr.mediaUrl = msgText; }
+          else if (msgText === '/skip') { /* no media */ }
+          else { await ctx.reply('Send image or image URL (http/https).'); return; }
+        } else {
+          if (video) { try { const file = await ctx.telegram.getFile(video.file_id); const link = await ctx.telegram.getFileLink(file.file_id || file); cr.mediaUrl = link.href || link.toString(); } catch { cr.mediaUrl = ''; } }
+          else if (msgText && /^https?:\/\//i.test(msgText)) { cr.mediaUrl = msgText; }
+          else if (msgText === '/skip') { /* no media */ }
+          else { await ctx.reply('Send video or video URL (http/https).'); return; }
+        }
+        ctx.wizard.state.creativeStep = 'headline';
+        await ctx.reply('Headline (max 40 chars):');
+        return;
+      }
+      if (step === 'headline') {
+        const msgText = (ctx.message?.text || '').trim();
+        if (!msgText || msgText.length > 40) { await ctx.reply('Headline 1-40 chars. Try again:'); return; }
+        cr.headline = msgText;
+        ctx.wizard.state.creativeStep = 'description';
+        await ctx.reply('Description (max 125 chars):');
+        return;
+      }
+      if (step === 'description') {
+        const msgText = (ctx.message?.text || '').trim();
+        if (!msgText || msgText.length > 125) { await ctx.reply('Description 1-125 chars. Try again:'); return; }
+        cr.description = msgText;
+        ctx.wizard.state.creativeStep = 'link';
+        await ctx.reply('Destination URL:');
+        return;
+      }
+      if (step === 'link') {
+        const msgText = (ctx.message?.text || '').trim();
+        if (!msgText || !/^https?:\/\//i.test(msgText)) { await ctx.reply('Send a valid URL (http/https).'); return; }
+        cr.linkUrl = msgText;
+        ctx.wizard.state.creative = cr;
+        ctx.wizard.state.creativeStep = 'preview';
+        const mediaStatus = ctype === 'text' ? 'Placeholder' : (cr.mediaUrl ? 'Ready' : 'AI-generate');
+        await ctx.reply(`Preview:\nType: ${ctype}\nHeadline: ${esc(cr.headline)}\nDescription: ${esc(cr.description)}\nLink: ${esc(cr.linkUrl)}\nMedia: ${mediaStatus}\n\nProceed?`, { reply_markup: { inline_keyboard: [
+          [{ text: 'Confirm', callback_data: 'create:creative:confirm' }],
+          [{ text: 'Redo', callback_data: 'create:creative:restart' }],
+          CANCEL_ROW,
+        ] } });
+        return;
+      }
+      if (step === 'preview' || step === 'done') { await ctx.reply('Tap Confirm to proceed.', { reply_markup: { inline_keyboard: [[{ text: 'Confirm', callback_data: 'create:creative:confirm' }], CANCEL_ROW] } }); return; }
+    }
+    if (!ctx.wizard.state.data.postId && !ctx.wizard.state.creative?.headline && source !== 'skip') {
+      await ctx.reply('Select an option using the buttons above.', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
+    }
+  },
+  // Step 8: Confirm
+  async (ctx) => {
+    if (ctx.wizard.state.confirmShown) return;
     const d = ctx.wizard.state.data;
     const targeting = d.targeting || {};
-    const summary =
-      `📋 *CONFIRMATION*\n\n` +
-      `📘 Account: ${esc((ctx.wizard.state.accounts || []).find(a => a.id === d.accountId)?.name || d.accountId)}\n` +
-      `🎯 Objective: ${esc(OBJECTIVES.find(o => o.id === d.objective)?.label || d.objective)}\n` +
-      `📝 Name: ${esc(d.name)}\n` +
-      `💰 Budget: ${fmtRp(d.dailyBudget)}/day\n` +
-      `🌍 Country: ${(targeting.countries || ['ID']).join(', ')}\n` +
-      `👤 Age: ${targeting.ageMin || 18}-${targeting.ageMax || 55}\n` +
-      `🚻 Gender: ${targeting.gender === 1 ? 'Male' : targeting.gender === 2 ? 'Female' : 'All'}\n` +
-      `🏷 Interests: ${(targeting.interests || []).join(', ') || 'None'}\n` +
-      `📱 Post ID: ${d.postId || 'AI-generated'}\n\n` +
-      `Status: ⏸ PAUSED (safe to review)`;
-    await ctx.reply(summary, {
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '🚀 Create Campaign', callback_data: 'create:go' }],
-          [{ text: '❌ Cancel', callback_data: 'create:cancel' }],
-        ],
-      },
-    });
+    const source = ctx.wizard.state.creativeSource;
+    let mediaInfo = 'AI-generated';
+    if (source === 'post') mediaInfo = `Post ${d.postId || '(pending)'}`;
+    else if (source === 'manual') mediaInfo = `Post ${d.postId || '(pending)'}`;
+    else if (source === 'skip') mediaInfo = 'AI-generated';
+    else if (source === 'custom') { const cr = ctx.wizard.state.creative || {}; mediaInfo = `Custom ${ctx.wizard.state.creativeType} - ${cr.headline || '...'}`; }
+    const summary = `CONFIRMATION\n\nAccount: ${esc((ctx.wizard.state.accounts || []).find(a => a.id === d.accountId)?.name || d.accountId)}\nObjective: ${esc(OBJECTIVES.find(o => o.id === d.objective)?.label || d.objective)}\nName: ${esc(d.name)}\nBudget: ${fmtRp(d.dailyBudget)}/day\nCountry: ${(targeting.countries || ['ID']).join(', ')}\nAge: ${targeting.ageMin || 18}-${targeting.ageMax || 55}\nGender: ${targeting.gender === 1 ? 'Male' : targeting.gender === 2 ? 'Female' : 'All'}\nInterests: ${(targeting.interests || []).join(', ') || 'None'}\nCreative: ${mediaInfo}\n\nStatus: PAUSED (safe to review)`;
+    await ctx.reply(summary, { reply_markup: { inline_keyboard: [
+      [{ text: 'Create Campaign', callback_data: 'create:go' }],
+      [{ text: 'Back', callback_data: 'create:back' }],
+      [{ text: 'Cancel', callback_data: 'create:cancel' }],
+    ] } });
     ctx.wizard.state.confirmShown = true;
-  }
+  },
 );
 
-// Post picker callback: user tapped a post or "custom".
-createCampaignScene.action(/^create:post:(.+)$/, async (ctx) => {
+// Action: Post from Page
+createCampaignScene.action(/^create:src:post$/, async (ctx) => {
   await ctx.answerCbQuery();
-  const val = ctx.match[1];
-  if (val === 'custom') {
-    ctx.wizard.state.postPickerShown = false; // re-enter step 7 for manual text
-    await ctx.reply('✏️ Masukkan Post ID Facebook/Instagram:\n\nContoh: `1234567890123456`');
-    return;
+  ctx.wizard.state.creativeSource = 'post';
+  const api = (ctx.wizard.state.data.selectedToken || ctx.wizard.state.tokens?.[0])?.api;
+  let pageId = ''; let pageAccessToken = '';
+  try { const pages = await api?.getPages?.() || []; pageId = pages[0]?.id || ''; pageAccessToken = pages[0]?.accessToken || ''; } catch {}
+  if (pageId && api) {
+    try {
+      const posts = await api.getPagePosts(pageId, { limit: 8, pageToken: pageAccessToken });
+      if (posts.length > 0) {
+        const rows = posts.map(p => [{ text: `${(p.message || '(no text)').slice(0, 40)}`, callback_data: `create:post:${p.id}` }]);
+        rows.push([{ text: 'Enter custom Post ID', callback_data: 'create:src:manual' }]);
+        rows.push(CANCEL_ROW);
+        await ctx.reply('Pick a post from your Page:', { reply_markup: { inline_keyboard: rows } });
+        ctx.wizard.state.postPickerShown = true;
+        return;
+      }
+    } catch {}
   }
-  ctx.wizard.state.data.postId = val;
-  ctx.wizard.state.confirmShown = false;
-  // Re-enter step 7 — postId is set so it goes straight to confirmation.
-  return ctx.wizard.selectStep(7);
+  await ctx.reply('No posts found. Enter Post ID manually:', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
 });
 
-// Wire scene callbacks: BM picker → account picker → objective picker → name prompt
+// Action: User selected a specific post
+createCampaignScene.action(/^create:post:(.+)$/, async (ctx) => {
+  await ctx.answerCbQuery();
+  const postId = ctx.match[1];
+  ctx.wizard.state.data.postId = postId;
+  ctx.wizard.state.creativeSource = 'post';
+  ctx.wizard.state.confirmShown = false;
+  await ctx.reply(`Post selected: ${postId}`);
+  return ctx.wizard.selectStep(8);
+});
+
+// Action: Manual Post ID
+createCampaignScene.action(/^create:src:manual$/, async (ctx) => {
+  await ctx.answerCbQuery();
+  ctx.wizard.state.creativeSource = 'manual';
+  await ctx.reply('Enter Post ID (e.g. 1234567890123456):', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
+});
+
+// Action: Custom creative type
+createCampaignScene.action(/^create:src:custom:(.+)$/, async (ctx) => {
+  await ctx.answerCbQuery();
+  const ctype = ctx.match[1];
+  ctx.wizard.state.creativeSource = 'custom';
+  ctx.wizard.state.creativeType = ctype;
+  ctx.wizard.state.creative = {};
+  ctx.wizard.state.confirmShown = false;
+  if (ctype === 'text') {
+    ctx.wizard.state.creativeStep = 'headline';
+    await ctx.reply('Text-only creative. Starting with headline.');
+    await ctx.reply('Headline (max 40 chars):');
+    return;
+  }
+  ctx.wizard.state.creativeStep = 'media';
+  const label = ctype === 'image' ? 'Send image (photo or URL) for the ad:' : 'Send video (file or URL) for the ad:';
+  await ctx.reply(label);
+});
+
+// Action: Skip
+createCampaignScene.action(/^create:src:skip$/, async (ctx) => {
+  await ctx.answerCbQuery();
+  ctx.wizard.state.creativeSource = 'skip';
+  ctx.wizard.state.data.postId = undefined;
+  ctx.wizard.state.confirmShown = false;
+  return ctx.wizard.selectStep(8);
+});
+
+// Action: Creative confirm
+createCampaignScene.action(/^create:creative:confirm$/, async (ctx) => {
+  await ctx.answerCbQuery();
+  ctx.wizard.state.creativeStep = 'done';
+  ctx.wizard.state.confirmShown = false;
+  return ctx.wizard.selectStep(8);
+});
+
+// Action: Creative restart
+createCampaignScene.action(/^create:creative:restart$/, async (ctx) => {
+  await ctx.answerCbQuery();
+  ctx.wizard.state.creative = {};
+  ctx.wizard.state.creativeStep = null;
+  ctx.wizard.state.creativeType = null;
+  ctx.wizard.state.confirmShown = false;
+  return ctx.wizard.selectStep(6);
+});
+
+// Action: Back
+createCampaignScene.action(/^create:back$/, async (ctx) => {
+  await ctx.answerCbQuery();
+  ctx.wizard.state.confirmShown = false;
+  ctx.wizard.state.postPickerShown = false;
+  return ctx.wizard.selectStep(6);
+});
+
+// Action: BM picker
 createCampaignScene.action(/^create:bm:(.+)$/, async (ctx) => {
   await ctx.answerCbQuery();
   const businessId = ctx.match[1];
   ctx.wizard.state.data.businessId = businessId;
-
-  // Find which token owns this BM
   const entry = (ctx.wizard.state.businessesByToken || []).find(b => b.business.id === businessId);
-  if (entry) {
-    ctx.wizard.state.data.selectedToken = entry.token;
-  }
-
+  if (entry) ctx.wizard.state.data.selectedToken = entry.token;
   const bmName = entry?.business?.name || businessId;
-  await ctx.reply(`✅ Business Manager selected: *${esc(bmName)}*`, { parse_mode: 'Markdown' });
-
-  // Fetch + render account picker for this BM from the owning token
+  await ctx.reply(`Business Manager: ${bmName}`);
   const token = entry?.token || ctx.wizard.state.tokens?.[0];
   const accounts = await fetchBmAccountsForToken(token?.api, businessId);
-  if (accounts.length === 0) {
-    await ctx.reply('🔌 No ad accounts found for this Business Manager. Connect one first via /settings.');
-    return ctx.scene.leave();
-  }
+  if (accounts.length === 0) { await ctx.reply('No ad accounts for this BM. Connect via /settings.'); return ctx.scene.leave(); }
   ctx.wizard.state.accounts = accounts;
   const multiToken = (ctx.wizard.state.tokens?.length || 0) > 1;
-  const keyboard = accounts.map(a => {
-    const prefix = multiToken && token ? `[${token.account.account_name}] ` : '';
-    return [{
-      text: `📘 ${prefix}${a.name}`,
-      callback_data: `create:acct:${a.id}`,
-    }];
-  });
-  keyboard.push(CANCEL_ROW);
-  await ctx.reply('📋 *Select an ad account* to run the campaign in:', {
-    parse_mode: 'Markdown',
-    reply_markup: { inline_keyboard: keyboard },
-  });
+  const kb = accounts.map(a => [{ text: `${multiToken && token ? '['+token.account.account_name+'] ' : ''}${a.name}`, callback_data: `create:acct:${a.id}` }]);
+  kb.push(CANCEL_ROW);
+  await ctx.reply('Select an ad account:', { reply_markup: { inline_keyboard: kb } });
   ctx.wizard.selectStep(2);
 });
 
+// Action: Account picker
 createCampaignScene.action(/^create:acct:(.+)$/, async (ctx) => {
   await ctx.answerCbQuery();
   const accountId = ctx.match[1];
   ctx.wizard.state.data.accountId = accountId;
-
-  // Find which token owns this account (for multi-token tracking)
   const entry = (ctx.wizard.state.accountsByToken || []).find(a => a.account.id === accountId);
-  if (entry) {
-    ctx.wizard.state.data.selectedToken = entry.token;
-  }
-
+  if (entry) ctx.wizard.state.data.selectedToken = entry.token;
   const name = (ctx.wizard.state.accounts || []).find(a => a.id === accountId)?.name || accountId;
-  await ctx.reply(`✅ Account selected: *${esc(name)}*`, { parse_mode: 'Markdown' });
-  await ctx.reply('🎯 *Campaign Objective*\n\nWhat is the goal of this campaign?', {
-    parse_mode: 'Markdown',
-    reply_markup: {
-      inline_keyboard: [...OBJECTIVES.map(o => [{ text: o.label, callback_data: `create:obj:${o.id}` }]), CANCEL_ROW],
-    },
-  });
+  await ctx.reply(`Account: ${name}`);
+  await ctx.reply('Campaign Objective:', { reply_markup: { inline_keyboard: [...OBJECTIVES.map(o => [{ text: o.label, callback_data: `create:obj:${o.id}` }]), CANCEL_ROW] } });
   ctx.wizard.selectStep(3);
 });
 
+// Action: Objective picker
 createCampaignScene.action(/^create:obj:(.+)$/, async (ctx) => {
   await ctx.answerCbQuery();
   const obj = ctx.match[1];
   ctx.wizard.state.data.objective = obj;
   const label = OBJECTIVES.find(o => o.id === obj)?.label || obj;
-  await ctx.reply(`✅ Objective: *${esc(label)}*`, { parse_mode: 'Markdown' });
-  await ctx.reply('📝 *Campaign Name*\n\nGive your campaign a name (e.g. "Promo Lebaran 2025"):', {
-    parse_mode: 'Markdown',
-    reply_markup: { inline_keyboard: [CANCEL_ROW] },
-  });
+  await ctx.reply(`Objective: ${label}`);
+  await ctx.reply('Campaign Name (e.g. "Promo Lebaran 2025"):', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
   ctx.wizard.selectStep(4);
 });
 
+// Action: Create
 createCampaignScene.action(/^create:go$/, async (ctx) => handleCreateGo(ctx));
+
+// Action: Cancel
 createCampaignScene.action(/^create:cancel$/, async (ctx) => {
   await ctx.answerCbQuery();
   ctx.wizard.state.data = {};
-  await ctx.reply('❌ Campaign creation cancelled.');
+  await ctx.reply('Campaign creation cancelled.');
   try { await ctx.scene.leave(); } catch { /* ok */ }
 });
 
 async function handleCreateGo(ctx) {
   await ctx.answerCbQuery();
   const d = ctx.wizard.state.data;
-  if (!d.accountId || !d.objective || !d.name || !d.dailyBudget) {
-    return ctx.reply('⚠️ Incomplete data. Start again with /create.');
-  }
-
+  if (!d.accountId || !d.objective || !d.name || !d.dailyBudget) { return ctx.reply('Incomplete data. Start again with /create.'); }
   const selectedToken = d.selectedToken || ctx.wizard.state.tokens?.[0];
   const api = selectedToken?.api;
-  if (!api) return ctx.reply('🔌 Connect a Meta account first via /settings.');
-
-  await ctx.reply('🔄 Creating campaign...');
+  if (!api) return ctx.reply('Connect a Meta account first via /settings.');
+  await ctx.reply('Creating campaign...');
   try {
     const realAccountId = d.accountId;
-    const campaign = await api.createCampaign(realAccountId, {
-      name: d.name,
-      objective: d.objective,
-      status: 'PAUSED',
-    });
-
+    const campaign = await api.createCampaign(realAccountId, { name: d.name, objective: d.objective, status: 'PAUSED' });
     if (!campaign?.id) throw new Error('No campaign ID returned');
-
     let pageId = '';
-    try {
-      const pages = await api.getPages ? await api.getPages() : [];
-      pageId = pages[0]?.id || '';
-    } catch { /* handled below */ }
-
+    try { const pages = await api.getPages ? await api.getPages() : []; pageId = pages[0]?.id || ''; } catch {}
     const targeting = d.targeting || {};
-    // Pixel-aware optimization: SALES/LEADS need OFFSITE_CONVERSIONS or
-    // LEAD_GENERATION plus a promoted_object pixel — otherwise Meta serves
-    // traffic (wrong setting) or 400s (subcode 1815430) without a pixel.
     let pixelId = '';
-    try {
-      const pixels = await api.getPixels ? await api.getPixels(realAccountId) : [];
-      pixelId = pixels[0]?.id || '';
-    } catch { /* fallback below */ }
-    const optimizationByObjective = {
-      OUTCOME_TRAFFIC: 'LINK_CLICKS',
-      OUTCOME_SALES: 'OFFSITE_CONVERSIONS',
-      OUTCOME_LEADS: 'LEAD_GENERATION',
-      OUTCOME_ENGAGEMENT: 'POST_ENGAGEMENT',
-      OUTCOME_AWARENESS: 'REACH',
-      OUTCOME_APP_PROMOTION: 'APP_INSTALLS',
-    };
+    try { const pixels = await api.getPixels ? await api.getPixels(realAccountId) : []; pixelId = pixels[0]?.id || ''; } catch {}
+    const optimizationByObjective = { OUTCOME_TRAFFIC: 'LINK_CLICKS', OUTCOME_SALES: 'OFFSITE_CONVERSIONS', OUTCOME_LEADS: 'LEAD_GENERATION', OUTCOME_ENGAGEMENT: 'POST_ENGAGEMENT', OUTCOME_AWARENESS: 'REACH', OUTCOME_APP_PROMOTION: 'APP_INSTALLS' };
     const needsPixel = d.objective === 'OUTCOME_SALES' || d.objective === 'OUTCOME_LEADS';
     let optimizationGoal = optimizationByObjective[d.objective] || 'LINK_CLICKS';
     let promotedObject = null;
     let pixelFallbackNote = '';
     if (needsPixel) {
-      if (pixelId) {
-        promotedObject = {
-          pixel_id: pixelId,
-          custom_event_type: d.objective === 'OUTCOME_SALES' ? 'PURCHASE' : 'LEAD',
-        };
-      } else {
-        // No pixel on this account: stay on LINK_CLICKS so the call succeeds,
-        // but tell the user plainly it will optimize for traffic, not sales.
-        optimizationGoal = 'LINK_CLICKS';
-        pixelFallbackNote = '\n⚠️ No Meta Pixel found on this account — ad set optimizes for traffic, not sales. Connect a pixel for true sales optimization.';
-      }
+      if (pixelId) { promotedObject = { pixel_id: pixelId, custom_event_type: d.objective === 'OUTCOME_SALES' ? 'PURCHASE' : 'LEAD' }; }
+      else { optimizationGoal = 'LINK_CLICKS'; pixelFallbackNote = '\nNo Meta Pixel found - ad set optimizes for traffic, not sales.'; }
     }
     const genderVal = targeting.gender || 0;
-    const adSet = await api.createAdSet(realAccountId, campaign.id, {
-      name: `${d.name} - Ad Set`,
-      dailyBudget: d.dailyBudget,
-      targeting: {
-        geo_locations: { countries: targeting.countries || ['ID'] },
-        age_min: targeting.ageMin || 18,
-        age_max: targeting.ageMax || 55,
-        ...(genderVal === 1 ? { genders: [1] } : genderVal === 2 ? { genders: [2] } : {}),
-      },
-      billingEvent: 'IMPRESSIONS',
-      optimizationGoal,
-      promotedObject,
-    });
-
-    // Try to create creative + ad (non-fatal if it fails)
+    const adSet = await api.createAdSet(realAccountId, campaign.id, { name: `${d.name} - Ad Set`, dailyBudget: d.dailyBudget, targeting: { geo_locations: { countries: targeting.countries || ['ID'] }, age_min: targeting.ageMin || 18, age_max: targeting.ageMax || 55, ...(genderVal === 1 ? { genders: [1] } : genderVal === 2 ? { genders: [2] } : {}) }, billingEvent: 'IMPRESSIONS', optimizationGoal, promotedObject });
     let adCreated = false;
     try {
-      if (d.postId) {
-        const data = await api._post(`/${realAccountId}/adcreatives`, {
-          name: `${d.name} - Creative`,
-          object_story_id: d.postId,
-        });
-        await api.createAd(realAccountId, {
-          adsetId: adSet.id,
-          creativeId: data.id,
-          name: `${d.name} - Ad`,
-          status: 'PAUSED',
-        });
+      const source = ctx.wizard.state.creativeSource;
+      if (source === 'post' || source === 'manual') {
+        if (d.postId) {
+          const data = await api._post(`/${realAccountId}/adcreatives`, { name: `${d.name} - Creative`, object_story_id: d.postId });
+          await api.createAd(realAccountId, { adsetId: adSet.id, creativeId: data.id, name: `${d.name} - Ad`, status: 'PAUSED' });
+          adCreated = true;
+        }
+      } else if (source === 'custom') {
+        const cr = ctx.wizard.state.creative || {};
+        const ctype = ctx.wizard.state.creativeType;
+        if (ctype === 'image' && cr.mediaUrl) {
+          try {
+            const imgData = await api._post(`/${realAccountId}/adimages`, { url: cr.mediaUrl });
+            const imgs = imgData.images || {}; const firstKey = Object.keys(imgs)[0]; const imageHash = firstKey ? imgs[firstKey].hash : null;
+            if (imageHash && pageId) { const creative = await api.createAdCreative(realAccountId, { name: `${d.name} - Creative`, pageId, message: cr.description || d.name, headline: cr.headline || d.name, description: cr.description || d.name, linkUrl: cr.linkUrl || `https://www.facebook.com/${pageId}`, imageHash, ctaType: 'LEARN_MORE' }); await api.createAd(realAccountId, { adsetId: adSet.id, creativeId: creative.id, name: `${d.name} - Ad`, status: 'PAUSED' }); adCreated = true; }
+          } catch (e) { log.warn('Image upload failed, falling back to AI', { error: e.message }); }
+        } else if (ctype === 'video' && cr.mediaUrl) {
+          try {
+            const vidData = await api.uploadAdVideo ? await api.uploadAdVideo(realAccountId, cr.mediaUrl) : null;
+            const videoId = vidData?.id;
+            if (videoId && pageId) { const creative = await api.createAdCreative(realAccountId, { name: `${d.name} - Creative`, pageId, message: cr.description || d.name, headline: cr.headline || d.name, description: cr.description || d.name, linkUrl: cr.linkUrl || `https://www.facebook.com/${pageId}`, videoId, ctaType: 'LEARN_MORE' }); await api.createAd(realAccountId, { adsetId: adSet.id, creativeId: creative.id, name: `${d.name} - Ad`, status: 'PAUSED' }); adCreated = true; }
+          } catch (e) { log.warn('Video upload failed, falling back to AI', { error: e.message }); }
+        } else if (ctype === 'text' && pageId) {
+          const creative = await api.createAdCreative(realAccountId, { name: `${d.name} - Creative`, pageId, message: cr.description || d.name, headline: cr.headline || d.name, description: cr.description || d.name, linkUrl: cr.linkUrl || `https://www.facebook.com/${pageId}`, ctaType: 'LEARN_MORE' });
+          await api.createAd(realAccountId, { adsetId: adSet.id, creativeId: creative.id, name: `${d.name} - Ad`, status: 'PAUSED' });
+          adCreated = true;
+        }
+      }
+      if (!adCreated && pageId) {
+        const creative = await api.createAdCreative(realAccountId, { name: `${d.name} - Creative`, pageId, message: d.name, headline: d.name, description: 'Created via AdForge Bot', linkUrl: `https://www.facebook.com/${pageId}`, ctaType: 'LEARN_MORE' });
+        await api.createAd(realAccountId, { adsetId: adSet.id, creativeId: creative.id, name: `${d.name} - Ad`, status: 'PAUSED' });
         adCreated = true;
-      } else if (pageId) {
-        const creative = await api.createAdCreative(realAccountId, {
-          name: `${d.name} - Creative`,
-          pageId,
-          message: d.name,
-          headline: d.name,
-          description: 'Created via AdForge Bot',
-          linkUrl: `https://www.facebook.com/${pageId}`,
-          ctaType: 'LEARN_MORE',
-        });
-        await api.createAd(realAccountId, {
-          adsetId: adSet.id,
-          creativeId: creative.id,
-          name: `${d.name} - Ad`,
-          status: 'PAUSED',
-        });
-        adCreated = true;
-      } else {
-        throw new Error('No Facebook Page available. Add a Page to create creatives.');
       }
     } catch (creativeErr) {
-      log.warn('Creative creation failed — campaign/adset still created', { error: creativeErr.message });
-      // Creative failed but campaign + adset exist — inform user
-      await ctx.reply(
-        `⚠️ *Campaign & Ad Set created, but creative failed:*\n${esc(creativeErr.message).slice(0, 200)}\n\n` +
-        'You can add a creative later from the Creative Library.',
-        { parse_mode: 'Markdown' }
-      );
+      log.warn('Creative creation failed - campaign/adset still created', { error: creativeErr.message });
+      await ctx.reply(`Campaign & Ad Set created, but creative failed: ${esc(creativeErr.message).slice(0, 200)}\n\nAdd a creative later from the Creative Library.`);
     }
-
-    await ctx.reply(
-      (adCreated
-        ? `🎉 *Campaign Created!*\n\n`
-        : `⚠️ *Campaign & Ad Set created — ad NOT created.*\n\n`) +
-      `📝 ${esc(d.name)}\n` +
-      `🎯 Optimasi: ${esc(optimizationGoal)}${promotedObject ? ' (pixel ✅)' : ''}\n` +
-      `💰 ${fmtRp(d.dailyBudget)}/day · Status: ⏸ PAUSED\n` +
-      (pixelFallbackNote ? `${pixelFallbackNote}\n` : '') +
-      (adCreated
-        ? '\nActivate via /ads → select account → Resume.'
-        : '\nAdd the ad from Creative Library, then activate via /ads.'),
-      { parse_mode: 'Markdown' }
-    );
+    await ctx.reply((adCreated ? 'Campaign Created!\n\n' : 'Campaign & Ad Set created - ad NOT created.\n\n') + `${esc(d.name)}\nOptimasi: ${esc(optimizationGoal)}${promotedObject ? ' (pixel)' : ''}\n${fmtRp(d.dailyBudget)}/day - Status: PAUSED\n` + (pixelFallbackNote ? `${pixelFallbackNote}\n` : '') + (adCreated ? '\nActivate via /ads -> select account -> Resume.' : '\nAdd the ad from Creative Library, then activate via /ads.'));
   } catch (err) {
     log.error('create campaign failed', { userId: ctx.userId, error: err.message });
     const metaErr = err.data?.error || {};
     const raw = `${err.message || ''} ${metaErr.error_user_msg || ''}`.toLowerCase();
     if (raw.includes('mode') && (raw.includes('perkembangan') || raw.includes('development'))) {
-      await ctx.reply(
-        '⚠️ *Creative gagal dibuat.*\n\n' +
-        'Meta App kamu masih dalam *mode pengembangan* (development mode).\n' +
-        'Creative (post/iklan) hanya bisa dibuat jika App sudah *publik* —\n' +
-        'buka Meta App Dashboard → Settings → App Mode → *Live*.\n\n' +
-        'Campaign + Ad Set sudah terbuat (PAUSED). Setelah App live, buat ulang iklannya.'
-      );
+      await ctx.reply('Creative failed. Meta App is still in development mode. Set it to Live in Meta App Dashboard first.');
     } else {
       const detail = err.userMessage || err.data?.error?.error_user_msg || err.data?.error?.message || err.message;
-      await ctx.reply(`⚠️ Failed: ${esc(detail).slice(0, 300)}`);
+      await ctx.reply(`Failed: ${esc(detail).slice(0, 300)}`);
     }
   }
   try { await ctx.scene.leave(); } catch { /* ok */ }
