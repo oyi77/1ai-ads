@@ -95,9 +95,11 @@ export function initBot(app, deps) {
     create: (ctx) => ctx.scene.enter('create-campaign'),
   };
 
-  // Keep bot.command() for metaapp to satisfy unit test
-  bot.command('metaapp', (ctx) => ctx.scene.enter('manage-meta-app'));
-  bot.command('create', (ctx) => ctx.scene.enter('create-campaign'));
+  // metaapp + create handled by custom command router (see commandHandlers above)
+
+  // Stage middleware MUST run before custom command router
+  // so ctx.scene is available for scene commands
+  bot.use(stage);
 
   // Custom command router middleware - runs BEFORE stage middleware
   // This bypasses Telegraf command routing which can pre-empt stage ordering
@@ -123,8 +125,7 @@ export function initBot(app, deps) {
     );
   });
 
-  // Stage middleware AFTER custom command router
-  bot.use(stage);
+    // NOTE: stage is now registered BEFORE custom command router (see above)
 
   // ── Callback queries (inline buttons) ────────────────────
   // ads:* callbacks carry explicit platform:accountId segments:

@@ -67,9 +67,9 @@ describe('initBot smoke', () => {
     expect(bot).toBeTruthy();
     // webhook callback mounted on Express:
     expect(app.use).toHaveBeenCalled();
-    // /metaapp command registered:
-    const metaappCall = fakeBot.command.mock.calls.find((c) => c[0] === 'metaapp');
-    expect(metaappCall).toBeTruthy();
+    // /metaapp + /create handled by custom command router (not bot.command)
+    // Stage middleware registered:
+    expect(fakeBot.use).toHaveBeenCalled();
     // setWebhook invoked (network swallowed by .catch in impl):
     expect(fakeBot.telegram.setWebhook).toHaveBeenCalled();
   });
