@@ -39,7 +39,7 @@ export class CampaignOrchestrator {
       () => meta.createAdCreative(accountId, {
         name: `${product} Creative`, pageId,
         message: `${bestAd.hook}\n\n${bestAd.body}`, headline: bestAd.cta || product,
-        description: product, linkUrl: landingUrl || 'https://example.com',
+        description: product, linkUrl: landingUrl || (pageId ? `https://www.facebook.com/${pageId}` : 'https://www.facebook.com/'),
         imageHash,
         ctaType: this._objectiveToCTA(objective),
       }));

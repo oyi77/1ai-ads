@@ -453,7 +453,7 @@ async function handleCreateGo(ctx) {
           message: d.name,
           headline: d.name,
           description: 'Created via AdForge Bot',
-          linkUrl: 'https://example.com',
+          linkUrl: `https://www.facebook.com/${pageId}`,
           ctaType: 'LEARN_MORE',
         });
         await api.createAd(realAccountId, {
