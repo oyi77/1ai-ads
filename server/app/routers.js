@@ -113,7 +113,7 @@ export function createRouters({ app, repos, services }) {
   // ── Milestones (customer self-serve) ──────────────────────
   app.use('/api/milestones', requireAuth, createMilestonesRouter(repos.paymentsRepo));
   // ── Boost Recommendations ────────────────────────────────────
-  app.use('/api/boost', createBoostRouter({ services }));
+  app.use('/api/boost', requireAuth, createBoostRouter({ services }));
   // ── Per-user Meta ad-accounts (Saved Audiences builder) ──
   app.use('/api/meta/accounts', requireAuth, handleListMetaAccounts(repos.settingsRepo));
   // ── WhatsApp Intelligence ─────────────────────────────────────
