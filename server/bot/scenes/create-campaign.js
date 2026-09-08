@@ -55,6 +55,26 @@ async function fetchBmAccountsForToken(api, businessId) {
   } catch { return fetchAccountsForToken(api); }
 }
 
+/** Show the confirmation/summary screen — reusable from step 7 and action callbacks */
+async function showConfirmScreen(ctx) {
+  if (ctx.wizard.state.confirmShown) return;
+  const d = ctx.wizard.state.data;
+  const targeting = d.targeting || {};
+  const source = ctx.wizard.state.creativeSource;
+  let mediaInfo = 'AI-generated';
+  if (source === 'post') mediaInfo = `Post ${d.postId || '(pending)'}`;
+  else if (source === 'manual') mediaInfo = `Post ${d.postId || '(pending)'}`;
+  else if (source === 'skip') mediaInfo = 'AI-generated';
+  else if (source === 'custom') { const cr = ctx.wizard.state.creative || {}; mediaInfo = `Custom ${ctx.wizard.state.creativeType} - ${cr.headline || '...'}`; }
+  const summary = `CONFIRMATION\n\nAccount: ${esc((ctx.wizard.state.accounts || []).find(a => a.id === d.accountId)?.name || d.accountId)}\nObjective: ${esc(OBJECTIVES.find(o => o.id === d.objective)?.label || d.objective)}\nName: ${esc(d.name)}\nBudget: ${fmtRp(d.dailyBudget)}/day\nCountry: ${(targeting.countries || ['ID']).join(', ')}\nAge: ${targeting.ageMin || 18}-${targeting.ageMax || 55}\nGender: ${targeting.gender === 1 ? 'Male' : targeting.gender === 2 ? 'Female' : 'All'}\nInterests: ${(targeting.interests || []).join(', ') || 'None'}\nCreative: ${mediaInfo}\n\nStatus: PAUSED (safe to review)`;
+  await ctx.reply(summary, { reply_markup: { inline_keyboard: [
+    [{ text: 'Create Campaign', callback_data: 'create:go' }],
+    [{ text: 'Back', callback_data: 'create:back' }],
+    [{ text: 'Cancel', callback_data: 'create:cancel' }],
+  ] } });
+  ctx.wizard.state.confirmShown = true;
+}
+
 export const createCampaignScene = new Scenes.WizardScene(
   'create-campaign',
   // Step 0: BM picker
@@ -137,7 +157,7 @@ export const createCampaignScene = new Scenes.WizardScene(
         const postId = text.replace(/[^0-9]/g, '');
         if (!postId || postId.length < 5) { await ctx.reply('Invalid Post ID. Try again.'); return; }
         ctx.wizard.state.data.postId = postId;
-        return ctx.wizard.selectStep(8);
+        return showConfirmScreen(ctx);
       }
     }
     if (source === 'custom') {
@@ -195,33 +215,28 @@ export const createCampaignScene = new Scenes.WizardScene(
       }
       if (step === 'preview' || step === 'done') { await ctx.reply('Tap Confirm to proceed.', { reply_markup: { inline_keyboard: [[{ text: 'Confirm', callback_data: 'create:creative:confirm' }], CANCEL_ROW] } }); return; }
     }
-    // If postId already set (from post picker callback or manual entry), advance to confirm
+    // If postId already set (from post picker callback or manual entry), show confirm
     if (ctx.wizard.state.data.postId && !ctx.wizard.state.confirmShown) {
-      return ctx.wizard.selectStep(8);
+      return showConfirmScreen(ctx);
+    }
+
+    // Skip flow: source='skip' with no postId/headline → show confirm
+    if (source === 'skip' && !ctx.wizard.state.confirmShown) {
+      return showConfirmScreen(ctx);
+    }
+
+    // Creative confirm: creativeStep='done' → show confirm
+    if (ctx.wizard.state.creativeStep === 'done' && !ctx.wizard.state.confirmShown) {
+      return showConfirmScreen(ctx);
     }
 
     if (!ctx.wizard.state.data.postId && !ctx.wizard.state.creative?.headline && source !== 'skip') {
       await ctx.reply('Select an option using the buttons above.', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
     }
   },
-  // Step 8: Confirm
+  // Step 8: Confirm (fallback — step 7 shows confirm directly via showConfirmScreen)
   async (ctx) => {
-    if (ctx.wizard.state.confirmShown) return;
-    const d = ctx.wizard.state.data;
-    const targeting = d.targeting || {};
-    const source = ctx.wizard.state.creativeSource;
-    let mediaInfo = 'AI-generated';
-    if (source === 'post') mediaInfo = `Post ${d.postId || '(pending)'}`;
-    else if (source === 'manual') mediaInfo = `Post ${d.postId || '(pending)'}`;
-    else if (source === 'skip') mediaInfo = 'AI-generated';
-    else if (source === 'custom') { const cr = ctx.wizard.state.creative || {}; mediaInfo = `Custom ${ctx.wizard.state.creativeType} - ${cr.headline || '...'}`; }
-    const summary = `CONFIRMATION\n\nAccount: ${esc((ctx.wizard.state.accounts || []).find(a => a.id === d.accountId)?.name || d.accountId)}\nObjective: ${esc(OBJECTIVES.find(o => o.id === d.objective)?.label || d.objective)}\nName: ${esc(d.name)}\nBudget: ${fmtRp(d.dailyBudget)}/day\nCountry: ${(targeting.countries || ['ID']).join(', ')}\nAge: ${targeting.ageMin || 18}-${targeting.ageMax || 55}\nGender: ${targeting.gender === 1 ? 'Male' : targeting.gender === 2 ? 'Female' : 'All'}\nInterests: ${(targeting.interests || []).join(', ') || 'None'}\nCreative: ${mediaInfo}\n\nStatus: PAUSED (safe to review)`;
-    await ctx.reply(summary, { reply_markup: { inline_keyboard: [
-      [{ text: 'Create Campaign', callback_data: 'create:go' }],
-      [{ text: 'Back', callback_data: 'create:back' }],
-      [{ text: 'Cancel', callback_data: 'create:cancel' }],
-    ] } });
-    ctx.wizard.state.confirmShown = true;
+    return showConfirmScreen(ctx);
   },
 );
 
@@ -248,7 +263,7 @@ createCampaignScene.action(/^create:src:post$/, async (ctx) => {
   await ctx.reply('No posts found. Enter Post ID manually:', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
 });
 
-// Action: User selected a specific post
+// Action: User selected a specific post — set state; step 7 detects and shows confirm
 createCampaignScene.action(/^create:post:(.+)$/, async (ctx) => {
   await ctx.answerCbQuery();
   const postId = ctx.match[1];
@@ -256,7 +271,6 @@ createCampaignScene.action(/^create:post:(.+)$/, async (ctx) => {
   ctx.wizard.state.creativeSource = 'post';
   ctx.wizard.state.confirmShown = false;
   await ctx.reply(`Post selected: ${postId}`);
-  return ctx.wizard.selectStep(8);
 });
 
 // Action: Manual Post ID
@@ -287,21 +301,21 @@ createCampaignScene.action(/^create:src:custom:(.+)$/, async (ctx) => {
   await ctx.reply(label);
 });
 
-// Action: Skip
+// Action: Skip — show confirm directly (no text follows this callback)
 createCampaignScene.action(/^create:src:skip$/, async (ctx) => {
   await ctx.answerCbQuery();
   ctx.wizard.state.creativeSource = 'skip';
   ctx.wizard.state.data.postId = undefined;
   ctx.wizard.state.confirmShown = false;
-  return ctx.wizard.selectStep(8);
+  return showConfirmScreen(ctx);
 });
 
-// Action: Creative confirm
+// Action: Creative confirm — show confirm screen directly
 createCampaignScene.action(/^create:creative:confirm$/, async (ctx) => {
   await ctx.answerCbQuery();
   ctx.wizard.state.creativeStep = 'done';
   ctx.wizard.state.confirmShown = false;
-  return ctx.wizard.selectStep(8);
+  return showConfirmScreen(ctx);
 });
 
 // Action: Creative restart
