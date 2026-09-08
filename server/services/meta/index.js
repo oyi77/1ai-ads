@@ -320,7 +320,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     this.log.info('Campaign created successfully', { campaignId: data.id });
     return { id: data.id };
   }
-  async createAdSet(accountId, campaignId, { name, dailyBudget, targeting, billingEvent = 'IMPRESSIONS', optimizationGoal = 'LINK_CLICKS', startTime, isCbo }) {
+  async createAdSet(accountId, campaignId, { name, dailyBudget, targeting, billingEvent = 'IMPRESSIONS', optimizationGoal = 'LINK_CLICKS', startTime, isCbo, promotedObject = null }) {
     const body = {
       name,
       campaign_id: campaignId,
@@ -337,6 +337,9 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     };
     if (dailyBudget && !isCbo) body.daily_budget = Math.round(dailyBudget * 100);
     else body.bid_amount = 500; // minimal bid (IDR) — required without ad-set budget
+    // OFFSITE_CONVERSIONS / LEAD_GENERATION require a promoted object (pixel).
+    // Without it Meta 400s (subcode 1815430) — caller must resolve the pixel first.
+    if (promotedObject) body.promoted_object = promotedObject;
     if (startTime) body.start_time = startTime;
     const data = await this._post(`/${accountId}/adsets`, body);
     return { id: data.id };
@@ -440,6 +443,17 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     if (updates.targeting) body.targeting = updates.targeting;
     const _data = await this._post(`/${adsetId}`, body);
     return { success: true, id: adsetId };
+  }
+
+  async getPixels(accountId) {
+    const data = await this._get(`/${accountId}/adspixels`, {
+      fields: 'id,name,last_fired_time',
+      limit: '50',
+    });
+    return (data.data || []).map(px => ({
+      id: px.id,
+      name: px.name || px.id,
+    }));
   }
 
   async getTargetingOptions(query) {

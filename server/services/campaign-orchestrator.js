@@ -45,7 +45,7 @@ export class CampaignOrchestrator {
       }));
   }
 
-  async _createCampaignStep(accountId, pageId, product, objective, dailyBudget, landingUrl, aiResult, bestAd, result, meta = this.meta) {
+  async _createCampaignStep(accountId, pageId, product, objective, dailyBudget, landingUrl, aiResult, bestAd, result, meta = this.meta, promotedObject = null) {
     const steps = result.steps;
     const campaignName = `${product} - ${objective} - ${new Date().toISOString().split('T')[0]}`;
     const campaignId = await this._runAndAssign(steps, 'create_campaign', result, 'campaignId',
@@ -58,6 +58,7 @@ export class CampaignOrchestrator {
         name: adsetName, dailyBudget, isCbo: false,
         targeting: this._buildDefaultTargeting(aiResult.targetingSuggestions),
         optimizationGoal: this._objectiveToOptimization(objective),
+        promotedObject,
       }), { name: adsetName });
 
     // Creative step is non-fatal: if it fails (dev-mode app, no page), the
@@ -86,7 +87,7 @@ export class CampaignOrchestrator {
   async createFullCampaign({
     accountId, pageId, product, target, keunggulan,
     objective = 'OUTCOME_TRAFFIC', targeting: _targeting, dailyBudget,
-    landingUrl, platform = 'meta', format = 'single_image',
+    landingUrl, platform = 'meta', format = 'single_image', promotedObject = null,
   }, metaApi = null) {
     const meta = metaApi || this.meta;
     log.info('Creating full campaign', { product, objective, platform });
@@ -108,7 +109,7 @@ export class CampaignOrchestrator {
         aiResult = { copies: [bestAd], imageDirections: [] };
         steps.push({ step: 'ai_creative', status: 'done', data: { model: 'template_fallback' } });
       }
-      await this._createCampaignStep(accountId, pageId, product, objective, dailyBudget, landingUrl, aiResult, bestAd, result, meta);
+      await this._createCampaignStep(accountId, pageId, product, objective, dailyBudget, landingUrl, aiResult, bestAd, result, meta, promotedObject);
       result.status = 'created';
       result.message = 'Campaign created as PAUSED. Activate when ready.';
       result.aiCreative = this._buildAICreative(bestAd, aiResult);

@@ -383,10 +383,39 @@ async function handleCreateGo(ctx) {
     } catch { /* handled below */ }
 
     const targeting = d.targeting || {};
-    // NOTE (probe-verified 2026-09-07): LINK_CLICKS + IMPRESSIONS is accepted
-    // for OUTCOME_SALES. OFFSITE_CONVERSIONS without a promoted_object pixel
-    // 400s (subcode 1815430), so do NOT map per-objective here.
-    const optimizationGoal = 'LINK_CLICKS';
+    // Pixel-aware optimization: SALES/LEADS need OFFSITE_CONVERSIONS or
+    // LEAD_GENERATION plus a promoted_object pixel — otherwise Meta serves
+    // traffic (wrong setting) or 400s (subcode 1815430) without a pixel.
+    let pixelId = '';
+    try {
+      const pixels = await api.getPixels ? await api.getPixels(realAccountId) : [];
+      pixelId = pixels[0]?.id || '';
+    } catch { /* fallback below */ }
+    const optimizationByObjective = {
+      OUTCOME_TRAFFIC: 'LINK_CLICKS',
+      OUTCOME_SALES: 'OFFSITE_CONVERSIONS',
+      OUTCOME_LEADS: 'LEAD_GENERATION',
+      OUTCOME_ENGAGEMENT: 'POST_ENGAGEMENT',
+      OUTCOME_AWARENESS: 'REACH',
+      OUTCOME_APP_PROMOTION: 'APP_INSTALLS',
+    };
+    const needsPixel = d.objective === 'OUTCOME_SALES' || d.objective === 'OUTCOME_LEADS';
+    let optimizationGoal = optimizationByObjective[d.objective] || 'LINK_CLICKS';
+    let promotedObject = null;
+    let pixelFallbackNote = '';
+    if (needsPixel) {
+      if (pixelId) {
+        promotedObject = {
+          pixel_id: pixelId,
+          custom_event_type: d.objective === 'OUTCOME_SALES' ? 'PURCHASE' : 'LEAD',
+        };
+      } else {
+        // No pixel on this account: stay on LINK_CLICKS so the call succeeds,
+        // but tell the user plainly it will optimize for traffic, not sales.
+        optimizationGoal = 'LINK_CLICKS';
+        pixelFallbackNote = '\n⚠️ No Meta Pixel found on this account — ad set optimizes for traffic, not sales. Connect a pixel for true sales optimization.';
+      }
+    }
     const genderVal = targeting.gender || 0;
     const adSet = await api.createAdSet(realAccountId, campaign.id, {
       name: `${d.name} - Ad Set`,
@@ -399,9 +428,11 @@ async function handleCreateGo(ctx) {
       },
       billingEvent: 'IMPRESSIONS',
       optimizationGoal,
+      promotedObject,
     });
 
     // Try to create creative + ad (non-fatal if it fails)
+    let adCreated = false;
     try {
       if (d.postId) {
         const data = await api._post(`/${realAccountId}/adcreatives`, {
@@ -414,6 +445,7 @@ async function handleCreateGo(ctx) {
           name: `${d.name} - Ad`,
           status: 'PAUSED',
         });
+        adCreated = true;
       } else if (pageId) {
         const creative = await api.createAdCreative(realAccountId, {
           name: `${d.name} - Creative`,
@@ -430,6 +462,7 @@ async function handleCreateGo(ctx) {
           name: `${d.name} - Ad`,
           status: 'PAUSED',
         });
+        adCreated = true;
       } else {
         throw new Error('No Facebook Page available. Add a Page to create creatives.');
       }
@@ -444,10 +477,16 @@ async function handleCreateGo(ctx) {
     }
 
     await ctx.reply(
-      `🎉 *Campaign Created!*\n\n` +
+      (adCreated
+        ? `🎉 *Campaign Created!*\n\n`
+        : `⚠️ *Campaign & Ad Set created — ad NOT created.*\n\n`) +
       `📝 ${esc(d.name)}\n` +
-      `💰 ${fmtRp(d.dailyBudget)}/day · Status: ⏸ PAUSED\n\n` +
-      'Activate via /ads → select account → Resume.',
+      `🎯 Optimasi: ${esc(optimizationGoal)}${promotedObject ? ' (pixel ✅)' : ''}\n` +
+      `💰 ${fmtRp(d.dailyBudget)}/day · Status: ⏸ PAUSED\n` +
+      (pixelFallbackNote ? `${pixelFallbackNote}\n` : '') +
+      (adCreated
+        ? '\nActivate via /ads → select account → Resume.'
+        : '\nAdd the ad from Creative Library, then activate via /ads.'),
       { parse_mode: 'Markdown' }
     );
   } catch (err) {

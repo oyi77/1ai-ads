@@ -28,7 +28,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
 
   // Create full campaign (AI creative → campaign → adset → creative → ad)
   router.post('/create', async (req, res) => {
-    const { accountId, pageId, product, target, keunggulan, objective, targeting, dailyBudget, landingUrl } = req.body;
+    const { accountId, pageId, product, target, keunggulan, objective, targeting, dailyBudget, landingUrl, pixelId, promotedObject } = req.body;
 
     if (!accountId || !product) {
       return res.status(400).json({ success: false, error: 'accountId and product are required' });
@@ -39,11 +39,15 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     }
 
     try {
+      const resolvedObjective = objective || 'OUTCOME_TRAFFIC';
+      const resolvedPromotedObject = promotedObject || (pixelId
+        ? { pixel_id: pixelId, custom_event_type: resolvedObjective === 'OUTCOME_SALES' ? 'PURCHASE' : 'LEAD' }
+        : null);
       const result = await orchestrator.createFullCampaign({
         accountId, pageId, product, target, keunggulan,
-        objective: objective || 'OUTCOME_TRAFFIC',
+        objective: resolvedObjective,
         targeting, dailyBudget: budget,
-        landingUrl,
+        landingUrl, promotedObject: resolvedPromotedObject,
       }, resolveUserMetaApi(req));
 
       // Save to local DB
