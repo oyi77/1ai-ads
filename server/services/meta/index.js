@@ -345,7 +345,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     return { id: data.id };
   }
 
-  async createAdCreative(accountId, { name, pageId, message, headline, description, linkUrl, imageHash, ctaType = 'LEARN_MORE' }) {
+  async createAdCreative(accountId, { name, pageId, message, headline, description, linkUrl, imageHash, videoId, ctaType = 'LEARN_MORE' }) {
     if (!pageId) {
       throw new Error('page_id is required to create an ad creative. Select a Facebook Page first.');
     }
@@ -360,12 +360,17 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       linkData.call_to_action = { type: ctaType, value: { link: linkUrl } };
     }
 
+    const objectStorySpec = {
+      page_id: pageId,
+      link_data: linkData,
+    };
+    if (videoId) {
+      objectStorySpec.video_id = videoId;
+    }
+
     const data = await this._post(`/${accountId}/adcreatives`, {
       name: name || `Creative_${Date.now()}`,
-      object_story_spec: {
-        page_id: pageId,
-        link_data: linkData,
-      },
+      object_story_spec: objectStorySpec,
     });
     return { id: data.id };
   }
@@ -444,7 +449,14 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     const _data = await this._post(`/${adsetId}`, body);
     return { success: true, id: adsetId };
   }
+  async uploadAdVideo(accountId, videoUrl) {
+    this.log.info('Uploading video', { accountId, videoUrl });
+    const data = await this._post(`/${accountId}/advideos`, { file_url: videoUrl });
+    if (!data.id) throw new Error('Video upload failed: no id returned');
+    return { id: data.id };
+  }
 
+  
   async getPixels(accountId) {
     const data = await this._get(`/${accountId}/adspixels`, {
       fields: 'id,name,last_fired_time',
