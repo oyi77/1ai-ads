@@ -396,6 +396,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
               if (existing) {
                 adsetsRepo?.update?.(as.id, {
                   name: as.name, status: as.status,
+                  dailyBudget: as.daily_budget ? Math.round(as.daily_budget) / 100 : 0,
                   targeting: targetingFlat,
                 });
               } else {
@@ -403,7 +404,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
                   {
                     id: as.id, campaignId: as.campaign_id,
                     name: as.name, status: as.status,
-                    dailyBudget: as.daily_budget || 0,
+                    dailyBudget: as.daily_budget ? Math.round(as.daily_budget) / 100 : 0,
                     targeting: targetingFlat,
                     optimizationGoal: as.optimization_goal,
                     billingEvent: as.billing_event,
