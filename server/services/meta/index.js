@@ -564,6 +564,33 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     return data.data || [];
   }
 
+  /**
+   * Resolve a user-entered post ID to the canonical object_story_id
+   * ({page_id}_{post_id}). Raw numeric IDs can only be resolved with a PAGE
+   * access token (user tokens hit the deprecated singular statuses API);
+   * the resolved id comes back in canonical compound form. Returns the id
+   * unchanged when it already contains '_', null when unresolvable.
+   */
+  async resolvePostId(rawPostId) {
+    const id = String(rawPostId || '').trim();
+    if (!id) return null;
+    if (id.includes('_')) return id;
+    let pages = [];
+    try { pages = await this.getPages() || []; } catch { /* token may lack pages perms */ }
+    for (const page of pages) {
+      if (!page?.access_token) continue;
+      try {
+        const url = new URL(`${BASE}/${id}`);
+        url.searchParams.set('fields', 'id');
+        url.searchParams.set('access_token', page.access_token);
+        const res = await safeFetch('meta', url.toString());
+        const data = await res.json();
+        if (data?.id && String(data.id).includes('_')) return data.id;
+      } catch { /* try next page */ }
+    }
+    return null;
+  }
+
   // --- Sync all accounts + campaigns + insights ---
 
   async syncAllAccounts() {

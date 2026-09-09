@@ -426,8 +426,12 @@ async function handleCreateGo(ctx) {
       const source = ctx.wizard.state.creativeSource;
       if (source === 'post' || source === 'manual') {
         if (d.postId) {
-          // Meta requires object_story_id in format {page_id}_{post_id}
-          const storyId = d.postId.includes('_') ? d.postId : `${pageId}_${d.postId}`;
+          // Meta requires object_story_id in format {page_id}_{post_id}.
+          // Resolve raw numeric IDs against the user's pages (page tokens can
+          // fetch a raw post id and return the canonical compound form);
+          // fall back to the first page when resolution fails.
+          let storyId = await api.resolvePostId?.(d.postId);
+          if (!storyId) storyId = pageId ? `${pageId}_${d.postId}` : d.postId;
           const data = await api._post(`/${realAccountId}/adcreatives`, { name: `${d.name} - Creative`, object_story_id: storyId });
           await api.createAd(realAccountId, { adsetId: adSet.id, creativeId: data.id, name: `${d.name} - Ad`, status: 'PAUSED' });
           adCreated = true;
@@ -467,7 +471,7 @@ async function handleCreateGo(ctx) {
     log.error('create campaign failed', { userId: ctx.userId, error: err.message });
     const metaErr = err.data?.error || {};
     const raw = `${err.message || ''} ${metaErr.error_user_msg || ''}`.toLowerCase();
-    if (raw.includes('mode') && (raw.includes('perkembangan') || raw.includes('development'))) {
+    if (raw.includes('mode') && (raw.includes('perkembangan') || raw.includes('pengembangan') || raw.includes('development'))) {
       await ctx.reply('Creative failed. Meta App is still in development mode. Set it to Live in Meta App Dashboard first.');
     } else {
       const detail = err.userMessage || err.data?.error?.error_user_msg || err.data?.error?.message || err.message;
