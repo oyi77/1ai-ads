@@ -418,13 +418,17 @@ async function handleCreateGo(ctx) {
       else { optimizationGoal = 'LINK_CLICKS'; pixelFallbackNote = '\nNo Meta Pixel found - ad set optimizes for traffic, not sales.'; }
     }
     const genderVal = targeting.gender || 0;
-    const adSet = await api.createAdSet(realAccountId, campaign.id, { name: `${d.name} - Ad Set`, dailyBudget: d.dailyBudget, targeting: { geo_locations: { countries: targeting.countries || ['ID'] }, age_min: targeting.ageMin || 18, age_max: targeting.ageMax || 55, ...(genderVal === 1 ? { genders: [1] } : genderVal === 2 ? { genders: [2] } : {}) }, billingEvent: 'IMPRESSIONS', optimizationGoal, promotedObject });
+    const ageMin = Number(targeting.ageMin) || 18;
+    const ageMax = Number(targeting.ageMax) || 55;
+    const adSet = await api.createAdSet(realAccountId, campaign.id, { name: `${d.name} - Ad Set`, dailyBudget: d.dailyBudget, targeting: { geo_locations: { countries: targeting.countries || ['ID'] }, age_min: ageMin, age_max: ageMax, ...(genderVal === 1 ? { genders: [1] } : genderVal === 2 ? { genders: [2] } : {}) }, billingEvent: 'IMPRESSIONS', optimizationGoal, promotedObject });
     let adCreated = false;
     try {
       const source = ctx.wizard.state.creativeSource;
       if (source === 'post' || source === 'manual') {
         if (d.postId) {
-          const data = await api._post(`/${realAccountId}/adcreatives`, { name: `${d.name} - Creative`, object_story_id: d.postId });
+          // Meta requires object_story_id in format {page_id}_{post_id}
+          const storyId = d.postId.includes('_') ? d.postId : `${pageId}_${d.postId}`;
+          const data = await api._post(`/${realAccountId}/adcreatives`, { name: `${d.name} - Creative`, object_story_id: storyId });
           await api.createAd(realAccountId, { adsetId: adSet.id, creativeId: data.id, name: `${d.name} - Ad`, status: 'PAUSED' });
           adCreated = true;
         }

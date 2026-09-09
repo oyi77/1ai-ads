@@ -102,27 +102,6 @@ async def main():
         for row in msg.buttons:
             print(f"  [{', '.join(b.text for b in row)}]")
 
-    # ── Select Objective ──
-    print("\n--- Selecting Objective ---")
-    clicked = False
-    if msg.buttons:
-        for row in msg.buttons:
-            for btn in row:
-                if 'traffic' in btn.text.lower() or 'sales' in btn.text.lower():
-                    print(f"  Clicking Objective: {btn.text}")
-                    await btn.click()
-                    clicked = True
-                    break
-            if clicked:
-                break
-    if not clicked:
-        print("❌ No Objective button found"); return
-    await asyncio.sleep(4)
-    msg = await get_last_bot(client)
-    print(f"Bot: {msg.text[:300]}")
-    if msg.buttons:
-        for row in msg.buttons:
-            print(f"  [{', '.join(b.text for b in row)}]")
 
     # ── Send Campaign Name ──
     print("\n--- Sending Campaign Name ---")
