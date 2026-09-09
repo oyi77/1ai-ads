@@ -28,8 +28,8 @@ from collections import defaultdict
 INBOUND_DIR = Path("/home/openclaw/.openclaw/media/inbound")
 PROCESSED_DIR = Path("/home/openclaw/.openclaw/media/processed")
 WATCHED_DIR = Path("/home/openclaw/.openclaw/media/inbound")
-SUPABASE_URL = 'https://fqlstjiabpczutscykdc.supabase.co'
-SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxbHN0amlhYnBjenV0c2N5a2RjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTExMTEzNiwiZXhwIjoyMDk0Njg3MTM2fQ.y5wmvpvL-Q1z03_YKfnV_dEbP6pN1C156mwBCOyP4_E'
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 USER_DB_DIR = Path("/home/openclaw/.openclaw/workspace/adforge/db/users")
 MASTER_DB = "/home/openclaw/.openclaw/workspace/adforge/db/adforge.db"
 

@@ -430,8 +430,10 @@ def get_yesterday_roi():
 
     # Try Supabase first
     try:
-        sb_url = "https://fqlstjiabpczutscykdc.supabase.co"
-        sb_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxbHN0amlhYnBjenV0c2N5a2RjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTExMTEzNiwiZXhwIjoyMDk0Njg3MTM2fQ.y5wmvpvL-Q1z03_YKfnV_dEbP6pN1C156mwBCOyP4_E"
+        sb_url = os.environ.get("SUPABASE_URL", "")
+        sb_key = os.environ.get("SUPABASE_SERVICE_KEY", "")
+        if not sb_url or not sb_key:
+            raise RuntimeError("SUPABASE_URL/SUPABASE_SERVICE_KEY not set")
         hdrs = {"apikey": sb_key, "Authorization": f"Bearer {sb_key}"}
         url = f"{sb_url}/rest/v1/daily_metrics?account_id=eq.1041&date=eq.{yesterday}&select=commission,spend"
         req = urllib.request.Request(url, headers=hdrs)
