@@ -79,3 +79,7 @@ coverage/
 # TypeScript build cache
 *.tsbuildinfo
 ADMIN-CREDENTIALS.txt
+
+# Agent/scratch state
+.vilona-brain.jsonl
+boot-result.txt
