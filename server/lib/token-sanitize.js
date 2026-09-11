@@ -9,10 +9,15 @@ export function sanitizeAccessToken(token) {
   if (!token || typeof token !== 'string') return token;
   let cleaned = token.trim();
   cleaned = cleaned.replace(/^✅\s*/, '');
-  cleaned = cleaned.replace(/\s*connected for Meta.*$/i, '');
-  cleaned = cleaned.replace(/\s*You can manage this account from the web dashboard.*$/i, '');
-  cleaned = cleaned.replace(/\s*Selesai.*cek \/status.*$/i, '');
-  return cleaned.trim();
+  cleaned = cleaned.replace(/\s*connected for Meta.*$/is, '');
+  cleaned = cleaned.replace(/\s*You can manage this account from the web dashboard.*$/is, '');
+  cleaned = cleaned.replace(/\s*Selesai.*cek \/status.*$/is, '');
+  cleaned = cleaned.trim();
+  // Meta tokens never contain whitespace. If bot text the rules above did not
+  // predict is still glued to a token-shaped value, keep only the token.
+  const shaped = cleaned.match(/^EAA[A-Za-z0-9_-]+/);
+  if (shaped && shaped[0] !== cleaned) cleaned = shaped[0];
+  return cleaned;
 }
 
 export function sanitizeCredentialAccessToken(credentials) {
