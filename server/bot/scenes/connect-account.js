@@ -4,6 +4,7 @@
  * Stores the account scoped to the current user (ctx.userId from identify middleware).
  */
 import { Scenes } from 'telegraf';
+import { verifyMetaTokenApp } from '../../services/meta-connection.js';
 import { createLogger } from '../../lib/logger.js';
 import config from '../../config/index.js';
 import { sanitizeAccessToken } from '../../lib/token-sanitize.js';
@@ -105,9 +106,10 @@ export const connectScene = new Scenes.WizardScene(
     if (platform === 'meta') {
       try {
         await validateMetaAccessToken(token);
+        await verifyMetaTokenApp(token);
       } catch (err) {
         log.warn('Meta token rejected before persistence', { userId: ctx.userId, error: err.message });
-        await ctx.reply('That Meta token was rejected. Please paste a fresh token from Graph API Explorer.');
+        await ctx.reply(`Token ditolak: ${err.message}\n\nPastikan token dibuat di bawah aplikasi AdForge (Settings → Connect), bukan aplikasi lain.`);
         return;
       }
     }
