@@ -28,10 +28,11 @@ async function g(method, path, params, tries = 3) {
   const dt = await g('GET', 'debug_token', { input_token: TOKEN, access_token: APP_TOKEN });
   const t = dt.body?.data;
   if (!t) { console.log(`debug_token failed: ${JSON.stringify(dt.body.error || dt.body).slice(0, 200)}`); process.exit(1); }
-  const mine = String(t.application_id || '') === ADFORGE_APP;
-  console.log(`token: valid=${t.is_valid} app=${t.application_id || '?'} type=${t.token_type || '?'} ${mine ? '<<< ADFORGE APP' : '<<< NOT ADFORGE APP'} scopes=${(t.scopes || []).join(',')}`);
-
-  if (!mine) { console.log(`\nHARD GATE: token belongs to app ${t.application_id}, expected ${ADFORGE_APP}. Cannot prove Adforge creative path.`); process.exit(2); }
+  const _appId = t.app_id || t.application_id || '';
+  const _type = t.type || t.token_type || '?';
+  const mine = String(_appId) === ADFORGE_APP;
+  console.log(`token: valid=${t.is_valid} app=${_appId || '?'} type=${_type} ${mine ? '<<< ADFORGE APP' : '<<< NOT ADFORGE APP'} scopes=${(t.scopes || []).join(',')}`);
+  if (!mine) { console.log(`\nHARD GATE: token belongs to app ${_appId}, expected ${ADFORGE_APP}. Cannot prove Adforge creative path.`); process.exit(2); }
   if (!t.is_valid) { console.log('\nToken invalid/expired.'); process.exit(1); }
 
   const aa = await g('GET', 'me/adaccounts', { fields: 'id,name,currency,account_status', limit: '10', access_token: TOKEN });
