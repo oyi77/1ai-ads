@@ -1,0 +1,1 @@
+"""1AI Ads scripts package."""

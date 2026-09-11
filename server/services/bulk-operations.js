@@ -188,7 +188,9 @@ export class BulkOperations {
           }
           newBudget = Math.round(newBudget * 100) / 100;
 
-          await this.meta.updateCampaign(metaCampaignId, { dailyBudget: Math.round(newBudget * 100) / 100 });
+          // newBudget is major units (IDR); updateCampaign converts to Meta's
+          // units via the account currency, so no *100 here.
+          await this.meta.updateCampaign(metaCampaignId, { dailyBudget: newBudget });
           op.completed++;
           return { campaignId, oldBudget, newBudget, success: true };
         } catch (err) {
