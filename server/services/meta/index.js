@@ -3,6 +3,7 @@ import config from '../../config/index.js';
 import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
 import { ConfigurationError } from '../../lib/errors.js';
 import { FacebookAdsApi } from 'facebook-nodejs-business-sdk';
+import { toMinorUnits, fromMinorUnits } from '../../lib/money.js';
 
 const BASE = `https://graph.facebook.com/${config.metaApiVersion}`;
 
@@ -144,8 +145,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
 
 
   // --- Campaign Management ---
-
-  async getCampaigns(accountId, { limit = 50 } = {}) {
+  async getCampaigns(accountId, { limit = 50, currency = 'IDR' } = {}) {
     const data = await this._get(`/${accountId}/campaigns`, {
       fields: 'id,name,status,objective,daily_budget,lifetime_budget,created_time,updated_time',
       limit: String(limit),
@@ -155,8 +155,8 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       name: c.name,
       status: (c.status || '').toLowerCase(),
       objective: c.objective,
-      dailyBudget: parseFloat(c.daily_budget || 0),
-      lifetimeBudget: parseFloat(c.lifetime_budget || 0),
+      dailyBudget: fromMinorUnits(parseFloat(c.daily_budget || 0), currency),
+      lifetimeBudget: fromMinorUnits(parseFloat(c.lifetime_budget || 0), currency),
       createdTime: c.created_time,
       updatedTime: c.updated_time,
     }));
@@ -305,47 +305,40 @@ export class MetaAdsAPI extends BasePlatformApiClient {
   }
 
   // --- Campaign WRITE Operations ---
-
-  async createCampaign(accountId, { name, objective, status = 'PAUSED', dailyBudget, specialAdCategories = ['NONE'], isAdsetBudgetSharing }) {
+  async createCampaign(accountId, { name, objective, status = 'PAUSED', dailyBudget, specialAdCategories = ['NONE'], isAdsetBudgetSharing, currency = 'IDR' } = {}) {
     this.log.info('Creating Meta campaign', { accountId, name, objective });
     const body = {
       name,
       objective,
       status,
       special_ad_categories: specialAdCategories,
-      is_adset_budget_sharing_enabled: isAdsetBudgetSharing ?? false,
+      is_adset_budget_sharing_enabled: isAdsetBudgetSharing ? true : false,
     };
-    if (isAdsetBudgetSharing && dailyBudget) body.daily_budget = Math.round(dailyBudget * 100);
+    if (isAdsetBudgetSharing && dailyBudget) body.daily_budget = toMinorUnits(dailyBudget, currency);
+    else if (!isAdsetBudgetSharing && dailyBudget) body.daily_budget = toMinorUnits(dailyBudget, currency);
     const data = await this._post(`/${accountId}/campaigns`, body);
     this.log.info('Campaign created successfully', { campaignId: data.id });
     return { id: data.id };
   }
-  async createAdSet(accountId, campaignId, { name, dailyBudget, targeting, billingEvent = 'IMPRESSIONS', optimizationGoal = 'LINK_CLICKS', startTime, isCbo, promotedObject = null }) {
+  async createAdSet(accountId, campaignId, { name, dailyBudget, targeting, billingEvent = 'IMPRESSIONS', optimizationGoal = 'LINK_CLICKS', startTime, isCbo, promotedObject = null, currency = 'IDR' } = {}) {
     const body = {
       name,
       campaign_id: campaignId,
       billing_event: billingEvent,
       optimization_goal: optimizationGoal,
-      // When the ad set carries no budget (campaign-level CBO), LOWEST_COST
-      // strategies demand a bid_amount (error_subcode 1815857) — use the bid-cap
-      // strategy with a minimal bid. When the ad set owns its budget,
-      // LOWEST_COST_WITHOUT_CAP with daily_budget is valid.
       bid_strategy: dailyBudget && !isCbo ? 'LOWEST_COST_WITHOUT_CAP' : 'LOWEST_COST_WITH_BID_CAP',
-      // v22 requires explicit advantage_audience toggle
       targeting: { ...(targeting || { geo_locations: { countries: ['ID'] }, age_min: 18 }), targeting_automation: { advantage_audience: 0 } },
       status: 'PAUSED',
     };
-    if (dailyBudget && !isCbo) body.daily_budget = Math.round(dailyBudget * 100);
-    else body.bid_amount = 500; // minimal bid (IDR) — required without ad-set budget
-    // OFFSITE_CONVERSIONS / LEAD_GENERATION require a promoted object (pixel).
-    // Without it Meta 400s (subcode 1815430) — caller must resolve the pixel first.
+    if (dailyBudget && !isCbo) body.daily_budget = toMinorUnits(dailyBudget, currency);
+    else body.bid_amount = 500;
     if (promotedObject) body.promoted_object = promotedObject;
     if (startTime) body.start_time = startTime;
     const data = await this._post(`/${accountId}/adsets`, body);
     return { id: data.id };
   }
 
-  async createAdCreative(accountId, { name, pageId, message, headline, description, linkUrl, imageHash, videoId, ctaType = 'LEARN_MORE' }) {
+  async createAdCreative(accountId, { name, pageId, message, headline, description, linkUrl, imageHash, videoId, ctaType = 'LEARN_MORE' } = {}) {
     if (!pageId) {
       throw new Error('page_id is required to create an ad creative. Select a Facebook Page first.');
     }
@@ -395,11 +388,11 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     return { hash: images[firstKey].hash, url: images[firstKey].url };
   }
 
-  async updateCampaign(campaignId, updates = {}) {
+  async updateCampaign(campaignId, updates = {}, currency = 'IDR') {
     const body = {};
     if (updates.name) body.name = updates.name;
     if (updates.status) body.status = updates.status;
-    if (updates.dailyBudget !== undefined) body.daily_budget = Math.round(updates.dailyBudget * 100);
+    if (updates.dailyBudget !== undefined) body.daily_budget = toMinorUnits(updates.dailyBudget, currency);
     const _data = await this._post(`/${campaignId}`, body);
     return { success: true, id: campaignId };
   }
@@ -441,10 +434,10 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     return { originalId: campaignId, newCampaignId: newId, shallow };
   }
 
-  async updateAdSet(adsetId, updates = {}) {
+  async updateAdSet(adsetId, updates = {}, currency = 'IDR') {
     const body = {};
     if (updates.status) body.status = updates.status;
-    if (updates.dailyBudget !== undefined) body.daily_budget = Math.round(updates.dailyBudget * 100);
+    if (updates.dailyBudget !== undefined) body.daily_budget = toMinorUnits(updates.dailyBudget, currency);
     if (updates.targeting) body.targeting = updates.targeting;
     const _data = await this._post(`/${adsetId}`, body);
     return { success: true, id: adsetId };

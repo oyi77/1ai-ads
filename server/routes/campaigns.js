@@ -39,6 +39,10 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     }
 
     try {
+      // Get account currency for proper budget conversion
+      const account = platformAccountsRepo.findById?.(accountId);
+      const currency = account?.currency || 'IDR';
+
       const resolvedObjective = objective || 'OUTCOME_TRAFFIC';
       const resolvedPromotedObject = promotedObject || (pixelId
         ? { pixel_id: pixelId, custom_event_type: resolvedObjective === 'OUTCOME_SALES' ? 'PURCHASE' : 'LEAD' }
@@ -48,6 +52,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
         objective: resolvedObjective,
         targeting, dailyBudget: budget,
         landingUrl, promotedObject: resolvedPromotedObject,
+        currency,
       }, resolveUserMetaApi(req));
 
       // Save to local DB
@@ -59,6 +64,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
           name: `${product} - ${objective || 'TRAFFIC'}`,
           status: 'paused',
           budget,
+          currency,
           spend: 0,
           impressions: 0,
           clicks: 0,
@@ -339,7 +345,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
         // Fetch campaigns
         let campaigns = [];
         try {
-          campaigns = await api.getCampaigns(account.id);
+          campaigns = await api.getCampaigns(account.id, { currency: account.currency || 'IDR' });
         } catch (err) {
           log.error('Failed to get campaigns', { accountId: account.id, error: err.message });
         }

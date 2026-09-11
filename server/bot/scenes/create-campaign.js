@@ -372,7 +372,10 @@ createCampaignScene.action(/^create:acct:(.+)$/, async (ctx) => {
   const accountId = ctx.match[1];
   ctx.wizard.state.data.accountId = accountId;
   const entry = (ctx.wizard.state.accountsByToken || []).find(a => a.account.id === accountId);
-  if (entry) ctx.wizard.state.data.selectedToken = entry.token;
+  if (entry) {
+    ctx.wizard.state.data.selectedToken = entry.token;
+    ctx.wizard.state.data.accountCurrency = entry.account.currency || 'IDR';
+  }
   const name = (ctx.wizard.state.accounts || []).find(a => a.id === accountId)?.name || accountId;
   await ctx.reply(`Account: ${name}`);
   await ctx.reply('Campaign Objective:', { reply_markup: { inline_keyboard: [...OBJECTIVES.map(o => [{ text: o.label, callback_data: `create:obj:${o.id}` }]), CANCEL_ROW] } });
@@ -407,8 +410,7 @@ async function handleCreateGo(ctx) {
   if (!d.accountId || !d.objective || !d.name || !d.dailyBudget) { return ctx.reply('Incomplete data. Start again with /create.'); }
   const selectedToken = d.selectedToken || ctx.wizard.state.tokens?.[0];
   const api = selectedToken?.api;
-  if (!api) return ctx.reply('Connect a Meta account first via /settings.');
-  await ctx.reply('Creating campaign...');
+    const campaign = await api.createCampaign(realAccountId, { name: d.name, objective: d.objective, status: 'PAUSED', currency: d.accountCurrency || 'IDR' });
   try {
     const realAccountId = d.accountId;
     const campaign = await api.createCampaign(realAccountId, { name: d.name, objective: d.objective, status: 'PAUSED' });
@@ -430,7 +432,7 @@ async function handleCreateGo(ctx) {
     const genderVal = targeting.gender || 0;
     const ageMin = Number(targeting.ageMin) || 18;
     const ageMax = Number(targeting.ageMax) || 55;
-    const adSet = await api.createAdSet(realAccountId, campaign.id, { name: `${d.name} - Ad Set`, dailyBudget: d.dailyBudget, targeting: { geo_locations: { countries: targeting.countries || ['ID'] }, age_min: ageMin, age_max: ageMax, ...(genderVal === 1 ? { genders: [1] } : genderVal === 2 ? { genders: [2] } : {}) }, billingEvent: 'IMPRESSIONS', optimizationGoal, promotedObject });
+    const adSet = await api.createAdSet(realAccountId, campaign.id, { name: `${d.name} - Ad Set`, dailyBudget: d.dailyBudget, targeting: { geo_locations: { countries: targeting.countries || ['ID'] }, age_min: ageMin, age_max: ageMax, ...(genderVal === 1 ? { genders: [1] } : genderVal === 2 ? { genders: [2] } : {}) }, billingEvent: 'IMPRESSIONS', optimizationGoal, promotedObject, currency: d.accountCurrency || 'IDR' });
     let adCreated = false;
     let creativeFailNote = '';
     try {

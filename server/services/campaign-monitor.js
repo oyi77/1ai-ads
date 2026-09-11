@@ -62,9 +62,7 @@ export class CampaignMonitorService {
       const api = this._ownerApi(accountId, userId, platform);
       // Account-level insights exist only on Meta today. Without it, return the
       // structured empty status (no fake data).
-      if (!api || typeof api.getAccountInsights !== 'function') return this._emptyStatus(accountId, platform);
-      const campaigns = await api.getCampaigns(accountId);
-      const active = campaigns.filter(c => c.status === 'active');
+      const campaigns = await api.getCampaigns(accountId, { currency: 'IDR' });
       const paused = campaigns.filter(c => c.status === 'paused');
 
       // Get today's and this week's spend from account insights
@@ -105,7 +103,7 @@ export class CampaignMonitorService {
         return { accountId, platform, score: 0, grade: 'N/A', factors: [{ name: 'API unavailable', impact: 0, detail: 'Platform account insights not supported' }], fetchedAt: new Date().toISOString() };
       }
       const [campaigns, todayInsights, weekInsights] = await Promise.all([
-        api.getCampaigns(accountId),
+        api.getCampaigns(accountId, { currency: 'IDR' }),
         api.getAccountInsights(accountId, { datePreset: 'today' }).catch(() => null),
         api.getAccountInsights(accountId, { datePreset: 'this_week' }).catch(() => null),
       ]);
@@ -117,10 +115,10 @@ export class CampaignMonitorService {
       const activeCampaigns = campaigns.filter(c => c.status === 'active');
       const totalDailyBudget = activeCampaigns.reduce((sum, c) => sum + (c.dailyBudget || 0), 0);
       if (totalDailyBudget > 0 && todayInsights) {
-        const ratio = (todayInsights.spend * 100) / totalDailyBudget; // spend is in currency, budget in cents
-        if (ratio > DEFAULTS.budgetExhaustedRatio * 100) {
+        const ratio = todayInsights.spend / totalDailyBudget; // both in major units
+        if (ratio > DEFAULTS.budgetExhaustedRatio) {
           score -= 15;
-          factors.push({ name: 'Budget nearly exhausted', impact: -15, detail: `${ratio.toFixed(0)}% of daily budget used` });
+          factors.push({ name: 'Budget nearly exhausted', impact: -15, detail: `${(ratio * 100).toFixed(0)}% of daily budget used` });
         }
       }
 
@@ -195,7 +193,7 @@ export class CampaignMonitorService {
       if (!api || typeof api.getCampaignInsights !== 'function') {
         return { accountId, platform, alerts: [], count: 0, error: 'Platform campaign insights not supported', fetchedAt: new Date().toISOString() };
       }
-      const campaigns = await api.getCampaigns(accountId);
+      const campaigns = await api.getCampaigns(accountId, { currency: 'IDR' });
       const alerts = [];
 
       for (const campaign of campaigns) {
@@ -207,15 +205,15 @@ export class CampaignMonitorService {
         } catch { /* no insights */ }
 
         // Campaign exceeding daily budget
-        if (campaign.dailyBudget > 0 && insights && insights.spend * 100 > campaign.dailyBudget) {
+        if (campaign.dailyBudget > 0 && insights && insights.spend > campaign.dailyBudget) {
           alerts.push({
             severity: 'critical',
             type: 'budget_exceeded',
             campaignId: campaign.id,
             campaignName: campaign.name,
-            message: `Spend (${insights.spend}) exceeds daily budget (${(campaign.dailyBudget / 100).toFixed(0)})`,
+            message: `Spend (${insights.spend.toFixed(2)}) exceeds daily budget (${campaign.dailyBudget.toFixed(0)})`,
             spend: insights.spend,
-            budget: campaign.dailyBudget / 100,
+            budget: campaign.dailyBudget,
           });
         }
 
@@ -260,13 +258,13 @@ export class CampaignMonitorService {
         }
 
         // Budget exhausted (spent > 95% of budget)
-        if (campaign.dailyBudget > 0 && insights && (insights.spend * 100) / campaign.dailyBudget >= DEFAULTS.budgetExhaustedRatio) {
+        if (campaign.dailyBudget > 0 && insights && insights.spend / campaign.dailyBudget >= DEFAULTS.budgetExhaustedRatio) {
           alerts.push({
             severity: 'info',
             type: 'budget_exhausted',
             campaignId: campaign.id,
             campaignName: campaign.name,
-            message: `Budget ${((insights.spend * 100 / campaign.dailyBudget) * 100).toFixed(0)}% exhausted`,
+            message: `Budget ${((insights.spend / campaign.dailyBudget) * 100).toFixed(0)}% exhausted`,
           });
         }
       }
@@ -329,7 +327,7 @@ export class CampaignMonitorService {
       if (!api || typeof api.getCampaignInsights !== 'function') {
         return { accountId, platform, shouldPause: false, campaigns: [], count: 0, error: 'Platform campaign insights not supported', fetchedAt: new Date().toISOString() };
       }
-      const campaigns = await api.getCampaigns(accountId);
+      const campaigns = await api.getCampaigns(accountId, { currency: 'IDR' });
       const toPause = [];
 
       for (const campaign of campaigns) {
@@ -342,18 +340,14 @@ export class CampaignMonitorService {
 
         if (!insights) continue;
 
-        const spendCents = insights.spend * 100; // Meta returns spend in currency units
-        const conversions = insights.conversions || 0;
-        const threshold = campaign.dailyBudget * DEFAULTS.autoPauseSpendMultiplier;
-
-        if (spendCents > threshold && conversions === 0) {
+        if (insights.spend > threshold && conversions === 0) {
           toPause.push({
             campaignId: campaign.id,
             campaignName: campaign.name,
             spend: insights.spend,
-            dailyBudget: campaign.dailyBudget / 100,
+            dailyBudget: campaign.dailyBudget,
             conversions,
-            reason: `Spend ${insights.spend} > ${DEFAULTS.autoPauseSpendMultiplier}x daily budget (${(campaign.dailyBudget / 100).toFixed(0)}) with 0 conversions`,
+            reason: `Spend ${insights.spend.toFixed(2)} > ${DEFAULTS.autoPauseSpendMultiplier}x daily budget (${campaign.dailyBudget.toFixed(0)}) with 0 conversions`,
           });
         }
       }

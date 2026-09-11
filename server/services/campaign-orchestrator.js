@@ -45,12 +45,11 @@ export class CampaignOrchestrator {
       }));
   }
 
-  async _createCampaignStep(accountId, pageId, product, objective, dailyBudget, landingUrl, aiResult, bestAd, result, meta = this.meta, promotedObject = null) {
+  async _createCampaignStep(accountId, pageId, product, objective, dailyBudget, landingUrl, aiResult, bestAd, result, meta = this.meta, promotedObject = null, currency = 'IDR') {
     const steps = result.steps;
     const campaignName = `${product} - ${objective} - ${new Date().toISOString().split('T')[0]}`;
     const campaignId = await this._runAndAssign(steps, 'create_campaign', result, 'campaignId',
-      () => meta.createCampaign(accountId, { name: campaignName, objective, status: 'PAUSED' }),
-      { name: campaignName });
+      () => meta.createCampaign(accountId, { name: campaignName, objective, status: 'PAUSED', currency }), { name: campaignName });
 
     const adsetName = `${product} - ${bestAd.hook || product}`;
     const adsetId = await this._runAndAssign(steps, 'create_adset', result, 'adsetId',
@@ -58,7 +57,7 @@ export class CampaignOrchestrator {
         name: adsetName, dailyBudget, isCbo: false,
         targeting: this._buildDefaultTargeting(aiResult.targetingSuggestions),
         optimizationGoal: this._objectiveToOptimization(objective),
-        promotedObject,
+        promotedObject, currency,
       }), { name: adsetName });
 
     // Creative step is non-fatal: if it fails (dev-mode app, no page), the
@@ -88,6 +87,7 @@ export class CampaignOrchestrator {
     accountId, pageId, product, target, keunggulan,
     objective = 'OUTCOME_TRAFFIC', targeting: _targeting, dailyBudget,
     landingUrl, platform = 'meta', format = 'single_image', promotedObject = null,
+    currency = 'IDR',
   }, metaApi = null) {
     const meta = metaApi || this.meta;
     log.info('Creating full campaign', { product, objective, platform });
@@ -107,9 +107,8 @@ export class CampaignOrchestrator {
           model_name: 'template_fallback',
         };
         aiResult = { copies: [bestAd], imageDirections: [] };
-        steps.push({ step: 'ai_creative', status: 'done', data: { model: 'template_fallback' } });
       }
-      await this._createCampaignStep(accountId, pageId, product, objective, dailyBudget, landingUrl, aiResult, bestAd, result, meta, promotedObject);
+      await this._createCampaignStep(accountId, pageId, product, objective, dailyBudget, landingUrl, aiResult, bestAd, result, meta, promotedObject, currency);
       result.status = 'created';
       result.message = 'Campaign created as PAUSED. Activate when ready.';
       result.aiCreative = this._buildAICreative(bestAd, aiResult);
