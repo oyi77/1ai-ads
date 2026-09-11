@@ -422,19 +422,26 @@ async function handleCreateGo(ctx) {
     const ageMax = Number(targeting.ageMax) || 55;
     const adSet = await api.createAdSet(realAccountId, campaign.id, { name: `${d.name} - Ad Set`, dailyBudget: d.dailyBudget, targeting: { geo_locations: { countries: targeting.countries || ['ID'] }, age_min: ageMin, age_max: ageMax, ...(genderVal === 1 ? { genders: [1] } : genderVal === 2 ? { genders: [2] } : {}) }, billingEvent: 'IMPRESSIONS', optimizationGoal, promotedObject });
     let adCreated = false;
+    let creativeFailNote = '';
     try {
       const source = ctx.wizard.state.creativeSource;
       if (source === 'post' || source === 'manual') {
         if (d.postId) {
-          // Meta requires object_story_id in format {page_id}_{post_id}.
-          // Resolve raw numeric IDs against the user's pages (page tokens can
-          // fetch a raw post id and return the canonical compound form);
-          // fall back to the first page when resolution fails.
-          let storyId = await api.resolvePostId?.(d.postId);
-          if (!storyId) storyId = pageId ? `${pageId}_${d.postId}` : d.postId;
-          const data = await api._post(`/${realAccountId}/adcreatives`, { name: `${d.name} - Creative`, object_story_id: storyId });
-          await api.createAd(realAccountId, { adsetId: adSet.id, creativeId: data.id, name: `${d.name} - Ad`, status: 'PAUSED' });
-          adCreated = true;
+          try {
+            // Meta requires object_story_id in format {page_id}_{post_id}.
+            // Resolve raw numeric IDs against the user's pages (page tokens can
+            // fetch a raw post id and return the canonical compound form);
+            // fall back to the first page when resolution fails.
+            let storyId = await api.resolvePostId?.(d.postId);
+            if (!storyId) storyId = pageId ? `${pageId}_${d.postId}` : d.postId;
+            const data = await api._post(`/${realAccountId}/adcreatives`, { name: `${d.name} - Creative`, object_story_id: storyId });
+            await api.createAd(realAccountId, { adsetId: adSet.id, creativeId: data.id, name: `${d.name} - Ad`, status: 'PAUSED' });
+            adCreated = true;
+          } catch (postErr) {
+            const metaMsg = postErr.data?.error?.error_user_msg || postErr.data?.error?.message || postErr.message;
+            creativeFailNote = `Postingan tidak bisa dipakai (${String(metaMsg).slice(0, 160)}). Ad dibuat dengan creative link standar.`;
+            log.warn('Post creative failed, falling back to link_data', { error: postErr.message });
+          }
         }
       } else if (source === 'custom') {
         const cr = ctx.wizard.state.creative || {};
@@ -464,9 +471,10 @@ async function handleCreateGo(ctx) {
       }
     } catch (creativeErr) {
       log.warn('Creative creation failed - campaign/adset still created', { error: creativeErr.message });
-      await ctx.reply(`Campaign & Ad Set created, but creative failed: ${esc(creativeErr.message).slice(0, 200)}\n\nAdd a creative later from the Creative Library.`);
+      const metaMsg = creativeErr.data?.error?.error_user_msg || creativeErr.data?.error?.message || creativeErr.message;
+      await ctx.reply(`Campaign & Ad Set created, but creative failed: ${esc(String(metaMsg)).slice(0, 200)}\n\nAdd a creative later from the Creative Library.`);
     }
-    await ctx.reply((adCreated ? 'Campaign Created!\n\n' : 'Campaign & Ad Set created - ad NOT created.\n\n') + `${esc(d.name)}\nOptimasi: ${esc(optimizationGoal)}${promotedObject ? ' (pixel)' : ''}\n${fmtRp(d.dailyBudget)}/day - Status: PAUSED\n` + (pixelFallbackNote ? `${pixelFallbackNote}\n` : '') + (adCreated ? '\nActivate via /ads -> select account -> Resume.' : '\nAdd the ad from Creative Library, then activate via /ads.'));
+    await ctx.reply((adCreated ? 'Campaign Created!\n\n' : 'Campaign & Ad Set created - ad NOT created.\n\n') + `${esc(d.name)}\nOptimasi: ${esc(optimizationGoal)}${promotedObject ? ' (pixel)' : ''}\n${fmtRp(d.dailyBudget)}/day - Status: PAUSED\n` + (pixelFallbackNote ? `${pixelFallbackNote}\n` : '') + (creativeFailNote ? `${esc(creativeFailNote)}\n` : '') + (adCreated ? '\nActivate via /ads -> select account -> Resume.' : '\nAdd the ad from Creative Library, then activate via /ads.'));
   } catch (err) {
     log.error('create campaign failed', { userId: ctx.userId, error: err.message });
     const metaErr = err.data?.error || {};
