@@ -185,4 +185,34 @@ describe('RuleEvaluator', () => {
       expect(matched).toBe(2);
     });
   });
+  describe('_scaleCampaign guards', () => {
+    it('should clamp scale-up to RULE_MAX_DAILY_BUDGET', async () => {
+      const updateCampaign = vi.fn().mockResolvedValue({ success: true });
+      const capped = new RuleEvaluator(
+        mockSettingsRepo, mockCampaignsRepo, mockRulesRepo, {},
+        { metaAdsAPI: { updateCampaign } }, null
+      );
+      mockCampaignsRepo.findById.mockReturnValue({ id: 'c1', campaign_id: 'm1', platform: 'meta', budget: 9000000 });
+      await capped._scaleCampaign('c1', 20, 'up'); // 9jt * 1.2 = 10.8jt > 10jt default cap
+      expect(updateCampaign).toHaveBeenCalledWith('m1', { dailyBudget: 10000000 });
+    });
+
+    it('should prefer the campaign owner token over the shared instance', async () => {
+      const { MetaAdsAPI } = await import('../../../server/services/meta/index.js');
+      const updateCampaign = vi.fn().mockResolvedValue({ success: true });
+      MetaAdsAPI.mockImplementation(function (token) { this.token = token; this.updateCampaign = updateCampaign; });
+      mockPlatformAccountsRepo.findAllActiveByUserAndPlatform = vi.fn().mockReturnValue([{ access_token: 'owner-tok' }]);
+      mockCampaignsRepo.findById.mockReturnValue({ id: 'c1', campaign_id: 'm1', platform: 'meta', user_id: 'u-owner', budget: 50000 });
+      const shared = { updateCampaign: vi.fn() };
+      const owned = new RuleEvaluator(
+        mockSettingsRepo, mockCampaignsRepo, mockRulesRepo, {},
+        { metaAdsAPI: shared, platformAccountsRepo: mockPlatformAccountsRepo }, null
+      );
+      await owned._scaleCampaign('c1', 10, 'up');
+      expect(MetaAdsAPI).toHaveBeenCalledWith('owner-tok');
+      expect(updateCampaign).toHaveBeenCalledWith('m1', { dailyBudget: 55000 });
+      expect(shared.updateCampaign).not.toHaveBeenCalled();
+      MetaAdsAPI.mockReset();
+    });
+  });
 });

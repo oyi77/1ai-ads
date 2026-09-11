@@ -140,6 +140,12 @@ describe('FacebookConnectionService', () => {
   });
 
   describe('linkFacebookAccount', () => {
+    beforeEach(() => {
+      global.fetch.mockResolvedValue({
+        json: () => Promise.resolve({ data: { app_id: 'test-app-id', is_valid: true, user_id: 'fb-1' } }),
+      });
+    });
+
     it('should upsert account to platform_accounts', async () => {
       const result = await service.linkFacebookAccount('user-1', 'act-123', 'My Page', 'access-token');
 
@@ -158,6 +164,13 @@ describe('FacebookConnectionService', () => {
       const call = mockRepo.upsert.mock.calls[0][0];
       const meta = JSON.parse(call.metadata);
       expect(meta.last_sync).toBeDefined();
+    });
+    it('should reject tokens from another app', async () => {
+      global.fetch.mockResolvedValue({
+        json: () => Promise.resolve({ data: { app_id: 'other-app', is_valid: true, user_id: 'fb-1' } }),
+      });
+      await expect(service.linkFacebookAccount('user-1', 'act-123', 'Page', 'token')).rejects.toThrow();
+      expect(mockRepo.upsert).not.toHaveBeenCalled();
     });
   });
 });

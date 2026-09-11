@@ -7,6 +7,7 @@
 
 import config from '../config/index.js';
 import { MetaAdsAPI } from './meta/index.js';
+import { verifyMetaTokenApp } from './meta-connection.js';
 
 const API_VERSION = config.metaApiVersion;
 
@@ -69,6 +70,7 @@ export class FacebookConnectionService {
    * Link a Facebook account to platform_accounts table.
    */
   async linkFacebookAccount(userId, accountId, accountName, accessToken) {
+    await verifyMetaTokenApp(accessToken);
     return this.platformAccountsRepo.upsert({
       user_id: userId,
       platform: 'meta',

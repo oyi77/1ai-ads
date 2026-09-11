@@ -14,6 +14,7 @@ import {
 import crypto from 'crypto';
 import { v4 as uuid } from 'uuid';
 import { sanitizeAccessToken } from '../../lib/token-sanitize.js';
+import { verifyMetaTokenApp } from '../../services/meta-connection.js';
 
 const log = createLogger('auth-handlers');
 /**
@@ -163,7 +164,11 @@ export function handleConnectMetaToken(settingsRepo) {
     const { account_name } = req.body;
     const access_token = sanitizeAccessToken(req.body?.access_token);
     if (!access_token) return res.status(400).json({ success: false, error: 'access_token is required' });
-    if (!settingsRepo) return res.status(500).json({ success: false, error: 'Settings repository not available' });
+    try {
+      await verifyMetaTokenApp(access_token);
+    } catch (gateErr) {
+      return res.status(400).json({ success: false, error: gateErr.message });
+    }
 
     try {
       const meRes = await fetch(`https://graph.facebook.com/${config.metaApiVersion}/me?access_token=${encodeURIComponent(access_token)}&fields=id,name`);

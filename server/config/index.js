@@ -87,6 +87,7 @@ const config = {
  get aiPipelineDefaultModel() { return process.env.AI_PIPELINE_DEFAULT_MODEL || ''; },
  get nangoSecretKey() { return process.env.NANGO_SECRET_KEY || ''; },
  get approvalRequired() { return process.env.APPROVAL_REQUIRED === 'true' || process.env.APPROVAL_REQUIRED === '1'; },
+ get ruleMaxDailyBudget() { return Number(process.env.RULE_MAX_DAILY_BUDGET || 10000000); },
  get publicBaseUrl() { return process.env.PUBLIC_BASE_URL || 'https://adforge.aitradepulse.com'; },
  get paymentGateway() { return process.env.PAYMENT_GATEWAY || 'duitku'; },
  get webhookSecret() { return process.env.WEBHOOK_SECRET || process.env.SCALEV_WEBHOOK_SECRET || ''; },

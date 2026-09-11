@@ -137,89 +137,59 @@ describe('meta-connection', () => {
   describe('connectMetaAccount', () => {
     let mockRepo;
 
+    // fetch order: exchange(2) -> debug_token gate(1) -> me(1) -> adaccounts(1)
+    function mockFullFlow({ appId = 'test-app-id', accounts = [{ id: 'act_1', name: 'Ad Account 1', account_status: 1 }] } = {}) {
+      global.fetch
+        .mockResolvedValueOnce({ json: () => Promise.resolve({ access_token: 'short' }) })
+        .mockResolvedValueOnce({ json: () => Promise.resolve({ access_token: 'long', expires_in: 5184000 }) })
+        .mockResolvedValueOnce({ json: () => Promise.resolve({ data: { app_id: appId, is_valid: true, user_id: 'fb-1' } }) })
+        .mockResolvedValueOnce({ json: () => Promise.resolve({ id: 'fb-1', name: 'John', email: 'j@t.com' }) })
+        .mockResolvedValueOnce({ json: () => Promise.resolve({ data: accounts }) });
+    }
+
     beforeEach(() => {
       mockRepo = {
-        getAccountByPlatformId: vi.fn().mockReturnValue(null),
-        addAccount: vi.fn(),
-        updateAccount: vi.fn(),
-        findByUserAndPlatform: vi.fn().mockReturnValue(null),
+        upsert: vi.fn(),
+        getByPlatform: vi.fn().mockReturnValue(null),
       };
     });
 
     it('should run full connection flow', async () => {
-      // exchangeCodeForToken
-      global.fetch
-        .mockResolvedValueOnce({ json: () => Promise.resolve({ access_token: 'short' }) })
-        .mockResolvedValueOnce({ json: () => Promise.resolve({ access_token: 'long', expires_in: 5184000 }) });
-      // verifyTokenAndGetUser
-      global.fetch.mockResolvedValueOnce({
-        json: () => Promise.resolve({ id: 'fb-1', name: 'John', email: 'j@t.com' }),
-      });
-      // detectAdAccounts
-      global.fetch.mockResolvedValueOnce({
-        json: () => Promise.resolve({
-          data: [{ id: 'act_1', name: 'Ad Account 1', account_status: 1 }],
-        }),
-      });
-
+      mockFullFlow();
       const result = await connectMetaAccount('code', 'https://redirect.com', mockRepo, 'user-1');
       expect(result.accessToken).toBe('long');
       expect(result.user.userId).toBe('fb-1');
       expect(result.accounts).toHaveLength(1);
-      expect(mockRepo.addAccount).toHaveBeenCalled();
+      expect(mockRepo.upsert).toHaveBeenCalledWith(expect.objectContaining({
+        user_id: 'user-1', platform: 'meta', access_token: 'long',
+      }));
     });
 
-    it('should update existing accounts', async () => {
-      global.fetch
-        .mockResolvedValueOnce({ json: () => Promise.resolve({ access_token: 'short' }) })
-        .mockResolvedValueOnce({ json: () => Promise.resolve({ access_token: 'long', expires_in: 5184000 }) });
-      global.fetch.mockResolvedValueOnce({
-        json: () => Promise.resolve({ id: 'fb-1', name: 'John', email: 'j@t.com' }),
-      });
-      global.fetch.mockResolvedValueOnce({
-        json: () => Promise.resolve({
-          data: [{ id: 'act_1', name: 'Account 1', account_status: 1 }],
-        }),
-      });
-
-      mockRepo.getAccountByPlatformId.mockReturnValue({ id: 'existing-id' });
-
+    it('should upsert (not duplicate) on reconnect', async () => {
+      mockFullFlow();
       await connectMetaAccount('code', 'https://redirect.com', mockRepo, 'user-1');
-      expect(mockRepo.updateAccount).toHaveBeenCalledWith('existing-id', expect.any(Object));
+      expect(mockRepo.upsert).toHaveBeenCalled();
     });
 
     it('should save token even if no ad accounts detected', async () => {
-      global.fetch
-        .mockResolvedValueOnce({ json: () => Promise.resolve({ access_token: 'short' }) })
-        .mockResolvedValueOnce({ json: () => Promise.resolve({ access_token: 'long', expires_in: 5184000 }) });
-      global.fetch.mockResolvedValueOnce({
-        json: () => Promise.resolve({ id: 'fb-1', name: 'John', email: 'j@t.com' }),
-      });
-      global.fetch.mockResolvedValueOnce({
-        json: () => Promise.resolve({ data: [] }),
-      });
-
+      mockFullFlow({ accounts: [] });
       await connectMetaAccount('code', 'https://redirect.com', mockRepo, 'user-1');
-      expect(mockRepo.addAccount).toHaveBeenCalledWith(expect.objectContaining({
+      expect(mockRepo.upsert).toHaveBeenCalledWith(expect.objectContaining({
         platform: 'meta', account_name: 'John',
       }));
     });
 
-    it('should not duplicate token if user already has meta account', async () => {
-      global.fetch
-        .mockResolvedValueOnce({ json: () => Promise.resolve({ access_token: 'short' }) })
-        .mockResolvedValueOnce({ json: () => Promise.resolve({ access_token: 'long', expires_in: 5184000 }) });
-      global.fetch.mockResolvedValueOnce({
-        json: () => Promise.resolve({ id: 'fb-1', name: 'John', email: 'j@t.com' }),
-      });
-      global.fetch.mockResolvedValueOnce({
-        json: () => Promise.resolve({ data: [] }),
-      });
-
-      mockRepo.findByUserAndPlatform.mockReturnValue({ id: 'existing' });
-
+    it('should not save when user already has meta account', async () => {
+      mockFullFlow({ accounts: [] });
+      mockRepo.getByPlatform.mockReturnValue({ id: 'existing' });
       await connectMetaAccount('code', 'https://redirect.com', mockRepo, 'user-1');
-      expect(mockRepo.addAccount).not.toHaveBeenCalled();
+      expect(mockRepo.upsert).not.toHaveBeenCalled();
+    });
+
+    it('should reject tokens from another app', async () => {
+      mockFullFlow({ appId: 'other-app' });
+      await expect(connectMetaAccount('code', 'https://redirect.com', mockRepo, 'user-1')).rejects.toThrow();
+      expect(mockRepo.upsert).not.toHaveBeenCalled();
     });
   });
 });

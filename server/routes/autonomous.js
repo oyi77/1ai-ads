@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { createLogger } from '../lib/logger.js';
+import { requireAdmin } from '../middleware/auth.js';
 import { exchangeCodeForToken } from '../services/meta-connection.js';
 
 const log = createLogger('autonomous-routes');
@@ -37,10 +38,11 @@ export function createAutonomousRouter(settingsRepo, platformAccountsRepo, campa
     }
   });
 
-  // GET /api/autonomous/facebook-accounts - Get user's Facebook accounts
-  router.get('/facebook-accounts', async (req, res) => {
+  // POST /api/autonomous/facebook-accounts - Get user's Facebook accounts.
+  // Token via JSON body (never query string — URLs land in proxy logs).
+  router.post('/facebook-accounts', async (req, res) => {
     try {
-      const { accessToken } = req.query;
+      const accessToken = req.body?.accessToken;
       if (!accessToken) {
         return res.status(400).json({ success: false, error: 'Access token is required' });
       }
@@ -114,8 +116,8 @@ export function createAutonomousRouter(settingsRepo, platformAccountsRepo, campa
     }
   });
 
-  // POST /api/autonomous/toggle-autonomy - Toggle full autonomy mode
-  router.post('/toggle-autonomy', async (req, res) => {
+  // POST /api/autonomous/toggle-autonomy - global flag: admin only.
+  router.post('/toggle-autonomy', requireAdmin, async (req, res) => {
     try {
       const { enabled } = req.body;
       await settingsRepo.set('autonomy_enabled', enabled ? 'true' : 'false');

@@ -5,6 +5,7 @@ import { createLogger } from '../lib/logger.js';
 import { compare } from '../lib/operators.js';
 import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
 import { METRICS } from '../lib/rule-metrics.js';
+import config from '../config/index.js';
 
 const log = createLogger('rule-evaluator');
 
@@ -22,9 +23,9 @@ export class RuleEvaluator {
   }
 
   _platformApiForOwner(platform, campaign) {
-    const ownerApi = this._getPlatformApi(platform);
-    if (ownerApi) return ownerApi;
-
+    // Owner first: rule mutations must run as the campaign owner's token.
+    // The shared instance is only a fallback (else every user's rules would
+    // fire as the operator token).
     if (campaign?.user_id && this.platformAccountsRepo) {
       const token = resolveOwnerPlatformToken(platform, campaign.user_id, {
         platformAccountsRepo: this.platformAccountsRepo,
@@ -35,7 +36,7 @@ export class RuleEvaluator {
         if (cls) return new cls(token);
       }
     }
-    return null;
+    return this._getPlatformApi(platform);
   }
 
   static PLATFORM_APIS = {
@@ -125,9 +126,15 @@ export class RuleEvaluator {
     if (!api) return;
     const metaCampaignId = campaign.campaign_id || campaignId;
     const currentBudget = campaign.budget || 0;
-    const newBudget = direction === 'up'
+    let newBudget = direction === 'up'
       ? Math.round(currentBudget * (1 + multiplier / 100))
       : Math.round(currentBudget * (1 - multiplier / 100));
+    // Anti-runaway: a matched rule refires every interval — never scale past the cap.
+    const cap = config.ruleMaxDailyBudget;
+    if (newBudget > cap) {
+      log.warn('Scale clamped to cap', { campaignId, newBudget, cap });
+      newBudget = cap;
+    }
     await api.updateCampaign(metaCampaignId, { dailyBudget: newBudget });
     log.info('Budget scaled', { campaignId, metaCampaignId, multiplier, direction, newBudget });
   }
@@ -206,11 +213,11 @@ RuleEvaluator.ACTION_HANDLERS = {
   increase_budget: async function(params, campaign) { await this._increaseBudget(campaign.id, params.percentage !== undefined ? params.percentage : 20); },
   decrease_budget: async function(params, campaign) { await this._decreaseBudget(campaign.id, params.percentage !== undefined ? params.percentage : 20); },
   duplicate_campaign: async function(params, campaign) { await this._duplicateCampaign(campaign.id, params.name || '_copy'); },
-  change_bid: async function(params, campaign) { log.info('Change bid', { strategy: params.strategy, campaignId: campaign.id }); },
-  notify: async function(params, campaign) { log.info('Notify', { message: params.message, campaignId: campaign.id }); },
-  notify_and_pause: async function(params, campaign) { log.info('Notify+Pause', { message: params.message, campaignId: campaign.id }); await this._pauseCampaign(campaign.id); },
-  auto_allocate: async function(params, campaign) { log.info('Auto allocate', { platforms: params.platforms, campaignId: campaign.id }); },
-  dayparting: async function(params, campaign) { log.info('Dayparting', { schedule: params.schedule, campaignId: campaign.id }); },
+  change_bid: async function(params, campaign) { log.warn('NOT IMPLEMENTED: change_bid is a no-op', { strategy: params.strategy, campaignId: campaign.id }); },
+  notify: async function(params, campaign) { log.warn('NOT IMPLEMENTED: notify is a no-op', { message: params.message, campaignId: campaign.id }); },
+  notify_and_pause: async function(params, campaign) { log.warn('NOT IMPLEMENTED: notify part is a no-op; pausing', { message: params.message, campaignId: campaign.id }); await this._pauseCampaign(campaign.id); },
+  auto_allocate: async function(params, campaign) { log.warn('NOT IMPLEMENTED: auto_allocate is a no-op', { platforms: params.platforms, campaignId: campaign.id }); },
+  dayparting: async function(params, campaign) { log.warn('NOT IMPLEMENTED: dayparting is a no-op', { schedule: params.schedule, campaignId: campaign.id }); },
   optimize_creative: async function(params, campaign) { await this._optimizeCreative(campaign.id); },
   optimize_budget: async function(params, campaign) { await this._optimizeBudget(campaign.id); },
 };

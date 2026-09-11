@@ -45,6 +45,10 @@ function makeRes() {
 let fetchImpl;
 beforeEach(() => {
   fetchImpl = vi.fn(async (url) => {
+    if (url.includes('debug_token')) {
+      const { default: config } = await import('../../../../../server/config/index.js');
+      return { json: async () => ({ data: { app_id: config.fbAppId, application_id: config.fbAppId, is_valid: true, user_id: 'fb-123' } }) };
+    }
     if (url.includes('/me?') || url.includes('/me/adaccounts') === false && url.includes('/me')) {
       return { json: async () => ({ id: 'fb-123', name: 'Alice' }) };
     }

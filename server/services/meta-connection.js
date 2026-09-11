@@ -15,6 +15,26 @@ import { createLogger } from '../lib/logger.js';
 const log = createLogger('meta-connection');
 
 const API_VERSION = config.metaApiVersion;
+/**
+ * Verify a Meta user token belongs to OUR app (fail-fast gate for every
+ * token entry point). Tokens minted by other (dev-mode) apps fail ALL
+ * creative writes with 1885183, so reject them at connect time with an
+ * actionable message instead of a mysterious failure at create time.
+ * @returns {{ appId: string, userId: string }} — throws Validation-style Error
+ */
+export async function verifyMetaTokenApp(accessToken) {
+  const appToken = `${config.fbAppId}|${config.fbAppSecret}`;
+  const res = await fetch(`https://graph.facebook.com/${API_VERSION}/debug_token?input_token=${encodeURIComponent(accessToken)}&access_token=${encodeURIComponent(appToken)}`);
+  const body = await res.json().catch(() => ({}));
+  const data = body?.data;
+  if (!data) throw new Error(`Token verification failed: ${body?.error?.message || 'unknown'}`);
+  const appId = String(data.app_id || data.application_id || '');
+  if (!data.is_valid) throw new Error('Token Meta tidak valid/kedaluwarsa. Hubungkan ulang.');
+  if (appId !== String(config.fbAppId)) {
+    throw new Error(`Token berasal dari aplikasi lain (${appId}), bukan AdForge. Cabut koneksi lalu hubungkan ulang via /settings agar creative bisa dibuat.`);
+  }
+  return { appId, userId: data.user_id };
+}
 
 /**
  * Exchange a short-lived OAuth code for a long-lived access token.
@@ -117,39 +137,34 @@ export async function detectAdAccounts(accessToken) {
  */
 export async function connectMetaAccount(code, redirectUri, platformAccountsRepo, userId) {
   const { accessToken, expiresIn } = await exchangeCodeForToken(code, redirectUri);
+  await verifyMetaTokenApp(accessToken);
   const user = await verifyTokenAndGetUser(accessToken);
   const accounts = await detectAdAccounts(accessToken);
 
-  // Save or update each detected ad account
+  // Save or update each detected ad account (user-scoped upsert: dedups by
+  // user+platform+account_name, stores the canonical access_token key).
   for (const account of accounts) {
-    const existing = platformAccountsRepo.getAccountByPlatformId(account.id);
-    if (existing) {
-      platformAccountsRepo.updateAccount(existing.id, {
-        credentials: { accessToken, expiresIn, fbUserId: user.userId },
-        is_active: 1,
-      });
-    } else {
-      platformAccountsRepo.addAccount({
-        id: `meta_${account.id}`,
-        user_id: userId,
-        platform: 'meta',
-        account_name: account.name,
-        credentials: { accessToken, expiresIn, fbUserId: user.userId, accountId: account.id },
-        is_active: 1,
-      });
-    }
+    platformAccountsRepo.upsert({
+      user_id: userId,
+      platform: 'meta',
+      account_name: account.name,
+      access_token: accessToken,
+      platform_id: account.id,
+      credentials: { expiresIn, fbUserId: user.userId },
+      is_active: 1,
+    });
   }
 
   // If no accounts detected, still save the token
   if (accounts.length === 0) {
-    const existing = platformAccountsRepo.findByUserAndPlatform(userId, 'meta');
+    const existing = platformAccountsRepo.getByPlatform ? platformAccountsRepo.getByPlatform(userId, 'meta') : null;
     if (!existing) {
-      platformAccountsRepo.addAccount({
-        id: `meta_${user.userId}`,
+      platformAccountsRepo.upsert({
         user_id: userId,
         platform: 'meta',
         account_name: user.name,
-        credentials: { accessToken, expiresIn, fbUserId: user.userId },
+        access_token: accessToken,
+        credentials: { expiresIn, fbUserId: user.userId },
         is_active: 1,
       });
     }

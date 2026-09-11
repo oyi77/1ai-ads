@@ -14,7 +14,8 @@ import {
   handleTelegramWebapp,
 } from './_handlers/auth-handlers.js';
 import { requireAuth } from '../middleware/auth.js';
-import { generateToken } from '../lib/auth.js';
+import { generateToken, verifyToken } from '../lib/auth.js';
+import { verifyMetaTokenApp } from '../services/meta-connection.js';
 
 export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = null) {
   const router = Router();
@@ -74,16 +75,30 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
       if (tokenData.error) return res.status(400).json({ success: false, error: tokenData.error.message });
 
       const accessToken = tokenData.access_token;
+      // Fail fast: token must belong to OUR app, else every creative write 1885183s.
+      try {
+        await verifyMetaTokenApp(accessToken);
+      } catch (gateErr) {
+        return res.status(400).json({ success: false, error: gateErr.message });
+      }
       const meRes = await fetch(`https://graph.facebook.com/${config.metaApiVersion}/me?access_token=${encodeURIComponent(accessToken)}&fields=id,name`);
       const meData = await meRes.json();
+      // The login step embeds the user id in `state` (this callback is public).
+      // Verify it — never store under an undefined user.
+      let oauthUserId = req.user?.id || null;
+      try {
+        const decoded = verifyToken(req.query.state);
+        if (decoded?.purpose === 'fb-oauth' && decoded?.sub) oauthUserId = decoded.sub;
+      } catch { /* invalid state below */ }
+      if (!oauthUserId) return res.status(400).json({ success: false, error: 'Invalid or expired OAuth state. Start over from /settings.' });
 
       if (settingsRepo) {
-        const existingAccounts = settingsRepo.getAccounts('meta').filter(a => a.user_id === req.user?.id);
+        const existingAccounts = settingsRepo.getAccounts('meta').filter(a => a.user_id === oauthUserId);
         const existing = existingAccounts.find(a => a.credentials?.fb_user_id === meData.id);
         if (existing) {
           settingsRepo.updateAccount(existing.id, { credentials: { ...existing.credentials, access_token: accessToken } });
         } else {
-          settingsRepo.addAccount({ id: undefined, user_id: req.user?.id, platform: 'meta', account_name: meData.name || 'Meta Account', credentials: { access_token: accessToken, fb_user_id: meData.id, fb_user_name: meData.name }, is_active: existingAccounts.length === 0 ? 1 : 0 });
+          settingsRepo.addAccount({ id: undefined, user_id: oauthUserId, platform: 'meta', account_name: meData.name || 'Meta Account', credentials: { access_token: accessToken, fb_user_id: meData.id, fb_user_name: meData.name }, is_active: existingAccounts.length === 0 ? 1 : 0 });
         }
       }
 

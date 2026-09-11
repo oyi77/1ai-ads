@@ -55,7 +55,20 @@ async function fetchBmAccountsForToken(api, businessId) {
   } catch { return fetchAccountsForToken(api); }
 }
 
-/** Show the confirmation/summary screen — reusable from step 7 and action callbacks */
+/** Re-send the creative-source picker (restart/back must SHOW it — selectStep alone never runs a step handler from an action callback). */
+async function sendCreativePicker(ctx) {
+  await ctx.reply('Choose creative source:', { reply_markup: { inline_keyboard: [
+    [{ text: 'Pick Post from Page', callback_data: 'create:src:post' }],
+    [{ text: 'Custom Image Creative', callback_data: 'create:src:custom:image' }],
+    [{ text: 'Custom Video Creative', callback_data: 'create:src:custom:video' }],
+    [{ text: 'Text-only Creative', callback_data: 'create:src:custom:text' }],
+    [{ text: 'Enter Post ID Manual', callback_data: 'create:src:manual' }],
+    [{ text: 'Skip (AI-generate)', callback_data: 'create:src:skip' }],
+    CANCEL_ROW,
+  ] } });
+}
+
+ /** Show the confirmation/summary screen — reusable from step 7 and action callbacks */
 async function showConfirmScreen(ctx) {
   if (ctx.wizard.state.confirmShown) return;
   const d = ctx.wizard.state.data;
@@ -137,15 +150,7 @@ export const createCampaignScene = new Scenes.WizardScene(
     } else {
       ctx.wizard.state.data.targeting = { countries: ['ID'], ageMin: 18, ageMax: 55, gender: 0, interests: [] };
     }
-    await ctx.reply('Choose creative source:', { reply_markup: { inline_keyboard: [
-      [{ text: 'Pick Post from Page', callback_data: 'create:src:post' }],
-      [{ text: 'Custom Image Creative', callback_data: 'create:src:custom:image' }],
-      [{ text: 'Custom Video Creative', callback_data: 'create:src:custom:video' }],
-      [{ text: 'Text-only Creative', callback_data: 'create:src:custom:text' }],
-      [{ text: 'Enter Post ID Manual', callback_data: 'create:src:manual' }],
-      [{ text: 'Skip (AI-generate)', callback_data: 'create:src:skip' }],
-      CANCEL_ROW,
-    ] } });
+    await sendCreativePicker(ctx);
     return ctx.wizard.next();
   },
   // Step 7: Creative handler
@@ -324,8 +329,12 @@ createCampaignScene.action(/^create:creative:restart$/, async (ctx) => {
   ctx.wizard.state.creative = {};
   ctx.wizard.state.creativeStep = null;
   ctx.wizard.state.creativeType = null;
+  ctx.wizard.state.creativeSource = null;
+  ctx.wizard.state.data.postId = undefined;
   ctx.wizard.state.confirmShown = false;
-  return ctx.wizard.selectStep(6);
+  ctx.wizard.state.postPickerShown = false;
+  await sendCreativePicker(ctx);
+  return ctx.wizard.selectStep(7);
 });
 
 // Action: Back
@@ -333,7 +342,8 @@ createCampaignScene.action(/^create:back$/, async (ctx) => {
   await ctx.answerCbQuery();
   ctx.wizard.state.confirmShown = false;
   ctx.wizard.state.postPickerShown = false;
-  return ctx.wizard.selectStep(6);
+  await sendCreativePicker(ctx);
+  return ctx.wizard.selectStep(7);
 });
 
 // Action: BM picker
