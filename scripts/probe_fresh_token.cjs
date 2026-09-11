@@ -14,8 +14,9 @@ async function g(method, path, params, tries = 3) {
   for (let i = 0; i < tries; i++) {
     try {
       const url = new URL(`https://graph.facebook.com/v22.0/${path}`);
-      if (method === 'GET') Object.entries(params || {}).forEach(([k, v]) => url.searchParams.set(k, v));
-      const res = await fetch(url, { method: method === 'GET' ? 'GET' : 'POST', headers: { 'Content-Type': 'application/json' }, body: method === 'GET' ? undefined : JSON.stringify(params) });
+      const asQuery = method === 'GET' || method === 'DELETE';
+      if (asQuery) Object.entries(params || {}).forEach(([k, v]) => url.searchParams.set(k, v));
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: asQuery ? undefined : JSON.stringify(params) });
       return { status: res.status, body: await res.json().catch(() => ({})) };
     } catch (e) {
       if (i === tries - 1) return { status: 0, body: { error: { message: `network: ${e.cause?.code || e.message}` } } };
@@ -66,9 +67,16 @@ async function g(method, path, params, tries = 3) {
       if (r.body.id) created.push(r.body.id);
     }
   } finally {
+    // Children before parents — Meta refuses to delete a node that still has
+    // children, and a creative in use by a live ad cannot be removed at all.
+    // Verify each delete with a follow-up GET: the API answers 200 for some
+    // no-ops, so the HTTP status alone is not proof (an earlier version POSTed
+    // to the node id, which deleted nothing while reporting DELETED).
     for (const id of created.reverse()) {
-      const d = await g('POST', id, { access_token: TOKEN });
-      console.log(`cleanup ${id}:`, d.status === 200 ? 'DELETED' : JSON.stringify(d.body).slice(0, 120));
+      const d = await g('DELETE', id, { access_token: TOKEN });
+      const check = await g('GET', id, { fields: 'id,status', access_token: TOKEN });
+      const gone = check.body?.status === 'DELETED';
+      console.log(`cleanup ${id}:`, gone ? 'DELETED' : `STILL PRESENT (http ${d.status}) ${JSON.stringify(d.body).slice(0, 160)}`);
     }
   }
 })();
