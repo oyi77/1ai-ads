@@ -41,7 +41,7 @@ async function fetchBusinessesForToken(api) {
 
 async function fetchAccountsForToken(api) {
   if (!api) return [];
-  try { const accounts = await api.getAdAccounts(); return (accounts || []).map(a => ({ id: a.id, name: a.name || a.id, status: a.status === 'active' ? 'active' : 'unknown' })); }
+  try { const accounts = await api.getAdAccounts(); return (accounts || []).map(a => ({ id: a.id, name: a.name || a.id, currency: a.currency || 'IDR', status: a.status === 'active' ? 'active' : 'unknown' })); }
   catch { return []; }
 }
 
@@ -49,10 +49,20 @@ async function fetchBmAccountsForToken(api, businessId) {
   if (!api) return [];
   try {
     const data = await api._get(`/${businessId}/owned_ad_accounts`, { fields: 'id,name,account_status,currency,balance,amount_spent', limit: '50' });
-    const owned = (data.data || []).map(a => ({ id: a.id, name: a.name || a.id, status: a.account_status === 1 ? 'active' : 'unknown' }));
+    const owned = (data.data || []).map(a => ({ id: a.id, name: a.name || a.id, currency: a.currency || 'IDR', status: a.account_status === 1 ? 'active' : 'unknown' }));
     if (owned.length > 0) return owned;
     return fetchAccountsForToken(api);
   } catch { return fetchAccountsForToken(api); }
+}
+
+/** Track {token, account} pairs so the account-picker action can resolve the owning token + currency. */
+function registerAccounts(ctx, token, accounts) {
+  const list = ctx.wizard.state.accountsByToken || (ctx.wizard.state.accountsByToken = []);
+  for (const account of accounts) {
+    const idx = list.findIndex(e => e.account?.id === account.id);
+    const entry = { token, account };
+    if (idx >= 0) list[idx] = entry; else list.push(entry);
+  }
 }
 
 /** Re-send the creative-source picker (restart/back must SHOW it — selectStep alone never runs a step handler from an action callback). */
@@ -101,9 +111,15 @@ export const createCampaignScene = new Scenes.WizardScene(
     ctx.wizard.state.creativeStep = null;
     const tokens = getAllMetaTokens(ctx);
     if (tokens.length === 0) { await ctx.reply('No Meta accounts connected. Connect first via /settings.'); return ctx.scene.leave(); }
-    const businessesByToken = []; const accountsByToken = [];
-    for (const t of tokens) { const bs = await fetchBusinessesForToken(t.api); bs.forEach(b => businessesByToken.push({ token: t, business: b })); const acs = await fetchAccountsForToken(t.api); acs.forEach(a => accountsByToken.push({ token: t, account: a })); }
-    ctx.wizard.state.tokens = tokens; ctx.wizard.state.businessesByToken = businessesByToken; ctx.wizard.state.accountsByToken = accountsByToken;
+    const businessesByToken = [];
+    ctx.wizard.state.accountsByToken = [];
+    for (const t of tokens) {
+      const bs = await fetchBusinessesForToken(t.api);
+      bs.forEach(b => businessesByToken.push({ token: t, business: b }));
+      registerAccounts(ctx, t, await fetchAccountsForToken(t.api));
+    }
+    const accountsByToken = ctx.wizard.state.accountsByToken;
+    ctx.wizard.state.tokens = tokens; ctx.wizard.state.businessesByToken = businessesByToken;
     const multiToken = tokens.length > 1;
     if (businessesByToken.length > 0) {
       const keyboard = businessesByToken.map(({ token, business }) => [{ text: `${multiToken ? '['+token.account.account_name+'] ' : ''}${business.name}`, callback_data: `create:bm:${business.id}` }]);
@@ -358,6 +374,7 @@ createCampaignScene.action(/^create:bm:(.+)$/, async (ctx) => {
   const token = entry?.token || ctx.wizard.state.tokens?.[0];
   const accounts = await fetchBmAccountsForToken(token?.api, businessId);
   if (accounts.length === 0) { await ctx.reply('No ad accounts for this BM. Connect via /settings.'); return ctx.scene.leave(); }
+  registerAccounts(ctx, token, accounts);
   ctx.wizard.state.accounts = accounts;
   const multiToken = (ctx.wizard.state.tokens?.length || 0) > 1;
   const kb = accounts.map(a => [{ text: `${multiToken && token ? '['+token.account.account_name+'] ' : ''}${a.name}`, callback_data: `create:acct:${a.id}` }]);
@@ -410,10 +427,9 @@ async function handleCreateGo(ctx) {
   if (!d.accountId || !d.objective || !d.name || !d.dailyBudget) { return ctx.reply('Incomplete data. Start again with /create.'); }
   const selectedToken = d.selectedToken || ctx.wizard.state.tokens?.[0];
   const api = selectedToken?.api;
-    const campaign = await api.createCampaign(realAccountId, { name: d.name, objective: d.objective, status: 'PAUSED', currency: d.accountCurrency || 'IDR' });
   try {
     const realAccountId = d.accountId;
-    const campaign = await api.createCampaign(realAccountId, { name: d.name, objective: d.objective, status: 'PAUSED' });
+    const campaign = await api.createCampaign(realAccountId, { name: d.name, objective: d.objective, status: 'PAUSED', currency: d.accountCurrency || 'IDR' });
     if (!campaign?.id) throw new Error('No campaign ID returned');
     let pageId = '';
     try { const pages = await api.getPages ? await api.getPages() : []; pageId = pages[0]?.id || ''; } catch {}

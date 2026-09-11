@@ -297,7 +297,7 @@ Example: for CTR > 5, send \`5\``,
               campaign_id: c.id,
               name: c.name,
               status: c.status,
-              budget: (c.dailyBudget || 0) / 100,
+              budget: c.dailyBudget || 0,
               userId: ctx.userId,
             });
           }

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { createLogger } from '../lib/logger.js';
 import { MetaAdsAPI } from '../services/meta/index.js';
 import { ValidationError } from '../lib/errors.js';
+import { fromMinorUnits } from '../lib/money.js';
 
 const log = createLogger('campaigns-route');
 
@@ -373,7 +374,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
             userId: req.user?.id,
             name: c.name,
             status: c.status,
-            budget: (c.dailyBudget || 0) / 100 || (c.lifetimeBudget || 0) / 100 || 0,
+            budget: (c.dailyBudget || 0) || (c.lifetimeBudget || 0) || 0,
             spend: spendVal,
             revenue: revenueVal,
             impressions: parseInt(insights.impressions || 0),
@@ -399,10 +400,11 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
             try {
               const existing = adsetsRepo?.findById?.(as.id);
               const targetingFlat = as.targeting ? JSON.stringify(as.targeting) : '{}';
+              const asBudget = as.daily_budget ? fromMinorUnits(as.daily_budget, account.currency || 'IDR') : 0;
               if (existing) {
                 adsetsRepo?.update?.(as.id, {
                   name: as.name, status: as.status,
-                  dailyBudget: as.daily_budget ? Math.round(as.daily_budget) / 100 : 0,
+                  dailyBudget: asBudget,
                   targeting: targetingFlat,
                 });
               } else {
@@ -410,7 +412,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
                   {
                     id: as.id, campaignId: as.campaign_id,
                     name: as.name, status: as.status,
-                    dailyBudget: as.daily_budget ? Math.round(as.daily_budget) / 100 : 0,
+                    dailyBudget: asBudget,
                     targeting: targetingFlat,
                     optimizationGoal: as.optimization_goal,
                     billingEvent: as.billing_event,

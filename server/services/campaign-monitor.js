@@ -8,7 +8,7 @@ const log = createLogger('campaign-monitor');
 // Alert thresholds — configurable via settingsRepo if needed
 const DEFAULTS = {
   ctrThreshold: 0.5,        // CTR below 0.5% is warning
-  cpaThreshold: 50000,      // CPA above 50k IDR is warning (cents)
+  cpaThreshold: 50000,      // CPA above 50k IDR (major units) is warning
   budgetExhaustedRatio: 0.95,
   zeroImpressionHours: 24,
   autoPauseSpendMultiplier: 2,
@@ -62,13 +62,15 @@ export class CampaignMonitorService {
       const api = this._ownerApi(accountId, userId, platform);
       // Account-level insights exist only on Meta today. Without it, return the
       // structured empty status (no fake data).
+      if (!api || typeof api.getAccountInsights !== 'function') return this._emptyStatus(accountId, platform);
       const campaigns = await api.getCampaigns(accountId, { currency: 'IDR' });
+      const active = campaigns.filter(c => c.status === 'active');
       const paused = campaigns.filter(c => c.status === 'paused');
 
       // Get today's and this week's spend from account insights
       const [todayInsights, weekInsights] = await Promise.all([
         api.getAccountInsights(accountId, { datePreset: 'today' }).catch(() => null),
-        api.getAccountInsights(accountId, { datePreset: 'this_week' }).catch(() => null),
+        api.getAccountInsights(accountId, { datePreset: 'last_7d' }).catch(() => null),
       ]);
 
       const alerts = await this._detectStatusAlerts(campaigns);
@@ -105,7 +107,7 @@ export class CampaignMonitorService {
       const [campaigns, todayInsights, weekInsights] = await Promise.all([
         api.getCampaigns(accountId, { currency: 'IDR' }),
         api.getAccountInsights(accountId, { datePreset: 'today' }).catch(() => null),
-        api.getAccountInsights(accountId, { datePreset: 'this_week' }).catch(() => null),
+        api.getAccountInsights(accountId, { datePreset: 'last_7d' }).catch(() => null),
       ]);
 
       let score = 100;
@@ -139,10 +141,10 @@ export class CampaignMonitorService {
       if (todayInsights) {
         const conversions = todayInsights.conversions || 0;
         if (conversions > 0) {
-          const cpa = (todayInsights.spend * 100) / conversions; // cents per conversion
+          const cpa = todayInsights.spend / conversions; // IDR per conversion
           if (cpa > DEFAULTS.cpaThreshold) {
             score -= 20;
-            factors.push({ name: 'High CPA', impact: -20, detail: `${Math.round(cpa)} cents/conversion` });
+            factors.push({ name: 'High CPA', impact: -20, detail: `${Math.round(cpa)} IDR/conversion` });
           }
         } else if (todayInsights.spend > 0) {
           score -= 25;
@@ -243,14 +245,14 @@ export class CampaignMonitorService {
 
         // High CPA
         if (insights && insights.conversions > 0) {
-          const cpa = (insights.spend * 100) / insights.conversions;
+          const cpa = insights.spend / insights.conversions;
           if (cpa > DEFAULTS.cpaThreshold) {
             alerts.push({
               severity: 'warning',
               type: 'high_cpa',
               campaignId: campaign.id,
               campaignName: campaign.name,
-              message: `CPA ${Math.round(cpa)} cents exceeds ${DEFAULTS.cpaThreshold} threshold`,
+              message: `CPA ${Math.round(cpa)} IDR exceeds ${DEFAULTS.cpaThreshold} threshold`,
               cpa,
               threshold: DEFAULTS.cpaThreshold,
             });
@@ -339,6 +341,8 @@ export class CampaignMonitorService {
         } catch { continue; }
 
         if (!insights) continue;
+        const conversions = insights.conversions || 0;
+        const threshold = campaign.dailyBudget * DEFAULTS.autoPauseSpendMultiplier;
 
         if (insights.spend > threshold && conversions === 0) {
           toPause.push({

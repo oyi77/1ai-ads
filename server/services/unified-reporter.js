@@ -267,7 +267,8 @@ export class UnifiedReporter {
   // ── Internal helpers ─────────────────────────────────────────
 
   async _fetchAllPlatformInsights(days, userId) {
-    const datePreset = days <= 1 ? 'last_1d' : days <= 7 ? 'last_7d' : days <= 30 ? 'last_30d' : 'last_90d';
+    // Meta rejects 'last_1d'; a 1-day window maps to 'today'.
+    const datePreset = days <= 1 ? 'today' : days <= 7 ? 'last_7d' : days <= 30 ? 'last_30d' : 'last_90d';
     const results = [];
 
     // When a userId is supplied, resolve the owner-scoped meta API so live

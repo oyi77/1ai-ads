@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { createLogger } from '../lib/logger.js';
+import { fromMinorUnits } from '../lib/money.js';
 
 const log = createLogger('bulk-ops');
 
@@ -268,7 +269,7 @@ export class BulkOperations {
           try {
             const newAdset = await this.meta.createAdSet(targetAccountId, newCampaign.id, {
               name: as.name,
-              dailyBudget: as.daily_budget ? parseFloat(as.daily_budget) / 100 : undefined,
+              dailyBudget: as.daily_budget ? fromMinorUnits(as.daily_budget, 'IDR') : undefined,
               targeting: as.targeting,
               billingEvent: as.billing_event,
               optimizationGoal: as.optimization_goal,

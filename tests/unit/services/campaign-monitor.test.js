@@ -198,9 +198,10 @@ describe('CampaignMonitorService', () => {
     });
 
     it('should detect budget exceeded alert', async () => {
+      // spend (major IDR) exceeds campaign A's daily budget of Rp 10.000
       mockMetaApi.getCampaignInsights.mockResolvedValue({
         ...sampleInsights,
-        spend: 150,
+        spend: 15000,
       });
 
       const result = await service.getAlerts('act_123');
@@ -256,9 +257,10 @@ describe('CampaignMonitorService', () => {
 
   describe('autoPauseCheck', () => {
     it('should identify campaigns to auto-pause', async () => {
+      // spend (major IDR) exceeds 2x campaign A's budget (2 x Rp 10.000 = Rp 20.000)
       mockMetaApi.getCampaignInsights.mockResolvedValue({
         ...sampleInsights,
-        spend: 250,
+        spend: 25000,
         conversions: 0,
       });
 

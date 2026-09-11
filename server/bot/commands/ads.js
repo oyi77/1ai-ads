@@ -387,9 +387,9 @@ export function handleAdsBudgetScale(deps) {
       let done = 0;
       for (const c of active) {
         try {
-          const current = (c.dailyBudget || 0) / 100; // Meta minor → major IDR
+          const current = c.dailyBudget || 0; // already major IDR (getCampaigns converts)
           if (current <= 0) continue;
-          const next = Math.max(10000, Math.round(current * mult * 100) / 100);
+          const next = Math.max(10000, Math.round(current * mult));
           await api.updateCampaign(c.id, { dailyBudget: next });
           done++;
         } catch (e) {
