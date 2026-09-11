@@ -63,8 +63,13 @@ function throwApiError(platformName, status, parsedError) {
 
   // Map known Meta errors to actionable guidance
   if (code === 100 && subcode === 1885183) {
-    // Dev mode: creative creation blocked
-    apiError.userMessage = 'Kreatif tidak bisa dibuat — Meta App masih dalam mode pengembangan. Campaign & ad set berhasil dibuat (PAUSED). Tambahkan kreatif dari Creative Library setelah App Review selesai.';
+    // Dev mode: EITHER our app OR the app that published the SOURCE POST is in
+    // development mode — both surface as 1885183. Only the post case is fixed by
+    // using a different post rather than toggling our own app's Live state, so
+    // the guidance must not send the user to the wrong switch.
+    apiError.userMessage = /postingan|created by an app/i.test(userMsg)
+      ? 'Kreatif tidak bisa dibuat — postingan sumber dibuat oleh aplikasi yang masih mode pengembangan. Campaign & ad set tetap dibuat (PAUSED). Posting ulang materi lewat aplikasi yang sudah Live (atau pakai postingan lain), lalu tambahkan kreatif dari Creative Library.'
+      : 'Kreatif tidak bisa dibuat — Meta App masih dalam mode pengembangan. Campaign & ad set berhasil dibuat (PAUSED). Tambahkan kreatif dari Creative Library setelah App Review selesai.';
     apiError.code = 'META_DEV_MODE';
   } else if (code === 100 && subcode === 4834011) {
     apiError.userMessage = 'Parameter campaign tidak lengkap — hubungi support.';

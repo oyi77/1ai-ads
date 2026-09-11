@@ -507,8 +507,16 @@ async function handleCreateGo(ctx) {
     log.error('create campaign failed', { userId: ctx.userId, error: err.message });
     const metaErr = err.data?.error || {};
     const raw = `${err.message || ''} ${metaErr.error_user_msg || ''}`.toLowerCase();
-    if (raw.includes('mode') && (raw.includes('perkembangan') || raw.includes('pengembangan') || raw.includes('development'))) {
-      await ctx.reply('Creative failed. Meta App is still in development mode. Set it to Live in Meta App Dashboard first.');
+    // 1885183 means an app in development mode is involved — either ours, or the
+    // app that published the SOURCE POST. The second case cannot be fixed by
+    // toggling our own app, so keep it a separate, accurate message.
+    const isDevMode = metaErr.error_subcode === 1885183
+      || (raw.includes('mode') && (raw.includes('perkembangan') || raw.includes('pengembangan') || raw.includes('development')));
+    // Both locales say the material was "created by an app": ID "postingan ... dibuat oleh aplikasi", EN "created by an app".
+    if (isDevMode && /postingan|created by an app/.test(raw)) {
+      await ctx.reply('Creative failed: the app that published that post is still in development mode, so Meta will not accept it as ad material. Repost it with a Live app (or pick another post), then add the creative from Creative Library.');
+    } else if (isDevMode) {
+      await ctx.reply('Creative failed: this Meta App is still in development mode. Set it to Live in Meta App Dashboard first.');
     } else {
       const detail = err.userMessage || err.data?.error?.error_user_msg || err.data?.error?.message || err.message;
       await ctx.reply(`Failed: ${esc(detail).slice(0, 300)}`);
