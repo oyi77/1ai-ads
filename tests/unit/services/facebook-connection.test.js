@@ -142,7 +142,7 @@ describe('FacebookConnectionService', () => {
   describe('linkFacebookAccount', () => {
     beforeEach(() => {
       global.fetch.mockResolvedValue({
-        json: () => Promise.resolve({ data: { app_id: 'test-app-id', is_valid: true, user_id: 'fb-1' } }),
+        json: () => Promise.resolve({ data: { app_id: 'test-app-id', is_valid: true, user_id: 'fb-1', scopes: ['ads_management', 'ads_read'] } }),
       });
     });
 

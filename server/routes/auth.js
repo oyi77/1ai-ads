@@ -47,7 +47,7 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
     if (!fbAppId || !fbSecret) {
       return res.status(500).json({ success: false, error: 'FB_APP_ID or FB_APP_SECRET not configured' });
     }
-    const fbScope = 'email,ads_management,ads_read,business_management,pages_show_list,pages_read_engagement,pages_manage_ads,pages_manage_metadata,pages_manage_posts';
+    const fbScope = 'ads_management,ads_read,business_management,pages_show_list,pages_read_engagement,pages_manage_ads,pages_manage_metadata,pages_manage_posts';
     // Embed the authenticated user id in the OAuth state so the (unauthenticated) callback
     // can scope the connected Meta account to the correct tenant instead of 'admin'.
     const state = generateToken({ sub: req.user.id, purpose: 'fb-oauth' }, '10m');

@@ -33,6 +33,14 @@ export async function verifyMetaTokenApp(accessToken) {
   if (appId !== String(config.fbAppId)) {
     throw new Error(`Token berasal dari aplikasi lain (${appId}), bukan AdForge. Cabut koneksi lalu hubungkan ulang via /settings agar creative bisa dibuat.`);
   }
+  // Ads calls need these scopes — a token without them stores fine but every
+  // ad read/write 403s. Reject at connect time with the exact missing list.
+  const need = ['ads_management', 'ads_read'];
+  const have = new Set(data.scopes || []);
+  const missing = need.filter(s => !have.has(s));
+  if (missing.length) {
+    throw new Error(`Token kurang permission: ${missing.join(', ')}. Generate ulang token dengan mencentang permission tersebut.`);
+  }
   return { appId, userId: data.user_id };
 }
 

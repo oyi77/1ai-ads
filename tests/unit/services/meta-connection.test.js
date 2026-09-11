@@ -142,7 +142,7 @@ describe('meta-connection', () => {
       global.fetch
         .mockResolvedValueOnce({ json: () => Promise.resolve({ access_token: 'short' }) })
         .mockResolvedValueOnce({ json: () => Promise.resolve({ access_token: 'long', expires_in: 5184000 }) })
-        .mockResolvedValueOnce({ json: () => Promise.resolve({ data: { app_id: appId, is_valid: true, user_id: 'fb-1' } }) })
+        .mockResolvedValueOnce({ json: () => Promise.resolve({ data: { app_id: appId, is_valid: true, user_id: 'fb-1', scopes: ['ads_management', 'ads_read', 'business_management'] } }) })
         .mockResolvedValueOnce({ json: () => Promise.resolve({ id: 'fb-1', name: 'John', email: 'j@t.com' }) })
         .mockResolvedValueOnce({ json: () => Promise.resolve({ data: accounts }) });
     }
@@ -189,6 +189,14 @@ describe('meta-connection', () => {
     it('should reject tokens from another app', async () => {
       mockFullFlow({ appId: 'other-app' });
       await expect(connectMetaAccount('code', 'https://redirect.com', mockRepo, 'user-1')).rejects.toThrow();
+      expect(mockRepo.upsert).not.toHaveBeenCalled();
+    });
+    it('should reject tokens missing ads scopes', async () => {
+      global.fetch
+        .mockResolvedValueOnce({ json: () => Promise.resolve({ access_token: 'short' }) })
+        .mockResolvedValueOnce({ json: () => Promise.resolve({ access_token: 'long', expires_in: 0 }) })
+        .mockResolvedValueOnce({ json: () => Promise.resolve({ data: { app_id: 'test-app-id', is_valid: true, user_id: 'fb-1', scopes: ['public_profile'] } }) });
+      await expect(connectMetaAccount('code', 'https://redirect.com', mockRepo, 'user-1')).rejects.toThrow(/permission/i);
       expect(mockRepo.upsert).not.toHaveBeenCalled();
     });
   });
