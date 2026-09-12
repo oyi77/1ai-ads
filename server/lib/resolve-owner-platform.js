@@ -1,3 +1,5 @@
+import { isAccountTokenUsable } from './token-health.js';
+
 /**
  * Resolve the API token for a platform mutation as the RESOURCE OWNER's own
  * bound token (multi-tenant / SaaS), falling back to the system/global token
@@ -21,7 +23,13 @@ export function resolveOwnerPlatformToken(platform, ownerId, repos) {
   if (ownerId && platformAccountsRepo?.findAllActiveByUserAndPlatform) {
     try {
       const accounts = platformAccountsRepo.findAllActiveByUserAndPlatform(ownerId, platform);
-      const found = accounts.find(a => a?.access_token);
+      // Prefer an account whose credential is believed to work. This used to
+      // take the FIRST account holding any token, so a user whose first account
+      // was expired had every scheduler run against that dead token - even when
+      // a reconnected account sat right behind it. Falls back to the first
+      // token-bearing account when no health data is known yet.
+      const usable = accounts.find(a => a?.access_token && isAccountTokenUsable(a));
+      const found = usable || accounts.find(a => a?.access_token);
       if (found) return found.access_token;
     } catch {
       // fall through to system token

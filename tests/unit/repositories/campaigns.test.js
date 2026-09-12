@@ -98,4 +98,41 @@ describe('CampaignsRepository', () => {
     const rows = repo.getByUserId('userA');
     expect(rows.map((c) => c.campaign_id)).toEqual(['a1']);
   });
+
+  it('upsert accepts the campaignId spelling used by non-Meta syncs', () => {
+    // Google/LinkedIn/Microsoft/Pinterest/TikTok syncs send `campaignId`.
+    // Binding only `campaign_id` made these throw NOT NULL constraint failed,
+    // which the sync's own try/catch swallowed as a per-campaign error.
+    const id = repo.upsert({ platform: 'google', campaignId: 'g-1', userId: 'userA', name: 'G', status: 'active' });
+    expect(id).toBeTruthy();
+    const rows = repo.findAll().data;
+    expect(rows.length).toBe(1);
+    expect(rows[0].campaign_id).toBe('g-1');
+
+    repo.upsert({ platform: 'google', campaignId: 'g-1', userId: 'userA', name: 'G updated', status: 'active' });
+    expect(repo.findAll().data.length).toBe(1);
+    expect(repo.findAll().data[0].name).toBe('G updated');
+  });
+
+  it('upsert still accepts the campaign_id spelling used by Meta syncs', () => {
+    const id = repo.upsert({ platform: 'meta', campaign_id: 'm-1', userId: 'userA', name: 'M', status: 'active' });
+    expect(id).toBeTruthy();
+    expect(repo.findAll().data[0].campaign_id).toBe('m-1');
+  });
+
+  it('upsert keeps the row id stable across repeated syncs', () => {
+    // Other tables reference campaigns.id (approval_drafts.campaign_id, ad_sets,
+    // ads). When a sync rewrote the primary key, every stored reference was
+    // orphaned - which is why the rule-guard dedup never matched the same
+    // campaign twice and re-created its approval drafts on every run.
+    const first = repo.upsert({ platform: 'meta', campaign_id: 'stable', userId: 'userA', name: 'S1' });
+    const second = repo.upsert({ platform: 'meta', campaign_id: 'stable', userId: 'userA', name: 'S2' });
+    expect(second).toBe(first);
+    expect(repo.findAll().data.filter((c) => c.campaign_id === 'stable').length).toBe(1);
+    expect(repo.findById(first).name).toBe('S2');
+  });
+
+  it('upsert rejects a payload with no campaign id', () => {
+    expect(() => repo.upsert({ platform: 'meta', userId: 'userA' })).toThrow(/campaign_id/);
+  });
 });

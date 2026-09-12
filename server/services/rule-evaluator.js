@@ -2,7 +2,7 @@ import { MetaAdsAPI } from './meta/index.js';
 import { GoogleAdsAPI } from './google/index.js';
 import { TikTokAdsAPI } from './tiktok/index.js';
 import { createLogger } from '../lib/logger.js';
-import { compare } from '../lib/operators.js';
+import { evaluateCondition, isUnknownMetric, MAX_CONDITION_DEPTH } from '../lib/rule-condition.js';
 import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
 import { METRICS } from '../lib/rule-metrics.js';
 import config from '../config/index.js';
@@ -10,7 +10,9 @@ import config from '../config/index.js';
 const log = createLogger('rule-evaluator');
 
 export class RuleEvaluator {
-  MAX_COMPOUND_DEPTH = 3;
+  // Bound is shared with the bot scheduler's rule-guard cron so both engines
+  // match/reject compound rules identically.
+  MAX_COMPOUND_DEPTH = MAX_CONDITION_DEPTH;
 
   constructor(settingsRepo, campaignsRepo, rulesRepo, llmClient, { metaAdsAPI, googleAdsAPI, tiktokAdsAPI, platformAccountsRepo } = {}, draftService = null) {
     this.settingsRepo = settingsRepo;
@@ -79,18 +81,24 @@ export class RuleEvaluator {
 
   _evaluateCondition(condition, campaign, depth = 0) {
     if (!condition) return false;
-    if (condition.type === 'group') return this._evaluateGroup(condition, campaign, depth);
-    return this._evaluateLeaf(condition, campaign);
+    if (isUnknownMetric(condition)) {
+      log.warn('Unknown metric in rule', { metric: condition.metric || condition.type });
+      return false;
+    }
+    // Delegates to the shared evaluator so the bot's rule-guard cron cannot
+    // disagree with this engine about whether a rule matches. This class
+    // previously ignored the {all,any} compound schema and the 'gt'/'lt'
+    // operator aliases that the rule UIs store.
+    return evaluateCondition(condition, campaign, depth, this.MAX_COMPOUND_DEPTH);
   }
 
   _evaluateLeaf(condition, campaign) {
-    const metric = METRICS[condition.metric];
-    if (!metric) {
-      log.warn('Unknown metric in rule', { metric: condition.metric });
+    const metric = condition?.metric || condition?.type;
+    if (metric && metric !== 'status' && !METRICS[metric]) {
+      log.warn('Unknown metric in rule', { metric });
       return false;
     }
-    const value = metric.resolve(campaign, campaign.insights || {});
-    return compare(value, condition.operator, condition.value);
+    return evaluateCondition(condition, campaign, 0, this.MAX_COMPOUND_DEPTH);
   }
 
   _evaluateGroup(group, campaign, depth = 0) {
@@ -98,10 +106,7 @@ export class RuleEvaluator {
       log.warn('Max compound depth exceeded');
       return false;
     }
-    if (!group.children || !group.children.length) return false;
-    if (group.logic === 'and') return group.children.every(c => this._evaluateCondition(c, campaign, depth + 1));
-    if (group.logic === 'or') return group.children.some(c => this._evaluateCondition(c, campaign, depth + 1));
-    return false;
+    return evaluateCondition(group, campaign, depth, this.MAX_COMPOUND_DEPTH);
   }
 
   async _executeAction(action, campaign) {

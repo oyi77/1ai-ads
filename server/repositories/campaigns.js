@@ -22,21 +22,37 @@ export class CampaignsRepository {
 
   upsert(data) {
     const id = data.id || uuid();
+    // Syncs disagree on casing: the Meta paths send `campaign_id`, the
+    // Google/LinkedIn/Microsoft/Pinterest/TikTok syncs send `campaignId`.
+    // Binding only the snake_case name made every one of those upserts throw
+    // "NOT NULL constraint failed: campaigns.campaign_id", which their local
+    // try/catch swallowed - so those platforms never synced a single campaign.
+    const campaignId = data.campaign_id ?? data.campaignId;
+    if (campaignId === undefined || campaignId === null || campaignId === '') {
+      throw new Error('CampaignsRepository.upsert requires campaign_id (or campaignId)');
+    }
     this.db.prepare(`
       INSERT INTO campaigns (id, user_id, platform, campaign_id, name, status, budget, spend, revenue, impressions, clicks, conversions, roas, last_synced)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       ON CONFLICT(platform, campaign_id) DO UPDATE SET
-        id = excluded.id, user_id = excluded.user_id, name = excluded.name, status = excluded.status,
+        user_id = excluded.user_id, name = excluded.name, status = excluded.status,
         budget = excluded.budget, spend = excluded.spend, revenue = excluded.revenue,
         impressions = excluded.impressions, clicks = excluded.clicks, conversions = excluded.conversions,
         roas = excluded.roas, last_synced = CURRENT_TIMESTAMP
     `).run(
-      id, data.userId || data.user_id || 'system', data.platform, data.campaign_id, data.name || null, data.status || null,
+      id, data.userId || data.user_id || 'system', data.platform, campaignId, data.name || null, data.status || null,
       data.budget || null, data.spend || null, data.revenue || null,
       data.impressions || 0, data.clicks || 0, data.conversions || 0,
       data.roas || null
     );
-    return id;
+    // `id` is deliberately NOT in the DO UPDATE list: a sync must not reassign
+    // the primary key. Other tables reference campaigns.id (approval_drafts.
+    // campaign_id, ad_sets, ads, ab_tests), and rewriting it orphaned every
+    // reference on every sync — which is why the rule-guard dedup never matched
+    // the same campaign twice. Return the row's real id, not the candidate.
+    const row = this.db.prepare('SELECT id FROM campaigns WHERE platform = ? AND campaign_id = ?')
+      .get(data.platform, campaignId);
+    return row ? row.id : id;
   }
 
   getDashboardMetrics(userId) {

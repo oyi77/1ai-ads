@@ -3,6 +3,7 @@ import { bus, EVENTS } from '../lib/event-bus.js';
 import { v4 as uuid } from 'uuid';
 import { MetaAdsAPI } from '../services/meta/index.js';
 import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
+import { filterUsableAccounts, isTokenExpiryError, flagAccountTokenInvalid } from '../lib/token-health.js';
 
 const log = createLogger('fatigue-detector');
 
@@ -514,8 +515,14 @@ export class FatigueDetector {
    */
   async _runSnapshots() {
     try {
-      const accounts = (this.platformAccountsRepo?.getAccounts?.('meta') || [])
+      // Skip accounts whose stored credential is already known-dead. This loop
+      // used to replay every expired account on every cycle (9 failed Meta calls
+      // each time) because it only checked for an ad_account_id.
+      const all = (this.platformAccountsRepo?.getAccounts?.('meta') || [])
         .filter(a => a.credentials?.ad_account_id);
+      const accounts = filterUsableAccounts(all);
+      const skipped = all.length - accounts.length;
+      if (skipped > 0) log.info('Skipping accounts with unusable tokens', { skipped, total: all.length });
 
       for (const account of accounts) {
         try {
@@ -524,6 +531,13 @@ export class FatigueDetector {
             : `act_${account.credentials.ad_account_id}`;
           await this.snapshotCreatives(realAccountId, { ownerId: account.user_id });
         } catch (err) {
+          // Flag here too: a token that expires between health checks would
+          // otherwise stay unflagged until the next 6-hourly sweep.
+          if (isTokenExpiryError(err)) {
+            flagAccountTokenInvalid(this.platformAccountsRepo, account.id, err);
+            log.warn('Account token expired — pausing its schedulers', { accountId: account.id });
+            continue;
+          }
           log.error('Snapshot failed for account', { accountId: account.id, error: err.message });
         }
       }

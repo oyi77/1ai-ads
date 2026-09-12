@@ -118,9 +118,12 @@ export class DraftsRepository {
   }
 
   findPendingForRuleCampaign(ruleName, campaignId) {
+    // `_` and `%` are LIKE wildcards; rule names such as "ROAS_Guard" would
+    // otherwise match unrelated summaries and silently suppress a real draft.
+    const escaped = String(ruleName ?? '').replace(/[\\%_]/g, (ch) => `\\${ch}`);
     return this.db.prepare(
-      "SELECT id FROM approval_drafts WHERE campaign_id = ? AND status = 'pending' AND summary LIKE ? LIMIT 1"
-    ).get(campaignId, `%Rule ${ruleName}%`) || null;
+      "SELECT id FROM approval_drafts WHERE campaign_id = ? AND status = 'pending' AND summary LIKE ? ESCAPE '\\' LIMIT 1"
+    ).get(campaignId, `%Rule ${escaped}%`) || null;
   }
 
   /** Delete all pending drafts for a campaign+type prefix (cleanup helper) */

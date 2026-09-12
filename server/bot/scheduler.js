@@ -19,8 +19,9 @@ import { calculateCampaignStats, formatDailyReport } from '../domain/reporting.j
 import { backupDatabase } from '../../db/backup.js';
 import { MetaAdsAPI } from '../services/meta/index.js';
 import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
-import { compare } from '../lib/operators.js';
 import { redactSecretsForLogs } from '../lib/platform-client.js';
+import { evaluateCondition, MAX_CONDITION_DEPTH } from '../lib/rule-condition.js';
+import { filterUsableAccounts, isAccountTokenUsable, hasUsableAccount } from '../lib/token-health.js';
 
 const log = createLogger('bot:scheduler');
 
@@ -42,6 +43,16 @@ function fmtRoas2(v) {
   return v === null || v === undefined ? '—' : `${Number(v).toFixed(2)}x`;
 }
 
+/** Human label for a rule condition; covers every schema stored in the DB. */
+function describeCondition(condition) {
+  if (!condition || typeof condition !== 'object') return 'condition';
+  if (condition.type === 'group') return condition.logic === 'or' ? 'any condition' : 'all conditions';
+  if (Array.isArray(condition.all) || Array.isArray(condition.any)) return 'compound condition';
+  const metric = condition.metric || condition.type || 'condition';
+  const threshold = condition.value !== undefined ? condition.value : condition.threshold;
+  return `${metric} ${condition.operator ?? ''} ${threshold ?? ''}`.trim();
+}
+
 /** Send a Markdown message to the admin chat; no-op when chatId missing. */
 async function safeSend(bot, text, extra) {
   const chatId = getChatId();
@@ -54,33 +65,19 @@ async function safeSend(bot, text, extra) {
 }
 
 /**
- * Evaluate a rule against a raw campaigns-table row (no .stats wrapper).
- * Mirrors RuleEvaluator._evaluateCondition but reads direct columns.
- * @param {{ condition: object }} rule — parsed rule from rulesRepo.findAll()
- * @param {object} campaign — raw campaigns row
+ * Evaluate a rule against a raw campaigns-table row.
+ *
+ * Delegates to the shared evaluator so the rule-guard cron and RuleEvaluator
+ * can never disagree about whether a rule matches. They previously handled
+ * different condition shapes: this copy ignored the {all,any} compound schema
+ * and the 'gt'/'lt' operator aliases that the rule UIs actually store.
+ *
+ * @param {{ condition: object }} rule - parsed rule from rulesRepo.findAll()
+ * @param {object} campaign - raw campaigns row
  * @returns {boolean}
  */
 export function evaluateRuleForCampaign(rule, campaign) {
-  const condition = rule.condition;
-  if (!condition || typeof condition !== 'object') return false;
-  // Supports both the bot schema {type:'leaf', metric, operator, value} /
-  // {type:'group', logic, children} and the legacy/web schema
-  // {type:'<metric>', operator, value} and {type:'status', ...}.
-  if (condition.type === 'group') {
-    if (!condition.children || !condition.children.length) return false;
-    const logic = condition.logic === 'or' ? 'some' : 'every';
-    return condition.children[logic](c => evaluateRuleForCampaign({ condition: c }, campaign));
-  }
-  if (condition.type === 'leaf') {
-    const metric = condition.metric;
-    if (metric === 'status') return campaign.status === condition.value;
-    const value = campaign[metric] ?? campaign.stats?.[metric] ?? 0;
-    return compare(value, condition.operator, condition.value);
-  }
-  // legacy/web schema: type is the metric column name
-  if (condition.type === 'status') return campaign.status === condition.value;
-  const metric = campaign[condition.type] ?? campaign.stats?.[condition.type] ?? 0;
-  return compare(metric, condition.operator, condition.value);
+  return evaluateCondition(rule?.condition, campaign, 0, MAX_CONDITION_DEPTH);
 }
 
 /**
@@ -212,7 +209,9 @@ export function initScheduler(bot, deps) {
       const BID_MAX = parseInt(process.env.BID_SATPAM_MAX || '150', 10);
       const BID_TARGET = parseInt(process.env.BID_SATPAM_TARGET || '140', 10);
 
-      const accounts = deps.repos?.platformAccountsRepo?.getAccounts?.('meta')?.filter(a => a.is_active !== 0) || [];
+      // Skip accounts whose credential is known-dead (flagged by the token
+      // health cron or a previous expiry) so dead tokens stop costing requests.
+      const accounts = filterUsableAccounts(deps.repos?.platformAccountsRepo?.getAccounts?.('meta') || []);
       let adjusted = 0;
 
       for (const account of accounts) {
@@ -429,35 +428,42 @@ export function initScheduler(bot, deps) {
 
       for (const rule of activeRules) {
         const action = rule.action || {};
-        const ownerId = rule.user_id || 'system';
+        // `findAll()` hydrates camelCase (`userId`). Reading `rule.user_id` always
+        // yielded undefined, so the owner fell back to 'system' and every user's
+        // rule was evaluated against system-owned campaigns. That cross-tenant
+        // leak produced ~93 spurious matches on every 5-minute run.
+        const ownerId = rule.userId || rule.user_id || 'system';
         const campaigns = campaignsByUser[ownerId] || [];
         if (campaigns.length === 0) continue;
 
         for (const campaign of campaigns) {
           if (!evaluateRuleForCampaign(rule, campaign)) continue;
 
-          // Dedup: skip if a pending draft already exists for this rule+campaign
+          // Dedup: skip if a pending draft already exists for this rule+campaign.
+          // Only effective while campaigns.id is stable - see CampaignsRepository.upsert.
           const existingDraft = deps.repos?.draftsRepo?.findPendingForRuleCampaign?.(rule.name, campaign.id);
           if (existingDraft) continue;
 
           const draft = await deps.services?.draftService?.guardAutonomousChange?.({
             type: `rule_${action.type}`,
-            summary: `Rule ${rule.name}: ${rule.condition.type} → ${action.type} on ${campaign.name}`,
+            summary: `Rule ${rule.name}: ${describeCondition(rule.condition)} → ${action.type} on ${campaign.name}`,
             details: { action: rule.action, campaign },
             proposedBy: 'ai',
             campaignId: campaign.id,
-            userId: rule.user_id,
+            userId: ownerId,
           });
           if (!draft) continue;
 
-          const telegramId = deps.repos?.usersRepo?.getTelegramIdByUserId?.(rule.user_id);
+          const telegramId = deps.repos?.usersRepo?.getTelegramIdByUserId?.(ownerId)
+            || deps.repos?.usersRepo?.findById?.(ownerId)?.telegram_id;
           if (!telegramId) {
-            await safeSend(bot, `⚠️ *${campaign.name}* matched rule *${rule.name}* — draft awaiting approval in /menu → Mini App`);
+            await safeSend(bot, `⚠️ <b>${esc(campaign.name)}</b> matched rule <b>${esc(rule.name)}</b> — draft awaiting approval in /menu → Mini App`, { parse_mode: 'HTML' });
             continue;
           }
-          const text = `⚠️ Rule *${rule.name}* matched *${campaign.name}*\nProposed action: *${action.type}*\n\nApprove or reject:`;
+          const text = `⚠️ Rule <b>${esc(rule.name)}</b> matched <b>${esc(campaign.name)}</b>\nProposed action: <b>${esc(action.type)}</b>\n\nApprove or reject:`;
           try {
             await bot.telegram.sendMessage(telegramId, text, {
+              parse_mode: 'HTML',
               reply_markup: {
                 inline_keyboard: [[
                   { text: '✅ Approve', callback_data: `approval:approve:${draft.id}` },
@@ -467,7 +473,7 @@ export function initScheduler(bot, deps) {
             });
           } catch (err) {
             log.error('Failed to send approval prompt to owner', { telegramId, error: err.message });
-            await safeSend(bot, `⚠️ *${campaign.name}* matched rule *${rule.name}* — draft awaiting approval in /menu → Mini App`);
+            await safeSend(bot, `⚠️ <b>${esc(campaign.name)}</b> matched rule <b>${esc(rule.name)}</b> — draft awaiting approval in /menu → Mini App`, { parse_mode: 'HTML' });
           }
         }
       }
@@ -491,7 +497,7 @@ export function initScheduler(bot, deps) {
       const usersRepo = deps.repos?.usersRepo;
       if (!repo || !usersRepo) return;
 
-      const { listPlatformKeys, getPlatformSync } = await import('../platforms/index.js');
+      const { listPlatformKeys, getPlatform } = await import('../platforms/index.js');
       const { resolveOwnerPlatformToken } = await import('../lib/resolve-owner-platform.js');
       const { AccountReportService } = await import('../services/account-report-service.js');
       const svc = new AccountReportService({ llmClient: deps.services?.llmClient });
@@ -513,7 +519,7 @@ export function initScheduler(bot, deps) {
             if (!user?.telegram_id) continue;
 
             for (const pa of userAccounts) {
-              if (!pa?.access_token) continue;
+              if (!pa?.access_token || !isAccountTokenUsable(pa)) continue;
 
               const token = resolveOwnerPlatformToken(platform, row.user_id, {
                 platformAccountsRepo: repo,
@@ -521,7 +527,7 @@ export function initScheduler(bot, deps) {
               });
               if (!token || token.startsWith('demo-') || token.startsWith('demo-meta-token')) continue;
 
-              const api = getPlatformSync(platform, settingsRepo);
+              const api = await getPlatform(platform, settingsRepo);
               api.setActiveAccount(null, token, true);
 
               // Feature-detect account enumeration. Meta has getAdAccounts,
@@ -582,7 +588,7 @@ export function initScheduler(bot, deps) {
       const usersRepo = deps.repos?.usersRepo;
       if (!repo || !settingsRepo || !usersRepo) return;
 
-      const { listPlatformKeys, getPlatformSync } = await import('../platforms/index.js');
+      const { listPlatformKeys, getPlatform } = await import('../platforms/index.js');
       const { resolveOwnerPlatformToken } = await import('../lib/resolve-owner-platform.js');
       const { AccountReportService } = await import('../services/account-report-service.js');
       const svc = new AccountReportService({ llmClient: deps.services?.llmClient });
@@ -605,7 +611,7 @@ export function initScheduler(bot, deps) {
             if (!user?.telegram_id) continue;
 
             for (const pa of userAccounts) {
-              if (!pa?.access_token) continue;
+              if (!pa?.access_token || !isAccountTokenUsable(pa)) continue;
 
               // dedup per account per day (account id = pa.id)
               const dedupKey = `anomaly_alerted_${pa.id}_${today}`;
@@ -617,7 +623,7 @@ export function initScheduler(bot, deps) {
               });
               if (!token || token.startsWith('demo-') || token.startsWith('demo-meta-token')) continue;
 
-              const api = getPlatformSync(platform, settingsRepo);
+              const api = await getPlatform(platform, settingsRepo);
               api.setActiveAccount(null, token, true);
 
               // Feature-detect account enumeration
@@ -738,7 +744,7 @@ export function initScheduler(bot, deps) {
       const settingsRepo = deps.repos?.settingsRepo;
       if (!platformAccountsRepo || !settingsRepo) return;
 
-      const { listPlatformKeys, getPlatformSync } = await import('../platforms/index.js');
+      const { listPlatformKeys, getPlatform } = await import('../platforms/index.js');
       const keys = listPlatformKeys();
       let synced = 0;
       let platformsSynced = 0;
@@ -753,6 +759,14 @@ export function initScheduler(bot, deps) {
 
         for (const row of userRows) {
           try {
+            // getDistinctUserPlatforms() only reports which users have an
+            // ACTIVE account; it does not know whether that credential still
+            // works. Skip owners whose only accounts are dead.
+            const owned = platformAccountsRepo.findAllActiveByUserAndPlatform?.(row.user_id, platform) || [];
+            if (!hasUsableAccount(owned)) {
+              log.debug('No usable token — skipping platform sync', { platform, user: row.user_id });
+              continue;
+            }
             const token = resolveOwnerPlatformToken(platform, row.user_id, {
               platformAccountsRepo,
               settingsRepo,
@@ -761,7 +775,7 @@ export function initScheduler(bot, deps) {
               log.debug('Placeholder token — skipping sync', { platform, account: row.user_id });
               continue;
             }
-            const PlatformClass = getPlatformSync(platform, settingsRepo);
+            const PlatformClass = await getPlatform(platform, settingsRepo);
             // Bind the OWNER's token so syncAllAccounts() resolves that user's accounts.
             const api = new PlatformClass();
             api.setActiveAccount(null, token, true);
