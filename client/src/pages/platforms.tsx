@@ -18,6 +18,11 @@ interface Platform {
   account_name?: string;
 }
 
+/** A token that is dead or invalid — the account must be reconnected. */
+function isNeedsReconnect(status?: string | null) {
+  return status === 'invalid_token' || status === 'expired';
+}
+
 export function PlatformsPage() {
   const queryClient = useQueryClient();
   const [tokenInputs, setTokenInputs] = useState<Record<string, string>>({});
@@ -129,18 +134,18 @@ export function PlatformsPage() {
                     <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div style={{
                         padding: '4px 10px', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600,
-                        background: e.health_status === 'invalid_token'
+                        background: isNeedsReconnect(e.health_status)
                           ? 'rgba(239,68,68,0.12)'
                           : e.health_status === 'ok'
                             ? 'rgba(52,211,153,0.1)'
                             : 'rgba(139,146,168,0.1)',
-                        color: e.health_status === 'invalid_token'
+                        color: isNeedsReconnect(e.health_status)
                           ? '#ef4444'
                           : e.health_status === 'ok'
                             ? 'var(--green)'
                             : 'var(--text-tertiary)',
                       }} title={e.last_error || undefined}>
-                        {e.health_status === 'invalid_token'
+                        {isNeedsReconnect(e.health_status)
                           ? `⚠️ Token expired — reconnect`
                           : `✅ ${e.account_name || e.platform}`}
                       </div>
