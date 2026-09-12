@@ -1,3 +1,4 @@
+import { filterActiveCampaigns } from '../../lib/campaign-status.js';
 import { createLogger } from '../../lib/logger.js';
 import { MetaAdsAPI } from '../../services/meta/index.js';
 
@@ -79,7 +80,7 @@ export function handleAds(deps) {
     const active = connected.filter(a => a.is_active);
 
     const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [] };
-    const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE').length;
+    const activeCampaigns = filterActiveCampaigns(campaigns).length;
 
     // Platform labels (same registry as Platforms page)
     const PLATFORM_LABELS = {

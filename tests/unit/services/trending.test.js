@@ -13,18 +13,29 @@ describe('TrendingService', () => {
   });
 
   describe('getInternalTrends', () => {
-    it('returns empty array when no campaigns', () => {
+    it('scopes the query to the requesting user', async () => {
       mockCampaignsRepo.findAll.mockReturnValue({ data: [] });
-      return service.getInternalTrends().then(result => {
-        expect(result).toEqual([]);
-      });
+      await service.getInternalTrends('u1');
+      // Unscoped findAll() returns every tenant's campaigns, so the owner id
+      // must reach the repository — this is what the dashboard relies on.
+      expect(mockCampaignsRepo.findAll).toHaveBeenCalledWith({ userId: 'u1' });
     });
 
-    it('returns empty array when campaigns data is null', () => {
+    it('fails closed when no owner is supplied', async () => {
+      const result = await service.getInternalTrends();
+      expect(result).toEqual([]);
+      // Better an empty panel than another customer's campaigns.
+      expect(mockCampaignsRepo.findAll).not.toHaveBeenCalled();
+    });
+
+    it('returns empty array when no campaigns', async () => {
+      mockCampaignsRepo.findAll.mockReturnValue({ data: [] });
+      await expect(service.getInternalTrends('u1')).resolves.toEqual([]);
+    });
+
+    it('returns empty array when campaigns data is null', async () => {
       mockCampaignsRepo.findAll.mockReturnValue({ data: null });
-      return service.getInternalTrends().then(result => {
-        expect(result).toEqual([]);
-      });
+      await expect(service.getInternalTrends('u1')).resolves.toEqual([]);
     });
 
     it('returns top 5 campaigns by ROAS', () => {
@@ -38,7 +49,7 @@ describe('TrendingService', () => {
       ];
 
       mockCampaignsRepo.findAll.mockReturnValue({ data: campaigns });
-      return service.getInternalTrends().then(result => {
+      return service.getInternalTrends('u1').then(result => {
         expect(result).toHaveLength(5);
         expect(result[0].roas).toBe(6.0);
         expect(result[1].roas).toBe(5.2);

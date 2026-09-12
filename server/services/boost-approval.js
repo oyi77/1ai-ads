@@ -46,14 +46,17 @@ export class BoostApprovalService {
 
   /**
    * Create a boost recommendation for a post and optionally notify via Telegram.
-   * @param {{ post_id: string, page_id: string, metrics?: object, target_audience_json?: string }} opts
+   * `userId` records the owner — required for SaaS isolation, since the queue
+   * and its approve/reject buttons are otherwise readable by any signed-in user.
+   * @param {{ post_id: string, page_id: string, metrics?: object, target_audience_json?: string, userId?: string }} opts
    * @returns {object} created recommendation row
    */
-  async recommend({ post_id, page_id, metrics = {}, target_audience_json = null }) {
+  async recommend({ post_id, page_id, metrics = {}, target_audience_json = null, userId = null }) {
     const score = this.computeScore(metrics);
     const budget = this._suggestBudget(score);
 
     const rec = this.boostRepo.create({
+      user_id: userId,
       post_id,
       page_id,
       boost_score: score,
@@ -69,28 +72,28 @@ export class BoostApprovalService {
     return rec;
   }
 
-  /** Approve a recommendation by id. */
-  approve(id, reviewed_by = 'system') {
-    return this.boostRepo.updateStatus(id, { status: 'approved', reviewed_by });
+  /** Approve a recommendation by id. Owner-scoped when `userId` is given. */
+  approve(id, reviewed_by = 'system', userId = null) {
+    return this.boostRepo.updateStatus(id, { status: 'approved', reviewed_by, userId });
   }
 
-  /** Reject a recommendation by id. */
-  reject(id, reviewed_by = 'system') {
-    return this.boostRepo.updateStatus(id, { status: 'rejected', reviewed_by });
+  /** Reject a recommendation by id. Owner-scoped when `userId` is given. */
+  reject(id, reviewed_by = 'system', userId = null) {
+    return this.boostRepo.updateStatus(id, { status: 'rejected', reviewed_by, userId });
   }
 
   /** Mark as actually boosted (ad campaign created). */
-  markBoosted(id, ad_campaign_id) {
-    return this.boostRepo.updateStatus(id, { status: 'boosted', reviewed_by: 'system', ad_campaign_id });
+  markBoosted(id, ad_campaign_id, userId = null) {
+    return this.boostRepo.updateStatus(id, { status: 'boosted', reviewed_by: 'system', ad_campaign_id, userId });
   }
 
-  /** List recommendations, optionally filtered by status. */
+  /** List recommendations, optionally filtered by status and owner. */
   list(status = null, opts = {}) {
     return this.boostRepo.findByStatus(status, opts);
   }
 
-  getById(id) {
-    return this.boostRepo.findById(id);
+  getById(id, userId = null) {
+    return this.boostRepo.findById(id, userId);
   }
 
   // ── Telegram ───────────────────────────────────────────────────
@@ -135,6 +138,9 @@ export class BoostApprovalService {
    * Returns { handled: bool, action?, rec_id?, success? }.
    */
   async handleTelegramCommand(text = '') {
+    // Operator-console path: these commands arrive on the deployment's own bot
+    // token, so there is no per-tenant identity to scope to. Left unscoped on
+    // purpose — the HTTP routes are the tenant-scoped surface.
     const approveMatch = text.match(/^\/boost_approve_(\d+)/);
     const rejectMatch  = text.match(/^\/boost_reject_(\d+)/);
 

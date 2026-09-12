@@ -2,6 +2,7 @@
  * /status command — Dashboard showing connected ad accounts + per-account reports
  */
 import { MetaAdsAPI } from '../../services/meta/index.js';
+import { filterActiveCampaigns } from '../../lib/campaign-status.js';
 import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('bot:status');
@@ -23,7 +24,7 @@ export function handleStatus(deps) {
       // Get campaigns
       const result = deps.repos?.campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [], total: 0 };
       const campaigns = result.data || [];
-      const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE').length;
+      const activeCampaigns = filterActiveCampaigns(campaigns).length;
       const totalSpend = campaigns.reduce((s, c) => s + (c.spend || 0), 0);
       const totalRevenue = campaigns.reduce((s, c) => s + (c.revenue || 0), 0);
       const roas = totalSpend > 0 ? (totalRevenue / totalSpend).toFixed(2) : '0.00';

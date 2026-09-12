@@ -11,7 +11,11 @@ function createMockRulesRepo() {
       { id: 'r2', name: 'Rule 2', enabled: false },
     ]),
     create: vi.fn(() => 'new-rule-id'),
-    findById: vi.fn((id) => ({ id, user_id: 'user-1', name: 'Rule 1' })),
+    // Mirrors the REAL RulesRepository: the lookup method is `getById`, and it
+    // hydrates camelCase (`userId`), not the raw user_id column. The mock
+    // previously advertised the wrong method name and the wrong field spelling,
+    // so the route's own mismatch passed here while 404-ing/403-ing in prod.
+    getById: vi.fn((id) => ({ id, userId: 'user-1', name: 'Rule 1' })),
     update: vi.fn(() => true),
     delete: vi.fn(() => true),
   };
@@ -159,10 +163,17 @@ describe('Optimizer Router', () => {
     });
 
     it('returns 404 when rule not found', async () => {
-      rulesRepo.update.mockReturnValue(false);
+      rulesRepo.getById.mockReturnValue(null);
       const res = await request(app).put('/api/optimizer/rules/missing').send({ name: 'x' });
       expect(res.status).toBe(404);
       expect(res.body.error).toMatch(/not found/i);
+    });
+
+    it('returns 403 when the rule belongs to another user', async () => {
+      rulesRepo.getById.mockReturnValue({ id: 'r9', userId: 'someone-else', name: 'Not mine' });
+      const res = await request(app).put('/api/optimizer/rules/r9').send({ name: 'x' });
+      expect(res.status).toBe(403);
+      expect(rulesRepo.update).not.toHaveBeenCalled();
     });
 
     it('returns 500 when repo throws', async () => {
@@ -183,10 +194,17 @@ describe('Optimizer Router', () => {
     });
 
     it('returns 404 when rule not found', async () => {
-      rulesRepo.delete.mockReturnValue(false);
+      rulesRepo.getById.mockReturnValue(null);
       const res = await request(app).delete('/api/optimizer/rules/missing');
       expect(res.status).toBe(404);
       expect(res.body.error).toMatch(/not found/i);
+    });
+
+    it('returns 403 when the rule belongs to another user', async () => {
+      rulesRepo.getById.mockReturnValue({ id: 'r9', userId: 'someone-else', name: 'Not mine' });
+      const res = await request(app).delete('/api/optimizer/rules/r9');
+      expect(res.status).toBe(403);
+      expect(rulesRepo.delete).not.toHaveBeenCalled();
     });
 
     it('returns 500 when repo throws', async () => {

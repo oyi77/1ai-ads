@@ -73,14 +73,16 @@ export class TargetingService {
   /**
    * Generate and persist a targeting suggestion for a post.
    * Reads category from the boost_recommendations table if available.
-   * @param {{ post_id: string, page_id: string, category?: string }} opts
+   * `userId` records the owner and scopes the category lookup, so one tenant's
+   * boost history can never seed or overwrite another tenant's suggestion.
+   * @param {{ post_id: string, page_id: string, category?: string, userId?: string }} opts
    * @returns {object} targeting suggestion
    */
-  suggest({ post_id, page_id, category = null }) {
+  suggest({ post_id, page_id, category = null, userId = null }) {
     // Try to infer category from boost rec if not provided
     let resolvedCategory = category;
     if (!resolvedCategory) {
-      const recs = this.boostRepo.findByStatus(null, { limit: 200 });
+      const recs = this.boostRepo.findByStatus(null, { limit: 200, userId });
       const match = recs.find(r => r.post_id === post_id && r.page_id === page_id);
       if (match?.target_audience_json) {
         try {
@@ -92,6 +94,7 @@ export class TargetingService {
 
     const heuristic = this._getHeuristic(resolvedCategory);
     const suggestion = {
+      user_id: userId,
       post_id,
       page_id,
       category: resolvedCategory,
@@ -103,24 +106,26 @@ export class TargetingService {
 
   /**
    * Return saved targeting for a post, or generate fresh if absent.
+   * Owner-scoped when `userId` is given.
    * @param {string} post_id
    * @param {string} page_id
+   * @param {string} [userId]
    */
-  getOrSuggest(post_id, page_id) {
-    const existing = this.targetingRepo.findByPost(post_id, page_id);
+  getOrSuggest(post_id, page_id, userId = null) {
+    const existing = this.targetingRepo.findByPost(post_id, page_id, userId);
     if (existing) return existing;
-    return this.suggest({ post_id, page_id });
+    return this.suggest({ post_id, page_id, userId });
   }
 
   /**
    * Analyze engagement patterns from boost recommendations grouped by category.
    * Returns aggregated avg score/budget per category.
-   * @param {{ page_id?: string, days?: number }} opts
+   * @param {{ page_id?: string, days?: number, userId?: string }} opts
    */
-  analyzeEngagementPatterns({ page_id = null, days = 30 } = {}) {
+  analyzeEngagementPatterns({ page_id = null, days = 30, userId = null } = {}) {
     const cutoff = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 19);
 
-    let recs = this.boostRepo.findByStatus(null, { limit: 1000 });
+    let recs = this.boostRepo.findByStatus(null, { limit: 1000, userId });
 
     // Filter by age and optionally page
     recs = recs.filter(r => r.created_at >= cutoff);
@@ -147,7 +152,7 @@ export class TargetingService {
     return { patterns, days, page_id, total_categories: patterns.length };
   }
 
-  /** List all saved targeting suggestions. */
+  /** List saved targeting suggestions, scoped to `opts.userId` when given. */
   listAll(opts = {}) {
     return this.targetingRepo.findAll(opts);
   }

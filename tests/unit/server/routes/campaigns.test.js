@@ -46,11 +46,23 @@ function createMockCreativeStudio() {
 }
 
 function createMockCampaignsRepo() {
+  // The real repository returns local rows keyed by an internal UUID whose
+  // `campaign_id` is Meta's own numeric id. Both id spaces must be exercised:
+  // the SPA echoes back the UUID, Meta needs `campaign_id`.
   return {
     findAll: vi.fn(() => ({ data: [], total: 0 })),
     upsert: vi.fn(),
+    findById: vi.fn(() => LOCAL_CAMPAIGN),
+    findByCampaignId: vi.fn(() => LOCAL_CAMPAIGN),
   };
 }
+
+const LOCAL_CAMPAIGN = {
+  id: '3f4925dc-dd45-4eda-ace1-73bac2909d4b',
+  campaign_id: '120249000012520121',
+  user_id: 'user-1',
+  name: 'Summer Sale',
+};
 
 function createMockAdsRepo() {
   return {
@@ -136,16 +148,25 @@ describe('Campaigns Router', () => {
   // ─── POST /:id/activate ────────────────────────────────────────────
 
   describe('POST /:id/activate', () => {
-    it('activates a campaign', async () => {
-      const res = await request(app).post('/api/campaigns/camp-001/activate');
+    it('activates the META campaign behind the local row id', async () => {
+      const res = await request(app).post(`/api/campaigns/${LOCAL_CAMPAIGN.id}/activate`);
       expect(res.status).toBe(200);
       expect(res.body.data.status).toBe('ACTIVE');
-      expect(orchestrator.activateCampaign).toHaveBeenCalledWith('camp-001', expect.anything());
+      // The internal UUID must never reach the Graph API.
+      expect(orchestrator.activateCampaign).toHaveBeenCalledWith(LOCAL_CAMPAIGN.campaign_id, expect.anything());
+    });
+
+    it('returns 404 when the campaign is not the caller\'s', async () => {
+      campaignsRepo.findById.mockReturnValue(null);
+      campaignsRepo.findByCampaignId.mockReturnValue({ ...LOCAL_CAMPAIGN, user_id: 'someone-else' });
+      const res = await request(app).post('/api/campaigns/camp-001/activate');
+      expect(res.status).toBe(404);
+      expect(orchestrator.activateCampaign).not.toHaveBeenCalled();
     });
 
     it('returns 500 on failure', async () => {
       orchestrator.activateCampaign.mockRejectedValue(new Error('Already active'));
-      const res = await request(app).post('/api/campaigns/camp-001/activate');
+      const res = await request(app).post(`/api/campaigns/${LOCAL_CAMPAIGN.id}/activate`);
       expect(res.status).toBe(500);
       expect(res.body.error).toBe('Already active');
     });
@@ -154,16 +175,31 @@ describe('Campaigns Router', () => {
   // ─── POST /:id/pause ───────────────────────────────────────────────
 
   describe('POST /:id/pause', () => {
-    it('pauses a campaign', async () => {
-      const res = await request(app).post('/api/campaigns/camp-001/pause');
+    it('pauses the META campaign behind the local row id', async () => {
+      const res = await request(app).post(`/api/campaigns/${LOCAL_CAMPAIGN.id}/pause`);
       expect(res.status).toBe(200);
       expect(res.body.data.status).toBe('PAUSED');
-      expect(orchestrator.pauseCampaign).toHaveBeenCalledWith('camp-001', expect.anything());
+      expect(orchestrator.pauseCampaign).toHaveBeenCalledWith(LOCAL_CAMPAIGN.campaign_id, expect.anything());
+    });
+
+    it('accepts a raw Meta campaign id', async () => {
+      campaignsRepo.findById.mockReturnValue(null);
+      const res = await request(app).post(`/api/campaigns/${LOCAL_CAMPAIGN.campaign_id}/pause`);
+      expect(res.status).toBe(200);
+      expect(orchestrator.pauseCampaign).toHaveBeenCalledWith(LOCAL_CAMPAIGN.campaign_id, expect.anything());
+    });
+
+    it('returns 404 for an unknown campaign', async () => {
+      campaignsRepo.findById.mockReturnValue(null);
+      campaignsRepo.findByCampaignId.mockReturnValue(null);
+      const res = await request(app).post('/api/campaigns/nope/pause');
+      expect(res.status).toBe(404);
+      expect(orchestrator.pauseCampaign).not.toHaveBeenCalled();
     });
 
     it('returns 500 on failure', async () => {
       orchestrator.pauseCampaign.mockRejectedValue(new Error('Already paused'));
-      const res = await request(app).post('/api/campaigns/camp-001/pause');
+      const res = await request(app).post(`/api/campaigns/${LOCAL_CAMPAIGN.id}/pause`);
       expect(res.status).toBe(500);
       expect(res.body.error).toBe('Already paused');
     });
@@ -172,22 +208,30 @@ describe('Campaigns Router', () => {
   // ─── PUT /:id/budget ───────────────────────────────────────────────
 
   describe('PUT /:id/budget', () => {
-    it('updates campaign budget', async () => {
-      const res = await request(app).put('/api/campaigns/camp-001/budget').send({ dailyBudget: '100' });
+    it('updates the META campaign budget', async () => {
+      const res = await request(app).put(`/api/campaigns/${LOCAL_CAMPAIGN.id}/budget`).send({ dailyBudget: '100' });
       expect(res.status).toBe(200);
-      expect(orchestrator.scaleBudget).toHaveBeenCalledWith('camp-001', 100, expect.anything());
+      expect(orchestrator.scaleBudget).toHaveBeenCalledWith(LOCAL_CAMPAIGN.campaign_id, 100, expect.anything());
       expect(res.body.data.dailyBudget).toBe('100');
     });
 
     it('returns 400 when dailyBudget missing', async () => {
-      const res = await request(app).put('/api/campaigns/camp-001/budget').send({});
+      const res = await request(app).put(`/api/campaigns/${LOCAL_CAMPAIGN.id}/budget`).send({});
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/dailyBudget/);
     });
 
+    it('returns 404 for an unknown campaign', async () => {
+      campaignsRepo.findById.mockReturnValue(null);
+      campaignsRepo.findByCampaignId.mockReturnValue(null);
+      const res = await request(app).put('/api/campaigns/nope/budget').send({ dailyBudget: '5' });
+      expect(res.status).toBe(404);
+      expect(orchestrator.scaleBudget).not.toHaveBeenCalled();
+    });
+
     it('returns 500 when orchestrator throws', async () => {
       orchestrator.scaleBudget.mockRejectedValue(new Error('Budget too low'));
-      const res = await request(app).put('/api/campaigns/camp-001/budget').send({ dailyBudget: '5' });
+      const res = await request(app).put(`/api/campaigns/${LOCAL_CAMPAIGN.id}/budget`).send({ dailyBudget: '5' });
       expect(res.status).toBe(500);
       expect(res.body.error).toBe('Budget too low');
     });
@@ -401,16 +445,25 @@ describe('Campaigns Router', () => {
   // ─── GET /:id ──────────────────────────────────────────────────────
 
   describe('GET /:id', () => {
-    it('returns campaign insights', async () => {
-      const res = await request(app).get('/api/campaigns/camp-001');
+    it('returns insights for the META campaign behind the local row id', async () => {
+      const res = await request(app).get(`/api/campaigns/${LOCAL_CAMPAIGN.id}`);
       expect(res.status).toBe(200);
-      expect(res.body.data.id).toBe('camp-001');
+      expect(res.body.data.id).toBe(LOCAL_CAMPAIGN.id);
+      expect(res.body.data.campaignId).toBe(LOCAL_CAMPAIGN.campaign_id);
+      expect(metaApi.getCampaignInsights).toHaveBeenCalledWith(LOCAL_CAMPAIGN.campaign_id);
       expect(res.body.data.insights.impressions).toBe(1000);
+    });
+
+    it('returns 404 for an unknown campaign', async () => {
+      campaignsRepo.findById.mockReturnValue(null);
+      campaignsRepo.findByCampaignId.mockReturnValue(null);
+      const res = await request(app).get('/api/campaigns/nope');
+      expect(res.status).toBe(404);
     });
 
     it('returns 500 on error', async () => {
       metaApi.getCampaignInsights.mockRejectedValue(new Error('Not found'));
-      const res = await request(app).get('/api/campaigns/camp-001');
+      const res = await request(app).get(`/api/campaigns/${LOCAL_CAMPAIGN.id}`);
       expect(res.status).toBe(500);
       expect(res.body.error).toBe('Not found');
     });

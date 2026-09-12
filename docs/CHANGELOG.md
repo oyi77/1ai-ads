@@ -1,3 +1,42 @@
+## [1.6.0] - 2026-09-12
+
+### Fixed
+- **CRITICAL (multi-tenant)**: `/api/boost/recommend`, `/api/boost/:id`,
+  `/api/boost/:id/approve|reject` and `/api/boost/targeting*` were global — any signed-in
+  user could list, read and approve another customer's boost recommendations and audience
+  suggestions. Both tables gained a `user_id` (migration `044`) and every repository
+  read/write is now owner-scoped.
+- **CRITICAL (multi-tenant)**: `/api/trending/internal` and `/api/trending/all` ranked
+  campaigns with an unscoped `findAll()`, exposing other tenants' campaign names and ROAS.
+- **CRITICAL**: `createOptimizeRouter` (`schedule.js`) was dead code containing a
+  cross-tenant `campaignsRepo.findAll()` and an `/apply-all` route that could never work
+  (`req.app.locals.llmClient` is never set). Deleted.
+- **HIGH**: Campaign mutation routes (`pause`/`activate`/`budget` and `GET /campaigns/:id`)
+  forwarded the local row UUID to Meta, which answered
+  `400 Object with ID '<uuid>' does not exist` for every SPA button. They now resolve the
+  owned row and send Meta's own campaign id.
+- **HIGH**: The follow-up-engine cron filtered `campaigns.status === 'WINNING'`. That column
+  holds a delivery state (`active`/`paused`) written by every sync — never a performance
+  grade — so the job was inert. Removed; scale alerts are event-driven from the campaign
+  monitor's `SCALE_UP` decision.
+- **HIGH**: `campaigns.status` is stored lower-case, but the campaign monitor and the daily
+  eval guard filtered on `'ACTIVE'`, so both processed **zero** campaigns while logging
+  success. Same defect in `CampaignsRepository.findActive()` (`WHERE status = 'ACTIVE'`
+  matched no row), in the bot's `/ads`, `/status`, admin-stats and `/optimize` counters, and
+  in `CampaignReporter` (`activeCampaigns`, plus `actionsTaken` which read a raw column name
+  off hydrated rows). Consolidated into `server/lib/campaign-status.js`. Verified against the
+  live database: 38 `active`, 276 `paused`, nothing else.
+- **MEDIUM**: Migration `044` could not boot a fresh database — both tables are created lazily
+  at runtime, so the `ALTER`s failed with `no such table` and the runner marked the file
+  applied after rolling it back. It now creates the tables first (pattern from migration
+  `029`).
+- **MEDIUM**: The daily eval guard listed only the first 10 underperformers but wrote dedup
+  keys only for the ones it displayed, so the rest re-alerted daily.
+
+### Changed
+- Pause/activate/ad-status routes write the resulting status back to the local row, so
+  schedulers and bot counters see what the platform was actually told.
+
 ## [1.5.0] - 2026-07-20
 
 ### Removed

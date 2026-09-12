@@ -18,8 +18,17 @@ export class TrendingService {
     this.apiConfig = config.externalTrendingApi;
   }
 
-  async getInternalTrends() {
-    const { data: campaigns } = this.campaignsRepo.findAll();
+  /**
+   * Top internal campaign trends for ONE tenant.
+   *
+   * `findAll()` with no userId returns every tenant's campaigns, so the caller's
+   * id is required here: without it the dashboard showed other customers' campaign
+   * names and ROAS. A missing id fails closed rather than falling back to the
+   * global query.
+   */
+  async getInternalTrends(userId) {
+    if (!userId) return [];
+    const { data: campaigns } = this.campaignsRepo.findAll({ userId });
     if (!campaigns || campaigns.length === 0) return [];
 
     return campaigns
@@ -201,14 +210,15 @@ export class TrendingService {
   }
 
   /**
-   * Get all trends - merges internal and external trends
+   * Get all trends - merges internal (this tenant's) and external trends
+   * @param {string} userId - Owner whose internal campaigns are ranked (required)
    * @param {string} industry - Optional industry filter for external trends
    * @param {string} region - Optional region filter for external trends
    * @returns {Promise<Object>} Object containing internal and external trends
    */
-  async getAllTrends(industry = null, region = null) {
+  async getAllTrends(userId, industry = null, region = null) {
     const [internal, external] = await Promise.all([
-      this.getInternalTrends(),
+      this.getInternalTrends(userId),
       this.getExternalTrends(industry, region),
     ]);
 

@@ -1,3 +1,5 @@
+import { isActiveStatus } from '../../lib/campaign-status.js';
+
 /**
  * Main Menu & Handlers
  * Multi-platform ads management
@@ -172,7 +174,7 @@ async function handleOptimizeAction(ctx, deps, scope) {
     let campaigns;
     if (scope === 'global') {
       const result = deps?.repos?.campaignsRepo?.findAll?.({ userId: ctx.userId }) || { data: [], total: 0 };
-      campaigns = (result.data || []).filter(c => c.platform === 'meta' && c.status === 'ACTIVE');
+      campaigns = (result.data || []).filter(c => c.platform === 'meta' && isActiveStatus(c.status));
     } else {
       const acct = getUserMetaAccount(ctx, deps);
       if (!acct) return ctx.reply('🔌 Connect a Meta account first via /start.');

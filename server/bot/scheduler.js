@@ -22,6 +22,7 @@ import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
 import { redactSecretsForLogs } from '../lib/platform-client.js';
 import { evaluateCondition, MAX_CONDITION_DEPTH } from '../lib/rule-condition.js';
 import { filterUsableAccounts, isAccountTokenUsable, hasUsableAccount } from '../lib/token-health.js';
+import { filterActiveCampaigns } from '../lib/campaign-status.js';
 
 const log = createLogger('bot:scheduler');
 
@@ -62,6 +63,35 @@ async function safeSend(bot, text, extra) {
   } catch (err) {
     log.error('Failed to send Telegram message', { error: err.message });
   }
+}
+
+/**
+ * Send an alert about a customer's campaign to that OWNER's Telegram, falling
+ * back to the admin chat only when the owner cannot be reached.
+ *
+ * `campaigns` is per-user, so routing a name-bearing alert straight to the
+ * admin chat tells one customer's story to whoever sits in the operations
+ * chat. The token-health, rule-guard, digest and anomaly jobs all resolve the
+ * owner's Telegram first; the campaign monitor and the daily eval guard did
+ * not, so every stop-loss/scale/underperformer alert went to the wrong place.
+ *
+ * @returns {Promise<boolean>} true when the owner received the message
+ */
+async function ownerSend(bot, deps, ownerId, text, extra, fallbackText = text) {
+  const usersRepo = deps.repos?.usersRepo;
+  const telegramId = ownerId
+    ? (usersRepo?.getTelegramIdByUserId?.(ownerId) || usersRepo?.findById?.(ownerId)?.telegram_id)
+    : null;
+  if (telegramId) {
+    try {
+      await bot.telegram.sendMessage(telegramId, text, extra);
+      return true;
+    } catch (err) {
+      log.warn('Owner alert failed', { ownerId, error: err.message });
+    }
+  }
+  await safeSend(bot, fallbackText, extra);
+  return false;
 }
 
 /**
@@ -122,7 +152,7 @@ export function initScheduler(bot, deps) {
     log.info('Running campaign monitor job');
     try {
       const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.() || { data: [] };
-      const active = campaigns.filter(c => c.status === 'ACTIVE');
+      const active = filterActiveCampaigns(campaigns);
       const EVAL_DAYS = parseInt(process.env.EVALUATION_DAYS || '3', 10);
       const today = new Date().toISOString().slice(0, 10);
 
@@ -170,7 +200,7 @@ export function initScheduler(bot, deps) {
           const dedupKey = `campaign_monitor_alerted_${campaign.id}_${today}`;
           if (deps.repos?.settingsRepo?.get(dedupKey)) continue;
 
-          await safeSend(bot, `⚠️ *${campaign.name}*: ${stoploss.reason}`, { parse_mode: 'Markdown' });
+          await ownerSend(bot, deps, campaign.user_id, `⚠️ *${campaign.name}*: ${stoploss.reason}`, { parse_mode: 'Markdown' });
           deps.repos?.settingsRepo?.set(dedupKey, new Date().toISOString());
         }
 
@@ -185,7 +215,7 @@ export function initScheduler(bot, deps) {
             // Dedup: max 1 scale alert per campaign per day
             const dedupKey = `campaign_monitor_scale_${campaign.id}_${today}`;
             if (!deps.repos?.settingsRepo?.get(dedupKey)) {
-              await safeSend(bot, `🚀 *${campaign.name}* eligible to scale!\n${scaleResult.reason}`, { parse_mode: 'Markdown' });
+              await ownerSend(bot, deps, campaign.user_id, `🚀 *${campaign.name}* eligible to scale!\n${scaleResult.reason}`, { parse_mode: 'Markdown' });
               deps.repos?.settingsRepo?.set(dedupKey, new Date().toISOString());
             }
           }
@@ -705,35 +735,6 @@ export function initScheduler(bot, deps) {
   });
 
   // ────────────────────────────────────────────────────────────
-  // 7. Follow-up Engine — every hour at :30
-  //    Find WINNING campaigns not yet scaled. Suggest scaling.
-  //    Dedup: max 1 alert per campaign per day.
-  // ────────────────────────────────────────────────────────────
-  cron.schedule('30 * * * *', async () => {
-    log.debug('Running follow-up engine');
-    try {
-      const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.() || { data: [] };
-      const today = new Date().toISOString().slice(0, 10);
-      const winning = campaigns.filter(c => c.status === 'WINNING');
-      for (const c of winning) {
-        // Dedup: skip if already alerted today for this campaign
-        const dedupKey = `followup_alerted_${c.id}_${today}`;
-        if (deps.repos?.settingsRepo?.get(dedupKey)) continue;
-
-        await safeSend(
-          bot,
-          `🏆 *${c.name}* is WINNING and hasn't been scaled yet. Consider increasing budget.`,
-          { parse_mode: 'Markdown' },
-        );
-        deps.repos?.settingsRepo?.set(dedupKey, new Date().toISOString());
-      }
-      log.debug('Follow-up engine complete', { winning: winning.length });
-    } catch (err) {
-      log.error('Follow-up engine failed', { error: err.message });
-    }
-  });
-
-  // ────────────────────────────────────────────────────────────
   // 8. Meta Campaign Sync — every 6h at :30
   //    Sync remote campaigns from Meta API → local DB.
   // ────────────────────────────────────────────────────────────
@@ -802,8 +803,11 @@ export function initScheduler(bot, deps) {
     log.info('Running daily eval guard');
     try {
       const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.() || { data: [] };
-      const active = campaigns.filter(c => c.status === 'ACTIVE');
-      const underperformers = [];
+      const active = filterActiveCampaigns(campaigns);
+      // Group by owner: a digest lists campaign NAMES, so sending one combined
+      // message to the admin chat would show every customer's campaigns to
+      // whoever is in that chat. Each owner gets only their own list.
+      const byOwner = new Map();
       const today = new Date().toISOString().slice(0, 10);
 
       for (const campaign of active) {
@@ -817,29 +821,49 @@ export function initScheduler(bot, deps) {
           const dedupKey = `daily_eval_alerted_${campaign.id}_${today}`;
           if (deps.repos?.settingsRepo?.get(dedupKey)) continue;
 
-          underperformers.push({ name: campaign.name, roas: metrics.roas, profit: metrics.profit, dedupKey });
+          const ownerId = campaign.user_id ?? null;
+          if (!byOwner.has(ownerId)) byOwner.set(ownerId, []);
+          byOwner.get(ownerId).push({ name: campaign.name, roas: metrics.roas, profit: metrics.profit, dedupKey });
         }
       }
 
-      if (underperformers.length > 0) {
-        const lines = underperformers.map(c =>
-          `• ${c.name}: ROAS ${c.roas.toFixed(2)}x, Loss Rp ${Math.abs(c.profit).toLocaleString('id-ID')}`,
+      let notified = 0;
+      for (const [ownerId, list] of byOwner) {
+        // Only the first 10 are shown, but EVERY underperformer gets its dedup
+        // key written below — otherwise the ones left out of the message would
+        // re-alert every day while the (truncated) list stays identical.
+        const shown = list.slice(0, 10);
+        const lines = shown.map(c =>
+          `• <b>${esc(c.name)}</b>: ROAS ${c.roas.toFixed(2)}x, loss Rp ${Math.abs(c.profit).toLocaleString('id-ID')}`,
         );
-        await safeSend(bot, `🔴 *Daily Eval — ${underperformers.length} underperformer(s):*\n${lines.join('\n')}`, { parse_mode: 'Markdown' });
-        for (const c of underperformers) {
+        if (list.length > shown.length) {
+          lines.push(`…and ${list.length - shown.length} more`);
+        }
+        const text = `🔴 <b>Daily Eval — ${list.length} underperformer(s)</b>\n${lines.join('\n')}`;
+        // The admin fallback carries no campaign names.
+        const fallback = `🔴 <b>Daily Eval — ${list.length} underperformer(s)</b> (owner has no Telegram link)`;
+        const delivered = await ownerSend(bot, deps, ownerId, text, { parse_mode: 'HTML' }, fallback);
+        notified += delivered ? list.length : 0;
+        for (const c of list) {
           deps.repos?.settingsRepo?.set(c.dedupKey, new Date().toISOString());
         }
       }
-      log.info('Daily eval guard complete', { checked: active.length, underperformers: underperformers.length });
+
+      log.info('Daily eval guard complete', {
+        checked: active.length,
+        underperformers: [...byOwner.values()].reduce((n, l) => n + l.length, 0),
+        notified,
+      });
     } catch (err) {
       log.error('Daily eval guard failed', { error: err.message });
     }
   });
-
   // ────────────────────────────────────────────────────────────
   // 10. Auto-scale — triggered by campaign monitor (not cron)
-  //     Auto-scale runs when campaign monitor (job 1) detects
-  //     WINNING status and evaluateScaleEligibility returns canScale.
+  //     Runs when campaign monitor (job 1) reports decision SCALE_UP and
+  //     evaluateScaleEligibility returns canScale. The status column is NOT
+  //     involved: 'WINNING'/'LOSING' are performance grades from
+  //     domain/optimization.js and are never stored in campaigns.status.
   //     Handled inside campaign monitor job above.
 
   // ────────────────────────────────────────────────────────────

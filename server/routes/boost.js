@@ -17,7 +17,7 @@ export function createBoostRouter({ services }) {
       return res.status(400).json({ success: false, error: 'post_id and page_id are required' });
     }
     try {
-      const rec = await svc.recommend({ post_id, page_id, metrics, target_audience_json });
+      const rec = await svc.recommend({ post_id, page_id, metrics, target_audience_json, userId: req.user?.id ?? null });
       return res.json({ success: true, data: rec });
     } catch (err) {
       return res.status(500).json({ success: false, error: err.message });
@@ -26,7 +26,8 @@ export function createBoostRouter({ services }) {
 
   router.get('/queue', requireAuth, (req, res) => {
     const { status = 'pending', limit = 50, offset = 0 } = req.query;
-    const recs = svc.list(status || null, { limit: Number(limit), offset: Number(offset) });
+    // Owner-scoped: the queue is per-tenant, never a global feed.
+    const recs = svc.list(status || null, { limit: Number(limit), offset: Number(offset), userId: req.user?.id ?? null });
     return res.json({ success: true, data: recs, count: recs.length });
   });
 
@@ -50,7 +51,7 @@ export function createBoostRouter({ services }) {
       return res.status(400).json({ success: false, error: 'post_id and page_id are required' });
     }
     try {
-      const suggestion = targeting.suggest({ post_id, page_id, category });
+      const suggestion = targeting.suggest({ post_id, page_id, category, userId: req.user?.id ?? null });
       return res.json({ success: true, data: suggestion });
     } catch (err) {
       return res.status(500).json({ success: false, error: err.message });
@@ -60,7 +61,7 @@ export function createBoostRouter({ services }) {
   // ── GET /api/boost/targeting/:post_id/:page_id ────────────────
   router.get('/targeting/:post_id/:page_id', requireAuth, (req, res) => {
     try {
-      const suggestion = targeting.getOrSuggest(req.params.post_id, req.params.page_id);
+      const suggestion = targeting.getOrSuggest(req.params.post_id, req.params.page_id, req.user?.id ?? null);
       return res.json({ success: true, data: suggestion });
     } catch (err) {
       return res.status(500).json({ success: false, error: err.message });
@@ -71,7 +72,7 @@ export function createBoostRouter({ services }) {
   router.get('/targeting/patterns', requireAuth, (req, res) => {
     const { page_id, days = 30 } = req.query;
     try {
-      const result = targeting.analyzeEngagementPatterns({ page_id: page_id || null, days: Number(days) });
+      const result = targeting.analyzeEngagementPatterns({ page_id: page_id || null, days: Number(days), userId: req.user?.id ?? null });
       return res.json({ success: true, data: result });
     } catch (err) {
       return res.status(500).json({ success: false, error: err.message });
@@ -82,7 +83,7 @@ export function createBoostRouter({ services }) {
   router.get('/targeting', requireAuth, (req, res) => {
     const { limit = 50, offset = 0 } = req.query;
     try {
-      const suggestions = targeting.listAll({ limit: Number(limit), offset: Number(offset) });
+      const suggestions = targeting.listAll({ limit: Number(limit), offset: Number(offset), userId: req.user?.id ?? null });
       return res.json({ success: true, data: suggestions, count: suggestions.length });
     } catch (err) {
       return res.status(500).json({ success: false, error: err.message });
@@ -92,24 +93,26 @@ export function createBoostRouter({ services }) {
   // ── GET /api/boost/:id ────────────────────────────────────────
   // Registered AFTER /targeting routes so /targeting is not shadowed by /:id.
   router.get('/:id', requireAuth, (req, res) => {
-    const rec = svc.getById(Number(req.params.id));
+    const rec = svc.getById(Number(req.params.id), req.user?.id ?? null);
     if (!rec) return res.status(404).json({ success: false, error: 'Not found' });
     return res.json({ success: true, data: rec });
   });
 
   // ── POST /api/boost/:id/approve ───────────────────────────────
   router.post('/:id/approve', requireAuth, (req, res) => {
-    const rec = svc.getById(Number(req.params.id));
+    const ownerId = req.user?.id ?? null;
+    const rec = svc.getById(Number(req.params.id), ownerId);
     if (!rec) return res.status(404).json({ success: false, error: 'Not found' });
-    const updated = svc.approve(Number(req.params.id), req.user?.username ?? 'system');
+    const updated = svc.approve(Number(req.params.id), req.user?.username ?? 'system', ownerId);
     return res.json({ success: true, data: updated });
   });
 
   // ── POST /api/boost/:id/reject ────────────────────────────────
   router.post('/:id/reject', requireAuth, (req, res) => {
-    const rec = svc.getById(Number(req.params.id));
+    const ownerId = req.user?.id ?? null;
+    const rec = svc.getById(Number(req.params.id), ownerId);
     if (!rec) return res.status(404).json({ success: false, error: 'Not found' });
-    const updated = svc.reject(Number(req.params.id), req.user?.username ?? 'system');
+    const updated = svc.reject(Number(req.params.id), req.user?.username ?? 'system', ownerId);
     return res.json({ success: true, data: updated });
   });
 

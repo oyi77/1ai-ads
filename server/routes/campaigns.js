@@ -27,6 +27,38 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     throw new ValidationError('Meta account is not connected. Connect your Meta account in Settings before using campaign features.');
   }
 
+  /**
+   * Resolve :id to the caller's OWN campaign row.
+   *
+   * The SPA lists campaigns from `GET /campaigns`, which returns LOCAL rows —
+   * so the id it echoes back into /:id/pause|activate|budget is the internal
+   * row id (a UUID), while Meta addresses campaigns by its own numeric id.
+   * Forwarding the UUID returned 400 "Object with ID '<uuid>' does not exist"
+   * for every button in the UI. Accept either spelling and fail closed.
+   */
+  function resolveOwnedCampaign(req) {
+    const id = String(req.params.id ?? '');
+    if (!id) return null;
+    const userId = req.user?.id;
+    let campaign = campaignsRepo?.findById?.(id, userId) || null;
+    if (!campaign) {
+      // A raw Meta campaign id (e.g. a bookmarked link) is addressable too — but
+      // only when the row belongs to the caller.
+      const byPlatformId = campaignsRepo?.findByCampaignId?.(id) || null;
+      if (byPlatformId && (!userId || !byPlatformId.user_id || byPlatformId.user_id === userId)) {
+        campaign = byPlatformId;
+      }
+    }
+    if (!campaign) return null;
+    if (userId && campaign.user_id && campaign.user_id !== userId) return null;
+    return campaign;
+  }
+
+  /** Meta's own campaign id for a resolved row (never the internal UUID). */
+  function metaCampaignIdOf(campaign, fallback) {
+    return String(campaign?.campaign_id || fallback);
+  }
+
   // Create full campaign (AI creative → campaign → adset → creative → ad)
   router.post('/create', async (req, res) => {
     const { accountId, pageId, product, target, keunggulan, objective, targeting, dailyBudget, landingUrl, pixelId, promotedObject } = req.body;
@@ -82,13 +114,20 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   // Activate a paused campaign
   router.post('/:id/activate', async (req, res) => {
     try {
-      const campaignId = req.params.id;
-      const approvedDrafts = draftsRepo.findAll({ campaignId, status: 'approved', limit: 1 });
+      const campaign = resolveOwnedCampaign(req);
+      if (!campaign) return res.status(404).json({ success: false, error: 'Campaign not found' });
+      // Drafts are keyed by the LOCAL row id (see the rule-guard cron).
+      const approvedDrafts = draftsRepo.findAll({ campaignId: campaign.id, status: 'approved', limit: 1 });
       if (!approvedDrafts || approvedDrafts.total === 0) {
         return res.status(403).json({ success: false, error: 'Campaign requires an approved activation request. Submit for approval first.' });
       }
-      await orchestrator.activateCampaign(campaignId, resolveUserMetaApi(req));
-      res.json({ success: true, data: { id: campaignId, status: 'ACTIVE' } });
+      const metaId = metaCampaignIdOf(campaign, req.params.id);
+      await orchestrator.activateCampaign(metaId, resolveUserMetaApi(req));
+      // The local row is what the schedulers and the bot's counters read, so a
+      // successful platform call must be reflected here too — otherwise a paused
+      // campaign keeps being monitored (and counted) as delivering.
+      campaignsRepo?.update?.(campaign.id, { status: 'active' }, req.user?.id);
+      res.json({ success: true, data: { id: campaign.id, campaignId: metaId, status: 'ACTIVE' } });
     } catch (err) {
       res.status(err.status || 500).json({ success: false, error: err.message });
     }
@@ -117,8 +156,12 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   // Pause a running campaign
   router.post('/:id/pause', async (req, res) => {
     try {
-      await orchestrator.pauseCampaign(req.params.id, resolveUserMetaApi(req));
-      res.json({ success: true, data: { id: req.params.id, status: 'PAUSED' } });
+      const campaign = resolveOwnedCampaign(req);
+      if (!campaign) return res.status(404).json({ success: false, error: 'Campaign not found' });
+      const metaId = metaCampaignIdOf(campaign, req.params.id);
+      await orchestrator.pauseCampaign(metaId, resolveUserMetaApi(req));
+      campaignsRepo?.update?.(campaign.id, { status: 'paused' }, req.user?.id);
+      res.json({ success: true, data: { id: campaign.id, campaignId: metaId, status: 'PAUSED' } });
     } catch (err) {
       res.status(err.status || 500).json({ success: false, error: err.message });
     }
@@ -130,8 +173,11 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       const { dailyBudget } = req.body;
       const budget = Number(dailyBudget);
       if (!Number.isFinite(budget) || budget <= 0) return res.status(400).json({ success: false, error: 'dailyBudget must be a positive number' });
-      await orchestrator.scaleBudget(req.params.id, budget, resolveUserMetaApi(req));
-      res.json({ success: true, data: { id: req.params.id, dailyBudget } });
+      const campaign = resolveOwnedCampaign(req);
+      if (!campaign) return res.status(404).json({ success: false, error: 'Campaign not found' });
+      const metaId = metaCampaignIdOf(campaign, req.params.id);
+      await orchestrator.scaleBudget(metaId, budget, resolveUserMetaApi(req));
+      res.json({ success: true, data: { id: campaign.id, campaignId: metaId, dailyBudget } });
     } catch (err) {
       res.status(err.status || 500).json({ success: false, error: err.message });
     }
@@ -143,7 +189,10 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
       if (!['ACTIVE', 'PAUSED'].includes(status)) {
         return res.status(400).json({ success: false, error: "status must be ACTIVE or PAUSED" });
       }
+      // The ads list is served from local rows whose id IS the Meta ad id for
+      // synced ads, so :id is already the platform id.
       await resolveUserMetaApi(req).updateAd(req.params.id, { status });
+      adsRepo?.update?.(req.params.id, { status: status.toLowerCase() }, req.user?.id);
       res.json({ success: true, data: { id: req.params.id, status } });
     } catch (err) {
       res.status(err.status || 500).json({ success: false, error: err.message });
@@ -539,8 +588,11 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   // Get campaign detail with insights
   router.get('/:id', async (req, res) => {
     try {
-      const insights = await resolveUserMetaApi(req).getCampaignInsights(req.params.id);
-      res.json({ success: true, data: { id: req.params.id, insights } });
+      const campaign = resolveOwnedCampaign(req);
+      if (!campaign) return res.status(404).json({ success: false, error: 'Campaign not found' });
+      const metaId = metaCampaignIdOf(campaign, req.params.id);
+      const insights = await resolveUserMetaApi(req).getCampaignInsights(metaId);
+      res.json({ success: true, data: { id: campaign.id, campaignId: metaId, insights } });
     } catch (err) {
       res.status(err.status || 500).json({ success: false, error: err.message });
     }

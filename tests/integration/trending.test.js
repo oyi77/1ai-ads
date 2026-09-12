@@ -43,6 +43,14 @@ describe('Trending API Integration', () => {
 
   const auth = (req) => req.set('Authorization', `Bearer ${authToken}`);
 
+  // Campaigns are tenant-owned, and /api/trending/internal only ranks the
+  // caller's own rows — an ownerless row is invisible by design. These inserts
+  // used to omit user_id, which pinned the old global (cross-tenant) query.
+  const insertCampaign = (c) => db.prepare(`
+    INSERT INTO campaigns (id, campaign_id, name, platform, status, roas, spend, revenue, impressions, clicks, conversions, user_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(c.id, c.id, c.name, c.platform, c.status, c.roas, c.spend, c.revenue, c.impressions, c.clicks, c.conversions, userId);
+
   beforeEach(() => {
     // Note: Since we're using vi.mock at module level, we don't need to reset here
     // The mock is already configured to return a function, which is fine for our tests
@@ -74,12 +82,7 @@ describe('Trending API Integration', () => {
         { id: '7', name: 'Campaign G', platform: 'meta', status: 'active', roas: 0.8, spend: 100, revenue: 80, impressions: 1000, clicks: 50, conversions: 5 },
       ];
 
-      campaigns.forEach(c => {
-        db.prepare(`
-          INSERT INTO campaigns (id, campaign_id, name, platform, status, roas, spend, revenue, impressions, clicks, conversions)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(c.id, c.id, c.name, c.platform, c.status, c.roas, c.spend, c.revenue, c.impressions, c.clicks, c.conversions);
-      });
+      campaigns.forEach(insertCampaign);
 
       const res = await auth(request(app).get('/api/trending/internal'));
 
@@ -112,6 +115,19 @@ describe('Trending API Integration', () => {
       });
     });
 
+    it('never ranks another tenant\u2019s campaigns', async () => {
+      insertCampaign({ id: 'mine', name: 'Mine', platform: 'meta', status: 'active', roas: 9.0, spend: 100, revenue: 900, impressions: 1000, clicks: 50, conversions: 10 });
+      db.prepare(`
+        INSERT INTO campaigns (id, campaign_id, name, platform, status, roas, spend, revenue, impressions, clicks, conversions, user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run('theirs', 'theirs', 'Theirs', 'meta', 'active', 99.0, 100, 9900, 1000, 50, 10, 'someone-else');
+
+      const res = await auth(request(app).get('/api/trending/internal'));
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.map(c => c.id)).toEqual(['mine']);
+    });
+
     it('filters out campaigns with null or zero ROAS', async () => {
       const campaigns = [
         { id: '1', name: 'Valid Campaign', platform: 'meta', status: 'active', roas: 3.5, spend: 100, revenue: 350, impressions: 1000, clicks: 50, conversions: 10 },
@@ -119,12 +135,7 @@ describe('Trending API Integration', () => {
         { id: '3', name: 'Zero ROAS Campaign', platform: 'tiktok', status: 'active', roas: 0, spend: 150, revenue: 0, impressions: 1500, clicks: 75, conversions: 15 },
       ];
 
-      campaigns.forEach(c => {
-        db.prepare(`
-          INSERT INTO campaigns (id, campaign_id, name, platform, status, roas, spend, revenue, impressions, clicks, conversions)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(c.id, c.id, c.name, c.platform, c.status, c.roas, c.spend, c.revenue, c.impressions, c.clicks, c.conversions);
-      });
+      campaigns.forEach(insertCampaign);
 
       const res = await auth(request(app).get('/api/trending/internal'));
 
@@ -140,12 +151,7 @@ describe('Trending API Integration', () => {
         { id: '2', name: 'Campaign B', platform: 'google', status: 'active', roas: 2.0, spend: 200, revenue: 400, impressions: 500, clicks: 25, conversions: 5 },
       ];
 
-      campaigns.forEach(c => {
-        db.prepare(`
-          INSERT INTO campaigns (id, campaign_id, name, platform, status, roas, spend, revenue, impressions, clicks, conversions)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(c.id, c.id, c.name, c.platform, c.status, c.roas, c.spend, c.revenue, c.impressions, c.clicks, c.conversions);
-      });
+      campaigns.forEach(insertCampaign);
 
       const res = await auth(request(app).get('/api/trending/internal'));
 
@@ -155,10 +161,7 @@ describe('Trending API Integration', () => {
     });
 
     it('handles zero impressions for CTR calculation', async () => {
-      db.prepare(`
-        INSERT INTO campaigns (id, campaign_id, name, platform, status, roas, spend, revenue, impressions, clicks, conversions)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run('1', '1', 'Zero Impressions', 'meta', 'active', 3.5, 100, 350, 0, 0, 0);
+      insertCampaign({ id: '1', name: 'Zero Impressions', platform: 'meta', status: 'active', roas: 3.5, spend: 100, revenue: 350, impressions: 0, clicks: 0, conversions: 0 });
 
       const res = await auth(request(app).get('/api/trending/internal'));
 
@@ -241,12 +244,7 @@ describe('Trending API Integration', () => {
         { id: '2', name: 'Internal Trend 2', platform: 'google', status: 'active', roas: 5.2, spend: 200, revenue: 1040, impressions: 2000, clicks: 100, conversions: 20 },
       ];
 
-      campaigns.forEach(c => {
-        db.prepare(`
-          INSERT INTO campaigns (id, campaign_id, name, platform, status, roas, spend, revenue, impressions, clicks, conversions)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(c.id, c.id, c.name, c.platform, c.status, c.roas, c.spend, c.revenue, c.impressions, c.clicks, c.conversions);
-      });
+      campaigns.forEach(insertCampaign);
 
       const res = await auth(request(app).get('/api/trending/all'));
 
@@ -425,10 +423,7 @@ describe('Trending API Integration', () => {
     });
 
     it('returns internal trends even when external fails', async () => {
-      db.prepare(`
-        INSERT INTO campaigns (id, campaign_id, name, platform, status, roas, spend, revenue, impressions, clicks, conversions)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run('1', '1', 'Test Campaign', 'meta', 'active', 3.5, 100, 350, 1000, 50, 10);
+      insertCampaign({ id: '1', name: 'Test Campaign', platform: 'meta', status: 'active', roas: 3.5, spend: 100, revenue: 350, impressions: 1000, clicks: 50, conversions: 10 });
 
       const res = await auth(request(app).get('/api/trending/all'));
 
@@ -507,10 +502,7 @@ describe('Trending API Integration', () => {
       db.prepare('DELETE FROM campaigns').run();
 
       // Insert test campaigns
-      db.prepare(`
-        INSERT INTO campaigns (id, campaign_id, name, platform, status, roas, spend, revenue, impressions, clicks, conversions)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run('cleanup-test', 'cleanup-test', 'Cleanup Test', 'meta', 'active', 3.5, 100, 350, 1000, 50, 10);
+      insertCampaign({ id: 'cleanup-test', name: 'Cleanup Test', platform: 'meta', status: 'active', roas: 3.5, spend: 100, revenue: 350, impressions: 1000, clicks: 50, conversions: 10 });
 
       // Verify data exists
       let res = await auth(request(app).get('/api/trending/internal'));

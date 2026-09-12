@@ -10,7 +10,7 @@
 
 - **Backend:** Express 5 + SQLite (better-sqlite3)
 - **Frontend:** React 19 + TypeScript + Tailwind CSS 4 + shadcn/ui
-- **Bot:** Telegraf (Telegram) — 7 commands, 10 cron jobs
+- **Bot:** Telegraf (Telegram) — 7 commands, 11 cron jobs
 - **Security:** AES-256-GCM encryption, Helmet, audit logging, JWT auth
 - **MCP:** Model Context Protocol server with 13 tools (SSE transport)
 - **Deploy:** Docker Compose, auto-restart on boot
@@ -55,7 +55,7 @@ Routes → Services → Repositories → DB (SQLite)
   ↓
 Domain (pure business logic — no DB, no API calls)
   ↓
-Scheduler (10 cron jobs wired to domain functions)
+Scheduler (11 cron jobs wired to domain functions)
 ```
 
 ## Key Features
@@ -102,20 +102,27 @@ AdForge exposes a Model Context Protocol server at `GET /api/mcp/sse` (requires 
 npx @modelcontextprotocol/inspector http://localhost:5000/api/mcp/sse
 ```
 
-## Scheduler Jobs (10 cron jobs)
+## Scheduler Jobs (11 cron jobs)
+
+All jobs live in `server/bot/scheduler.js`. The count is asserted at boot
+(`cron.getTasks().size`), so a drift here shows up in the startup log.
 
 | # | Job | Schedule | What it does |
 |---|-----|----------|--------------|
 | 1 | Campaign Monitor | Every 6h | Evaluates stoploss, scale eligibility, generates reports |
 | 2 | Bid Satpam | Every 5m | Enforces bid caps (BID_SATPAM_MIN/MAX/TARGET) |
 | 3 | Daily Dashboard | 07:00 WIB | Sends formatted daily report via Telegram |
-| 4 | Token Health | Every 6h | Verifies Meta API tokens, alerts on expiry |
-| 5 | Spend Guard | Every 5m | Compares spend to automation rules |
-| 6 | Subscription Check | 09:00 WIB | Monitors payment expiry |
-| 7 | Follow-up Engine | Every :30 | Flags WINNING campaigns not yet scaled |
-| 8 | Meta Sync | Every 6h at :30 | Syncs remote campaigns to local DB |
-| 9 | Daily Eval Guard | 01:00 WIB | Evaluates all active campaigns for underperformance |
-| 10 | Auto-scale | Triggered | Runs when campaign monitor detects WINNING status |
+| 4 | Token Health | Every 6h at :15 | Verifies platform tokens, alerts the OWNER on expiry |
+| 5 | Rule Guard | Every 5m | Evaluates automation rules, drafts changes for approval |
+| 6 | Account Digest | 08:00 WIB | Per-account performance report + AI recommendations |
+| 7 | Anomaly Sweep | Hourly | Flags spend/ROAS anomalies per account |
+| 8 | Subscription Check | 09:00 WIB | Monitors payment expiry |
+| 9 | Multi-Platform Sync | Every 6h at :30 | Syncs remote campaigns to local DB |
+| 10 | Daily Eval Guard | 01:00 WIB | Evaluates all active campaigns for underperformance |
+| 11 | Database Backup | Every 6h | Backs up the SQLite database |
+
+Scale-up alerts are event-driven, not a cron job: the campaign monitor sends one
+when `evaluateScaleEligibility` reports `canScale` on a `SCALE_UP` decision.
 
 ## React Pages (12)
 

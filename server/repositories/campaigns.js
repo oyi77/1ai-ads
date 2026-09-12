@@ -159,17 +159,20 @@ export class CampaignsRepository {
     return this.findById(id);
   }
 
+  /**
+   * Delivering campaigns. Compares case-insensitively: the column stores the
+   * provider-mapped status ('active'), so the previous literal 'ACTIVE' matched
+   * no row and this returned an empty list for every caller.
+   */
   findActive(userId) {
-    if (userId) {
-      return this.db.prepare('SELECT * FROM campaigns WHERE status = ? AND user_id = ?').all('ACTIVE', userId).map(row => ({
-        ...row,
-        stats: { spend: row.spend, revenue: row.revenue, roas: row.roas, impressions: row.impressions, clicks: row.clicks },
-      }));
-    }
-    return this.db.prepare('SELECT * FROM campaigns WHERE status = ?').all('ACTIVE').map(row => ({
+    const withStats = (row) => ({
       ...row,
       stats: { spend: row.spend, revenue: row.revenue, roas: row.roas, impressions: row.impressions, clicks: row.clicks },
-    }));
+    });
+    if (userId) {
+      return this.db.prepare("SELECT * FROM campaigns WHERE lower(status) = 'active' AND user_id = ?").all(userId).map(withStats);
+    }
+    return this.db.prepare("SELECT * FROM campaigns WHERE lower(status) = 'active'").all().map(withStats);
   }
 
   getByUserId(userId) {

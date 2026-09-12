@@ -3,6 +3,8 @@
  * Ported from asisten-jualan/bot/handlers/admin.py
  */
 
+import { filterActiveCampaigns } from '../../lib/campaign-status.js';
+
 function escMd(str) {
   if (str === null || str === undefined) return '';
   return String(str).replace(/[_*[\]()~`>#+\-=|.!{}]/g, '\\$&');
@@ -26,7 +28,7 @@ export function handleAdminStats(deps) {
         `Users: ${users.length}\n` +
         `Campaigns: ${campaigns.length}\n` +
         `Connected accounts: ${accounts.length}\n` +
-        `Active campaigns: ${campaigns.filter(c => c.status === 'ACTIVE').length}`,
+        `Active campaigns: ${filterActiveCampaigns(campaigns).length}`,
         { parse_mode: 'Markdown' }
       );
     } catch {

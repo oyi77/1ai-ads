@@ -23,10 +23,12 @@ export class CampaignReporter {
     const report = {
       date: new Date().toISOString().split('T')[0],
       totalCampaigns: campaigns.length,
-      activeCampaigns: campaigns.filter(c => c.status === 'ACTIVE').length,
+      // Status is persisted lower-case ('active'/'paused'), so the old
+      // upper-case compare reported 0 active campaigns on every report.
+      activeCampaigns: campaigns.filter(c => String(c.status).toLowerCase() === 'active').length,
       totalSpend: stats.totalSpend,
       totalROAS: stats.totalROAS,
-      actionsTaken: this._getActionsTakenToday(),
+      actionsTaken: this._getActionsTakenToday(userId),
       newRecommendations: await this.aiAgent.analyzeAndSuggest(userId),
     };
 
@@ -51,13 +53,21 @@ export class CampaignReporter {
     };
   }
 
-  _getActionsTakenToday() {
+  /**
+   * Count of rule actions fired today for ONE tenant.
+   *
+   * `getAll()` takes the owner id; calling it bare binds undefined and returns
+   * an empty list, and the hydrated rows expose `lastTriggeredAt` — so the old
+   * `last_triggered` check was dead on both counts (always reported 0).
+   */
+  _getActionsTakenToday(userId) {
     try {
+      if (!userId) return 0;
       const today = new Date().toISOString().split('T')[0];
-      const rules = this.rulesRepo.getAll ? this.rulesRepo.getAll() : (this.rulesRepo.findAll ? this.rulesRepo.findAll() : []);
-      return rules.filter(r => r.last_triggered?.startsWith(today)).length;
+      const rules = this.rulesRepo.getAll(userId) || [];
+      return rules.filter(r => String(r.lastTriggeredAt ?? '').startsWith(today)).length;
     } catch (err) {
-      log.error('Failed to count actions today', { error: err.message });
+      log.error('Failed to count actions today', { userId, error: err.message });
       return 0;
     }
   }

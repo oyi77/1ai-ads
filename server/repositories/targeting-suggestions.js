@@ -1,6 +1,9 @@
 /**
  * TargetingSuggestionsRepository — persists ad targeting suggestions per post/page.
  * Table: targeting_suggestions
+ *
+ * Rows are tenant-owned: every read and write carries the owning user id so one
+ * customer can never list or overwrite another customer's audience suggestions.
  */
 export class TargetingSuggestionsRepository {
   constructor(db) {
@@ -12,6 +15,7 @@ export class TargetingSuggestionsRepository {
     this.db.prepare(`
       CREATE TABLE IF NOT EXISTS targeting_suggestions (
         id                INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id           TEXT,
         post_id           TEXT NOT NULL,
         page_id           TEXT NOT NULL,
         category          TEXT,
@@ -26,15 +30,19 @@ export class TargetingSuggestionsRepository {
         UNIQUE(post_id, page_id)
       )
     `).run();
+    this.db.prepare(
+      'CREATE INDEX IF NOT EXISTS idx_targeting_suggestions_user ON targeting_suggestions(user_id)'
+    ).run();
   }
 
   /** Upsert a targeting suggestion. Returns the saved row. */
-  upsert({ post_id, page_id, category, age_min, age_max, genders, interests, locations, lookalike_source, confidence_score }) {
+  upsert({ user_id = null, post_id, page_id, category, age_min, age_max, genders, interests, locations, lookalike_source, confidence_score }) {
     this.db.prepare(`
       INSERT INTO targeting_suggestions
-        (post_id, page_id, category, age_min, age_max, genders, interests_json, locations_json, lookalike_source, confidence_score)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (user_id, post_id, page_id, category, age_min, age_max, genders, interests_json, locations_json, lookalike_source, confidence_score)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(post_id, page_id) DO UPDATE SET
+        user_id          = COALESCE(excluded.user_id, targeting_suggestions.user_id),
         category         = excluded.category,
         age_min          = excluded.age_min,
         age_max          = excluded.age_max,
@@ -45,6 +53,7 @@ export class TargetingSuggestionsRepository {
         confidence_score = excluded.confidence_score,
         created_at       = datetime('now')
     `).run(
+      user_id,
       post_id, page_id,
       category ?? null,
       age_min ?? 18,
@@ -58,20 +67,27 @@ export class TargetingSuggestionsRepository {
     return this.findByPost(post_id, page_id);
   }
 
-  /** Find saved suggestion for a post+page. Returns null if absent. */
-  findByPost(post_id, page_id) {
-    const row = this.db.prepare(
-      'SELECT * FROM targeting_suggestions WHERE post_id = ? AND page_id = ?'
-    ).get(post_id, page_id);
+  /**
+   * Find saved suggestion for a post+page. Scoped to `userId` when provided —
+   * a post id belonging to another tenant then reads as absent.
+   */
+  findByPost(post_id, page_id, userId = null) {
+    const sql = userId
+      ? 'SELECT * FROM targeting_suggestions WHERE post_id = ? AND page_id = ? AND user_id = ?'
+      : 'SELECT * FROM targeting_suggestions WHERE post_id = ? AND page_id = ?';
+    const params = userId ? [post_id, page_id, userId] : [post_id, page_id];
+    const row = this.db.prepare(sql).get(...params);
     if (!row) return null;
     return this._deserialize(row);
   }
 
-  /** List all suggestions, newest first. */
-  findAll({ limit = 50, offset = 0 } = {}) {
-    return this.db.prepare(
-      'SELECT * FROM targeting_suggestions ORDER BY created_at DESC LIMIT ? OFFSET ?'
-    ).all(limit, offset).map(r => this._deserialize(r));
+  /** List suggestions, newest first, scoped to `userId` when provided. */
+  findAll({ limit = 50, offset = 0, userId = null } = {}) {
+    const sql = userId
+      ? 'SELECT * FROM targeting_suggestions WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
+      : 'SELECT * FROM targeting_suggestions ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    const params = userId ? [userId, limit, offset] : [limit, offset];
+    return this.db.prepare(sql).all(...params).map(r => this._deserialize(r));
   }
 
   _deserialize(row) {

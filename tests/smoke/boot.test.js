@@ -49,7 +49,10 @@ describe('Smoke Tests', () => {
     db.close();
   });
 
-  it('auth endpoints respond', async () => {
+  // These build an app + run bcrypt login; measured ~1.9s warm, but the full
+  // suite runs 12 files in parallel and this one has no timeout of its own,
+  // so it intermittently blew the 5s default. Line 72 already pins 15s.
+  it('auth endpoints respond', { timeout: 15000 }, async () => {
     const db = createDatabase(':memory:');
     seedDemoData(db);
     const app = createApp({ db, llmClient: mockLLM, mcpClient: mockMCP });
@@ -60,7 +63,7 @@ describe('Smoke Tests', () => {
     db.close();
   });
 
-  it('protected endpoints return 401 without token', async () => {
+  it('protected endpoints return 401 without token', { timeout: 15000 }, async () => {
     const db = createDatabase(':memory:');
     const app = createApp({ db, llmClient: mockLLM, mcpClient: mockMCP });
 
