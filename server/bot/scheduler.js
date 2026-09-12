@@ -1,6 +1,6 @@
 /**
  * Bot Scheduler — Cron jobs for automated tasks
- * Ported from asisten-jualan/scheduler/jobs.py (10 cron jobs)
+ * Ported from asisten-jualan/scheduler/jobs.py
  *
  * Uses node-cron for scheduling. All jobs run in Express process.
  */
@@ -841,5 +841,5 @@ export function initScheduler(bot, deps) {
   });
   // ────────────────────────────────────────────────────────────
 
-  log.info('Bot scheduler initialized with 11 cron jobs');
+  log.info(`Bot scheduler initialized with ${cron.getTasks?.().size ?? '?'} cron jobs`);
 }
