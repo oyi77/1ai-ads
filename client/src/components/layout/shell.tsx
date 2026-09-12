@@ -140,7 +140,7 @@ export function Shell() {
   }, []);
 
   useEffect(() => {
-    api.get('/auth/me').then(res => {
+    api.get<{ data: { username: string; plan: string } }>('/auth/me').then(res => {
       if (res?.data) setUser(res.data);
     }).catch(() => {});
   }, []);
@@ -300,7 +300,7 @@ export function Shell() {
                 {user.username}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <PlanBadge plan={user.plan} />
+                <PlanBadge />
               </div>
             </div>
             <button

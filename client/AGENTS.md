@@ -12,7 +12,7 @@ Dark industrial dashboard theme (trading terminal aesthetic).
 | `src/lib/api.ts` | Typed fetch wrapper with auth lifecycle (login, register, refreshToken, logout, 401 retry) |
 | `src/pages/` | Page components (dashboard, campaigns, settings, creative, reporting, etc.) |
 | `src/components/layout/shell.tsx` | App shell with sidebar + topbar |
-| `vite.config.js` | Vite build config — sets `root: 'client'`, outputs to `../dist` |
+| `vite.config.ts` | Vite build config — react + tailwind plugins, outputs to `../dist` |
 
 ## Subdirectories
 | Directory | Purpose |
