@@ -1,6 +1,16 @@
 ## [1.6.0] - 2026-09-12
 
 ### Fixed
+- **CRITICAL**: `/api/boost/*`, `/api/adsets`, `/api/invoices` and
+  `/api/audiences/saved` returned 500 for every request since commit `a45a1a3`
+  (2026-09-05). That commit removed six repository registrations from
+  `createRepositories()` while leaving every consumer in place, so
+  `BoostApprovalService`, `TargetingService` and three routers received
+  `undefined`. Only `auditRepo` was compensated elsewhere (`app.js`); the other
+  five left the SPA `/targeting` page and the adsets/invoices/audiences APIs
+  dead. All five registrations restored, and
+  `tests/unit/server/repositories-wiring.test.js` now fails the build if any
+  `repos.<name>` consumer has no registration.
 - **CRITICAL (multi-tenant)**: `/api/boost/recommend`, `/api/boost/:id`,
   `/api/boost/:id/approve|reject` and `/api/boost/targeting*` were global — any signed-in
   user could list, read and approve another customer's boost recommendations and audience

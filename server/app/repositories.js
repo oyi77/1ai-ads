@@ -19,6 +19,11 @@ import { DraftsRepository } from '../repositories/drafts.js';
 import { ShopeeCommissionsRepository } from '../repositories/shopee-commissions.js';
 import { WaConversationsRepository } from '../repositories/wa-conversations.js';
 import { UserMetaAppsRepository } from '../repositories/user-meta-apps.js';
+import { BoostRecommendationsRepository } from '../repositories/boost-recommendations.js';
+import { AdsetsRepository } from '../repositories/adsets.js';
+import { InvoicesRepository } from '../repositories/invoices.js';
+import { SavedAudiencesRepository } from '../repositories/saved-audiences.js';
+import { TargetingSuggestionsRepository } from '../repositories/targeting-suggestions.js';
 import { CreativeLibraryRepository } from '../repositories/creative-library.js';
 import { CampaignWizardRepository } from '../repositories/campaign-wizard.js';
 import { ReportingRepository } from '../repositories/reporting.js';
@@ -56,12 +61,24 @@ export function createRepositories(db) {
     contentSchedulerQueueRepo,
     draftsRepo: new DraftsRepository(db, settingsRepo),
     shopeeCommissionsRepo: new ShopeeCommissionsRepository(db),
+    // Consumed by services.js (BoostApprovalService, TargetingService). Dropping
+    // these left both services holding an undefined repo, so every /api/boost
+    // route — including the ones the SPA /targeting page calls — returned 500.
+    boostRecommendationsRepo: new BoostRecommendationsRepository(db),
+    targetingSuggestionsRepo: new TargetingSuggestionsRepository(db),
     waConversationsRepo: new WaConversationsRepository(db),
     userMetaAppsRepo: new UserMetaAppsRepository(db),
     creativeLibraryRepo: new CreativeLibraryRepository(db),
     campaignWizardRepo: new CampaignWizardRepository(db),
     reportingRepo: new ReportingRepository(db),
     automationRulesRepo: new AutomationRuleRepository(db),
+    // Consumed by routes/_campaigns.js and routes/_ai.js. Commit a45a1a3
+    // dropped these registrations along with the boost/targeting pair while
+    // leaving every consumer in place, so the routers received `undefined` and
+    // every /adsets, /invoices and /audiences/saved request threw.
+    adsetsRepo: new AdsetsRepository(db),
+    invoicesRepo: new InvoicesRepository(db),
+    savedAudiencesRepo: new SavedAudiencesRepository(db),
     monitoringRepo: new MonitoringRepository(db),
   };
 }
