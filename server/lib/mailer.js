@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { createRequire } from 'module';
 import { createLogger } from './logger.js';
 import config from '../config/index.js';
+import { escapeHtml, validateUrl } from './escape.js';
 
 const require = createRequire(import.meta.url);
 const log = createLogger('mailer');
@@ -102,5 +103,30 @@ export async function sendPasswordResetEmail(email, username, token) {
       <p style="color:#9ca3af;font-size:13px;line-height:1.6">Hi ${username}, we received a request to reset your password. This link expires in 1 hour.</p>
       <p style="margin:20px 0">${button(url, 'Reset Password')}</p>
       <p style="color:#6b7280;font-size:11px;word-break:break-all">Or paste this link: ${url}</p>`)
+  );
+}
+
+const ROLE_LABELS = { admin: 'administrator', viewer: 'viewer' };
+
+export async function sendInvite(email, { inviterName, role, acceptUrl, token, expiresAt } = {}) {
+  // Prefer the caller's accept URL, but never put a javascript:/data: URL in an
+  // email — fall back to constructing one from the configured public origin.
+  const url = validateUrl(acceptUrl)
+    ? acceptUrl
+    : `${config.publicBaseUrl}/team/accept?token=${encodeURIComponent(token || '')}`;
+  const inviter = escapeHtml(inviterName || 'A teammate');
+  const roleLabel = ROLE_LABELS[role] || 'team member';
+  const expiry = expiresAt
+    ? `<p style="color:#6b7280;font-size:11px">This invitation expires on ${escapeHtml(expiresAt)}.</p>`
+    : '';
+
+  return send(
+    email,
+    `${inviterName || 'A teammate'} invited you to AdForge`,
+    layout('Join the team', `
+      <p style="color:#9ca3af;font-size:13px;line-height:1.6">${inviter} invited you to collaborate on AdForge as ${escapeHtml(roleLabel)}.</p>
+      <p style="margin:20px 0">${button(url, 'Accept Invitation')}</p>
+      <p style="color:#6b7280;font-size:11px;word-break:break-all">Or paste this link: ${escapeHtml(url)}</p>
+      ${expiry}`)
   );
 }

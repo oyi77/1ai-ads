@@ -368,19 +368,26 @@ CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
 CREATE TABLE IF NOT EXISTS team_members (
   id TEXT PRIMARY KEY,
   team_owner_id TEXT NOT NULL,  -- the account owner (billable user)
-  user_id TEXT NOT NULL,         -- the invited user (can be same as owner initially)
+  user_id TEXT,                  -- the invited user; NULL until the invite is accepted
   email TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'viewer',  -- owner, admin, viewer
   status TEXT NOT NULL DEFAULT 'pending',  -- pending, active, revoked
   invited_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   accepted_at DATETIME,
   revoked_at DATETIME,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  invite_token TEXT,
+  expires_at DATETIME
 );
 
 CREATE INDEX IF NOT EXISTS idx_team_members_owner ON team_members(team_owner_id);
 CREATE INDEX IF NOT EXISTS idx_team_members_user ON team_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_team_members_status ON team_members(status);
+
+-- Partial unique index: only real tokens are constrained, so member rows
+-- created directly (no invite) never collide on NULL.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_team_members_invite
+  ON team_members(invite_token) WHERE invite_token IS NOT NULL;
 
 -- Usage meters for per-tenant billing/limits
 CREATE TABLE IF NOT EXISTS usage_meters (

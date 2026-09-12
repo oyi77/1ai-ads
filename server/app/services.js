@@ -55,6 +55,9 @@ import { DashboardWidgetsRepository } from '../repositories/dashboard-widgets.js
 import { AccountReportService } from '../services/account-report-service.js';
 import { AlertingService } from '../services/alerting.js';
 import { NangoAuthService } from '../services/nango-auth.js';
+// Namespace import: mailer is consumed as a module of send helpers
+// (`services.mailer.sendInvite`), not as a constructed instance.
+import * as mailer from '../lib/mailer.js';
 export function createServices({ db, repos, params }) {
   const llmClient = (params && params.llmClient) || new LLMClient({
     url: config.llm.url,
@@ -170,7 +173,7 @@ export function createServices({ db, repos, params }) {
     draftService, facebookSystemUserService, campaignMonitorService,
     abTestService, fatigueDetector, unifiedReporter, bulkOperations,
     imageGenerator, audienceIntelligence, creativeScorer, whiteLabelService,
-    alertingService, boostApproval, targeting,
+    alertingService, boostApproval, targeting, mailer,
     creativeLibraryRepo, dashboardWidgetsRepo, accountReportService, nangoAuth,
     campaignWizardRepo, reportingRepo, automationRulesRepo, monitoringRepo: repos.monitoringRepo,
   };

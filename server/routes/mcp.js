@@ -13,6 +13,17 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
   // Per-user transport map prevents concurrent connections from overwriting each other
   const sseTransports = new Map();
 
+  // mcpClient is injected via createApp({ mcpClient }) and is absent from the
+  // default server graph (server.js passes only { db, llmClient }). Without it
+  // every route below throws on `mcpClient.x` and answers an opaque 500, so
+  // fail with an explicit 503 instead. The SSE endpoint does not need it.
+  const requireMcpClient = (_req, res, next) => {
+    if (!mcpClient) {
+      return res.status(503).json({ success: false, error: 'MCP client not configured' });
+    }
+    next();
+  };
+
   router.get('/sse', async (req, res) => {
     const userId = req.user.id;
     log.info('New SSE connection request', { userId });
@@ -32,13 +43,13 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
     }
   });
 
-  router.get('/status', (req, res) => {
+  router.get('/status', requireMcpClient, (req, res) => {
     const status = mcpClient.getStatus();
     res.json({ success: true, data: status });
   });
 
   // Connect to a platform's MCP server
-  router.post('/connect', async (req, res) => {
+  router.post('/connect', requireMcpClient, async (req, res) => {
     const { platform } = req.body;
     if (!platform) {
       return res.status(400).json({ success: false, error: 'platform is required' });
@@ -69,7 +80,7 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
   });
 
   // Disconnect from a platform
-  router.post('/disconnect', async (req, res) => {
+  router.post('/disconnect', requireMcpClient, async (req, res) => {
     const { platform } = req.body;
     if (!platform) {
       return res.status(400).json({ success: false, error: 'platform is required' });
@@ -80,13 +91,13 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
   });
 
   // List available tools for a connected platform
-  router.get('/tools/:platform', (req, res) => {
+  router.get('/tools/:platform', requireMcpClient, (req, res) => {
     const tools = mcpClient.getTools(req.params.platform);
     res.json({ success: true, data: tools });
   });
 
   // Call an MCP tool
-  router.post('/call', async (req, res) => {
+  router.post('/call', requireMcpClient, async (req, res) => {
     const { platform, tool, arguments: args } = req.body;
     if (!platform || !tool) {
       return res.status(400).json({ success: false, error: 'platform and tool are required' });
@@ -101,7 +112,7 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
   });
 
   // Get ad accounts for a connected platform
-  router.get('/accounts/:platform', async (req, res) => {
+  router.get('/accounts/:platform', requireMcpClient, async (req, res) => {
     const { platform } = req.params;
     const toolName = platform === 'meta' ? 'get_ad_accounts' : 'list_accounts';
 
@@ -114,7 +125,7 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
   });
 
   // Sync campaigns from a connected platform
-  router.post('/sync/:platform', async (req, res) => {
+  router.post('/sync/:platform', requireMcpClient, async (req, res) => {
     const { platform } = req.params;
     const { account_id } = req.body;
 

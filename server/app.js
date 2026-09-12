@@ -119,17 +119,17 @@ export function createApp(params) {
     next();
   });
 
-  // Central 5xx error sanitizer — per-route catch blocks return err.message
+  // Central 500 error sanitizer — per-route catch blocks return err.message
   // verbatim (e.g. res.status(500).json({ success:false, error: err.message })).
   // In production those leak internal details (SQLite constraint text, file
-  // paths, provider errors). Wrap res.json so any 5xx error response with a
+  // paths, provider errors). Wrap res.json so a bare-500 error response with a
   // string error field is replaced with the same generic message the central
   // error handler uses. Development/test keep err.message for debugging.
   app.use((_req, res, next) => {
     const originalJson = res.json.bind(res);
     res.json = (body) => {
       if (
-        res.statusCode >= 500 &&
+        res.statusCode === 500 &&
         body &&
         typeof body === 'object' &&
         body.success === false &&
@@ -328,7 +328,7 @@ export function createApp(params) {
     const status = err.status || err.statusCode || 500;
     log.error('Request error', { timestamp: new Date().toISOString(), method: req.method, path: req.path, status, error: err.message });
     if (status >= 500) log.error('Server error stack', { stack: err.stack });
-    res.status(status).json({ success: false, error: config.nodeEnv === 'production' ? 'Internal Server Error' : err.message });
+    res.status(status).json({ success: false, error: (status >= 500 && config.nodeEnv === 'production') ? 'Internal Server Error' : err.message });
   });
 
   app.locals.realtimeService = services.realtimeService;

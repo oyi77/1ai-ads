@@ -12,6 +12,10 @@ const ROLE_PERMISSIONS = {
   viewer: ['read_only'],
 };
 
+// Invitation links stay valid for this long. The same value is persisted on the
+// row and echoed in the email so the deadline cannot be misreported.
+const INVITE_TTL_DAYS = 14;
+
 function generateInviteToken() {
   return crypto.randomBytes(32).toString('base64url');
 }
@@ -73,8 +77,10 @@ export function createTeamRouter(paymentsRepo, usersRepo, mailer) {
       const invitedUser = usersRepo.findByEmail?.(email);
       const invitedUserId = invitedUser?.id || null;
 
-      // Create invite
+      // Create invite. The deadline is stored so acceptance can enforce it.
       const inviteToken = generateInviteToken();
+      const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 86_400_000)
+        .toISOString().replace('T', ' ').slice(0, 19);
       const member = paymentsRepo.addTeamMember({
         teamOwnerId,
         userId: invitedUserId,
@@ -82,32 +88,39 @@ export function createTeamRouter(paymentsRepo, usersRepo, mailer) {
         role,
         status: 'pending',
         inviteToken,
+        expiresAt,
       });
 
-      // Send invite email if mailer available
-      if (mailer && mailer.sendInvite) {
+      // sendInvite reports real delivery and returns false when no provider is
+      // configured, so a suppressed send must not be logged as success.
+      let emailSent = false;
+      if (mailer && typeof mailer.sendInvite === 'function') {
         try {
           const acceptUrl = `${process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com'}/team/accept?token=${inviteToken}`;
-          await mailer.sendInvite(email, {
+          emailSent = await mailer.sendInvite(email, {
             inviterName: req.user.username || req.user.email,
             role,
             acceptUrl,
             token: inviteToken,
+            expiresAt,
           });
-          log.info('Team invite email sent', { email, teamOwnerId });
+          if (emailSent) log.info('Team invite email sent', { email, teamOwnerId });
+          else log.warn('Team invite stored but no mail provider is configured', { email, teamOwnerId });
         } catch (err) {
           log.warn('Failed to send invite email', { error: err.message, email });
         }
+      } else {
+        log.warn('Team invite stored without a mailer', { email, teamOwnerId });
       }
 
-      // Store invite token for acceptance (could use a separate table or embed in member record)
-      // For simplicity, we'll use the member ID as reference and email token separately
+      // Never echo the invite token: the response is readable by the inviter's
+      // client, whereas the token is meant to travel only by email.
+      const safeMember = { ...(member || {}) };
+      delete safeMember.invite_token;
+
       res.status(201).json({
         success: true,
-        data: {
-          ...member,
-          inviteToken, // Only returned once for email construction
-        },
+        data: { ...safeMember, emailSent },
       });
     } catch (err) {
       log.error('Failed to invite team member', { error: err.message, userId: req.user.id });
@@ -115,7 +128,8 @@ export function createTeamRouter(paymentsRepo, usersRepo, mailer) {
     }
   });
 
-  // POST /api/team/accept — accept team invitation (public, no auth)
+  // POST /api/team/accept — accept team invitation. The invitee must be signed
+  // in: accepting binds the membership to their authenticated user id.
   router.post('/accept', async (req, res) => {
     try {
       const { email, token } = req.body;
@@ -141,6 +155,9 @@ export function createTeamRouter(paymentsRepo, usersRepo, mailer) {
       }
 
       const accepted = paymentsRepo.acceptTeamInvite(pending.id, user.id);
+      if (!accepted) {
+        return res.status(409).json({ success: false, error: 'Invitation is expired or already accepted' });
+      }
       res.json({ success: true, data: accepted });
     } catch (err) {
       log.error('Failed to accept invite', { error: err.message });

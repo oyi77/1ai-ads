@@ -104,11 +104,14 @@ export class PaymentsRepository {
 
   // Team Members
   addTeamMember(params) {
-    const { teamOwnerId, userId, email, role, status, inviteToken } = params;
+    const { teamOwnerId, userId, email, role, status, inviteToken, expiresAt } = params;
     this.db.prepare(`
-      INSERT INTO team_members (id, team_owner_id, user_id, email, role, status, invite_token)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(uuidv4(), teamOwnerId, userId, email, role, status || 'pending', inviteToken || null);
+      INSERT INTO team_members (id, team_owner_id, user_id, email, role, status, invite_token, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      uuidv4(), teamOwnerId, userId, email, role,
+      status || 'pending', inviteToken || null, expiresAt || null
+    );
     const row = inviteToken
       ? this.findTeamInviteByToken(inviteToken)
       : this.findTeamMember(teamOwnerId, userId);
@@ -125,6 +128,55 @@ export class PaymentsRepository {
 
   findTeamMembershipByUserId(userId) {
     return this.db.prepare('SELECT * FROM team_members WHERE user_id = ?').all(userId);
+  }
+
+  findTeamMembersByOwner(teamOwnerId) {
+    return this.db.prepare(
+      `SELECT tm.*, u.username AS user_username
+         FROM team_members tm
+         LEFT JOIN users u ON u.id = tm.user_id
+        WHERE tm.team_owner_id = ?
+        ORDER BY tm.invited_at DESC`
+    ).all(teamOwnerId);
+  }
+
+  // Case-insensitive: the invite UI and signup both normalise email, but a
+  // stored "User@X.com" must not slip a second invite past the unique check.
+  findTeamMemberByOwnerAndEmail(teamOwnerId, email) {
+    return this.db.prepare(
+      'SELECT * FROM team_members WHERE team_owner_id = ? AND lower(email) = lower(?)'
+    ).get(teamOwnerId, email) || null;
+  }
+
+  // Scoped to a still-pending, unexpired row so a replayed or stale token is
+  // rejected, and the token is cleared so an accepted link is single-use.
+  acceptTeamInvite(inviteId, userId) {
+    const res = this.db.prepare(`
+      UPDATE team_members
+         SET user_id = ?, status = 'active', accepted_at = CURRENT_TIMESTAMP, invite_token = NULL
+       WHERE id = ? AND status = 'pending'
+         AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+    `).run(userId, inviteId);
+    if (res.changes === 0) return null;
+    return this.db.prepare('SELECT * FROM team_members WHERE id = ?').get(inviteId);
+  }
+
+  updateTeamMemberRole(id, teamOwnerId, role) {
+    const res = this.db.prepare(
+      "UPDATE team_members SET role = ? WHERE id = ? AND team_owner_id = ? AND status != 'revoked'"
+    ).run(role, id, teamOwnerId);
+    if (res.changes === 0) return null;
+    return this.db.prepare('SELECT * FROM team_members WHERE id = ?').get(id);
+  }
+
+  revokeTeamMember(id, teamOwnerId) {
+    const res = this.db.prepare(`
+      UPDATE team_members
+         SET status = 'revoked', revoked_at = CURRENT_TIMESTAMP, invite_token = NULL
+       WHERE id = ? AND team_owner_id = ? AND status != 'revoked'
+    `).run(id, teamOwnerId);
+    if (res.changes === 0) return null;
+    return this.db.prepare('SELECT * FROM team_members WHERE id = ?').get(id);
   }
 
  

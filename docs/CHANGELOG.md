@@ -1,6 +1,35 @@
 ## [1.6.0] - 2026-09-12
 
 ### Fixed
+- **CRITICAL**: `/api/team` (list/invite/accept/role-update/revoke) returned 500 for
+  every request. `PaymentsRepository` never implemented the five methods the router
+  calls (`findTeamMembersByOwner`, `findTeamMemberByOwnerAndEmail`, `acceptTeamInvite`,
+  `updateTeamMemberRole`, `revokeTeamMember`), no test covered the surface, and the
+  `service-wiring` gate only scanned `routes/_*.js`, leaving `team.js` and
+  `app/routers.js` invisible. All five methods are implemented (owner-scoped
+  mutations, single-use tokens, case-insensitive duplicate check), the gate now
+  scans every route file plus the central router list, and
+  `tests/unit/server/routes/team.test.js` covers the lifecycle including
+  cross-tenant 404s.
+- **HIGH**: `team_members.user_id` was `NOT NULL`, but the invite flow explicitly
+  supports emails with no account yet (`invitedUser?.id || null`), and invites never
+  expired. Migration `045` rebuilds the table with a nullable `user_id`, an
+  `expires_at` deadline (14 days, backfilled for pending rows), and a partial unique
+  index on `invite_token`; `acceptTeamInvite` enforces pending + unexpired.
+- **HIGH**: `services.mailer` was consumed by `app/routers.js` but never registered,
+  and `mailer.sendInvite` did not exist, so team-invite emails could never send. The
+  mailer module is now on the service graph, `sendInvite` is implemented (escaped
+  inviter name, validated URL), the route reports delivery via the returned boolean,
+  and the invite token is no longer echoed in the API response.
+- **MEDIUM**: `/api/mcp/*` management routes called the unconfigured `mcpClient`
+  unguarded (`server.js` never injects one), answering an opaque 500. They now answer
+  503 `MCP client not configured`; the SSE endpoint is unaffected.
+- **MEDIUM**: the production error pipeline masked real messages twice — the res.json
+  sanitizer keyed on `statusCode >= 500` (scrubbing the intentional 503) and the
+  central error handler scrubbed every status (so even a 401 answered "Internal
+  Server Error"). The sanitizer now applies to bare 500s only and the error handler
+  preserves sub-500 messages. `tests/unit/server/routes/error-sanitizer-scope.test.js`
+  pins the contract.
 - **CRITICAL**: `/api/boost/*`, `/api/adsets`, `/api/invoices` and
   `/api/audiences/saved` returned 500 for every request since commit `a45a1a3`
   (2026-09-05). That commit removed six repository registrations from
