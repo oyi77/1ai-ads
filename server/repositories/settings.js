@@ -76,18 +76,6 @@ export class SettingsRepository {
     return this._accountsRepo.setCredentials(platform, credentials);
   }
 
-  /** Delete all credential rows for a platform (admin-scoped caller filters by user). */
-  deleteCredentials(platform) {
-    if (this._accountsRepo && typeof this._accountsRepo.getAccounts === 'function') {
-      const accounts = this._accountsRepo.getAccounts(platform);
-      for (const acct of accounts || []) {
-        if (typeof this._accountsRepo.remove === 'function') this._accountsRepo.remove(acct.id);
-      }
-      return { deleted: (accounts || []).length };
-    }
-    return this.delete(`credentials_${platform}`);
-  }
-
 
   /** @deprecated Use platformAccountsRepo.getAccounts(platform) */
   getAccounts(platform = null) {

@@ -29,9 +29,9 @@ export class CampaignMonitorService {
 
   /**
    * Resolve a platform API client bound to the account owner (multi-tenant).
-   * For 'meta' the legacy system metaApi is the fallback when no owner token.
-   * For other platforms only a bound owner token yields a usable client;
-   * otherwise returns null and the caller returns an unsupported/empty shape.
+   * Returns null when the owner has no bound token — every caller renders a
+   * structured empty shape instead of reading tenant data with the operator
+   * credential. Never another user's token.
    */
   _ownerApi(accountId, userId, platform = 'meta') {
     if (userId && this.platformAccountsRepo) {
@@ -49,8 +49,6 @@ export class CampaignMonitorService {
         }
       }
     }
-    // Legacy/system-owned fallback: Meta only.
-    if (platform === 'meta') return this.metaApi || null;
     return null;
   }
 

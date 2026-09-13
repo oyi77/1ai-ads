@@ -13,26 +13,24 @@ describe('BasePlatformApiClient', () => {
   });
 
   describe('_getToken', () => {
-    it('should return access token from credentials', () => {
-      mockSettingsRepo.getCredentials.mockReturnValue({ access_token: 'test-token' });
-      const token = client._getToken();
-      expect(token).toBe('test-token');
+    it('returns the explicit token set via setActiveAccount', () => {
+      client.setActiveAccount(null, 'test-token', true);
+      expect(client._getToken()).toBe('test-token');
     });
 
-    it('should throw if no credentials', () => {
-      mockSettingsRepo.getCredentials.mockReturnValue(null);
+    it('throws when no explicit token (no system fallback)', () => {
       expect(() => client._getToken()).toThrow('not configured');
     });
 
-    it('should throw if no access_token', () => {
-      mockSettingsRepo.getCredentials.mockReturnValue({});
+    it('never consults settingsRepo.getCredentials', () => {
       expect(() => client._getToken()).toThrow('not configured');
+      expect(mockSettingsRepo.getCredentials).not.toHaveBeenCalled();
     });
   });
 
   describe('_get', () => {
     it('should make GET request with token', async () => {
-      mockSettingsRepo.getCredentials.mockReturnValue({ access_token: 'test-token' });
+      client.setActiveAccount(null, 'test-token', true);
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         text: () => Promise.resolve('{"data":"test"}'),
@@ -49,7 +47,7 @@ describe('BasePlatformApiClient', () => {
 
   describe('_post', () => {
     it('should make POST request with token and body', async () => {
-      mockSettingsRepo.getCredentials.mockReturnValue({ access_token: 'test-token' });
+      client.setActiveAccount(null, 'test-token', true);
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         text: () => Promise.resolve('{"success":true}'),

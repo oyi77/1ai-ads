@@ -20,9 +20,9 @@ export class RealtimeService {
   }
 
   /**
-   * Resolve the Meta client bound to the campaign OWNER's token (multi-tenant),
-   * falling back to the system client when the owner has no bound account.
-   * Background polling must not read cross-user campaigns with a system token.
+   * Resolve the Meta client bound to the campaign OWNER's token (multi-tenant).
+   * Returns null when the owner has no bound account — the poll loop skips
+   * those campaigns instead of reading them with the operator credential.
    */
   _metaApiForOwner(campaign) {
     const ownerId = campaign?.user_id || campaign?.created_by;
@@ -37,7 +37,7 @@ export class RealtimeService {
         return api;
       }
     }
-    return this.metaApi;
+    return null;
   }
 
   /**
@@ -134,6 +134,10 @@ export class RealtimeService {
           const key = `${ownerId}:${acctId}`;
           if (!byOwner.has(key)) {
             const api = this._metaApiForOwner(campaign);
+            if (!api) {
+              log.debug('Skipping poll group - owner has no bound Meta token', { ownerId, acctId });
+              continue;
+            }
             byOwner.set(key, { api, accountId: acctId, campaignIds: [] });
           }
           byOwner.get(key).campaignIds.push(campaign);

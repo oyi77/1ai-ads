@@ -172,7 +172,7 @@ describe('RealtimeService', () => {
       expect(acctRepo.findAllActiveByUserAndPlatform).toHaveBeenCalledWith('owner-2', 'meta');
     });
 
-    it('falls back to the system meta when no owner token is bound', () => {
+    it('returns null when no owner token is bound (poll loop skips, no operator read)', () => {
       const metaApi = { getCampaignInsights: vi.fn() };
       const service = new RealtimeService(metaApi, { findAll: vi.fn(() => ({ data: [] })) }, { platformAccountsRepo: acctRepo, settingsRepo });
       acctRepo.getByPlatform.mockReturnValue(null);
@@ -180,15 +180,15 @@ describe('RealtimeService', () => {
 
       const api = service._metaApiForOwner({ id: 'c3', user_id: 'owner-3', platform: 'meta' });
 
-      expect(api).toBe(metaApi);
+      expect(api).toBeNull();
       expect(acctRepo.findAllActiveByUserAndPlatform).toHaveBeenCalledWith('owner-3', 'meta');
     });
 
-    it('falls back to system meta when no platformAccountsRepo is wired', () => {
+    it('returns null when no platformAccountsRepo is wired', () => {
       const metaApi = { getCampaignInsights: vi.fn() };
       const service = new RealtimeService(metaApi, { findAll: vi.fn(() => ({ data: [] })) });
       const api = service._metaApiForOwner({ id: 'c4', user_id: 'owner-4', platform: 'meta' });
-      expect(api).toBe(metaApi);
+      expect(api).toBeNull();
     });
 
     it('polls each active campaign via the owner-scoped client (no cross-user system token)', async () => {

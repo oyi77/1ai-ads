@@ -76,6 +76,9 @@ describe('CampaignMonitorService', () => {
     });
 
     service = new CampaignMonitorService(mockMetaApi, mockCampaignsRepo, mockSettingsRepo, mockPlatformAccountsRepo);
+    // Data-shape tests exercise logic, not routing: bind the owner resolver
+    // to the mock client. The null path has its own dedicated test below.
+    service._ownerApi = vi.fn().mockReturnValue(mockMetaApi);
   });
 
   it('should create instance with dependencies', () => {
@@ -119,6 +122,16 @@ describe('CampaignMonitorService', () => {
       expect(result.activeCampaigns).toBe(0);
       expect(result.totalCampaigns).toBe(0);
       expect(result.alerts[0].type).toBe('api_unavailable');
+    });
+
+    it('returns empty status when the owner has no bound token (no operator read)', async () => {
+      const unscoped = new CampaignMonitorService(mockMetaApi, mockCampaignsRepo, mockSettingsRepo, mockPlatformAccountsRepo);
+      // Real _ownerApi + mocked resolver (null for meta) → null api → empty shape.
+      const result = await unscoped.getAccountStatus('act_123', 'user-no-token', 'meta');
+      expect(result.accountId).toBe('act_123');
+      expect(result.totalCampaigns).toBe(0);
+      expect(result.alerts[0].type).toBe('api_unavailable');
+      expect(mockMetaApi.getCampaigns).not.toHaveBeenCalled();
     });
   });
 

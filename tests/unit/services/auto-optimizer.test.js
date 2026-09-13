@@ -88,6 +88,14 @@ describe('AutoOptimizer', () => {
     mockRulesRepo.findActive.mockReturnValue(rules);
     mockMetaApi.getCampaignInsights.mockResolvedValue(insights);
     mockMetaApi.updateCampaign.mockResolvedValue({ id: 'camp_123', status: 'PAUSED' });
+    // Owner has a bound token: _metaForOwner builds a MetaAdsAPI — point it at the mock.
+    const { MetaAdsAPI: MockMeta } = await import('../../../server/services/meta/index.js');
+    vi.mocked(MockMeta).mockImplementationOnce(function () { return mockMetaApi; });
+    vi.mocked(MockMeta).mockImplementationOnce(function () { return mockMetaApi; });
+    optimizer = new AutoOptimizer(mockMetaApi, mockRulesRepo, mockCampaignsRepo, null, {
+      findAllActiveByUserAndPlatform: () => [{ access_token: 'owner-tok' }],
+    }, {});
+    mockCampaignsRepo.getById.mockResolvedValue({ id: 'camp_123', name: 'LC_camp_123', user_id: 'owner-1' });
 
     const result = await optimizer.evaluate();
 
@@ -149,6 +157,13 @@ describe('AutoOptimizer', () => {
     mockRulesRepo.findActive.mockReturnValue(rules);
     mockMetaApi.getCampaignInsights.mockResolvedValue(insights);
     mockMetaApi.updateCampaign.mockResolvedValue({});
+    const { MetaAdsAPI: MockMetaUp } = await import('../../../server/services/meta/index.js');
+    vi.mocked(MockMetaUp).mockImplementationOnce(function () { return mockMetaApi; });
+    vi.mocked(MockMetaUp).mockImplementationOnce(function () { return mockMetaApi; });
+    optimizer = new AutoOptimizer(mockMetaApi, mockRulesRepo, mockCampaignsRepo, null, {
+      findAllActiveByUserAndPlatform: () => [{ access_token: 'owner-tok' }],
+    }, {});
+    mockCampaignsRepo.getById.mockResolvedValue({ id: 'camp_456', name: 'LC_camp_456', user_id: 'owner-1' });
 
     const result = await optimizer.evaluate();
 
@@ -179,6 +194,13 @@ describe('AutoOptimizer', () => {
     mockRulesRepo.findActive.mockReturnValue(rules);
     mockMetaApi.getCampaignInsights.mockResolvedValue(insights);
     mockMetaApi.updateCampaign.mockResolvedValue({});
+    const { MetaAdsAPI: MockMetaDown } = await import('../../../server/services/meta/index.js');
+    vi.mocked(MockMetaDown).mockImplementationOnce(function () { return mockMetaApi; });
+    vi.mocked(MockMetaDown).mockImplementationOnce(function () { return mockMetaApi; });
+    optimizer = new AutoOptimizer(mockMetaApi, mockRulesRepo, mockCampaignsRepo, null, {
+      findAllActiveByUserAndPlatform: () => [{ access_token: 'owner-tok' }],
+    }, {});
+    mockCampaignsRepo.getById.mockResolvedValue({ id: 'camp_789', name: 'LC_camp_789', user_id: 'owner-1' });
 
     const result = await optimizer.evaluate();
 
@@ -297,21 +319,21 @@ describe('AutoOptimizer', () => {
       expect(acctRepo.findAllActiveByUserAndPlatform).toHaveBeenCalledWith('owner-2', 'meta');
     });
 
-    it('falls back to the system meta when no owner token is bound', () => {
+    it('returns null when no owner token is bound (caller skips, no operator read)', () => {
       const opt = new AutoOptimizer(mockMetaApi, mockRulesRepo, mockCampaignsRepo, null, acctRepo, settingsRepo);
       acctRepo.getByPlatform.mockReturnValue(null);
       acctRepo.findAllActiveByUserAndPlatform.mockReturnValue([]);
 
       const meta = opt._metaForOwner({ id: 'c3', user_id: 'owner-3', platform: 'meta' });
 
-      expect(meta).toBe(mockMetaApi);
+      expect(meta).toBeNull();
       expect(acctRepo.findAllActiveByUserAndPlatform).toHaveBeenCalledWith('owner-3', 'meta');
     });
 
-    it('falls back to system meta when no platformAccountsRepo is wired', () => {
+    it('returns null when no platformAccountsRepo is wired', () => {
       const opt = new AutoOptimizer(mockMetaApi, mockRulesRepo, mockCampaignsRepo);
       const meta = opt._metaForOwner({ id: 'c4', user_id: 'owner-4', platform: 'meta' });
-      expect(meta).toBe(mockMetaApi);
+      expect(meta).toBeNull();
     });
   });
 

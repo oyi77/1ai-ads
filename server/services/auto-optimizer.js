@@ -26,8 +26,9 @@ export class AutoOptimizer {
 
   /**
    * Resolve a Meta API as the RULE/owner of a given campaign (multi-tenant).
-   * Uses the owner's bound Meta token when present, else the injected
-   * system metaApi. Never another user's token.
+   * Returns null when the owner has no bound Meta token — the caller skips
+   * the rule instead of reading tenant campaigns with the operator credential.
+   * Never another user's token.
    */
   _metaForOwner(campaign) {
     const ownerId = campaign?.user_id || campaign?.created_by || (campaign && campaign.user && campaign.user.id);
@@ -37,7 +38,7 @@ export class AutoOptimizer {
         if (acct?.access_token) return new MetaAdsAPI(acct.access_token);
       }
     }
-    return this.meta;
+    return null;
   }
 
   start(intervalMs = 6 * 60 * 60 * 1000) {
@@ -81,6 +82,10 @@ export class AutoOptimizer {
     }
     const campaign = await this.campaigns.getById(rule.campaign_id);
     const meta = this._metaForOwner(campaign);
+    if (!meta) {
+      log.debug('Skipping rule - owner has no bound Meta token', { ruleId: rule.id, name: rule.name });
+      return null;
+    }
     let insights;
     try {
       insights = await meta.getCampaignInsights(rule.campaign_id, { datePreset: 'last_7d' });

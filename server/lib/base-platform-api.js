@@ -20,19 +20,12 @@ export class BasePlatformApiClient {
   }
 
   /**
-   * Resolve API token. Override in subclasses for platform-specific resolution.
-   * Default: explicit token > operator/system settings (only when not user-scoped) > throw.
-   *
-   * When a request has been bound to a specific user's account via setActiveAccount(..., true),
-   * the operator/system token fallback is disabled so an unconnected user gets a clear error
-   * instead of silently borrowing the operator's shared credential.
+   * Resolve API token. Explicit token only — set via constructor, withToken(),
+   * or setActiveAccount(). There is NO system/global fallback (removed:
+   * cross-tenant leak). Unbound callers get a clear ConfigurationError.
    */
   _getToken() {
     if (this._explicitToken) return this._explicitToken;
-    if (!this._userScoped && this.settingsRepo) {
-      const creds = this.settingsRepo.getCredentials(this.platformName);
-      if (creds?.access_token) return creds.access_token;
-    }
     throw new ConfigurationError(
       `${this.platformName} access token not configured. Go to Settings to connect.`
     );
