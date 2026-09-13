@@ -2,6 +2,8 @@ import { createLogger } from '../lib/logger.js';
 import { MetricsNormalizer } from './metrics-normalizer.js';
 import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
 import { MetaAdsAPI } from './meta/index.js';
+import { getPlatformSync } from '../platforms/index.js';
+
 const log = createLogger('unified-reporter');
 
 const DATE_RANGE_MAP = {
@@ -266,22 +268,44 @@ export class UnifiedReporter {
 
   // ── Internal helpers ─────────────────────────────────────────
 
+  /**
+   * Build a platform client bound to the caller's own token (same pattern
+   * as campaign-monitor._ownerApi). Null when unbound — the caller skips
+   * the platform instead of borrowing the operator credential.
+   */
+  _ownerClient(platform, userId) {
+    if (!userId || !this.repos) return null;
+    const token = resolveOwnerPlatformToken(platform, userId, this.repos);
+    if (!token) return null;
+    if (platform === 'meta') return MetaAdsAPI.withToken(token);
+    try {
+      const PlatformClass = getPlatformSync(platform, this.repos.settingsRepo);
+      if (!PlatformClass) return null;
+      const api = new PlatformClass();
+      api.setActiveAccount(null, token, true);
+      return api;
+    } catch {
+      return null;
+    }
+  }
+
   async _fetchAllPlatformInsights(days, userId) {
     // Meta rejects 'last_1d'; a 1-day window maps to 'today'.
     const datePreset = days <= 1 ? 'today' : days <= 7 ? 'last_7d' : days <= 30 ? 'last_30d' : 'last_90d';
     const results = [];
 
-    // Per-user isolation: a caller's live insights come ONLY from their own
-    // bound Meta token. Non-meta system clients are skipped for scoped calls
-    // (no per-platform owner resolution yet) — never the operator's data.
-    // Unscoped calls (no userId) keep the legacy system-client behavior for
-    // operator dashboards.
+    // Per-user isolation: live insights come ONLY from the caller's own
+    // bound tokens (meta + google + tiktok + linkedin — the dispatched
+    // platforms). Platforms without a bound token are skipped, never the
+    // operator's data. Unscoped calls keep legacy system-client behavior.
     let liveApis = this.apis;
     if (userId) {
       liveApis = {};
       if (this.repos) {
-        const token = resolveOwnerPlatformToken('meta', userId, this.repos);
-        if (token) liveApis.meta = MetaAdsAPI.withToken(token);
+        for (const platform of ['meta', 'google', 'tiktok', 'linkedin']) {
+          const client = this._ownerClient(platform, userId);
+          if (client) liveApis[platform] = client;
+        }
       }
     }
 

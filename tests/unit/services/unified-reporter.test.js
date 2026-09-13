@@ -11,6 +11,13 @@ const { mockWithToken } = vi.hoisted(() => ({
 vi.mock('../../../server/services/meta/index.js', () => ({
   MetaAdsAPI: { withToken: (...a) => mockWithToken(...a) },
 }));
+const { mockGetPlatformSync } = vi.hoisted(() => ({
+  mockGetPlatformSync: vi.fn(),
+}));
+
+vi.mock('../../../server/platforms/index.js', () => ({
+  getPlatformSync: (...a) => mockGetPlatformSync(...a),
+}));
 
 import { UnifiedReporter } from '../../../server/services/unified-reporter.js';
 
@@ -192,6 +199,46 @@ describe('UnifiedReporter', () => {
       const result = await scoped.recommendBudgetAllocation('owner-nobody', 1000);
       expect(mockApis.meta.getAdAccounts).not.toHaveBeenCalled();
       expect(result.allocations[0].reasoning).toContain('No historical data');
+    });
+
+    it('builds per-platform owner clients, skipping unbound platforms', async () => {
+      const ownerGoogle = {
+        listAccounts: vi.fn().mockResolvedValue(['cust_9']),
+        getCampaignPerformance: vi.fn().mockResolvedValue([
+          { campaignId: 'g-1', costMicros: 100000000, impressions: 3000, clicks: 150, conversions: 8 },
+        ]),
+      };
+      mockGetPlatformSync.mockImplementation(() => class {
+        constructor() {}
+        setActiveAccount() {}
+        listAccounts = ownerGoogle.listAccounts;
+        getCampaignPerformance = ownerGoogle.getCampaignPerformance;
+      });
+      const ownerMeta = {
+        getAdAccounts: vi.fn().mockResolvedValue([{ id: 'act_9' }]),
+        getAccountInsights: vi.fn().mockResolvedValue({
+          spend: 100, revenue: 300, impressions: 5000, clicks: 200, conversions: 10,
+        }),
+      };
+      mockWithToken.mockReturnValue(ownerMeta);
+      const { UnifiedReporter: UR } = await import('../../../server/services/unified-reporter.js');
+      const scoped = new UR(mockApis, mockCampaignsRepo, mockDb, {
+        platformAccountsRepo: {
+          // meta + google bound; tiktok/linkedin unbound
+          findAllActiveByUserAndPlatform: vi.fn((uid, platform) =>
+            platform === 'meta' || platform === 'google'
+              ? [{ access_token: `${platform}-tok`, health_status: 'ok' }]
+              : []),
+        },
+      });
+      const result = await scoped.recommendBudgetAllocation('owner-9', 1000);
+      expect(ownerMeta.getAdAccounts).toHaveBeenCalled();
+      expect(ownerGoogle.listAccounts).toHaveBeenCalled();
+      expect(mockApis.meta.getAdAccounts).not.toHaveBeenCalled();
+      expect(mockApis.google.listAccounts).not.toHaveBeenCalled();
+      const platforms = result.allocations.map(a => a.platform);
+      expect(platforms).toContain('meta');
+      expect(platforms).toContain('google');
     });
   });
 
