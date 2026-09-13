@@ -44,7 +44,7 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
   });
 
   router.get('/status', requireMcpClient, (req, res) => {
-    const status = mcpClient.getStatus();
+    const status = mcpClient.getStatus(req.user.id);
     res.json({ success: true, data: status });
   });
 
@@ -72,7 +72,7 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
     }
 
     try {
-      const result = await mcpClient.connect(platform, credentials);
+      const result = await mcpClient.connect(req.user.id, platform);
       res.json({ success: true, data: result });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -86,13 +86,13 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
       return res.status(400).json({ success: false, error: 'platform is required' });
     }
 
-    await mcpClient.disconnect(platform);
+    await mcpClient.disconnect(req.user.id, platform);
     res.json({ success: true, data: { message: `Disconnected from ${platform}` } });
   });
 
   // List available tools for a connected platform
-  router.get('/tools/:platform', requireMcpClient, (req, res) => {
-    const tools = mcpClient.getTools(req.params.platform);
+  router.get('/tools/:platform', requireMcpClient, async (req, res) => {
+    const tools = await mcpClient.getTools(req.user.id, req.params.platform);
     res.json({ success: true, data: tools });
   });
 
@@ -104,7 +104,7 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
     }
 
     try {
-      const result = await mcpClient.callTool(platform, tool, args || {});
+      const result = await mcpClient.callTool(req.user.id, platform, tool, args || {});
       res.json({ success: true, data: result.data });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -117,7 +117,7 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
     const toolName = platform === 'meta' ? 'get_ad_accounts' : 'list_accounts';
 
     try {
-      const result = await mcpClient.callTool(platform, toolName, {});
+      const result = await mcpClient.callTool(req.user.id, platform, toolName, {});
       res.json({ success: true, data: result.data });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -136,7 +136,7 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
     try {
       // Get campaigns
       const campaignsTool = platform === 'meta' ? 'get_campaigns' : 'get_campaign_performance';
-      const campaignsResult = await mcpClient.callTool(platform, campaignsTool, {
+      const campaignsResult = await mcpClient.callTool(req.user.id, platform, campaignsTool, {
         account_id,
         ...(platform === 'meta' && { status: ['ACTIVE', 'PAUSED'] }),
       });
@@ -145,7 +145,7 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
       let insightsData = null;
       if (platform === 'meta') {
         try {
-          const insightsResult = await mcpClient.callTool(platform, 'get_insights', {
+          const insightsResult = await mcpClient.callTool(req.user.id, platform, 'get_insights', {
             object_id: account_id,
             object_type: 'account',
             date_preset: 'last_30d',

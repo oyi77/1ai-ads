@@ -38,7 +38,12 @@ export class WhatsAppIntelligenceService {
       const phoneNumber = msg.from || contact?.wa_id;
       if (!phoneNumber) continue;
 
-      const existingConvs = this.repo.findByPhone(phoneNumber);
+      // Attribute by the BUSINESS number that received the message. Unmapped
+      // numbers yield NULL (invisible to every tenant) — never a stranger.
+      const waPhoneNumberId = value.metadata?.phone_number_id;
+      const ownerId = this.repo.findOwnerByWaNumber(waPhoneNumberId);
+      if (waPhoneNumberId && !ownerId) log.warn('wa_ingress_unmapped_number', { waPhoneNumberId });
+      const existingConvs = this.repo.findByPhone(phoneNumber, ownerId);
       const activeConv = existingConvs.find(c => c.status === 'active');
 
       const message = {
@@ -60,9 +65,10 @@ export class WhatsAppIntelligenceService {
         const created = this.repo.create({
           phoneNumber,
           waAccountId: entry.id,
-          waPhoneNumberId: value.metadata?.phone_number_id,
+          waPhoneNumberId,
           contactName: contact?.profile?.name,
           messages: [message],
+          userId: ownerId,
         });
         convId = created?.id;
       }
@@ -385,7 +391,7 @@ Balasan maksimal 150 karakter, langsung ke intinya, jangan formal berlebihan.`;
       return null;
     }
 
-    const sent = await this.sendWhatsAppMessage(waPhoneNumberId, to, reply);
+    const sent = await this.sendWhatsAppMessage(waPhoneNumberId, to, reply, conversation.user_id);
     if (!sent || sent?.error) {
       log.warn('auto_reply_send_failed', { convId, error: sent?.error?.message });
       return null;
@@ -395,12 +401,12 @@ Balasan maksimal 150 karakter, langsung ke intinya, jangan formal berlebihan.`;
     return reply;
   }
 
-  async sendReply(convId, text) {
+  async sendReply(convId, text, userId = undefined) {
     if (!convId || !text) {
       log.warn('send_reply_missing_params', { convId });
       return null;
     }
-    const conversation = this.repo.findById(convId);
+    const conversation = this.repo.findById(convId, userId);
     if (!conversation) {
       log.warn('send_reply_conv_not_found', { convId });
       return null;
@@ -410,7 +416,7 @@ Balasan maksimal 150 karakter, langsung ke intinya, jangan formal berlebihan.`;
     const to = conversation.phone_number;
     if (!waPhoneNumberId || !to) return null;
 
-    const sent = await this.sendWhatsAppMessage(waPhoneNumberId, to, text);
+    const sent = await this.sendWhatsAppMessage(waPhoneNumberId, to, text, userId);
     if (!sent || sent?.error) {
       log.warn('send_reply_failed', { convId, error: sent?.error?.message });
       return null;
@@ -465,8 +471,8 @@ Buat pesan follow-up untuk percakapan berikut (langsung teks balasan, tanpa penj
     }
   }
 
-  async processFollowUps(daysSinceLastContact = 3, limit = 10) {
-    const candidates = this.repo.findForFollowUp(daysSinceLastContact, limit);
+  async processFollowUps(daysSinceLastContact = 3, limit = 10, userId = undefined) {
+    const candidates = this.repo.findForFollowUp(daysSinceLastContact, limit, userId);
     let sent = 0;
     for (const conv of candidates) {
       const text = await this._generateFollowUp(conv);
@@ -476,7 +482,7 @@ Buat pesan follow-up untuk percakapan berikut (langsung teks balasan, tanpa penj
       const to = conv.phone_number;
       if (!waPhoneNumberId || !to) continue;
 
-      const result = await this.sendWhatsAppMessage(waPhoneNumberId, to, text);
+      const result = await this.sendWhatsAppMessage(waPhoneNumberId, to, text, conv.user_id);
       if (result && !result.error) {
         sent++;
         const messages = safeParseJson(conv.messages || '[]', []);
@@ -537,8 +543,8 @@ Buat pesan follow-up untuk percakapan berikut (langsung teks balasan, tanpa penj
     return lead;
   }
 
-  async pushUnpushedLeads(limit = 10) {
-    const unpushed = this.repo.findUnpushedLeads(limit);
+  async pushUnpushedLeads(limit = 10, userId = undefined) {
+    const unpushed = this.repo.findUnpushedLeads(limit, userId);
     let pushed = 0;
     for (const conv of unpushed) {
       try {
@@ -588,8 +594,8 @@ Buat pesan follow-up untuk percakapan berikut (langsung teks balasan, tanpa penj
     return label;
   }
 
-  async processAutoLabeling(limit = 20) {
-    const needsLabel = this.repo.findNeedsLabel(limit);
+  async processAutoLabeling(limit = 20, userId = undefined) {
+    const needsLabel = this.repo.findNeedsLabel(limit, userId);
     let labeled = 0;
     for (const conv of needsLabel) {
       await this._autoLabelConversation(conv);
@@ -600,8 +606,8 @@ Buat pesan follow-up untuk percakapan berikut (langsung teks balasan, tanpa penj
 
   // ── Batch Processing ────────────────────────────────────────────
 
-  async processUnscoredConversations(limit = 5) {
-    const unscored = this.repo.findUnscored(limit);
+  async processUnscoredConversations(limit = 5, userId = undefined) {
+    const unscored = this.repo.findUnscored(limit, userId);
     let scored = 0;
     for (const conv of unscored) {
       const result = await this._scoreConversation(conv);
@@ -610,8 +616,8 @@ Buat pesan follow-up untuk percakapan berikut (langsung teks balasan, tanpa penj
     return { scored, total: unscored.length };
   }
 
-  async processUnsentCapiEvents(limit = 5) {
-    const unsent = this.repo.findUnsentCapi(limit);
+  async processUnsentCapiEvents(limit = 5, userId = undefined) {
+    const unsent = this.repo.findUnsentCapi(limit, userId);
     let sent = 0;
     for (const conv of unsent) {
       await this.sendCapiEvent(conv);
@@ -622,36 +628,43 @@ Buat pesan follow-up untuk percakapan berikut (langsung teks balasan, tanpa penj
 
   // ── Single-Conversation Operations ──────────────────────────
 
-  async scoreConversation(id) {
-    const conv = this.repo.findById(id);
+  async scoreConversation(id, userId = undefined) {
+    const conv = this.repo.findById(id, userId);
     if (!conv) return null;
     const result = await this._scoreConversation(conv);
     return result;
   }
 
-  async sendCapiEventById(id) {
-    const conv = this.repo.findById(id);
+  async sendCapiEventById(id, userId = undefined) {
+    const conv = this.repo.findById(id, userId);
     if (!conv) return null;
     const eventType = conv.intent_label === 'Purchase' ? 'Purchase' : 'Lead';
     const result = await this.sendCapiEvent(conv);
     return { events_sent: result?.events_received === 1 ? 1 : 0, event_type: eventType };
   }
 
-  async getUnscoredConversations(limit = 20) {
-    return this.repo.findUnscored(limit);
+  async getUnscoredConversations(limit = 20, userId = undefined) {
+    return this.repo.findUnscored(limit, userId);
   }
 
-  async getUnsentCapiConversations(limit = 20) {
-    return this.repo.findUnsentCapi(limit);
+  async getUnsentCapiConversations(limit = 20, userId = undefined) {
+    return this.repo.findUnsentCapi(limit, userId);
   }
 
   // ── Stats ───────────────────────────────────────────────────────
 
-  getStats(from, to) {
-    return this.repo.getStats(from, to);
+  getStats(from, to, userId = undefined) {
+    return this.repo.getStats(from, to, userId);
   }
 
-  getConversations(limit = 50) {
-    return this.repo.findRecent(limit);
+  getConversations(limit = 50, userId = undefined) {
+    return this.repo.findRecent(limit, userId);
+  }
+
+  // ── WABA number → owner map (admin-managed) ──────────────────────
+  // Called only from the requireAdmin /numbers route: tenants must never
+  // remap each other's business numbers.
+  registerWaNumber(phoneNumberId, userId) {
+    return this.repo.setOwnerForWaNumber(phoneNumberId, userId);
   }
 }

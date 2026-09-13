@@ -58,6 +58,7 @@ import { NangoAuthService } from '../services/nango-auth.js';
 // Namespace import: mailer is consumed as a module of send helpers
 // (`services.mailer.sendInvite`), not as a constructed instance.
 import * as mailer from '../lib/mailer.js';
+import { McpClientManager } from '../services/mcp-client.js';
 export function createServices({ db, repos, params }) {
   const llmClient = (params && params.llmClient) || new LLMClient({
     url: config.llm.url,
@@ -150,7 +151,8 @@ export function createServices({ db, repos, params }) {
     userMetaAppsRepo: repos.userMetaAppsRepo,
   });
   const boostApproval = new BoostApprovalService(repos.boostRecommendationsRepo, repos.settingsRepo);
-  const mcpClient = params?.mcpClient;
+  // Default per-user manager; tests and embeds may inject their own via params.
+  const mcpClient = params?.mcpClient || new McpClientManager({ platformAccountsRepo: repos.platformAccountsRepo });
   const targeting = new TargetingService(repos.targetingSuggestionsRepo, repos.boostRecommendationsRepo);
   const creativeLibraryRepo = new CreativeLibraryRepository(db);
   const dashboardWidgetsRepo = new DashboardWidgetsRepository(db);

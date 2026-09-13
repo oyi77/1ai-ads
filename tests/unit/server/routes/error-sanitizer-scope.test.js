@@ -4,6 +4,8 @@ import { createDatabase } from '../../../../db/index.js';
 import { seedDemoData } from '../../../../db/seed.js';
 import { createApp } from '../../../../server/app.js';
 import { generateToken } from '../../../../server/lib/auth.js';
+import { createMcpRouter } from '../../../../server/routes/mcp.js';
+import express from 'express';
 
 /**
  * Production error-pipeline contract.
@@ -48,15 +50,17 @@ describe('production error pipeline — bare 500s sanitized, intentional statuse
     db.close();
   });
 
-  it('503 from a guarded route keeps its message in production', async () => {
-    process.env.NODE_ENV = 'production';
-    const { db, app } = buildApp();
+  // The requireMcpClient guard itself, pinned at router level: with no client
+  // wired, the route answers 503 with its message rather than a TypeError 500.
+  it('guard answers 503 with a message when no client is wired', async () => {
+    const app = express();
+    app.use(express.json());
+    app.use('/api/mcp', createMcpRouter({}, {}, {}, {}, {}, {}));
 
-    const res = await request(app).get('/api/mcp/status').set('Authorization', auth());
+    const res = await request(app).get('/api/mcp/status');
 
     expect(res.status).toBe(503);
     expect(res.body).toEqual({ success: false, error: 'MCP client not configured' });
-    db.close();
   });
 
   it('bare 500 from a route catch is scrubbed in production but visible otherwise', async () => {

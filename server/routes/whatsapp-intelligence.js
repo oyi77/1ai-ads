@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { createLogger } from '../lib/logger.js';
 import config from '../config/index.js';
 import { WebhookHandler } from '../services/webhook-handler.js';
+import { requireAdmin } from '../middleware/auth.js';
 
 const log = createLogger('wa-intelligence-routes');
 
@@ -59,22 +60,22 @@ export function createWhatsappWebhookRouter(whatsAppIntelligence) {
 export function createWhatsappApiRouter(whatsAppIntelligence) {
   const router = Router();
 
-  // GET /conversations — list recent conversations
+  // GET /conversations — list the CALLER's recent conversations only
   router.get('/conversations', (req, res) => {
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 200);
-    const conversations = whatsAppIntelligence.getConversations(limit);
+    const conversations = whatsAppIntelligence.getConversations(limit, req.user.id);
     res.json({ success: true, data: conversations.map(formatConversation) });
   });
 
   // GET /conversations/unscored — list unscored conversations for manual review
   router.get('/conversations/unscored', (req, res) => {
-    const unscored = whatsAppIntelligence.repo.findUnscored(20);
+    const unscored = whatsAppIntelligence.repo.findUnscored(20, req.user.id);
     res.json({ success: true, data: unscored.map(formatConversation) });
   });
 
   // GET /conversations/unsent — list high-intent unsent CAPI events
   router.get('/conversations/unsent', (req, res) => {
-    const unsent = whatsAppIntelligence.repo.findUnsentCapi(20);
+    const unsent = whatsAppIntelligence.repo.findUnsentCapi(20, req.user.id);
     res.json({ success: true, data: unsent.map(formatConversation) });
   });
 
@@ -82,12 +83,12 @@ export function createWhatsappApiRouter(whatsAppIntelligence) {
   router.post('/conversations/score', async (req, res) => {
     const { conversationId } = req.body || {};
     if (conversationId) {
-      const result = await whatsAppIntelligence.scoreConversation(conversationId);
+      const result = await whatsAppIntelligence.scoreConversation(conversationId, req.user.id);
       if (!result) return res.status(404).json({ success: false, error: 'Conversation not found' });
       return res.json({ success: true, ...result });
     }
     const n = Math.min(Math.max(parseInt(req.body?.limit) || 5, 1), 20);
-    const result = await whatsAppIntelligence.processUnscoredConversations(n);
+    const result = await whatsAppIntelligence.processUnscoredConversations(n, req.user.id);
     res.json({ success: true, data: result });
   })
 
@@ -95,12 +96,12 @@ export function createWhatsappApiRouter(whatsAppIntelligence) {
   router.post('/conversations/send-capi', async (req, res) => {
     const { conversationId } = req.body || {};
     if (conversationId) {
-      const result = await whatsAppIntelligence.sendCapiEventById(conversationId);
+      const result = await whatsAppIntelligence.sendCapiEventById(conversationId, req.user.id);
       if (!result) return res.status(404).json({ success: false, error: 'Conversation not found' });
       return res.json({ success: true, ...result, conversation_id: conversationId });
     }
     const n = Math.min(Math.max(parseInt(req.body?.limit) || 5, 1), 20);
-    const result = await whatsAppIntelligence.processUnsentCapiEvents(n);
+    const result = await whatsAppIntelligence.processUnsentCapiEvents(n, req.user.id);
     res.json({ success: true, data: result });
   })
 
@@ -108,7 +109,7 @@ export function createWhatsappApiRouter(whatsAppIntelligence) {
   router.post('/conversations/push-leads', async (req, res) => {
     try {
       const limit = Number(req.body.limit) || 10;
-      const result = await whatsAppIntelligence.pushUnpushedLeads(limit);
+      const result = await whatsAppIntelligence.pushUnpushedLeads(limit, req.user.id);
       res.json({ status: 'ok', ...result });
     } catch (err) {
       log.error('push_leads_error', { error: err.message });
@@ -121,7 +122,7 @@ export function createWhatsappApiRouter(whatsAppIntelligence) {
     try {
       const days = Number(req.body.daysSinceLastContact) || 3;
       const limit = Number(req.body.limit) || 10;
-      const result = await whatsAppIntelligence.processFollowUps(days, limit);
+      const result = await whatsAppIntelligence.processFollowUps(days, limit, req.user.id);
       res.json({ status: 'ok', ...result });
     } catch (err) {
       log.error('auto_followup_error', { error: err.message });
@@ -133,7 +134,7 @@ export function createWhatsappApiRouter(whatsAppIntelligence) {
   router.post('/conversations/auto-label', async (req, res) => {
     try {
       const limit = Number(req.body.limit) || 20;
-      const result = await whatsAppIntelligence.processAutoLabeling(limit);
+      const result = await whatsAppIntelligence.processAutoLabeling(limit, req.user.id);
       res.json({ status: 'ok', ...result });
     } catch (err) {
       log.error('auto_label_error', { error: err.message });
@@ -149,12 +150,16 @@ export function createWhatsappApiRouter(whatsAppIntelligence) {
     }
 
     if (text) {
-      const reply = await whatsAppIntelligence.sendReply(conversationId, text);
+      const reply = await whatsAppIntelligence.sendReply(conversationId, text, req.user.id);
       if (!reply) {
         return res.status(404).json({ success: false, error: 'Conversation not found or send failed' });
       }
       res.json({ success: true, data: { reply } });
     } else {
+      const owned = whatsAppIntelligence.repo.findById(conversationId, req.user.id);
+      if (!owned) {
+        return res.status(404).json({ success: false, error: 'Conversation not found' });
+      }
       const reply = await whatsAppIntelligence._autoReplyForConversation(conversationId);
       if (!reply) {
         return res.status(500).json({ success: false, error: 'Auto-reply generation or send failed' });
@@ -163,11 +168,27 @@ export function createWhatsappApiRouter(whatsAppIntelligence) {
     }
   });
 
+  // POST /numbers — bind a WABA business number to its owning tenant so
+  // inbound webhooks attribute new conversations. Admin only: tenants must
+  // never remap each other's numbers.
+  router.post('/numbers', requireAdmin, (req, res) => {
+    const { wa_phone_number_id, user_id } = req.body || {};
+    if (!wa_phone_number_id || !user_id) {
+      return res.status(400).json({ success: false, error: 'wa_phone_number_id and user_id are required' });
+    }
+    try {
+      const registered = whatsAppIntelligence.registerWaNumber(wa_phone_number_id, user_id);
+      res.status(201).json({ success: true, data: registered });
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
   // GET /stats — conversation stats
   router.get('/stats', (req, res) => {
     const from = req.query.from;
     const to = req.query.to;
-    const stats = whatsAppIntelligence.getStats(from, to);
+    const stats = whatsAppIntelligence.getStats(from, to, req.user.id);
     res.json({ success: true, data: stats });
   });
 

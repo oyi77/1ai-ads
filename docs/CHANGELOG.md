@@ -1,6 +1,19 @@
 ## [1.6.0] - 2026-09-12
 
 ### Fixed
+- **FEATURE**: `/api/mcp/*` is live with a minimal per-user client
+  (`McpClientManager`): each user+platform gets its own spawned `meta-ads-mcp`
+  stdio session with only `META_ACCESS_TOKEN` in the child env, credentials
+  resolved from the caller's own platform account. All seven routes thread
+  `req.user.id`; unknown platforms answer a clear error. The `requireMcpClient`
+  503 guard stays for unwired embeds.
+- **CRITICAL (multi-tenant)**: `wa_conversations` was a single global pool — any
+  tenant behind one deployment shared every conversation. Migration `046` adds
+  `user_id` plus an admin-managed `wa_number_owners` map; inbound webhooks
+  attribute by business `phone_number_id` (unmapped yields NULL, never a
+  stranger), all reads filter by owner, single-row actions 404 cross-tenant,
+  and outbound sends resolve the row owner's own client. API surface moved from
+  `requireAdmin` to `requireAuth`; number registration stays admin-only.
 - **HIGH**: `POST /api/boost/telegram-webhook` was dead surface with a dangerous
   payload — unreachable (Telegram only delivers to `/webhook/telegram`, and the
   route demanded a user JWT Telegram can never present) while its callee

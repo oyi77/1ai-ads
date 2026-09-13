@@ -12,8 +12,8 @@ export class WaConversationsRepository {
     const id = uuidv4();
     const now = new Date().toISOString();
     this.db.prepare(`
-      INSERT INTO wa_conversations (id, phone_number, wa_account_id, wa_phone_number_id, contact_name, messages, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?)
+      INSERT INTO wa_conversations (id, phone_number, wa_account_id, wa_phone_number_id, contact_name, messages, status, created_at, updated_at, user_id)
+      VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)
     `).run(
       id,
       data.phoneNumber,
@@ -22,59 +22,103 @@ export class WaConversationsRepository {
       data.contactName || null,
       JSON.stringify(data.messages || []),
       now,
-      now
+      now,
+      data.userId || null
     );
     log.info('conversation_created', { id, phone: data.phoneNumber });
     return this.findById(id);
   }
 
-  findById(id) {
-    return this.db.prepare('SELECT * FROM wa_conversations WHERE id = ?').get(id);
+  // userId undefined = unscoped (internal sweeps); any other value — including
+  // null — filters with IS, so unattributed rows never merge into a tenant.
+  findById(id, userId = undefined) {
+    if (userId === undefined) return this.db.prepare('SELECT * FROM wa_conversations WHERE id = ?').get(id);
+    return this.db.prepare('SELECT * FROM wa_conversations WHERE id = ? AND user_id IS ?').get(id, userId);
   }
 
-  findByPhone(phoneNumber) {
-    return this.db.prepare('SELECT * FROM wa_conversations WHERE phone_number = ? ORDER BY created_at DESC').all(phoneNumber);
+  findByPhone(phoneNumber, userId = undefined) {
+    if (userId === undefined) return this.db.prepare('SELECT * FROM wa_conversations WHERE phone_number = ? ORDER BY created_at DESC').all(phoneNumber);
+    return this.db.prepare('SELECT * FROM wa_conversations WHERE phone_number = ? AND user_id IS ? ORDER BY created_at DESC').all(phoneNumber, userId);
   }
 
-  findActive() {
-    return this.db.prepare('SELECT * FROM wa_conversations WHERE status = ? ORDER BY created_at DESC').all('active');
+  findActive(userId = undefined) {
+    if (userId === undefined) return this.db.prepare('SELECT * FROM wa_conversations WHERE status = ? ORDER BY created_at DESC').all('active');
+    return this.db.prepare('SELECT * FROM wa_conversations WHERE status = ? AND user_id IS ? ORDER BY created_at DESC').all('active', userId);
   }
 
-  findRecent(limit = 50) {
-    return this.db.prepare('SELECT * FROM wa_conversations ORDER BY updated_at DESC LIMIT ?').all(limit);
+  findRecent(limit = 50, userId = undefined) {
+    if (userId === undefined) return this.db.prepare('SELECT * FROM wa_conversations ORDER BY updated_at DESC LIMIT ?').all(limit);
+    return this.db.prepare('SELECT * FROM wa_conversations WHERE user_id IS ? ORDER BY updated_at DESC LIMIT ?').all(userId, limit);
   }
 
-  findUnscored(limit = 10) {
-    return this.db.prepare("SELECT * FROM wa_conversations WHERE intent_score IS NULL AND status = 'active' ORDER BY created_at ASC LIMIT ?").all(limit);
+  findUnscored(limit = 10, userId = undefined) {
+    if (userId === undefined) return this.db.prepare("SELECT * FROM wa_conversations WHERE intent_score IS NULL AND status = 'active' ORDER BY created_at ASC LIMIT ?").all(limit);
+    return this.db.prepare("SELECT * FROM wa_conversations WHERE intent_score IS NULL AND status = 'active' AND user_id IS ? ORDER BY created_at ASC LIMIT ?").all(userId, limit);
   }
 
-  findUnsentCapi(limit = 10) {
-    return this.db.prepare("SELECT * FROM wa_conversations WHERE capi_event_sent = 0 AND intent_score >= 7 AND status = 'active' ORDER BY intent_score DESC LIMIT ?").all(limit);
+  findUnsentCapi(limit = 10, userId = undefined) {
+    if (userId === undefined) return this.db.prepare("SELECT * FROM wa_conversations WHERE capi_event_sent = 0 AND intent_score >= 7 AND status = 'active' ORDER BY intent_score DESC LIMIT ?").all(limit);
+    return this.db.prepare("SELECT * FROM wa_conversations WHERE capi_event_sent = 0 AND intent_score >= 7 AND status = 'active' AND user_id IS ? ORDER BY intent_score DESC LIMIT ?").all(userId, limit);
   }
 
-  findUnpushedLeads(limit = 10) {
-    return this.db.prepare("SELECT * FROM wa_conversations WHERE intent_score >= 7 AND social_lead_id IS NULL AND status = 'active' ORDER BY intent_score DESC LIMIT ?").all(limit);
+  findUnpushedLeads(limit = 10, userId = undefined) {
+    if (userId === undefined) return this.db.prepare("SELECT * FROM wa_conversations WHERE intent_score >= 7 AND social_lead_id IS NULL AND status = 'active' ORDER BY intent_score DESC LIMIT ?").all(limit);
+    return this.db.prepare("SELECT * FROM wa_conversations WHERE intent_score >= 7 AND social_lead_id IS NULL AND status = 'active' AND user_id IS ? ORDER BY intent_score DESC LIMIT ?").all(userId, limit);
   }
 
-  findForFollowUp(daysSinceLastContact = 3, limit = 20) {
+  findForFollowUp(daysSinceLastContact = 3, limit = 20, userId = undefined) {
     const cutoff = new Date(Date.now() - daysSinceLastContact * 86400_000).toISOString();
+    if (userId === undefined) {
+      return this.db.prepare(`
+        SELECT * FROM wa_conversations
+        WHERE status = 'active'
+          AND updated_at < ?
+          AND (last_follow_up_at IS NULL OR last_follow_up_at < ?)
+          AND follow_up_count < 5
+        ORDER BY updated_at ASC
+        LIMIT ?
+      `).all(cutoff, cutoff, limit);
+    }
     return this.db.prepare(`
       SELECT * FROM wa_conversations
       WHERE status = 'active'
+        AND user_id IS ?
         AND updated_at < ?
         AND (last_follow_up_at IS NULL OR last_follow_up_at < ?)
         AND follow_up_count < 5
       ORDER BY updated_at ASC
       LIMIT ?
-    `).all(cutoff, cutoff, limit);
+    `).all(userId, cutoff, cutoff, limit);
   }
 
-  findNeedsLabel(limit = 20) {
-    return this.db.prepare("SELECT * FROM wa_conversations WHERE labels = '[]' AND status = 'active' AND intent_score IS NOT NULL ORDER BY updated_at DESC LIMIT ?").all(limit);
+  findNeedsLabel(limit = 20, userId = undefined) {
+    if (userId === undefined) return this.db.prepare("SELECT * FROM wa_conversations WHERE labels = '[]' AND status = 'active' AND intent_score IS NOT NULL ORDER BY updated_at DESC LIMIT ?").all(limit);
+    return this.db.prepare("SELECT * FROM wa_conversations WHERE labels = '[]' AND status = 'active' AND intent_score IS NOT NULL AND user_id IS ? ORDER BY updated_at DESC LIMIT ?").all(userId, limit);
   }
 
-  findByLabel(label, limit = 50) {
-    return this.db.prepare("SELECT * FROM wa_conversations WHERE labels LIKE ? ORDER BY updated_at DESC LIMIT ?").all(`%"${label}"%`, limit);
+  findByLabel(label, limit = 50, userId = undefined) {
+    if (userId === undefined) return this.db.prepare("SELECT * FROM wa_conversations WHERE labels LIKE ? ORDER BY updated_at DESC LIMIT ?").all(`%"${label}"%`, limit);
+    return this.db.prepare("SELECT * FROM wa_conversations WHERE labels LIKE ? AND user_id IS ? ORDER BY updated_at DESC LIMIT ?").all(`%"${label}"%`, userId, limit);
+  }
+
+  // ── WABA number → owner map (admin-managed) ──────────────────────
+  // Inbound webhooks carry only the business phone_number_id, so ingress
+  // attributes new conversations through this map. Unmapped numbers yield
+  // NULL (invisible to every tenant) rather than a stranger's user_id.
+  findOwnerByWaNumber(waPhoneNumberId) {
+    if (!waPhoneNumberId) return null;
+    const row = this.db.prepare('SELECT user_id FROM wa_number_owners WHERE wa_phone_number_id = ?').get(waPhoneNumberId);
+    return row?.user_id || null;
+  }
+
+  setOwnerForWaNumber(waPhoneNumberId, userId) {
+    if (!waPhoneNumberId || !userId) throw new Error('wa_phone_number_id and user_id are required');
+    this.db.prepare(`
+      INSERT INTO wa_number_owners (wa_phone_number_id, user_id)
+      VALUES (?, ?)
+      ON CONFLICT(wa_phone_number_id) DO UPDATE SET user_id = excluded.user_id
+    `).run(waPhoneNumberId, userId);
+    return { wa_phone_number_id: waPhoneNumberId, user_id: userId };
   }
 
   update(id, data) {
@@ -110,8 +154,10 @@ export class WaConversationsRepository {
     return this.findById(id);
   }
 
-  getStats(from, to) {
-    const rows = this.db.prepare(`
+  getStats(from, to, userId = undefined) {
+    const fromDate = from || '1970-01-01';
+    const toDate = to || '9999-12-31';
+    const select = `
       SELECT
         COUNT(*) AS total,
         SUM(CASE WHEN capi_event_sent = 1 THEN 1 ELSE 0 END) AS capi_sent,
@@ -121,8 +167,10 @@ export class WaConversationsRepository {
         SUM(CASE WHEN intent_label = 'Support' THEN 1 ELSE 0 END) AS support,
         SUM(CASE WHEN intent_label = 'LowIntent' THEN 1 ELSE 0 END) AS low_intent
       FROM wa_conversations
-      WHERE created_at >= ? AND created_at <= ?
-    `).get(from || '1970-01-01', to || '9999-12-31');
+    `;
+    const rows = userId === undefined
+      ? this.db.prepare(`${select} WHERE created_at >= ? AND created_at <= ?`).get(fromDate, toDate)
+      : this.db.prepare(`${select} WHERE created_at >= ? AND created_at <= ? AND user_id IS ?`).get(fromDate, toDate, userId);
 
     return rows || { total: 0, capi_sent: 0, avg_intent: null, purchases: 0, leads: 0, support: 0, low_intent: 0 };
   }

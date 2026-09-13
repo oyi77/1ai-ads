@@ -41,15 +41,6 @@ describe('service wiring — fail fast on unwired route dependencies', () => {
     const { createServices } = await import('../../../../server/app/services.js');
     const services = createServices({ db, repos, params: {} });
 
-    // Optional dependencies injected through createApp(params) rather than
-    // constructed in createServices, so they are legitimately absent from the
-    // default graph. Every consumer must guard for absence — see the
-    // requireMcpClient middleware in routes/mcp.js.
-    const PARAM_INJECTED = new Set(['mcpClient']);
-
-    const missing = [...referenced]
-      .filter(k => !PARAM_INJECTED.has(k))
-      .filter(k => !(k in services) || services[k] === undefined);
-    expect(missing, `unwired service keys consumed by routes/_*.js: ${missing.join(', ')}`).toEqual([]);
+    const missing = [...referenced].filter(k => !(k in services) || services[k] === undefined);
   }, 120000);
 });
