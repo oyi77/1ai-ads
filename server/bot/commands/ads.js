@@ -255,11 +255,14 @@ async function replyCampaignList(ctx, accountId, campaigns, page, platform = 'me
         inline_keyboard: [
           ...slice.map((c) => [{
             text: (c.status === 'active' ? '⏸ Pause ' : '▶️ Resume ') + c.name,
-            callback_data: `ads:toggle:${platform}:${accountId}:${c.id}:${c.status === 'active' ? 'pause' : 'resume'}`,
+            // No accountId segment: `ads:toggle:<p>:<acct>:<camp>:<mode>`
+            // overflows Telegram's 64-byte cap (83 worst-case). The toggle
+            // mutation needs platform+campaign+mode only; back navigates up.
+            callback_data: `ads:toggle:${platform}:${c.id}:${c.status === 'active' ? 'pause' : 'resume'}`,
           }]),
           pagerRow(`ads:camps:${platform}:${accountId}`, p, pages),
           [{ text: '📊 Report', callback_data: `ads:repacc:${platform}:${accountId}` }],
-          [{ text: '➕20%', callback_data: `ads:budget:${platform}:${accountId}:pct:1.2` }, { text: '➖20%', callback_data: `ads:budget:${platform}:${accountId}:pct:0.8333` }, { text: '🎯 Create', callback_data: 'menu:create' }],
+          [{ text: '➕20%', callback_data: `ads:bud:${platform}:${accountId}:1.2` }, { text: '➖20%', callback_data: `ads:bud:${platform}:${accountId}:0.8333` }, { text: '🎯 Create', callback_data: 'menu:create' }],
           [{ text: '◀️ Back to accounts', callback_data: `ads:platform:${platform}` }],
         ],
       },
@@ -283,7 +286,7 @@ export function handleAdsCampaignsPage(deps) {
 
 // ── Pause / Resume ──────────────────────────────────────────
 export function handleAdsToggle(deps) {
-  return async (ctx, platform, accountId, campaignId, mode) => {
+  return async (ctx, platform, campaignId, mode) => {
     const { api } = await makeApi(ctx, deps, platform);
     if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first.`);
     await ctx.reply(`🔄 ${mode === 'pause' ? 'Pausing' : 'Resuming'} campaign ${campaignId}…`);
@@ -291,7 +294,7 @@ export function handleAdsToggle(deps) {
       await api.updateCampaign(campaignId, { status: mode === 'pause' ? 'PAUSED' : 'ACTIVE' });
       return ctx.reply(`✅ Campaign <b>${mode === 'pause' ? 'paused' : 'resumed'}</b>.`, {
         parse_mode: 'HTML',
-        reply_markup: { inline_keyboard: [[{ text: '⚙️ Back to campaigns', callback_data: `ads:select:${platform}:${accountId}` }]] },
+        reply_markup: { inline_keyboard: [[{ text: '⚙️ Back to campaigns', callback_data: `ads:platform:${platform}` }]] },
       });
     } catch (err) {
       log.error('ads toggle failed', { userId: ctx.userId, platform, campaignId, mode, error: err?.message });

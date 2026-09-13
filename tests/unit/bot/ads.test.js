@@ -102,15 +102,16 @@ describe('per-user ads handlers (multi-platform)', () => {
 
   it('handleAdsToggle pauses an active campaign', async () => {
     const ctx = makeCtx();
-    await handleAdsToggle(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', '1181078009580337', 'c1', 'pause');
+    await handleAdsToggle(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', 'c1', 'pause');
     expect(mockUpdateCampaign).toHaveBeenCalledWith('c1', { status: 'PAUSED' });
     expect(txt(ctx._replies[1])).toContain('paused');
   });
 
   it('handleAdsToggle resumes a paused campaign', async () => {
     const ctx = makeCtx();
-    await handleAdsToggle(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', '1181078009580337', 'c2', 'resume');
+    await handleAdsToggle(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', 'c2', 'resume');
     expect(mockUpdateCampaign).toHaveBeenCalledWith('c2', { status: 'ACTIVE' });
     expect(txt(ctx._replies[1])).toContain('resumed');
   });
+
 });

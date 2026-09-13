@@ -13,7 +13,7 @@ import { log } from '../helpers.js';
  * @param { telegram: object } bot — Telegram bot instance
  * @param { repos: object, services: object } deps
  */
-export function setupDbBackup(bot, deps) {
+export function setupDbBackup(_bot, _deps) {
   // ────────────────────────────────────────────────────────────
   // 11. Database Backup — every 6 hours
   // ────────────────────────────────────────────────────────────

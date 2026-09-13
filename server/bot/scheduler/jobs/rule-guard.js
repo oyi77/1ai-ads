@@ -3,7 +3,7 @@
  *
  * Extracted verbatim from ../scheduler.js. Registered via setupRuleGuard(bot, deps).
  */
-import { describeCondition, safeSend, evaluateRuleForCampaign, scheduleJob, log } from '../helpers.js';
+import { describeCondition, safeSend, evaluateRuleForCampaign, scheduleJob, log, esc } from '../helpers.js';
 
 /**
  * Register the rule-guard cron job.

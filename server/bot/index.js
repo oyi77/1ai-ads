@@ -132,12 +132,11 @@ export function initBot(app, deps) {
   //   ads:select:<platform>:<accountId>
   //   ads:accts:<platform>:<page>
   //   ads:camps:<platform>:<accountId>:<page>
-  //   ads:toggle:<platform>:<accountId>:<campaignId>:<mode>
+  //   ads:toggle:<platform>:<campaignId>:<mode>  (no accountId — 64-byte cap)
   //   ads:report:<platform>[:<accountId>]
   //   ads:repacc:<platform>:<accountId>
-  //   ads:budget:<platform>:<accountId>:pct:<mult>
-  //   ads:platform:<platform>  (list accounts for a platform)
-  bot.action(/^ads:budget:(.+):(.+):pct:([\d.]+)$/, async (ctx) => {
+  //   ads:bud:<platform>:<accountId>:<mult>  (compact — pct: form overflowed)
+  bot.action(/^ads:bud:(.+):(.+):([\d.]+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     const [, platform, acct, mult] = ctx.match;
     await handleAdsBudgetScale(deps)(ctx, platform, acct, 'pct', mult);
@@ -148,14 +147,11 @@ export function initBot(app, deps) {
   });
   bot.action(/^menu:(.+)$/, handleMenuButton(deps));
   // Platform keyboard callbacks (nav.js buildPlatformKeyboard / buildPlatformAccountKeyboard)
-  bot.action(/^platform:account:(.+):(.+)$/, async (ctx) => {
+  // `pacc:<platform>:<id>` is the compact account key — `platform:account:…`
+  // exceeded Telegram's 64-byte callback_data cap for thetradedesk (66).
+  bot.action(/^pacc:(.+):(.+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     await handlePlatformAction(ctx, deps, `platform:account:${ctx.match[1]}:${ctx.match[2]}`);
-  });
-  bot.action(/^platform:(.+):(.+)$/, async (ctx) => {
-    await ctx.answerCbQuery();
-    // ctx.match[1]=platform, match[2]=action — reconstruct scope without 'platform:' prefix
-    await handlePlatformAction(ctx, deps, ctx.match[1] + ':' + ctx.match[2]);
   });
   bot.action(/^settings:(.+)$/, handleSettingsCallback(deps));
   bot.action(/^ads:select:(.+):(.+)$/, async (ctx) => {
@@ -163,10 +159,10 @@ export function initBot(app, deps) {
     const [, platform, accountId] = ctx.match;
     await handleAdsSelect(deps)(ctx, platform, accountId);
   });
-  bot.action(/^ads:toggle:(.+):(.+):(.+):(.+)$/, async (ctx) => {
+  bot.action(/^ads:toggle:(.+):(.+):(.+)$/, async (ctx) => {
     await ctx.answerCbQuery();
-    const [, platform, acct, camp, mode] = ctx.match;
-    await handleAdsToggle(deps)(ctx, platform, acct, camp, mode);
+    const [, platform, camp, mode] = ctx.match;
+    await handleAdsToggle(deps)(ctx, platform, camp, mode);
   });
   bot.action(/^ads:report:(.+?)(?::(.+))?$/, async (ctx) => {
     await ctx.answerCbQuery();

@@ -58,9 +58,11 @@ export async function buildPlatformAccountKeyboard(deps, userId, platform) {
 
   for (const acc of accounts) {
     const status = acc.is_active ? '✅' : '⏸';
+    // Telegram caps callback_data at 64 bytes. `platform:account:<p>:<uuid>`
+    // overflows for thetradedesk (66). Compact `pacc:` prefix: max 54.
     rows.push([{
       text: `${status} ${acc.account_name} (${platform})`,
-      callback_data: `platform:account:${platform}:${acc.id}`,
+      callback_data: `pacc:${platform}:${acc.id}`,
     }]);
   }
 
