@@ -160,6 +160,46 @@ describe('ContentScheduler', () => {
       expect(results[0].success).toBe(false);
       expect(mockQueueRepo.updateFailed).toHaveBeenCalled();
     });
+
+    it('routes NULL-owner legacy rows to the system client', async () => {
+      mockQueueRepo.findPendingAll.mockReturnValue([{
+        id: 'q1', user_id: null, page_id: 'page-1', file_path: '/tmp/video.mp4',
+        caption: 'Test', hashtags: '[]',
+      }]);
+      const results = await scheduler.processQueue();
+      expect(results).toHaveLength(1);
+      expect(results[0].success).toBe(true);
+      expect(mockVideoService.uploadVideo).toHaveBeenCalled();
+    });
+
+    it('skips owned rows whose owner has no bound token', async () => {
+      const { ContentScheduler: CS } = await import('../../../server/services/content-scheduler.js');
+      const owned = new CS({
+        videoService: mockVideoService, llmClient: mockLlmClient, queueRepo: mockQueueRepo,
+        platformAccountsRepo: { findAllActiveByUserAndPlatform: () => [] },
+      });
+      mockQueueRepo.findPendingAll.mockReturnValue([{
+        id: 'q2', user_id: 'owner-x', page_id: 'page-1', file_path: '/tmp/video.mp4',
+        caption: 'Test', hashtags: '[]',
+      }]);
+      const results = await owned.processQueue();
+      expect(results).toHaveLength(1);
+      expect(results[0].skipped).toBe(true);
+      expect(mockVideoService.uploadVideo).not.toHaveBeenCalled();
+    });
+
+    it('uses the owner token for owned rows with a bound account', async () => {
+      const { ContentScheduler: CS } = await import('../../../server/services/content-scheduler.js');
+      const owned = new CS({
+        videoService: mockVideoService, llmClient: mockLlmClient, queueRepo: mockQueueRepo,
+        platformAccountsRepo: {
+          findAllActiveByUserAndPlatform: () => [{ access_token: 'owner-tok', health_status: 'ok' }],
+        },
+      });
+      const routed = owned._videoServiceForRow({ user_id: 'owner-1' });
+      expect(routed.skip).toBeUndefined();
+      expect(routed.service).not.toBe(mockVideoService);
+    });
   });
 
   describe('cancelSchedule', () => {

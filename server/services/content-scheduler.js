@@ -15,6 +15,9 @@ import fs from 'fs';
 import { createLogger } from '../lib/logger.js';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
+import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
+import { MetaAdsAPI } from './meta/index.js';
+import { MetaVideoService } from './meta-video-service.js';
 
 const log = createLogger('content-scheduler');
 
@@ -52,14 +55,16 @@ const CAPTION_SYSTEM_PROMPT = 'Kamu adalah copywriter viral Indonesia untuk kont
 export class ContentScheduler {
   /**
    * @param {object} deps
-   * @param {import('./meta-video-service.js').MetaVideoService} deps.videoService
+   * @param {import('./meta-video-service.js').MetaVideoService} deps.videoService - system/operator video client (NULL-owner legacy rows only)
    * @param {import('./llm-client.js').LLMClient} deps.llmClient
    * @param {import('../repositories/content-scheduler-queue.js').ContentSchedulerQueueRepository} deps.queueRepo
+   * @param {object} [deps.platformAccountsRepo] - per-owner Meta token resolution
    */
-  constructor({ videoService, llmClient, queueRepo }) {
+  constructor({ videoService, llmClient, queueRepo, platformAccountsRepo = null }) {
     this.videoService = videoService;
     this.llmClient = llmClient;
     this.queueRepo = queueRepo;
+    this.platformAccountsRepo = platformAccountsRepo;
     this._processing = false;
     this._interval = null;
   }
@@ -147,7 +152,7 @@ export class ContentScheduler {
           : this.queueRepo.findPendingAll(now);
 
       for (const row of rows) {
-        const result = await this._processItem(row);
+        const result = await this._processItem(row, this._videoServiceForRow(row));
         results.push(result);
       }
     } catch (err) {
@@ -186,11 +191,30 @@ export class ContentScheduler {
     };
   }
 
-  async _uploadAndComplete(id, row, caption, hashtags, logCtx) {
+  /**
+   * Resolve the upload client for a queue row. Owned rows use the OWNER's
+   * bound Meta token (never another tenant's, never the operator's). Rows
+   * with no owner fall back to the injected system client (operator legacy
+   * content). Owned rows whose owner has no bound token are skipped.
+   * Returns { service } or { skip }.
+   */
+  _videoServiceForRow(row) {
+    const ownerId = row.user_id;
+    if (!ownerId) return { service: this.videoService };
+    if (!this.platformAccountsRepo) return { skip: 'no account repo wired' };
+    const token = resolveOwnerPlatformToken('meta', ownerId, {
+      platformAccountsRepo: this.platformAccountsRepo,
+    });
+    if (!token) return { skip: 'owner has no bound Meta token' };
+    const ownerApi = MetaAdsAPI.withToken(token);
+    return { service: new MetaVideoService(ownerApi) };
+  }
+
+  async _uploadAndComplete(id, row, caption, hashtags, logCtx, videoService = this.videoService) {
     log.info('Uploading video', logCtx);
     this._updateStatus(id, 'uploading');
 
-    const uploadResult = await this.videoService.uploadVideo(
+    const uploadResult = await videoService.uploadVideo(
       this._prepareVideoUploadPayload(row, caption, hashtags),
     );
 
@@ -205,13 +229,17 @@ export class ContentScheduler {
     return { id, success: true, videoId: uploadResult.videoId, permalinkUrl: uploadResult.permalinkUrl };
   }
 
-  async _processItem(row) {
+  async _processItem(row, svc = {}) {
     const id = row.id;
     const logCtx = { queueId: id, pageId: row.page_id };
+    if (svc.skip) {
+      log.warn('Queue item skipped - no owner token', { ...logCtx, reason: svc.skip });
+      return { id, success: false, error: svc.skip, skipped: true };
+    }
 
     try {
       const { caption, hashtags } = await this._resolveCaption(row, logCtx);
-      return await this._uploadAndComplete(id, row, caption, hashtags, logCtx);
+      return await this._uploadAndComplete(id, row, caption, hashtags, logCtx, svc.service || this.videoService);
     } catch (err) {
       const errorMsg = err.message || 'Unknown error';
       this.queueRepo.updateFailed(id, errorMsg, Math.floor(Date.now() / 1000));

@@ -3,6 +3,7 @@ import { safeParse } from '../lib/safe-parse.js';
 import { encryptToken, decryptToken } from '../lib/crypto.js';
 import { createLogger } from '../lib/logger.js';
 import { sanitizeAccessToken, sanitizeCredentialAccessToken } from '../lib/token-sanitize.js';
+import { ConfigurationError } from '../lib/errors.js';
 
 const log = createLogger('platform-accounts');
 
@@ -124,15 +125,10 @@ export class PlatformAccountsRepository {
   // them borrowed another tenant's token. Strict per-user isolation:
   // callers MUST use findActiveByUserAndPlatform / findAllActiveByUserAndPlatform.
   // These shims throw loudly so misuse surfaces instead of leaking silently.
-  getActiveAccount(_platform) {
-    throw new Error('getActiveAccount is removed (cross-tenant leak): use findActiveByUserAndPlatform(userId, platform)');
-  }
-  getAccountByPlatformId(platformId) {
-    const row = this.db.prepare(
-      'SELECT * FROM platform_accounts WHERE id = ? LIMIT 1'
-    ).get(platformId);
-    if (!row) return null;
-    return { ...row, credentials: decryptCredentials(row.credentials) };
+  getActiveAccount(platform) {
+    throw new ConfigurationError(
+      `getActiveAccount('${platform}') is removed (cross-tenant leak): use findActiveByUserAndPlatform(userId, platform)`
+    );
   }
   getAccounts(platform = null) {
     if (platform) {
@@ -147,11 +143,15 @@ export class PlatformAccountsRepository {
     return rows.map(r => ({ ...r, credentials: decryptCredentials(r.credentials) }));
   }
   // ── Credential helpers (REMOVED system fallback) ─────────────────
-  getCredentials(_platform) {
-    throw new Error('getCredentials is removed (cross-tenant leak): use findActiveByUserAndPlatform(userId, platform)');
+  getCredentials(platform) {
+    throw new ConfigurationError(
+      `getCredentials('${platform}') is removed (cross-tenant leak): use findActiveByUserAndPlatform(userId, platform)`
+    );
   }
-  setCredentials(_platform, _credentials) {
-    throw new Error('setCredentials is removed (cross-tenant leak): use create/update with explicit user_id');
+  setCredentials(platform, _credentials) {
+    throw new ConfigurationError(
+      `setCredentials('${platform}') is removed (cross-tenant leak): use create/update with explicit user_id`
+    );
   }
 
   // ── CRUD ────────────────────────────────────────────────────

@@ -77,7 +77,7 @@ export function createServices({ db, repos, params }) {
   const whatsappApi = new WhatsAppAdsAPI(repos.settingsRepo);
   const creativeStudio = new CreativeStudio(llmClient);
   const videoService = new MetaVideoService(metaApi);
-  const contentScheduler = new ContentScheduler({ videoService, llmClient, queueRepo: repos.contentSchedulerQueueRepo });
+  const contentScheduler = new ContentScheduler({ videoService, llmClient, queueRepo: repos.contentSchedulerQueueRepo, platformAccountsRepo: repos.platformAccountsRepo });
   const adResearchService = new AdResearchService({ metaApi, db });
   const orchestrator = new CampaignOrchestrator(metaApi, creativeStudio);
   const realtimeService = new RealtimeService(metaApi, repos.campaignsRepo, { platformAccountsRepo: repos.platformAccountsRepo, settingsRepo: repos.settingsRepo });
@@ -149,6 +149,7 @@ export function createServices({ db, repos, params }) {
     settingsRepo: repos.settingsRepo,
     config,
     userMetaAppsRepo: repos.userMetaAppsRepo,
+    platformAccountsRepo: repos.platformAccountsRepo,
   });
   const boostApproval = new BoostApprovalService(repos.boostRecommendationsRepo, repos.settingsRepo);
   // Default per-user manager; tests and embeds may inject their own via params.

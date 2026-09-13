@@ -1,4 +1,5 @@
 import config from '../config/index.js';
+import { ConfigurationError } from '../lib/errors.js';
 
 
 /**
@@ -68,12 +69,16 @@ export class SettingsRepository {
 
   /** @removed Cross-tenant leak — use platformAccountsRepo.findActiveByUserAndPlatform(userId, platform) */
   getCredentials(platform) {
-    return this._accountsRepo.getCredentials(platform);
+    throw new ConfigurationError(
+      `getCredentials('${platform}') is removed (cross-tenant leak): resolve the caller's own token via platformAccountsRepo.findActiveByUserAndPlatform(userId, platform)`
+    );
   }
 
   /** @removed Cross-tenant leak — use platformAccountsRepo.create/update with explicit user_id */
-  setCredentials(platform, credentials) {
-    return this._accountsRepo.setCredentials(platform, credentials);
+  setCredentials(platform, _credentials) {
+    throw new ConfigurationError(
+      `setCredentials('${platform}') is removed (cross-tenant leak): write via platformAccountsRepo.create/update with explicit user_id`
+    );
   }
 
 
@@ -108,6 +113,8 @@ export class SettingsRepository {
 
   /** @removed Cross-tenant leak — use platformAccountsRepo.findActiveByUserAndPlatform(userId, platform) */
   getActiveAccount(platform) {
-    return this._accountsRepo.getActiveAccount(platform);
+    throw new ConfigurationError(
+      `getActiveAccount('${platform}') is removed (cross-tenant leak): resolve via platformAccountsRepo.findActiveByUserAndPlatform(userId, platform)`
+    );
   }
 }

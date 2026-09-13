@@ -103,9 +103,23 @@ describe('WhatsApp ingress attribution', () => {
     expect(repos.waConversationsRepo.findByPhone('628100003', OWNER_A)).toHaveLength(1);
     expect(repos.waConversationsRepo.findByPhone('628100003', OWNER_B)).toHaveLength(1);
   });
-});
+  it('skips background scoring without an owner (no cross-tenant sweep)', async () => {
+    const spy = [];
+    const origFind = repos.waConversationsRepo.findUnscored.bind(repos.waConversationsRepo);
+    repos.waConversationsRepo.findUnscored = (...a) => { spy.push(a); return origFind(...a); };
+    await svc._scoreRecentConversations(undefined);
+    expect(spy).toHaveLength(0);
+  });
 
-describe('WhatsApp API tenant isolation', () => {
+  it('skips CAPI when the conversation owner has no bound token', async () => {
+    repos.waConversationsRepo.setOwnerForWaNumber(NUMBER_A, OWNER_A);
+    await svc.processWebhook(webhookPayload('628199999', NUMBER_A));
+    const row = repos.waConversationsRepo.findByPhone('628199999', OWNER_A)[0];
+    // No platformAccountsRepo wired → no owner token → skipped, never posted.
+    const result = await svc.sendCapiEvent({ ...row, intent_label: 'Lead', intent_score: 8 });
+    expect(result).toBeNull();
+  });
+
   beforeEach(async () => {
     repos.waConversationsRepo.setOwnerForWaNumber(NUMBER_A, OWNER_A);
     repos.waConversationsRepo.setOwnerForWaNumber(NUMBER_B, OWNER_B);
@@ -148,6 +162,15 @@ describe('WhatsApp API tenant isolation', () => {
     const app = buildApp();
     // Let the fire-and-forget sweeps from setup settle so only this call acts.
     await new Promise((r) => setTimeout(r, 500));
+    // Setup rows may or may not have been labeled by the setup sweeps (race
+    // between scoring write and labeling sweep). Pin them labeled so only
+    // the fresh row below needs labeling — the assertion is tenant scope.
+    for (const row of repos.waConversationsRepo.findByPhone('628110001', OWNER_A)) {
+      repos.waConversationsRepo.update(row.id, { labels: ['Setup'] });
+    }
+    for (const row of repos.waConversationsRepo.findByPhone('628120001', OWNER_B)) {
+      repos.waConversationsRepo.update(row.id, { labels: ['Setup'] });
+    }
     // Fresh work for A, created after the background sweeps finished.
     const fresh = repos.waConversationsRepo.create({ phoneNumber: '628110002', userId: OWNER_A, messages: [] });
     repos.waConversationsRepo.update(fresh.id, { intentScore: 5 });

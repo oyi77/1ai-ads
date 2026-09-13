@@ -1,6 +1,8 @@
 import crypto from 'crypto';
 import { createLogger } from '../lib/logger.js';
 import { buildUserMetaClients } from '../lib/meta-user-factory.js';
+import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
+import { MetaAdsAPI } from './meta/index.js';
 
 const log = createLogger('whatsapp_intelligence');
 
@@ -8,7 +10,7 @@ function safeParseJson(text, fallback) {
   try { return JSON.parse(text); } catch { return fallback; }
 }
 export class WhatsAppIntelligenceService {
-  constructor({ waConversationsRepo, metaApi, whatsappApi, llmClient, db, settingsRepo, config, userMetaAppsRepo }) {
+  constructor({ waConversationsRepo, metaApi, whatsappApi, llmClient, db, settingsRepo, config, userMetaAppsRepo, platformAccountsRepo = null }) {
     this.repo = waConversationsRepo;
     this.metaApi = metaApi;
     this.whatsappApi = whatsappApi;
@@ -17,17 +19,18 @@ export class WhatsAppIntelligenceService {
     this.settings = settingsRepo;
     this.config = config;
     this.userMetaAppsRepo = userMetaAppsRepo;
+    this.platformAccountsRepo = platformAccountsRepo;
     this._pixelId = null;
   }
 
   // ── Webhook Processing ──────────────────────────────────────────
-
   async processWebhook(payload) {
     const entry = payload?.entry?.[0];
     if (!entry) return { processed: 0 };
 
     const changes = entry.changes || [];
     let processed = 0;
+    const ownerIds = new Set();
 
     for (const change of changes) {
       const value = change.value;
@@ -43,6 +46,7 @@ export class WhatsAppIntelligenceService {
       const waPhoneNumberId = value.metadata?.phone_number_id;
       const ownerId = this.repo.findOwnerByWaNumber(waPhoneNumberId);
       if (waPhoneNumberId && !ownerId) log.warn('wa_ingress_unmapped_number', { waPhoneNumberId });
+      if (ownerId) ownerIds.add(ownerId);
       const existingConvs = this.repo.findByPhone(phoneNumber, ownerId);
       const activeConv = existingConvs.find(c => c.status === 'active');
 
@@ -82,16 +86,18 @@ export class WhatsAppIntelligenceService {
       processed++;
     }
 
-    // Fire-and-forget scoring
+    // Fire-and-forget scoring + labeling, scoped per message owner. Unmapped
+    // (NULL-owner) rows are skipped: scoring them would spend LLM and fire
+    // CAPI/lead-push on unattributable data with the operator credential.
     if (processed > 0) {
-      this._scoreRecentConversations().catch(err => {
-        if (err) log.error('scoring_cycle_failed', { error: err.message });
-      });
-
-      // Fire-and-forget auto-labeling
-      this.processAutoLabeling(5).catch(err => {
-        if (err) log.error('auto_labeling_cycle_failed', { error: err.message });
-      });
+      for (const ownerId of ownerIds) {
+        this._scoreRecentConversations(ownerId).catch(err => {
+          if (err) log.error('scoring_cycle_failed', { error: err.message });
+        });
+        this.processAutoLabeling(5, ownerId).catch(err => {
+          if (err) log.error('auto_labeling_cycle_failed', { error: err.message });
+        });
+      }
     }
 
     return { processed };
@@ -210,8 +216,9 @@ Return ONLY valid JSON, no markdown, no explanation.`;
     }
   }
 
-  async _scoreRecentConversations() {
-    const unscored = this.repo.findUnscored(5);
+  async _scoreRecentConversations(ownerId = undefined) {
+    if (!ownerId) return;
+    const unscored = this.repo.findUnscored(5, ownerId);
     for (const conv of unscored) {
       await this._scoreConversation(conv);
     }
@@ -219,24 +226,28 @@ Return ONLY valid JSON, no markdown, no explanation.`;
 
   // ── CAPI Event Sending ──────────────────────────────────────────
 
-  async _resolvePixelId() {
-    if (this._pixelId) return this._pixelId;
+  /**
+   * Resolve the conversation OWNER's Meta token for CAPI. Returns null when
+   * the owner has no bound account — the event is skipped instead of posting
+   * tenant customer data to the operator pixel with the operator credential.
+   */
+  _ownerMetaApi(conversation) {
+    const ownerId = conversation?.user_id;
+    if (!ownerId || !this.platformAccountsRepo) return null;
+    const token = resolveOwnerPlatformToken('meta', ownerId, {
+      platformAccountsRepo: this.platformAccountsRepo,
+    });
+    return token ? MetaAdsAPI.withToken(token) : null;
+  }
 
-    const stored = this.settings?.getKey?.('meta_pixel_id');
-    if (stored) {
-      this._pixelId = stored;
-      return stored;
-    }
-
+  async _resolvePixelId(ownerApi) {
+    if (!ownerApi) return null;
     try {
-      const accounts = await this.metaApi.apiGet('/me/adaccounts', { fields: 'id,name' });
+      const accounts = await ownerApi.apiGet('/me/adaccounts', { fields: 'id,name' });
       const accountId = accounts?.data?.[0]?.id;
       if (accountId) {
-        const info = await this.metaApi.apiGet(`/${accountId}`, { fields: 'pixel_id' });
-        if (info?.pixel_id) {
-          this._pixelId = info.pixel_id;
-          return info.pixel_id;
-        }
+        const info = await ownerApi.apiGet(`/${accountId}`, { fields: 'pixel_id' });
+        if (info?.pixel_id) return info.pixel_id;
       }
     } catch (err) {
       log.warn('pixel_id_autodetect_failed', { error: err.message });
@@ -245,7 +256,12 @@ Return ONLY valid JSON, no markdown, no explanation.`;
   }
 
   async sendCapiEvent(conversation) {
-    const pixelId = await this._resolvePixelId();
+    const ownerApi = this._ownerMetaApi(conversation);
+    if (!ownerApi) {
+      log.debug('capi_skipped_no_owner_token', { conversationId: conversation?.id });
+      return null;
+    }
+    const pixelId = await this._resolvePixelId(ownerApi);
     if (!pixelId) {
       log.warn('no_pixel_id', { conversationId: conversation.id });
       return null;
@@ -271,7 +287,7 @@ Return ONLY valid JSON, no markdown, no explanation.`;
     }
 
     try {
-      const result = await this.metaApi.apiPost(`/${pixelId}/events`, { data: [eventPayload] });
+      const result = await ownerApi.apiPost(`/${pixelId}/events`, { data: [eventPayload] });
 
       const ok = result?.events_received === 1 || result?.success;
       if (ok) {
@@ -292,7 +308,7 @@ Return ONLY valid JSON, no markdown, no explanation.`;
       log.error('capi_event_failed', { id: conversation.id, error: err.message });
       return null;
     }
-    }
+  }
 
   // ── WhatsApp Sending ───────────────────────────────────────────
   async sendWhatsAppMessage(phoneNumberId, to, text, userId = null) {
