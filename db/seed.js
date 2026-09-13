@@ -466,14 +466,14 @@ export function seedDemoData(db) {
 
   // ── Performance History ───────────────────────────────────────────────
   const insertPH = db.prepare(`
-    INSERT OR IGNORE INTO performance_history (id, campaign_id, snapshot_date, platform, impressions, clicks, spend, conversions, ctr, cpc)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR IGNORE INTO performance_history (id, campaign_id, user_id, snapshot_date, platform, impressions, clicks, spend, conversions, ctr, cpc)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const history = generatePerformanceHistory();
   let seededPh = 0;
   for (const h of history) {
-    insertPH.run(h.id, h.campaign_id, h.snapshot_date, h.platform, h.impressions, h.clicks, h.spend, h.conversions, h.ctr, h.cpc);
+    insertPH.run(h.id, h.campaign_id, adminUserId, h.snapshot_date, h.platform, h.impressions, h.clicks, h.spend, h.conversions, h.ctr, h.cpc);
     seededPh++;
   }
 

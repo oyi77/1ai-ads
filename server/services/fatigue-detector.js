@@ -21,8 +21,8 @@ class CreativePerformanceRepository {
 
   upsert(row) {
     this.db.prepare(`
-      INSERT INTO creative_performance (id, ad_id, campaign_id, platform, snapshot_date, impressions, clicks, spend, conversions, ctr, cpc, frequency, reach, hook, body, image_hash, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      INSERT INTO creative_performance (id, ad_id, campaign_id, user_id, platform, snapshot_date, impressions, clicks, spend, conversions, ctr, cpc, frequency, reach, hook, body, image_hash, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       ON CONFLICT(ad_id, snapshot_date) DO UPDATE SET
         impressions = excluded.impressions,
         clicks = excluded.clicks,
@@ -34,31 +34,47 @@ class CreativePerformanceRepository {
         reach = excluded.reach,
         hook = excluded.hook,
         body = excluded.body,
-        image_hash = excluded.image_hash
+        image_hash = excluded.image_hash,
+        user_id = COALESCE(excluded.user_id, creative_performance.user_id)
     `).run(
-      row.id, row.ad_id, row.campaign_id, row.platform, row.snapshot_date,
+      row.id, row.ad_id, row.campaign_id, row.user_id || null, row.platform, row.snapshot_date,
       row.impressions, row.clicks, row.spend, row.conversions,
       row.ctr, row.cpc, row.frequency, row.reach,
       row.hook, row.body, row.image_hash
     );
   }
 
-  findByAdId(adId, lookbackDays = 7) {
+  findByAdId(adId, lookbackDays = 7, userId = undefined) {
+    if (userId === undefined) {
+      return this.db.prepare(`
+        SELECT * FROM creative_performance
+        WHERE ad_id = ? AND snapshot_date >= date('now', ?)
+        ORDER BY snapshot_date ASC
+      `).all(adId, `-${lookbackDays} days`);
+    }
     return this.db.prepare(`
       SELECT * FROM creative_performance
-      WHERE ad_id = ? AND snapshot_date >= date('now', ?)
+      WHERE ad_id = ? AND user_id IS ? AND snapshot_date >= date('now', ?)
       ORDER BY snapshot_date ASC
-    `).all(adId, `-${lookbackDays} days`);
+    `).all(adId, userId, `-${lookbackDays} days`);
   }
 
-  findByAccountId(accountId, lookbackDays = 7) {
+  findByAccountId(accountId, lookbackDays = 7, userId = undefined) {
     if (!accountId) return [];
+    if (userId === undefined) {
+      return this.db.prepare(`
+        SELECT * FROM creative_performance
+        WHERE campaign_id = ? AND snapshot_date >= date('now', ?)
+        ORDER BY ad_id, snapshot_date ASC
+      `).all(accountId, `-${lookbackDays} days`);
+    }
     return this.db.prepare(`
       SELECT * FROM creative_performance
-      WHERE campaign_id = ? AND snapshot_date >= date('now', ?)
+      WHERE campaign_id = ? AND user_id IS ? AND snapshot_date >= date('now', ?)
       ORDER BY ad_id, snapshot_date ASC
-    `).all(accountId, `-${lookbackDays} days`);
+    `).all(accountId, userId, `-${lookbackDays} days`);
   }
+
 }
 export class FatigueDetector {
   constructor(metaApi, db, opts = {}) {
@@ -150,7 +166,7 @@ export class FatigueDetector {
       const batch = ads.slice(i, i + BATCH_SIZE);
 
       const results = await Promise.allSettled(
-        batch.map(ad => this._snapshotOneAd(ad, accountId, meta))
+        batch.map(ad => this._snapshotOneAd(ad, accountId, meta, ownerId))
       );
 
       for (const r of results) {
@@ -169,13 +185,14 @@ export class FatigueDetector {
 
   /**
    * Return stored creative performance history for a specific ad.
-   * Delegates to the creative_performance repository (keyed by ad_id).
+   * Scoped to the owner: a caller only sees their own rows (legacy
+   * unattributed rows stay invisible).
    */
-  async getHistory(adId, { _ownerId } = {}) {
-    return this.repo.findByAdId(adId);
+  async getHistory(adId, { ownerId } = {}) {
+    return this.repo.findByAdId(adId, 7, ownerId);
   }
 
-  async _snapshotOneAd(ad, accountId, meta) {
+  async _snapshotOneAd(ad, accountId, meta, ownerId = null) {
     try {
       const insights = await meta.apiGet(`/${ad.id}/insights`, {
         fields: 'impressions,clicks,spend,actions,ctr,cpc,reach,frequency',
@@ -194,6 +211,7 @@ export class FatigueDetector {
         id: uuid(),
         ad_id: ad.id,
         campaign_id: accountId,
+        user_id: ownerId,
         platform: 'meta',
         snapshot_date: new Date().toISOString().slice(0, 10),
         impressions,
@@ -222,14 +240,15 @@ export class FatigueDetector {
    * and linear regression trend analysis (R²>0.5).
    */
   async detectFatigue(accountId, {
-    _ownerId,
+    ownerId,
     lookbackDays = 7,
     frequencyThreshold = 3.0,
     ctrDropPercent = 30,
   } = {}) {
     log.info('Detecting fatigue', { accountId, lookbackDays });
 
-    const allRows = this.repo.findByAccountId(accountId, lookbackDays);
+    const allRows = this.repo.findByAccountId(accountId, lookbackDays, ownerId);
+
     if (!allRows.length) {
       log.info('No performance data for fatigue detection', { accountId });
       return [];

@@ -27,8 +27,7 @@ export class UnifiedReporter {
   // ── Public API ───────────────────────────────────────────────
 
   /**
-   * Aggregated cross-platform dashboard.
-   * @param {string} [userId] - when provided, metrics are scoped to that user's performance_history rows
+   * Aggregated cross-platform dashboard, scoped to the caller's history rows.
    */
   async getUnifiedDashboard(userId, { dateRange = 'last_7d' } = {}) {
     const days = DATE_RANGE_MAP[dateRange] || 7;
@@ -237,25 +236,26 @@ export class UnifiedReporter {
   }
 
   /**
-   * Time-series data for charts.
-   * @param {string} [userId] - when provided, rows are scoped to that user's performance_history
+   * Time-series data for charts, scoped to the caller's own history rows.
    */
-  async getTimeSeries({ metric = 'spend', granularity: _granularity = 'daily', days = 30 } = {}, _userId) {
+  async getTimeSeries({ metric = 'spend', granularity: _granularity = 'daily', days = 30 } = {}, userId = undefined) {
     const validMetric = ['spend', 'revenue', 'impressions', 'clicks', 'conversions'].includes(metric)
       ? metric : 'spend';
 
     try {
-      // snapshot_date is the actual column; created_at/user_id do not exist.
+      const params = [`-${days} days`];
+      let scope = '';
+      if (userId !== undefined) { scope = 'AND user_id IS ?'; params.push(userId); }
       const rows = this.db.prepare(`
         SELECT
           DATE(snapshot_date) AS date,
           platform,
           SUM(${validMetric}) AS value
         FROM performance_history
-        WHERE snapshot_date >= DATE('now', '-${days} days')
+        WHERE snapshot_date >= DATE('now', ?) ${scope}
         GROUP BY DATE(snapshot_date), platform
         ORDER BY date ASC
-      `).all();
+      `).all(...params);
 
       return rows.map(r => ({ date: r.date, platform: r.platform, value: r.value || 0 }));
     } catch (err) {
@@ -415,17 +415,16 @@ export class UnifiedReporter {
   }
 
   /**
-   * @param {number} days
-   * NOTE: performance_history has no user_id column (pre-existing schema),
-   * so this aggregate is GLOBAL across tenants. The userId params on
-   * getUnifiedDashboard/getTimeSeries are accepted but cannot scope until
-   * the table gains attribution. Do not present these numbers as per-user.
+   * @param {string} [userId] - when provided, only that user's rows aggregate
    */
-  _getDBMetrics(days, _userId) {
+  _getDBMetrics(days, userId = undefined) {
     try {
       // performance_history columns: snapshot_date, impressions, clicks, spend,
-      // conversions (no revenue, no user_id, no created_at). revenue is not
-      // persisted — aggregate what exists, report revenue as 0.
+      // conversions, user_id (047). revenue is not persisted — aggregate what
+      // exists, report revenue as 0.
+      const params = [`-${days} days`];
+      let scope = '';
+      if (userId !== undefined) { scope = 'AND user_id IS ?'; params.push(userId); }
       return this.db.prepare(`
         SELECT platform,
                SUM(spend) AS spend,
@@ -434,9 +433,9 @@ export class UnifiedReporter {
                SUM(clicks) AS clicks,
                SUM(conversions) AS conversions
         FROM performance_history
-        WHERE snapshot_date >= DATE('now', '-${days} days')
+        WHERE snapshot_date >= DATE('now', ?) ${scope}
         GROUP BY platform
-      `).all();
+      `).all(...params);
     } catch (err) {
       log.debug('_getDBMetrics: table may not exist', { error: err.message });
       return [];
