@@ -133,7 +133,7 @@ export function createServices({ db, repos, params }) {
   const abTestService = new ABTestService(metaApi, db);
   const fatigueDetector = new FatigueDetector(metaApi, db, { creativeStudio, abTestService, platformAccountsRepo: repos.platformAccountsRepo, settingsRepo: repos.settingsRepo });
   const platformApis = { meta: metaApi, google: googleAdsAPI, tiktok: tiktokAdsAPI, linkedin: linkedinAdsAPI, twitter: twitterAdsAPI, microsoft: microsoftAdsAPI, snapchat: snapchatAdsAPI, pinterest: pinterestAdsAPI };
-  const unifiedReporter = new UnifiedReporter(platformApis, repos.campaignsRepo, db);
+  const unifiedReporter = new UnifiedReporter(platformApis, repos.campaignsRepo, db, { platformAccountsRepo: repos.platformAccountsRepo, settingsRepo: repos.settingsRepo });
   const bulkOperations = new BulkOperations(metaApi, repos.campaignsRepo, repos.adsRepo);
   const imageGenerator = new ImageGenerator(llmClient);
   const audienceIntelligence = new AudienceIntelligence(metaApi, db);

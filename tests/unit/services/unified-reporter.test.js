@@ -4,6 +4,14 @@ vi.mock('../../../server/lib/logger.js', () => ({
   createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }));
 
+const { mockWithToken } = vi.hoisted(() => ({
+  mockWithToken: vi.fn(),
+}));
+
+vi.mock('../../../server/services/meta/index.js', () => ({
+  MetaAdsAPI: { withToken: (...a) => mockWithToken(...a) },
+}));
+
 import { UnifiedReporter } from '../../../server/services/unified-reporter.js';
 
 describe('UnifiedReporter', () => {
@@ -152,6 +160,37 @@ describe('UnifiedReporter', () => {
       mockDb.prepare.mockReturnValue({ all: vi.fn().mockReturnValue([]) });
 
       const result = await reporter.recommendBudgetAllocation('user-1', 1000);
+      expect(result.allocations[0].reasoning).toContain('No historical data');
+    });
+
+    it('uses the owner token (not system apis) when repos are wired', async () => {
+      const ownerMeta = {
+        getAdAccounts: vi.fn().mockResolvedValue([{ id: 'act_9' }]),
+        getAccountInsights: vi.fn().mockResolvedValue({
+          spend: 100, revenue: 300, impressions: 5000, clicks: 200, conversions: 10,
+        }),
+      };
+      mockWithToken.mockReturnValue(ownerMeta);
+      const { UnifiedReporter: UR } = await import('../../../server/services/unified-reporter.js');
+      const scoped = new UR(mockApis, mockCampaignsRepo, mockDb, {
+        platformAccountsRepo: {
+          findAllActiveByUserAndPlatform: vi.fn(() => [{ access_token: 'owner-tok', health_status: 'ok' }]),
+        },
+      });
+      const result = await scoped.recommendBudgetAllocation('owner-9', 1000);
+      expect(mockWithToken).toHaveBeenCalledWith('owner-tok');
+      expect(ownerMeta.getAdAccounts).toHaveBeenCalled();
+      expect(mockApis.meta.getAdAccounts).not.toHaveBeenCalled();
+      expect(result.totalBudget).toBe(1000);
+    });
+
+    it('returns equal split without operator data when the owner is unbound', async () => {
+      const { UnifiedReporter: UR } = await import('../../../server/services/unified-reporter.js');
+      const scoped = new UR(mockApis, mockCampaignsRepo, mockDb, {
+        platformAccountsRepo: { findAllActiveByUserAndPlatform: vi.fn(() => []) },
+      });
+      const result = await scoped.recommendBudgetAllocation('owner-nobody', 1000);
+      expect(mockApis.meta.getAdAccounts).not.toHaveBeenCalled();
       expect(result.allocations[0].reasoning).toContain('No historical data');
     });
   });

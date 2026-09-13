@@ -23,6 +23,14 @@ vi.mock('uuid', () => ({
   v4: () => 'test-uuid-1234',
 }));
 
+const { mockWithToken } = vi.hoisted(() => ({
+  mockWithToken: vi.fn(),
+}));
+
+vi.mock('../../../server/services/meta/index.js', () => ({
+  MetaAdsAPI: { withToken: (...a) => mockWithToken(...a) },
+}));
+
 import { FatigueDetector } from '../../../server/services/fatigue-detector.js';
 
 describe('FatigueDetector', () => {
@@ -46,9 +54,13 @@ describe('FatigueDetector', () => {
       exec: vi.fn(),
     };
 
-    detector = new FatigueDetector(mockMetaApi, mockDb);
+    detector = new FatigueDetector(mockMetaApi, mockDb, {
+      platformAccountsRepo: {
+        findAllActiveByUserAndPlatform: vi.fn(() => [{ access_token: 'owner-tok', health_status: 'ok' }]),
+      },
+    });
+    mockWithToken.mockReturnValue(mockMetaApi);
   });
-
   it('should create instance with dependencies', () => {
     expect(detector.meta).toBe(mockMetaApi);
     expect(detector.db).toBe(mockDb);
@@ -58,8 +70,17 @@ describe('FatigueDetector', () => {
   describe('snapshotCreatives', () => {
     it('should return 0 when no ads found', async () => {
       mockMetaApi.getAds.mockResolvedValue([]);
-      const count = await detector.snapshotCreatives('act_123');
+      const count = await detector.snapshotCreatives('act_123', { ownerId: 'u1' });
       expect(count).toBe(0);
+    });
+
+    it('skips without Meta call when the owner has no bound token', async () => {
+      const unscoped = new FatigueDetector(mockMetaApi, mockDb, {
+        platformAccountsRepo: { findAllActiveByUserAndPlatform: vi.fn(() => []) },
+      });
+      const count = await unscoped.snapshotCreatives('act_123', { ownerId: 'u1' });
+      expect(count).toBe(0);
+      expect(mockMetaApi.getAds).not.toHaveBeenCalled();
     });
 
     it('should snapshot ads with insights', async () => {
@@ -79,7 +100,7 @@ describe('FatigueDetector', () => {
         }],
       });
 
-      const count = await detector.snapshotCreatives('act_123');
+      const count = await detector.snapshotCreatives('act_123', { ownerId: 'u1' });
       expect(count).toBe(1);
       expect(mockDb.prepare).toHaveBeenCalled();
     });
@@ -88,7 +109,7 @@ describe('FatigueDetector', () => {
       mockMetaApi.getAds.mockResolvedValue([{ id: 'ad1' }]);
       mockMetaApi.apiGet.mockResolvedValue({ data: [] });
 
-      const count = await detector.snapshotCreatives('act_123');
+      const count = await detector.snapshotCreatives('act_123', { ownerId: 'u1' });
       expect(count).toBe(0);
     });
   });

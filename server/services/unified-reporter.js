@@ -1,7 +1,7 @@
 import { createLogger } from '../lib/logger.js';
 import { MetricsNormalizer } from './metrics-normalizer.js';
 import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
-
+import { MetaAdsAPI } from './meta/index.js';
 const log = createLogger('unified-reporter');
 
 const DATE_RANGE_MAP = {
@@ -271,11 +271,19 @@ export class UnifiedReporter {
     const datePreset = days <= 1 ? 'today' : days <= 7 ? 'last_7d' : days <= 30 ? 'last_30d' : 'last_90d';
     const results = [];
 
-    // When a userId is supplied, resolve the owner-scoped meta API so live
-    // insights reflect only that user's connected account (never the system token).
-    const liveApis = (userId && this.repos)
-      ? { meta: resolveOwnerPlatformToken('meta', userId, this.repos) }
-      : this.apis;
+    // Per-user isolation: a caller's live insights come ONLY from their own
+    // bound Meta token. Non-meta system clients are skipped for scoped calls
+    // (no per-platform owner resolution yet) — never the operator's data.
+    // Unscoped calls (no userId) keep the legacy system-client behavior for
+    // operator dashboards.
+    let liveApis = this.apis;
+    if (userId) {
+      liveApis = {};
+      if (this.repos) {
+        const token = resolveOwnerPlatformToken('meta', userId, this.repos);
+        if (token) liveApis.meta = MetaAdsAPI.withToken(token);
+      }
+    }
 
     for (const [platform, api] of Object.entries(liveApis)) {
       if (!api) continue;
@@ -404,15 +412,14 @@ export class UnifiedReporter {
         return empty;
       }
     }
-
-    // Other platforms: gracefully return empty
-    return empty;
   }
 
   /**
-   * Fetch aggregated metrics from the DB for platforms that may not be live-connected.
    * @param {number} days
-   * @param {string} [userId] - when provided, only that user's performance_history rows are aggregated
+   * NOTE: performance_history has no user_id column (pre-existing schema),
+   * so this aggregate is GLOBAL across tenants. The userId params on
+   * getUnifiedDashboard/getTimeSeries are accepted but cannot scope until
+   * the table gains attribution. Do not present these numbers as per-user.
    */
   _getDBMetrics(days, _userId) {
     try {

@@ -75,16 +75,17 @@ export class FatigueDetector {
   }
 
   /**
-   * Resolve a per-owner MetaAdsAPI client. Background system loops (no ownerId)
-   * fall back to the default this.meta so DB-driven sweeps still work.
+   * Resolve a per-owner MetaAdsAPI client. Returns null when the owner has
+   * no bound token — callers skip instead of reading tenant creatives with
+   * the operator credential. Never another user's token.
    */
   _metaApiForOwner(ownerId) {
-    if (!ownerId) return this.meta;
+    if (!ownerId) return null;
     const token = resolveOwnerPlatformToken('meta', ownerId, {
       platformAccountsRepo: this.platformAccountsRepo,
       settingsRepo: this.settingsRepo,
     });
-    if (!token) return this.meta;
+    if (!token) return null;
     return MetaAdsAPI.withToken(token);
   }
 
@@ -132,6 +133,10 @@ export class FatigueDetector {
     log.info('Snapshotting creatives', { accountId });
 
     const meta = this._metaApiForOwner(ownerId);
+    if (!meta) {
+      log.debug('Snapshot skipped - owner has no bound Meta token', { accountId });
+      return 0;
+    }
     const ads = await meta.getAds(accountId);
     if (!ads || ads.length === 0) {
       log.info('No ads found', { accountId });
