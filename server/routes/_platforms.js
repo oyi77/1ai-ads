@@ -88,7 +88,7 @@ export function createPlatformsGroupRouter({ repos, services, publicRateLimit })
   router.use('/meta-system', requireAuth, createFacebookSystemUserRouter(services.facebookSystemUserService, { userMetaAppsRepo: repos.userMetaAppsRepo }));
 
   // ── Non-platform integrations ──────────────────────────────────
-  router.use('/selow', requireAuth, createSelowRouter(repos.settingsRepo));
+  router.use('/selow', requireAuth, createSelowRouter(repos.platformAccountsRepo));
   router.use('/shopee', requireAuth, createShopeeDashboardRouter(services.shopeeAdapter, repos.settingsRepo, repos.shopeeCommissionsRepo));
   router.use('/adspirer', requireAuth, createAdspirerRouter(services.adspirerClient, repos.platformAccountsRepo, repos.settingsRepo));
   router.use('/ads-library', publicRateLimit, createAdsLibraryRouter());

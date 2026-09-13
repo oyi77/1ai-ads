@@ -14,7 +14,6 @@
  */
 
 import { createLogger } from '../lib/logger.js';
-import { ConfigurationError } from '../lib/errors.js';
 
 const log = createLogger('ad-research');
 
@@ -64,7 +63,7 @@ export class AdResearchService {
       'spend', 'impressions', 'currency',
     ].join(',');
 
-    const token = this._getToken();
+    const token = this.metaApi._getToken();
     const params = new URLSearchParams({
       search_terms: query, ad_reached_countries: JSON.stringify([country]),
       ad_active_status: activeStatus, ad_type: 'ALL', fields: FIELDS,
@@ -87,17 +86,6 @@ export class AdResearchService {
     return result;
   }
 
-  _getToken() {
-    if (this._explicitToken) return this._explicitToken;
-    if (!this._userScoped && this.settingsRepo) {
-      const creds = this.settingsRepo.getCredentials('meta');
-      if (!creds?.access_token) {
-        throw new ConfigurationError('Meta access token not configured');
-      }
-      return creds.access_token;
-    }
-    throw new ConfigurationError('Meta access token not configured');
-  }
 
   _formatDirectAd(ad) {
     return {
@@ -198,7 +186,7 @@ export class AdResearchService {
       'spend', 'impressions', 'currency',
     ].join(',');
 
-    const token = this._getToken();
+    const token = this.metaApi._getToken();
     const params = new URLSearchParams({
       ad_reached_countries: JSON.stringify([country]),
       ad_active_status: 'ALL', ad_type: 'ALL', fields: FIELDS,
@@ -228,7 +216,7 @@ export class AdResearchService {
 
     const config = (await import('../config/index.js')).default;
     const GRAPH_API_BASE = `https://graph.facebook.com/${config.metaApiVersion}`;
-    const token = this._getToken();
+    const token = this.metaApi._getToken();
     const searchQuery = pageNameOrUrl.includes('facebook.com')
       ? pageNameOrUrl.replace(/https?:\/\/(www\.)?facebook\.com\//, '').replace(/\/$/, '')
       : pageNameOrUrl;

@@ -9,7 +9,7 @@ export function createPinterestRouter(platformAccountsRepo) {
   const router = Router();
 
   async function clientFor(req) {
-    const userToken = await resolveUserPlatformToken(req, 'pinterest', platformAccountsRepo);
+    const userToken = resolveUserPlatformToken('pinterest', req, platformAccountsRepo);
     return PinterestAdsAPI.withToken(userToken || '');
   }
 

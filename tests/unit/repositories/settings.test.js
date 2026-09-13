@@ -117,44 +117,25 @@ describe('SettingsRepository', () => {
     });
   });
 
-  describe('getCredentials/setCredentials', () => {
-    function insertUser(id) {
-      db.prepare('INSERT OR IGNORE INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)').run(id, `user_${id}`, `${id}@test.com`, 'hash');
-    }
+  describe('getCredentials/setCredentials (removed — cross-tenant leak)', () => {
+    it('getCredentials throws and points at the per-user lookup', () => {
+      expect(() => repo.getCredentials('meta')).toThrow(/findActiveByUserAndPlatform/);
+    });
 
-    it('stores and retrieves platform credentials', () => {
+    it('setCredentials throws and points at per-user create/update', () => {
+      expect(() => repo.setCredentials('meta', { token: 'new' })).toThrow(/explicit user_id/);
+    });
+
+    it('getActiveAccount throws and points at the per-user lookup', () => {
+      expect(() => repo.getActiveAccount('meta')).toThrow(/findActiveByUserAndPlatform/);
+    });
+
+    it('per-user lookups still work via platformAccountsRepo', () => {
       const userId = 'test-user-1';
-      insertUser(userId);
-      const credentials = { accessToken: 'abc123', refreshToken: 'xyz789' };
-      accountsRepo.addAccount({ user_id: userId, platform: 'meta', account_name: 'Test Account', credentials, is_active: 1 });
-
-      const retrieved = repo.getCredentials('meta');
-      expect(retrieved).toEqual(credentials);
-    });
-
-    it('returns null for non-existent platform credentials', () => {
-      const retrieved = repo.getCredentials('google');
-      expect(retrieved).toBeNull();
-    });
-
-    it('updates existing credentials', () => {
-      const userId = 'test-user-2';
-      insertUser(userId);
-      accountsRepo.addAccount({ user_id: userId, platform: 'meta', account_name: 'Test', credentials: { token: 'old' }, is_active: 1 });
-      repo.setCredentials('meta', { token: 'new', extra: 'data' });
-
-      const retrieved = repo.getCredentials('meta');
-      expect(retrieved).toEqual({ token: 'new', extra: 'data' });
-    });
-
-    it('stores credentials for different platforms separately', () => {
-      const userId = 'test-user-3';
-      insertUser(userId);
-      accountsRepo.addAccount({ user_id: userId, platform: 'meta', account_name: 'Meta Account', credentials: { meta_token: 'meta_val' }, is_active: 1 });
-      accountsRepo.addAccount({ user_id: userId, platform: 'google', account_name: 'Google Account', credentials: { google_token: 'google_val' }, is_active: 1 });
-
-      expect(repo.getCredentials('meta')).toEqual({ meta_token: 'meta_val' });
-      expect(repo.getCredentials('google')).toEqual({ google_token: 'google_val' });
+      db.prepare('INSERT OR IGNORE INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)').run(userId, `user_${userId}`, `${userId}@test.com`, 'hash');
+      accountsRepo.addAccount({ user_id: userId, platform: 'meta', account_name: 'Test Account', credentials: { accessToken: 'abc123' }, is_active: 1 });
+      const found = accountsRepo.findActiveByUserAndPlatform(userId, 'meta');
+      expect(found.credentials).toEqual({ accessToken: 'abc123' });
     });
   });
 

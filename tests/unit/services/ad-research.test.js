@@ -5,18 +5,19 @@ describe('AdResearchService', () => {
   const mockSettingsRepo = {
     getCredentials: vi.fn(),
   };
+  const mockMetaApi = {
+    _getToken: vi.fn(() => 'test_token_123'),
+  };
 
-  const service = new AdResearchService({ settingsRepo: mockSettingsRepo });
+  const service = new AdResearchService({ settingsRepo: mockSettingsRepo, metaApi: mockMetaApi });
 
   it('should create an AdResearchService instance with settings repo', () => {
     expect(service).toBeInstanceOf(AdResearchService);
     expect(service.settingsRepo).toBe(mockSettingsRepo);
   });
 
-  it('should throw error when access token is not configured', () => {
-    mockSettingsRepo.getCredentials.mockReturnValue(null);
-
-    expect(() => service._getToken()).toThrow('Meta access token not configured');
+  it('resolves the direct-API token from the injected meta client', () => {
+    expect(service.metaApi._getToken()).toBe('test_token_123');
   });
 
   it('should search ads by keyword', async () => {

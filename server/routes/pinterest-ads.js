@@ -9,9 +9,9 @@ const log = createLogger('pinterest-ads');
 export function createPinterestAdsRouter(settingsRepo, platformAccountsRepo) {
   const router = Router();
 
-  // Build a Pinterest client bound to the REQUESTING USER's token (SaaS),
-  // falling back to the system token. Per-request (not a shared singleton)
-  // so concurrent users never share token state.
+  // Build a Pinterest client bound to the REQUESTING USER's token (SaaS).
+  // Strict per-user isolation: unconnected users get a clear error, never
+  // another tenant's token. Per-request (not a shared singleton).
 function clientFor(req) {
   const api = new PinterestAdsAPI(settingsRepo);
   const token = resolveUserPlatformToken('pinterest', req, platformAccountsRepo, settingsRepo);

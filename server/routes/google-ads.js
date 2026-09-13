@@ -14,7 +14,7 @@ export function createGoogleAdsRouter(settingsRepo, platformAccountsRepo, campai
 
   // Build a Google Ads API client bound to the requesting user's token
   async function clientFor(req) {
-    const userToken = await resolveUserPlatformToken(req, 'google', platformAccountsRepo);
+    const userToken = resolveUserPlatformToken('google', req, platformAccountsRepo, settingsRepo);
     return GoogleAdsAPI.withToken(userToken || '', {
       developerToken: process.env.GOOGLE_ADS_DEVELOPER_TOKEN || '',
       clientId: process.env.GOOGLE_ADS_CLIENT_ID || '',

@@ -31,19 +31,19 @@ describe('resolveOwnerPlatformToken', () => {
     expect(repos.platformAccountsRepo.findAllActiveByUserAndPlatform).toHaveBeenCalledWith('user-9', 'meta');
   });
 
-  it('falls back to the system token when the owner has no bound account', () => {
+  it('returns null when the owner has no bound account (no system fallback)', () => {
     const repos = makeRepos({ systemToken: 'sys-tok-456' });
     const token = resolveOwnerPlatformToken(platform, 'user-9', repos);
-    expect(token).toBe('sys-tok-456');
-    // owner lookup ran first, then system fallback
+    expect(token).toBeNull();
+    // owner lookup ran; system credential must never be consulted
     expect(repos.platformAccountsRepo.findAllActiveByUserAndPlatform).toHaveBeenCalledWith('user-9', 'meta');
-    expect(repos.settingsRepo.getCredentials).toHaveBeenCalledWith('meta');
+    expect(repos.settingsRepo.getCredentials).not.toHaveBeenCalled();
   });
 
-  it('falls back to system token when the owner lookup throws', () => {
+  it('returns null when the owner lookup throws (no system fallback)', () => {
     const repos = makeRepos({ systemToken: 'sys-tok-456', getByPlatformThrows: true });
     const token = resolveOwnerPlatformToken(platform, 'user-9', repos);
-    expect(token).toBe('sys-tok-456');
+    expect(token).toBeNull();
   });
 
   it('returns null when neither owner nor system token is configured', () => {
@@ -55,15 +55,15 @@ describe('resolveOwnerPlatformToken', () => {
   it('returns null when ownerId is absent (no cross-user leakage)', () => {
     const repos = makeRepos({ systemToken: 'sys-tok-456' });
     const token = resolveOwnerPlatformToken(platform, null, repos);
-    // Without an ownerId the owner lookup is skipped; system fallback still applies
+    // Without an ownerId the owner lookup is skipped and no fallback applies
     expect(repos.platformAccountsRepo.findAllActiveByUserAndPlatform).not.toHaveBeenCalled();
-    expect(token).toBe('sys-tok-456');
+    expect(token).toBeNull();
   });
 
-  it('honors a bare string system credential', () => {
+  it('ignores a bare string system credential', () => {
     const platformAccountsRepo = { getByPlatform: vi.fn(() => null), findAllActiveByUserAndPlatform: vi.fn(() => []) };
     const settingsRepo = { getCredentials: vi.fn(() => 'bare-sys-tok') };
     const token = resolveOwnerPlatformToken(platform, 'user-1', { platformAccountsRepo, settingsRepo });
-    expect(token).toBe('bare-sys-tok');
+    expect(token).toBeNull();
   });
 });

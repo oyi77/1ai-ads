@@ -9,9 +9,9 @@ const log = createLogger('snapchat-ads');
 export function createSnapchatAdsRouter(settingsRepo, platformAccountsRepo) {
   const router = Router();
 
-  // Build a Snapchat client bound to the REQUESTING USER's token (SaaS),
-  // falling back to the system token. Per-request (not a shared singleton)
-  // so concurrent users never share token state.
+  // Build a Snapchat client bound to the REQUESTING USER's token (SaaS).
+  // Strict per-user isolation: unconnected users get a clear error, never
+  // another tenant's token. Per-request (not a shared singleton).
 function clientFor(req) {
   const api = new SnapchatAdsAPI(settingsRepo);
   const token = resolveUserPlatformToken('snapchat', req, platformAccountsRepo, settingsRepo);

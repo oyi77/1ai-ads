@@ -10,7 +10,7 @@ export function createTikTokRouter(platformAccountsRepo, campaignsRepo) {
   const router = Router();
 
   async function clientFor(req) {
-    const userToken = await resolveUserPlatformToken(req, 'tiktok', platformAccountsRepo);
+    const userToken = resolveUserPlatformToken('tiktok', req, platformAccountsRepo);
     return TikTokAdsAPI.withToken(userToken || '', {
       appId: process.env.TIKTOK_APP_ID || '',
       secret: process.env.TIKTOK_APP_SECRET || '',

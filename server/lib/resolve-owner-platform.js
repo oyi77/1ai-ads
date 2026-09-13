@@ -2,8 +2,9 @@ import { isAccountTokenUsable } from './token-health.js';
 
 /**
  * Resolve the API token for a platform mutation as the RESOURCE OWNER's own
- * bound token (multi-tenant / SaaS), falling back to the system/global token
- * only when the owner has no bound account.
+ * bound token (multi-tenant / SaaS). Strict per-user isolation: returns null
+ * when the owner has no bound account. NEVER falls back to a shared
+ * system/global token — that was a silent cross-user leak.
  *
  * This is the background-execution counterpart of
  * `resolveUserPlatformToken` (used in request paths). Background jobs
@@ -13,13 +14,11 @@ import { isAccountTokenUsable } from './token-health.js';
  *
  * @param {string} platform — platform key (e.g. 'meta', 'google', 'tiktok')
  * @param {string|null} ownerId — the campaign/rule owner's user id
- * @param {object} repos — container with platformAccountsRepo + settingsRepo
- * @returns {string|null} access token, or null if neither is configured
+ * @param {object} repos — container with platformAccountsRepo (settingsRepo ignored)
+ * @returns {string|null} access token, or null if owner has no bound account
  */
 export function resolveOwnerPlatformToken(platform, ownerId, repos) {
   const platformAccountsRepo = repos?.platformAccountsRepo;
-  const settingsRepo = repos?.settingsRepo;
-
   if (ownerId && platformAccountsRepo?.findAllActiveByUserAndPlatform) {
     try {
       const accounts = platformAccountsRepo.findAllActiveByUserAndPlatform(ownerId, platform);
@@ -32,11 +31,8 @@ export function resolveOwnerPlatformToken(platform, ownerId, repos) {
       const found = usable || accounts.find(a => a?.access_token);
       if (found) return found.access_token;
     } catch {
-      // fall through to system token
+      // no bound account → strict per-user isolation: do NOT borrow system token
     }
   }
-  const sys = settingsRepo?.getCredentials?.(platform);
-  if (typeof sys === 'string' && sys.length > 0) return sys;
-  if (sys?.access_token) return sys.access_token;
   return null;
 }

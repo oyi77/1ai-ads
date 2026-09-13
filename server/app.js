@@ -360,6 +360,13 @@ export function startServices(app) {
     log.info('Alerting service initialized with bot');
   }
 
+  // Incident-response kill-switch: SCHEDULERS_DISABLED=1 skips every
+  // background scheduler. HTTP routes + bot stay live.
+  if (config.schedulersDisabled) {
+    log.warn('SCHEDULERS_DISABLED=1 — background schedulers skipped (routes + bot live)');
+    return;
+  }
+
   autonomousAgent.runAutonomousMode();
   autoOptimizer.start();
   aiAgent.startScheduler(() => usersRepo.findAll().map(u => u.id));

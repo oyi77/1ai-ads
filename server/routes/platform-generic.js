@@ -6,7 +6,7 @@
  * custom needs (Meta, Shopee, etc.) keep their own routers.
  *
  * Multi-tenant: each request uses the REQUESTING USER's bound platform token
- * (via PlatformAccountsRepository), falling back to the system token.
+ * (via PlatformAccountsRepository). Strict per-user isolation — no system fallback.
  */
 
 import { Router } from 'express';
@@ -28,8 +28,8 @@ export function createGenericPlatformRouter(platformKey, platformLabel, settings
   const router = Router();
   const log = createLogger(platformKey);
 
-  // Build a platform client bound to the REQUESTING USER's token (SaaS),
-  // falling back to the system token. Per-request instance.
+  // Build a platform client bound to the REQUESTING USER's token (SaaS).
+  // Strict per-user isolation. Per-request instance.
   async function clientFor(req) {
     const api = await getPlatform(platformKey, settingsRepo);
     const token = resolveUserPlatformToken(platformKey, req, platformAccountsRepo, settingsRepo);

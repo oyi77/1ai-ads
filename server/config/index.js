@@ -86,7 +86,11 @@ const config = {
  get aiPipelineDirectApiKey() { return process.env.AI_PIPELINE_DIRECT_API_KEY || ''; },
  get aiPipelineDefaultModel() { return process.env.AI_PIPELINE_DEFAULT_MODEL || ''; },
  get nangoSecretKey() { return process.env.NANGO_SECRET_KEY || ''; },
- get approvalRequired() { return process.env.APPROVAL_REQUIRED === 'true' || process.env.APPROVAL_REQUIRED === '1'; },
+  get approvalRequired() { return process.env.APPROVAL_REQUIRED === 'true' || process.env.APPROVAL_REQUIRED === '1'; },
+  // Incident-response kill-switch: SCHEDULERS_DISABLED=1 skips every
+  // background scheduler in startServices (autonomous, optimizer, schedulers,
+  // processors, monitors). HTTP routes + bot stay live.
+  get schedulersDisabled() { return process.env.SCHEDULERS_DISABLED === 'true' || process.env.SCHEDULERS_DISABLED === '1'; },
  get ruleMaxDailyBudget() { return Number(process.env.RULE_MAX_DAILY_BUDGET || 10000000); },
  get publicBaseUrl() { return process.env.PUBLIC_BASE_URL || 'https://adforge.aitradepulse.com'; },
  get paymentGateway() { return process.env.PAYMENT_GATEWAY || 'duitku'; },

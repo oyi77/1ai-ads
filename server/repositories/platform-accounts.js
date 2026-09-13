@@ -118,18 +118,15 @@ export class PlatformAccountsRepository {
     });
   }
 
-  // ── System-level lookups (no userId) ─────────────────────────
-  // These match the old SettingsRepository pattern where "active account"
-  // means the system-wide active account for a platform, not per-user.
-
-  getActiveAccount(platform) {
-    const row = this.db.prepare(
-      'SELECT * FROM platform_accounts WHERE platform = ? AND is_active = 1 LIMIT 1'
-    ).get(platform);
-    if (!row) return null;
-    return { ...row, credentials: decryptCredentials(row.credentials) };
+  // ── System-level lookups REMOVED (cross-tenant leak) ─────────────
+  // getActiveAccount / getCredentials / setCredentials used to serve
+  // `WHERE platform = ? LIMIT 1` with no user scope — any caller reaching
+  // them borrowed another tenant's token. Strict per-user isolation:
+  // callers MUST use findActiveByUserAndPlatform / findAllActiveByUserAndPlatform.
+  // These shims throw loudly so misuse surfaces instead of leaking silently.
+  getActiveAccount(_platform) {
+    throw new Error('getActiveAccount is removed (cross-tenant leak): use findActiveByUserAndPlatform(userId, platform)');
   }
-
   getAccountByPlatformId(platformId) {
     const row = this.db.prepare(
       'SELECT * FROM platform_accounts WHERE id = ? LIMIT 1'
@@ -137,7 +134,6 @@ export class PlatformAccountsRepository {
     if (!row) return null;
     return { ...row, credentials: decryptCredentials(row.credentials) };
   }
-
   getAccounts(platform = null) {
     if (platform) {
       const rows = this.db.prepare(
@@ -150,20 +146,12 @@ export class PlatformAccountsRepository {
     ).all();
     return rows.map(r => ({ ...r, credentials: decryptCredentials(r.credentials) }));
   }
-
-  // ── Credential helpers (system-level) ───────────────────────
-
-  getCredentials(platform) {
-    const active = this.getActiveAccount(platform);
-    if (active) return active.credentials;
-    return null;
+  // ── Credential helpers (REMOVED system fallback) ─────────────────
+  getCredentials(_platform) {
+    throw new Error('getCredentials is removed (cross-tenant leak): use findActiveByUserAndPlatform(userId, platform)');
   }
-
-  setCredentials(platform, credentials) {
-    const active = this.getActiveAccount(platform);
-    if (active) {
-      this.update(active.id, { credentials });
-    }
+  setCredentials(_platform, _credentials) {
+    throw new Error('setCredentials is removed (cross-tenant leak): use create/update with explicit user_id');
   }
 
   // ── CRUD ────────────────────────────────────────────────────
@@ -238,13 +226,6 @@ export class PlatformAccountsRepository {
   // Alias: deleteAccount for backward compatibility
   deleteAccount(id) {
     return this.remove(id);
-  }
-
-  setActiveAccount(platform, id) {
-    this.db.transaction(() => {
-      this.db.prepare('UPDATE platform_accounts SET is_active = 0 WHERE platform = ?').run(platform);
-      this.db.prepare('UPDATE platform_accounts SET is_active = 1 WHERE id = ?').run(id);
-    })();
   }
 
   setActiveAccountForUser(platform, id, userId) {

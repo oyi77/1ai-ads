@@ -9,7 +9,7 @@ export function createMicrosoftRouter(platformAccountsRepo) {
   const router = Router();
 
   async function clientFor(req) {
-    const userToken = await resolveUserPlatformToken(req, 'microsoft', platformAccountsRepo);
+    const userToken = resolveUserPlatformToken('microsoft', req, platformAccountsRepo);
     return MicrosoftAdsAPI.withToken(userToken || '', {
       developerToken: process.env.MICROSOFT_ADS_DEVELOPER_TOKEN || '',
       customerId: req.query.customerId || req.body?.customerId || '',

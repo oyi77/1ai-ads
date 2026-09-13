@@ -53,9 +53,11 @@ export class SettingsRepository {
   }
 
 
-  // ── Deprecated: Account management ────────────────────────────
-  // These delegate to PlatformAccountsRepository for backward compatibility.
-  // New code should use platformAccountsRepo directly.
+  // ── REMOVED: unscoped account management ────────────────────────
+  // getCredentials / setCredentials / getActiveAccount served
+  // `WHERE platform = ? LIMIT 1` with no user scope (cross-tenant leak).
+  // They now throw. New code MUST use platformAccountsRepo
+  // .findActiveByUserAndPlatform(userId, platform) directly.
 
   get _accountsRepo() {
     if (!this._platformAccountsRepo) {
@@ -64,17 +66,17 @@ export class SettingsRepository {
     return this._platformAccountsRepo;
   }
 
-  /** @deprecated Use platformAccountsRepo.getCredentials(platform) */
+  /** @removed Cross-tenant leak — use platformAccountsRepo.findActiveByUserAndPlatform(userId, platform) */
   getCredentials(platform) {
     return this._accountsRepo.getCredentials(platform);
   }
 
-  /** @deprecated Use platformAccountsRepo.setCredentials(platform, credentials) */
+  /** @removed Cross-tenant leak — use platformAccountsRepo.create/update with explicit user_id */
   setCredentials(platform, credentials) {
     return this._accountsRepo.setCredentials(platform, credentials);
   }
 
-  /** Delete the real platform credential row (not the legacy settings KV key). */
+  /** Delete all credential rows for a platform (admin-scoped caller filters by user). */
   deleteCredentials(platform) {
     if (this._accountsRepo && typeof this._accountsRepo.getAccounts === 'function') {
       const accounts = this._accountsRepo.getAccounts(platform);
@@ -85,6 +87,7 @@ export class SettingsRepository {
     }
     return this.delete(`credentials_${platform}`);
   }
+
 
   /** @deprecated Use platformAccountsRepo.getAccounts(platform) */
   getAccounts(platform = null) {
@@ -111,16 +114,11 @@ export class SettingsRepository {
     return this._accountsRepo.deleteAccount(id);
   }
 
-  /** @deprecated Use platformAccountsRepo.setActiveAccount(platform, id) */
-  setActiveAccount(platform, id) {
-    return this._accountsRepo.setActiveAccount(platform, id);
-  }
   setActiveAccountForUser(platform, id, userId) {
     return this._accountsRepo.setActiveAccountForUser(platform, id, userId);
   }
 
-
-  /** @deprecated Use platformAccountsRepo.getActiveAccount(platform) */
+  /** @removed Cross-tenant leak — use platformAccountsRepo.findActiveByUserAndPlatform(userId, platform) */
   getActiveAccount(platform) {
     return this._accountsRepo.getActiveAccount(platform);
   }

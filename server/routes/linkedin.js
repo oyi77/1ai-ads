@@ -9,7 +9,7 @@ export function createLinkedInRouter(platformAccountsRepo) {
   const router = Router();
 
   async function clientFor(req) {
-    const userToken = await resolveUserPlatformToken(req, 'linkedin', platformAccountsRepo);
+    const userToken = resolveUserPlatformToken('linkedin', req, platformAccountsRepo);
     return LinkedInAdsAPI.withToken(userToken || '');
   }
 

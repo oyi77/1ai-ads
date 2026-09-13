@@ -14,32 +14,34 @@ import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('routes:selow');
 
-export function createSelowRouter(settingsRepo) {
+export function createSelowRouter(platformAccountsRepo) {
   const router = Router();
 
-  // Cache the SELOW API instance; only recreate when cookies change
-  let cachedClient = null;
-  let cachedCookies = null;
+  // Per-user SELOW API instances (no shared singleton — cross-tenant leak).
+  const clientsByUser = new Map();
 
-  function getSelowClient() {
-    const creds = settingsRepo?.getCredentials?.('selow');
-    if (!creds?.cookies) {
-      cachedClient = null;
-      cachedCookies = null;
+  function getSelowClient(req) {
+    const userId = req?.user?.id;
+    if (!userId) return null;
+    const acct = platformAccountsRepo?.findActiveByUserAndPlatform?.(userId, 'selow');
+    const cookies = acct?.credentials?.cookies;
+    if (!cookies) {
+      clientsByUser.delete(userId);
       return null;
     }
-    if (cachedClient && cachedCookies === creds.cookies) {
-      return cachedClient;
+    const cached = clientsByUser.get(userId);
+    if (cached && cached.cookies === cookies) {
+      return cached.client;
     }
-    cachedClient = new SelowAPI(creds.cookies);
-    cachedCookies = creds.cookies;
-    return cachedClient;
+    const client = new SelowAPI(cookies);
+    clientsByUser.set(userId, { cookies, client });
+    return client;
   }
 
   // GET /api/selow/accounts
   router.get('/accounts', async (req, res, next) => {
     try {
-      const client = getSelowClient();
+      const client = getSelowClient(req);
       if (!client) return res.status(401).json({ error: 'SELOW not configured. Set cookies in Settings.' });
 
       const { search, status, page, pageSize } = req.query;
@@ -60,7 +62,7 @@ export function createSelowRouter(settingsRepo) {
   // GET /api/selow/accounts/:id
   router.get('/accounts/:id', async (req, res, next) => {
     try {
-      const client = getSelowClient();
+      const client = getSelowClient(req);
       if (!client) return res.status(401).json({ error: 'SELOW not configured' });
 
       const account = await client.getAccount(req.params.id);
@@ -74,7 +76,7 @@ export function createSelowRouter(settingsRepo) {
   // POST /api/selow/accounts/:id/topup
   router.post('/accounts/:id/topup', async (req, res, next) => {
     try {
-      const client = getSelowClient();
+      const client = getSelowClient(req);
       if (!client) return res.status(401).json({ error: 'SELOW not configured' });
 
       const { amount, merchant } = req.body;
@@ -92,9 +94,9 @@ export function createSelowRouter(settingsRepo) {
   });
 
   // GET /api/selow/summary
-  router.get('/summary', async (_req, res, next) => {
+  router.get('/summary', async (req, res, next) => {
     try {
-      const client = getSelowClient();
+      const client = getSelowClient(req);
       if (!client) return res.status(401).json({ error: 'SELOW not configured' });
 
       const summary = await client.getPortfolioSummary();

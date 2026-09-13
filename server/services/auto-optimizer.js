@@ -26,8 +26,8 @@ export class AutoOptimizer {
 
   /**
    * Resolve a Meta API as the RULE/owner of a given campaign (multi-tenant).
-   * Uses the owner's bound Meta token when present, else falls back to the
-   * injected system metaApi. Never another user's token.
+   * Uses the owner's bound Meta token when present, else the injected
+   * system metaApi. Never another user's token.
    */
   _metaForOwner(campaign) {
     const ownerId = campaign?.user_id || campaign?.created_by || (campaign && campaign.user && campaign.user.id);
@@ -36,8 +36,6 @@ export class AutoOptimizer {
       for (const acct of accounts) {
         if (acct?.access_token) return new MetaAdsAPI(acct.access_token);
       }
-      const fallback = this.settingsRepo && this.settingsRepo.getCredentials('meta')?.access_token;
-      if (fallback) return new MetaAdsAPI(fallback);
     }
     return this.meta;
   }
