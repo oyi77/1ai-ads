@@ -1,6 +1,17 @@
 ## [1.6.0] - 2026-09-12
 
 ### Fixed
+- **HIGH**: `POST /api/boost/telegram-webhook` was dead surface with a dangerous
+  payload — unreachable (Telegram only delivers to `/webhook/telegram`, and the
+  route demanded a user JWT Telegram can never present) while its callee
+  `handleTelegramCommand` approved/rejected by global numeric id with no tenant
+  scoping. Route and method deleted (same treatment as `createOptimizeRouter`);
+  the `_notify` Telegram alert no longer advertises the unhandled
+  `/boost_approve_N` commands and points at the dashboard instead.
+- **MEDIUM**: five pre-`044` `boost_recommendations` rows (`test1`, `gate_check`,
+  `fb_123` x2, `probe`) carried `NULL user_id` and were invisible to every
+  tenant's queue. Backed up to `backups/purged-ownerless-boost-*.json` and purged;
+  live table verified at zero ownerless rows.
 - **CRITICAL**: `/api/team` (list/invite/accept/role-update/revoke) returned 500 for
   every request. `PaymentsRepository` never implemented the five methods the router
   calls (`findTeamMembersByOwner`, `findTeamMemberByOwnerAndEmail`, `acceptTeamInvite`,

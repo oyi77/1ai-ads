@@ -31,17 +31,6 @@ export function createBoostRouter({ services }) {
     return res.json({ success: true, data: recs, count: recs.length });
   });
 
-  // ── POST /api/boost/telegram-webhook ─────────────────────────
-  // Receives Telegram bot updates; handles /boost_approve_N and /boost_reject_N commands.
-  router.post('/telegram-webhook', requireAuth, async (req, res) => {
-    const text = req.body?.message?.text ?? req.body?.callback_query?.data ?? '';
-    try {
-      const result = await svc.handleTelegramCommand(text);
-      return res.json({ ok: true, ...result });
-    } catch (err) {
-      return res.status(500).json({ ok: false, error: err.message });
-    }
-  });
 
   // ── POST /api/boost/targeting/suggest ─────────────────────────
   // Body: { post_id, page_id, category? }

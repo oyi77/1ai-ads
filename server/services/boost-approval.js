@@ -110,6 +110,10 @@ export class BoostApprovalService {
     const token  = this._telegramToken();
     const chatId = this._telegramChatId();
     if (!token || !chatId) return;
+    // The dashboard is the only approval surface: the /boost_approve_N commands
+    // this notification used to advertise were never handled by any route or
+    // bot handler, so they are not offered here.
+    const dashboardUrl = process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com';
 
     const score   = (rec.boost_score * 100).toFixed(0);
     const emoji   = rec.boost_score >= SCORE_HIGH ? '🔥' : '📈';
@@ -121,8 +125,7 @@ export class BoostApprovalService {
       `Budget: ${rec.suggested_budget_idr}`,
       `Duration: ${rec.suggested_duration_days} days`,
       ``,
-      `✅ /boost_approve_${rec.id}`,
-      `❌ /boost_reject_${rec.id}`,
+      `Review it in the AdForge dashboard: ${dashboardUrl}`,
     ].join('\n');
 
     await fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
@@ -133,35 +136,4 @@ export class BoostApprovalService {
     });
   }
 
-  /**
-   * Handle a Telegram bot command like /boost_approve_42 or /boost_reject_42.
-   * Returns { handled: bool, action?, rec_id?, success? }.
-   */
-  async handleTelegramCommand(text = '') {
-    // Operator-console path: these commands arrive on the deployment's own bot
-    // token, so there is no per-tenant identity to scope to. Left unscoped on
-    // purpose — the HTTP routes are the tenant-scoped surface.
-    const approveMatch = text.match(/^\/boost_approve_(\d+)/);
-    const rejectMatch  = text.match(/^\/boost_reject_(\d+)/);
-
-    if (approveMatch) {
-      const id  = parseInt(approveMatch[1], 10);
-      const rec = this.boostRepo.findById(id);
-      // 'attempted' is the command the user sent; success=false means the
-      // record wasn't found, so no mutation happened.
-      if (!rec) return { handled: true, attempted: 'approve', action: 'approved', rec_id: id, success: false };
-      this.approve(id, 'telegram');
-      return { handled: true, attempted: 'approve', action: 'approved', rec_id: id, success: true };
-    }
-
-    if (rejectMatch) {
-      const id  = parseInt(rejectMatch[1], 10);
-      const rec = this.boostRepo.findById(id);
-      if (!rec) return { handled: true, attempted: 'reject', action: 'rejected', rec_id: id, success: false };
-      this.reject(id, 'telegram');
-      return { handled: true, attempted: 'reject', action: 'rejected', rec_id: id, success: true };
-    }
-
-    return { handled: false };
-  }
 }
