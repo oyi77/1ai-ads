@@ -103,7 +103,7 @@ export class AiAgent {
           })
         : false;
       if (!intercepted) {
-        await this._applyChanges(s).catch(err => log.warn('Auto-apply failed', { id, error: err.message }));
+        await this._applyChanges(s, userId).catch(err => log.warn('Auto-apply failed', { id, error: err.message }));
         this.suggestionsRepo.updateStatus(id, 'applied');
       }
     }
@@ -116,30 +116,38 @@ export class AiAgent {
     if (row.status !== 'pending') throw new Error(`Suggestion is already ${row.status}`);
 
     const suggestion = this._parseSuggestion(row.suggestion);
-    await this._applyChanges({ type: row.type, target_id: row.target_id, target_type: row.target_type, changes: suggestion.changes || [] });
+    await this._applyChanges({ type: row.type, target_id: row.target_id, target_type: row.target_type, changes: suggestion.changes || [] }, userId);
     return this.suggestionsRepo.updateStatus(suggestionId, 'applied');
   }
+
 
   _parseSuggestion(value) {
     if (!value) return {};
     if (typeof value !== 'string') return value;
     try { return JSON.parse(value); } catch { return {}; }
   }
-
-  async _applyChanges(suggestion) {
+  async _applyChanges(suggestion, userId = undefined) {
     const { type, target_id, changes = [] } = suggestion;
     if (!target_id || changes.length === 0) return;
 
     if (type === 'ad_copy' || type === 'creative') {
       const updates = {};
       for (const { field, value } of changes) updates[field] = value;
-      if (this.adsRepo.update) this.adsRepo.update(target_id, updates);
+      if (this.adsRepo.update) await this.adsRepo.update(target_id, updates, userId);
     } else if (type === 'pause_ad') {
-      if (this.adsRepo.update) this.adsRepo.update(target_id, { status: 'paused' });
+      if (this.adsRepo.update) await this.adsRepo.update(target_id, { status: 'paused' }, userId);
     } else if (type === 'landing_page') {
+      // landingRepo.update has no user scope — verify ownership on read first.
+      const existing = this.landingPagesRepo?.findById
+        ? await this.landingPagesRepo.findById(target_id)
+        : null;
+      if (userId && existing && existing.user_id !== userId) {
+        log.warn('AI auto-apply skipped - foreign landing page', { target_id, userId });
+        return;
+      }
       const updates = {};
       for (const { field, value } of changes) updates[field] = value;
-      if (this.landingPagesRepo?.update) this.landingPagesRepo.update(target_id, updates);
+      if (this.landingPagesRepo?.update) await this.landingPagesRepo.update(target_id, updates);
     }
   }
 

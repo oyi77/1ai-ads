@@ -32,11 +32,12 @@ vi.mock('../../../server/lib/logger.js', () => ({
   }),
 }));
 
-function makeMockWs() {
+function makeMockWs(userId = undefined) {
   return {
     readyState: 1, // OPEN
     send: vi.fn(),
     on: vi.fn(),
+    userId,
   };
 }
 
@@ -49,56 +50,62 @@ describe('RealtimeService', () => {
     service = new RealtimeService(metaApi, campaignsRepo);
   });
 
-  it('broadcast sends to all connected open clients', () => {
-    const ws1 = makeMockWs();
-    const ws2 = makeMockWs();
-    service.clients.add(ws1);
-    service.clients.add(ws2);
+  it('broadcast delivers owner metrics only to that owner clients', () => {
+    const wsA = makeMockWs('owner-a');
+    const wsB = makeMockWs('owner-b');
+    service.clients.add(wsA);
+    service.clients.add(wsB);
 
-    service._broadcast({ type: 'test', data: 'hello' });
+    service._broadcast({ type: 'metric_update', data: { campaign_id: 'c1' } }, 'owner-a');
 
-    const payload = JSON.stringify({ type: 'test', data: 'hello' });
-    expect(ws1.send).toHaveBeenCalledWith(payload);
-    expect(ws2.send).toHaveBeenCalledWith(payload);
+    const payload = JSON.stringify({ type: 'metric_update', data: { campaign_id: 'c1' } });
+    expect(wsA.send).toHaveBeenCalledWith(payload);
+    expect(wsB.send).not.toHaveBeenCalled();
   });
 
   it('broadcast skips clients not in OPEN state', () => {
-    const open = makeMockWs();
-    const closed = makeMockWs();
+    const open = makeMockWs('owner-a');
+    const closed = makeMockWs('owner-a');
     closed.readyState = 3; // CLOSED
     service.clients.add(open);
     service.clients.add(closed);
 
-    service._broadcast({ type: 'test', data: 'x' });
+    service._broadcast({ type: 'test', data: 'x' }, 'owner-a');
 
     expect(open.send).toHaveBeenCalledTimes(1);
     expect(closed.send).not.toHaveBeenCalled();
   });
 
-  it('getMetrics returns connected_clients count', () => {
+  it('getMetrics scopes campaigns to the caller', () => {
     service.clients.add(makeMockWs());
     service.clients.add(makeMockWs());
+    service.metrics.set('c1', { campaign_id: 'c1', owner: 'owner-a' });
+    service.metrics.set('c2', { campaign_id: 'c2', owner: 'owner-b' });
 
-    const result = service.getMetrics();
+    const result = service.getMetrics('owner-a');
     expect(result.connected_clients).toBe(2);
+    expect(Object.keys(result.campaigns)).toEqual(['c1']);
   });
 
-  it('attach registers connection and close handlers', () => {
+  it('attach destroys upgrades without a valid access cookie', () => {
     const mockServer = { on: vi.fn() };
     service.attach(mockServer);
+    const upgrade = mockServer.on.mock.calls.find(c => c[0] === 'upgrade')[1];
 
-    // Simulate a connection
-    const ws = makeMockWs();
-    const req = { socket: { remoteAddress: '127.0.0.1' } };
-    service.wss.handlers.connection(ws, req);
-
-    expect(service.clients.size).toBe(1);
-    expect(ws.send).toHaveBeenCalled(); // snapshot sent
-
-    // Simulate close
-    const closeHandler = ws.on.mock.calls.find(c => c[0] === 'close')[1];
-    closeHandler();
+    const socket = { destroy: vi.fn() };
+    upgrade({ url: '/ws/realtime', headers: {} }, socket, {});
+    expect(socket.destroy).toHaveBeenCalled();
     expect(service.clients.size).toBe(0);
+  });
+
+  it('attach rejects non-realtime paths', () => {
+    const mockServer = { on: vi.fn() };
+    service.attach(mockServer);
+    const upgrade = mockServer.on.mock.calls.find(c => c[0] === 'upgrade')[1];
+
+    const socket = { destroy: vi.fn() };
+    upgrade({ url: '/other', headers: {} }, socket, {});
+    expect(socket.destroy).toHaveBeenCalled();
   });
 
   it('extractConversions finds purchase action', () => {
@@ -205,6 +212,22 @@ describe('RealtimeService', () => {
       // Owner-scoped instance was constructed and used.
       expect(MetaAdsAPI).toHaveBeenCalled();
       expect(acctRepo.findAllActiveByUserAndPlatform).toHaveBeenCalledWith('owner-9', 'meta');
+    });
+  });
+
+  describe('refreshCampaign (scoped)', () => {
+    it('404s on another tenant campaign', async () => {
+      const service = new RealtimeService({ getCampaignInsights: vi.fn() }, {
+        findById: vi.fn((id, userId) => (userId === 'owner-a' ? { id, user_id: 'owner-a' } : null)),
+      }, { platformAccountsRepo: { findAllActiveByUserAndPlatform: () => [] } });
+      await expect(service.refreshCampaign('c1', 'intruder')).rejects.toMatchObject({ statusCode: 404 });
+    });
+
+    it('errors clearly when the owner has no bound token', async () => {
+      const service = new RealtimeService({ getCampaignInsights: vi.fn() }, {
+        findById: vi.fn(() => ({ id: 'c1', user_id: 'owner-a' })),
+      }, { platformAccountsRepo: { findAllActiveByUserAndPlatform: () => [] } });
+      await expect(service.refreshCampaign('c1', 'owner-a')).rejects.toThrow(/not connected/);
     });
   });
 });

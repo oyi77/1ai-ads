@@ -60,7 +60,7 @@ describe('AiAgent', () => {
     const ids = await agent.analyzeAndSuggest('u1');
     expect(ids).toHaveLength(1);
     expect(mocks.suggestionsRepo.create).toHaveBeenCalledWith(expect.objectContaining({ status: 'applied' }));
-    expect(mocks.adsRepo.update).toHaveBeenCalledWith('ad1', expect.objectContaining({ headline: 'Better Headline' }));
+    expect(mocks.adsRepo.update).toHaveBeenCalledWith('ad1', expect.objectContaining({ headline: 'Better Headline' }), 'u1');
   });
 
   it('analyzeAndSuggest returns [] when LLM returns invalid JSON', async () => {
@@ -113,11 +113,22 @@ describe('AiAgent', () => {
     mocks.suggestionsRepo.getById.mockReturnValue({
       id: 'sug2', user_id: 'u1', type: 'landing_page', target_id: 'lp1', target_type: 'landing_page',
       suggestion: JSON.stringify({ changes: [{ field: 'cta_primary', value: 'Sign Up' }] }),
-      rationale: 'Test', status: 'pending',
+      status: 'pending',
     });
     await agent.applySuggestion('u1', 'sug2');
     expect(mocks.landingPagesRepo.update).toHaveBeenCalledWith('lp1', { cta_primary: 'Sign Up' });
     expect(mocks.suggestionsRepo.updateStatus).toHaveBeenCalledWith('sug2', 'applied');
+  });
+
+  it('skips landing_page auto-apply on another tenant page', async () => {
+    mocks.landingPagesRepo.findById = vi.fn().mockReturnValue({ id: 'lp9', user_id: 'victim' });
+    mocks.llmClient.call.mockResolvedValue(JSON.stringify([{
+      type: 'landing_page', target_id: 'lp9', target_type: 'landing_page',
+      changes: [{ field: 'cta_primary', value: 'Hijacked' }],
+      rationale: 'x',
+    }]));
+    await agent.analyzeAndSuggest('u1');
+    expect(mocks.landingPagesRepo.update).not.toHaveBeenCalled();
   });
 
   // US-002: scheduler
@@ -224,6 +235,6 @@ describe('AiAgent', () => {
       hook: 'New Hook',
       body: 'New Body',
       cta: 'Shop Now',
-    });
+    }, 'u1');
   });
 });

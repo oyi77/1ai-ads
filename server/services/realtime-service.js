@@ -3,9 +3,28 @@ import { WebSocketServer } from 'ws';
 import { createLogger } from '../lib/logger.js';
 import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
 import { MetaAdsAPI } from './meta/index.js';
+import { verifyToken } from '../lib/auth.js';
+import { ACCESS_COOKIE } from '../lib/auth-cookies.js';
 
 const log = createLogger('realtime-service');
 
+/**
+ * Resolve the authenticated user id from a WS upgrade request. Browsers
+ * send the httpOnly access cookie automatically; there is no other
+ * credential channel on a WebSocket handshake. Returns null when absent
+ * or invalid — the caller must destroy the socket (fail-closed).
+ */
+function userIdFromUpgrade(req) {
+  try {
+    const header = req?.headers?.cookie || '';
+    const pair = header.split(';').map(s => s.trim()).find(s => s.startsWith(`${ACCESS_COOKIE}=`));
+    if (!pair) return null;
+    const payload = verifyToken(decodeURIComponent(pair.slice(ACCESS_COOKIE.length + 1)));
+    return payload?.id || null;
+  } catch {
+    return null;
+  }
+}
 export class RealtimeService {
   constructor(metaApi, campaignsRepo, { platformAccountsRepo = null, settingsRepo = null } = {}) {
     this.metaApi = metaApi;
@@ -41,24 +60,38 @@ export class RealtimeService {
   }
 
   /**
-   * Attach WebSocket server to an HTTP server
+   * Attach WebSocket server to an HTTP server. Upgrade requests without a
+   * valid access cookie are destroyed — previously ANY anonymous connection
+   * received every tenant's live metrics snapshot + broadcast.
    */
-  _handleConnection(ws, req) {
-    log.info('Client connected', { ip: req.socket.remoteAddress });
+  _handleConnection(ws, req, userId) {
+    ws.userId = userId || null;
+    log.info('Client connected', { ip: req.socket.remoteAddress, userId });
     this.clients.add(ws);
-    ws.send(JSON.stringify({ type: 'snapshot', data: Object.fromEntries(this.metrics), timestamp: new Date().toISOString() }));
+    ws.send(JSON.stringify({ type: 'snapshot', data: this._snapshotFor(userId), timestamp: new Date().toISOString() }));
     ws.on('close', () => { this.clients.delete(ws); log.info('Client disconnected', { remaining: this.clients.size }); });
     ws.on('error', (err) => { log.error('WebSocket error', { error: err.message }); this.clients.delete(ws); });
+  }
+
+  /** Metrics snapshot scoped to one owner's campaigns. */
+  _snapshotFor(userId) {
+    const out = {};
+    for (const [cid, m] of this.metrics) {
+      if (!userId || m?.owner === userId) out[cid] = m;
+    }
+    return out;
   }
 
   attach(server) {
     this.wss = new WebSocketServer({ noServer: true });
     server.on('upgrade', (req, socket, head) => {
       if (req.url === '/ws/realtime') {
-        this.wss.handleUpgrade(req, socket, head, (ws) => this.wss.emit('connection', ws, req));
+        const userId = userIdFromUpgrade(req);
+        if (!userId) { socket.destroy(); return; }
+        this.wss.handleUpgrade(req, socket, head, (ws) => this.wss.emit('connection', ws, req, userId));
       } else { socket.destroy(); }
     });
-    this.wss.on('connection', (ws, req) => this._handleConnection(ws, req));
+    this.wss.on('connection', (ws, req, userId) => this._handleConnection(ws, req, userId));
     log.info('WebSocket server attached', { path: '/ws/realtime' });
   }
 
@@ -91,6 +124,7 @@ export class RealtimeService {
     const conversions = this._extractConversions(data);
     return {
       campaign_id: campaign.campaign_id,
+      owner: campaign.user_id || campaign.created_by || null,
       name: campaign.name, status: campaign.status,
       spend, clicks: parseInt(data.clicks || 0), impressions: parseInt(data.impressions || 0),
       conversions, ctr: parseFloat(data.ctr || 0), cpc: parseFloat(data.cpc || 0),
@@ -99,6 +133,9 @@ export class RealtimeService {
     };
   }
 
+  /**
+   * Poll Meta API for all active campaigns
+   */
   async _poll() {
     try {
       const result = this.campaignsRepo.findAll ? this.campaignsRepo.findAll({}) : { data: [] };
@@ -161,7 +198,7 @@ export class RealtimeService {
             const insights = insightsMap[cid] || {};
             const metric = this._buildMetricFromInsights(campaign, insights);
             this.metrics.set(cid, metric);
-            this._broadcast({ type: 'metric_update', data: metric });
+            this._broadcast({ type: 'metric_update', data: metric }, metric.owner);
           }
         } catch (err) {
           log.warn('Failed to poll owner account', { accountId, error: err.message });
@@ -187,47 +224,62 @@ export class RealtimeService {
   }
 
   /**
-   * Broadcast message to all connected clients
+   * Broadcast a message to connected clients of ONE owner. The owner id
+   * comes from the metric itself — a client never receives another
+   * tenant's spend/clicks/revenue. Messages without an owner (system
+   * notices) still go to every open client.
    */
-  _broadcast(message) {
+  _broadcast(message, ownerId = undefined) {
     const payload = JSON.stringify(message);
     for (const client of this.clients) {
-      if (client.readyState === 1) { // OPEN
-        client.send(payload);
-      }
+      if (client.readyState !== 1) continue; // OPEN
+      if (ownerId !== undefined && client.userId !== undefined && client.userId !== ownerId) continue;
+      client.send(payload);
     }
   }
 
   /**
-   * Get current metrics snapshot (REST fallback)
+   * Metrics snapshot scoped to one owner (REST fallback). Operational
+   * counters stay global; campaign data is filtered.
    */
-  getMetrics() {
+  getMetrics(userId = undefined) {
     return {
-      campaigns: Object.fromEntries(this.metrics),
+      campaigns: this._snapshotFor(userId),
       connected_clients: this.clients.size,
       last_poll: new Date().toISOString(),
     };
   }
 
   /**
-   * Force refresh a specific campaign
+   * Force-refresh one campaign. Scoped: a caller can only refresh their
+   * OWN campaign (404 otherwise), and only with their own bound token
+   * (clear error when unbound — never the operator credential).
    */
-  async refreshCampaign(campaignId) {
+  async refreshCampaign(campaignId, userId = undefined) {
     try {
-      const campaign = this.campaignsRepo.getById ? this.campaignsRepo.getById(campaignId) : null;
-      const api = this._metaApiForOwner(campaign || { campaign_id: campaignId });
+      const campaign = typeof this.campaignsRepo?.findById === 'function'
+        ? this.campaignsRepo.findById(campaignId, userId)
+        : null;
+      if (!campaign) {
+        const err = new Error('Campaign not found');
+        err.statusCode = 404;
+        throw err;
+      }
+      const api = this._metaApiForOwner(campaign);
+      if (!api) throw new Error('Meta account not connected. Connect your account in Settings.');
       const insights = await api.getCampaignInsights(campaignId, {
         datePreset: 'today', fields: 'spend,impressions,clicks,actions,ctr,cpc,cpm',
       });
       const data = insights || {};
       const metric = {
-        campaign_id: campaignId, spend: parseFloat(data.spend || 0),
+        campaign_id: campaignId, owner: campaign.user_id || campaign.created_by || null,
+        spend: parseFloat(data.spend || 0),
         clicks: parseInt(data.clicks || 0), impressions: parseInt(data.impressions || 0),
         conversions: this._extractConversions(data), ctr: parseFloat(data.ctr || 0),
         cpc: parseFloat(data.cpc || 0), timestamp: new Date().toISOString(),
       };
       this.metrics.set(campaignId, metric);
-      this._broadcast({ type: 'metric_update', data: metric });
+      this._broadcast({ type: 'metric_update', data: metric }, metric.owner);
       return metric;
     } catch (err) {
       log.error('Refresh failed', { campaignId, error: err.message });

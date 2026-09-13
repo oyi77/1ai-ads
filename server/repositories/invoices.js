@@ -48,9 +48,4 @@ export class InvoicesRepository {
     }
     return this.findById(id, userId);
   }
-
-  remove(id) {
-    const result = this.db.prepare('DELETE FROM invoices WHERE id = ?').run(id);
-    return result.changes > 0;
-  }
 }
