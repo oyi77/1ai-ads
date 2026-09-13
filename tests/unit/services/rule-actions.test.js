@@ -29,28 +29,26 @@ describe('RuleEvaluator — new actions', () => {
   describe('increase_budget', () => {
     it('calls _scaleCampaign with up direction', async () => {
       const campaign = { id: 'c1', platform: 'meta', budget: 100000 };
-      mockCampaignsRepo.findById.mockReturnValue(campaign);
-      
+
       const scaleSpy = vi.spyOn(RuleEvaluator.prototype, '_scaleCampaign').mockResolvedValue();
-      
-      await evaluator._increaseBudget('c1', 20);
-      
-      expect(scaleSpy).toHaveBeenCalledWith('c1', 20, 'up');
-      
+
+      await evaluator._increaseBudget(campaign, 20);
+
+      expect(scaleSpy).toHaveBeenCalledWith(campaign, 20, 'up');
+
       scaleSpy.mockRestore();
     });
 
     it('passes undefined when no percentage (default kicks in)', async () => {
       const campaign = { id: 'c1', platform: 'meta', budget: 100000 };
-      mockCampaignsRepo.findById.mockReturnValue(campaign);
-      
+
       const scaleSpy = vi.spyOn(RuleEvaluator.prototype, '_scaleCampaign').mockResolvedValue();
-      
-      await evaluator._increaseBudget('c1');
-      
+
+      await evaluator._increaseBudget(campaign);
+
       // JavaScript passes undefined when no arg, default param kicks in
-      expect(scaleSpy).toHaveBeenCalledWith('c1', undefined, 'up');
-      
+      expect(scaleSpy).toHaveBeenCalledWith(campaign, undefined, 'up');
+
       scaleSpy.mockRestore();
     });
   });
@@ -58,28 +56,26 @@ describe('RuleEvaluator — new actions', () => {
   describe('decrease_budget', () => {
     it('calls _scaleCampaign with down direction', async () => {
       const campaign = { id: 'c1', platform: 'meta', budget: 100000 };
-      mockCampaignsRepo.findById.mockReturnValue(campaign);
-      
+
       const scaleSpy = vi.spyOn(RuleEvaluator.prototype, '_scaleCampaign').mockResolvedValue();
-      
-      await evaluator._decreaseBudget('c1', 30);
-      
-      expect(scaleSpy).toHaveBeenCalledWith('c1', 30, 'down');
-      
+
+      await evaluator._decreaseBudget(campaign, 30);
+
+      expect(scaleSpy).toHaveBeenCalledWith(campaign, 30, 'down');
+
       scaleSpy.mockRestore();
     });
 
     it('passes undefined when no percentage (default kicks in)', async () => {
       const campaign = { id: 'c1', platform: 'meta', budget: 100000 };
-      mockCampaignsRepo.findById.mockReturnValue(campaign);
-      
+
       const scaleSpy = vi.spyOn(RuleEvaluator.prototype, '_scaleCampaign').mockResolvedValue();
-      
-      await evaluator._decreaseBudget('c1');
-      
+
+      await evaluator._decreaseBudget(campaign);
+
       // JavaScript passes undefined when no arg, default param kicks in
-      expect(scaleSpy).toHaveBeenCalledWith('c1', undefined, 'down');
-      
+      expect(scaleSpy).toHaveBeenCalledWith(campaign, undefined, 'down');
+
       scaleSpy.mockRestore();
     });
   });
@@ -87,17 +83,16 @@ describe('RuleEvaluator — new actions', () => {
   describe('duplicate_campaign', () => {
     it('logs duplication intent', async () => {
       const campaign = { id: 'c1', name: 'Test Campaign', platform: 'meta' };
-      mockCampaignsRepo.findById.mockReturnValue(campaign);
-      
-      await expect(evaluator._duplicateCampaign('c1', '_auto_copy')).resolves.not.toThrow();
+
+      await expect(evaluator._duplicateCampaign(campaign, '_auto_copy')).resolves.not.toThrow();
     });
 
     it('handles missing campaign gracefully', async () => {
-      mockCampaignsRepo.findById.mockReturnValue(null);
-      
-      await expect(evaluator._duplicateCampaign('missing', '_copy')).resolves.not.toThrow();
+      await expect(evaluator._duplicateCampaign(null, '_copy')).resolves.not.toThrow();
+      await expect(evaluator._duplicateCampaign({ }, '_copy')).resolves.not.toThrow();
     });
   });
+
 
   describe('ACTION_HANDLERS', () => {
     it('has handler for increase_budget', () => {

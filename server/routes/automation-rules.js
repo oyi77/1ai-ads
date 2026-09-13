@@ -81,15 +81,16 @@ export function createAutomationRulesRouter(automationRepo) {
     }
   });
 
-  // GET /api/automation/rules/:id/executions — get rule execution history
+  // GET /api/automation/rules/:id/executions — execution history (owner only)
   router.get('/:id/executions', async (req, res) => {
     try {
+      const rule = automationRepo.findById(req.params.id, req.user.id);
+      if (!rule) return res.status(404).json({ success: false, error: 'Rule not found' });
       const executions = automationRepo.getExecutions(req.params.id, { limit: parseInt(req.query.limit) || 50 });
       res.json({ success: true, data: executions });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
   });
-
   return router;
 }

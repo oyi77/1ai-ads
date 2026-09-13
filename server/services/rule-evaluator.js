@@ -26,8 +26,8 @@ export class RuleEvaluator {
 
   _platformApiForOwner(platform, campaign) {
     // Owner first: rule mutations must run as the campaign owner's token.
-    // The shared instance is only a fallback (else every user's rules would
-    // fire as the operator token).
+    // Null when unbound — callers skip instead of firing as operator.
+    // Never another user's token, never the shared instance.
     if (campaign?.user_id && this.platformAccountsRepo) {
       const token = resolveOwnerPlatformToken(platform, campaign.user_id, {
         platformAccountsRepo: this.platformAccountsRepo,
@@ -38,7 +38,7 @@ export class RuleEvaluator {
         if (cls) return new cls(token);
       }
     }
-    return this._getPlatformApi(platform);
+    return null;
   }
 
   static PLATFORM_APIS = {
@@ -124,9 +124,11 @@ export class RuleEvaluator {
     return this._executeAction(action, campaign);
   }
 
-  async _scaleCampaign(campaignId, multiplier, direction) {
-    const campaign = this.campaignsRepo.findById(campaignId);
-    if (!campaign) return;
+  async _scaleCampaign(campaign, multiplier, direction) {
+    // Campaign object comes from a scoped list (checkCampaigns) or an
+    // approved draft's stored details — never re-fetched unscoped.
+    const campaignId = campaign?.id;
+    if (!campaignId) return;
     const api = this._platformApiForOwner(campaign.platform, campaign);
     if (!api) return;
     const metaCampaignId = campaign.campaign_id || campaignId;
@@ -144,49 +146,49 @@ export class RuleEvaluator {
     log.info('Budget scaled', { campaignId, metaCampaignId, multiplier, direction, newBudget });
   }
 
-  async _increaseBudget(campaignId, percentage) {
-    await this._scaleCampaign(campaignId, percentage, 'up');
-    log.info('Budget increased', { campaignId, percentage });
+  async _increaseBudget(campaign, percentage) {
+    await this._scaleCampaign(campaign, percentage, 'up');
+    log.info('Budget increased', { campaignId: campaign?.id, percentage });
   }
 
-  async _decreaseBudget(campaignId, percentage) {
-    await this._scaleCampaign(campaignId, percentage, 'down');
-    log.info('Budget decreased', { campaignId, percentage });
+  async _decreaseBudget(campaign, percentage) {
+    await this._scaleCampaign(campaign, percentage, 'down');
+    log.info('Budget decreased', { campaignId: campaign?.id, percentage });
   }
 
-  async _duplicateCampaign(campaignId, nameSuffix) {
-    const campaign = this.campaignsRepo.findById(campaignId);
-    if (!campaign) return;
+  async _duplicateCampaign(campaign, nameSuffix) {
+    const campaignId = campaign?.id;
+    if (!campaignId) return;
     log.info('Duplicating campaign', { campaignId, nameSuffix });
   }
 
-  async _pauseCampaign(campaignId) {
-    const campaign = this.campaignsRepo.findById(campaignId);
-    if (!campaign) return;
+  async _pauseCampaign(campaign) {
+    const campaignId = campaign?.id;
+    if (!campaignId) return;
     const api = this._platformApiForOwner(campaign.platform, campaign);
     if (!api) return;
     await api.updateCampaign(campaign.campaign_id || campaignId, { status: 'PAUSED' });
     log.info('Campaign paused', { campaignId });
   }
 
-  async _resumeCampaign(campaignId) {
-    const campaign = this.campaignsRepo.findById(campaignId);
-    if (!campaign) return;
+  async _resumeCampaign(campaign) {
+    const campaignId = campaign?.id;
+    if (!campaignId) return;
     const api = this._platformApiForOwner(campaign.platform, campaign);
     if (!api) return;
     await api.updateCampaign(campaign.campaign_id || campaignId, { status: 'ACTIVE' });
     log.info('Campaign resumed', { campaignId });
   }
 
-  async _optimizeCreative(campaignId) {
-    const campaign = this.campaignsRepo.findById(campaignId);
-    if (!campaign) return;
+  async _optimizeCreative(campaign) {
+    const campaignId = campaign?.id;
+    if (!campaignId) return;
     log.info('Creative optimization triggered', { campaignId });
   }
 
-  async _optimizeBudget(campaignId) {
-    const campaign = this.campaignsRepo.findById(campaignId);
-    if (!campaign) return;
+  async _optimizeBudget(campaign) {
+    const campaignId = campaign?.id;
+    if (!campaignId) return;
     log.info('Budget optimization triggered', { campaignId });
   }
 
@@ -209,22 +211,22 @@ export class RuleEvaluator {
     return matched;
   }
 }
-
-// Register action handlers
+// Register action handlers — each receives the owned campaign object from
+// checkCampaigns' scoped list or the approved draft's stored details.
 RuleEvaluator.ACTION_HANDLERS = {
-  pause: async function(params, campaign) { await this._pauseCampaign(campaign.id); },
-  resume: async function(params, campaign) { await this._resumeCampaign(campaign.id); },
-  scale_budget: async function(params, campaign) { await this._scaleCampaign(campaign.id, params.percentage || 10, 'up'); },
-  increase_budget: async function(params, campaign) { await this._increaseBudget(campaign.id, params.percentage !== undefined ? params.percentage : 20); },
-  decrease_budget: async function(params, campaign) { await this._decreaseBudget(campaign.id, params.percentage !== undefined ? params.percentage : 20); },
-  duplicate_campaign: async function(params, campaign) { await this._duplicateCampaign(campaign.id, params.name || '_copy'); },
+  pause: async function(params, campaign) { await this._pauseCampaign(campaign); },
+  resume: async function(params, campaign) { await this._resumeCampaign(campaign); },
+  scale_budget: async function(params, campaign) { await this._scaleCampaign(campaign, params.percentage || 10, 'up'); },
+  increase_budget: async function(params, campaign) { await this._increaseBudget(campaign, params.percentage !== undefined ? params.percentage : 20); },
+  decrease_budget: async function(params, campaign) { await this._decreaseBudget(campaign, params.percentage !== undefined ? params.percentage : 20); },
+  duplicate_campaign: async function(params, campaign) { await this._duplicateCampaign(campaign, params.name || '_copy'); },
   change_bid: async function(params, campaign) { log.warn('NOT IMPLEMENTED: change_bid is a no-op', { strategy: params.strategy, campaignId: campaign.id }); },
   notify: async function(params, campaign) { log.warn('NOT IMPLEMENTED: notify is a no-op', { message: params.message, campaignId: campaign.id }); },
-  notify_and_pause: async function(params, campaign) { log.warn('NOT IMPLEMENTED: notify part is a no-op; pausing', { message: params.message, campaignId: campaign.id }); await this._pauseCampaign(campaign.id); },
+  notify_and_pause: async function(params, campaign) { log.warn('NOT IMPLEMENTED: notify part is a no-op; pausing', { message: params.message, campaignId: campaign.id }); await this._pauseCampaign(campaign); },
   auto_allocate: async function(params, campaign) { log.warn('NOT IMPLEMENTED: auto_allocate is a no-op', { platforms: params.platforms, campaignId: campaign.id }); },
   dayparting: async function(params, campaign) { log.warn('NOT IMPLEMENTED: dayparting is a no-op', { schedule: params.schedule, campaignId: campaign.id }); },
-  optimize_creative: async function(params, campaign) { await this._optimizeCreative(campaign.id); },
-  optimize_budget: async function(params, campaign) { await this._optimizeBudget(campaign.id); },
+  optimize_creative: async function(params, campaign) { await this._optimizeCreative(campaign); },
+  optimize_budget: async function(params, campaign) { await this._optimizeBudget(campaign); },
 };
 
 export default RuleEvaluator;
