@@ -94,6 +94,12 @@ const config = {
  // Env var name starts with a digit — bracket access required.
  get oneAiPaymentWebhookSecret() { return process.env['1AI_PAYMENT_WEBHOOK_SECRET'] || ''; },
   get webAppUrl() { return process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com'; },
+  // Outbound mail. Resend is the primary path when keyed; SMTP is the
+  // fallback. MAIL_FROM should be an identity on a verified domain for
+  // production; the resend.dev default only delivers to the Resend account
+  // owner's own address.
+  get resendApiKey() { return process.env.RESEND_API_KEY || ''; },
+  get mailFrom() { return process.env.MAIL_FROM || 'AdForge <onboarding@resend.dev>'; },
 };
 
 export default config;

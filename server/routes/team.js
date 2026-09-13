@@ -91,11 +91,14 @@ export function createTeamRouter(paymentsRepo, usersRepo, mailer) {
         expiresAt,
       });
 
-      // sendInvite reports real delivery and returns false when no provider is
-      // configured, so a suppressed send must not be logged as success.
+      // sendInvite reports real delivery. Distinguish "no provider" (nothing
+      // attempted) from "attempted but rejected" (provider hit a quota or
+      // refused the send) so the log never misreports which happened.
       let emailSent = false;
       if (mailer && typeof mailer.sendInvite === 'function') {
-        try {
+        if (typeof mailer.mailerEnabled === 'function' && !mailer.mailerEnabled()) {
+          log.warn('Team invite stored but no mail provider is configured', { email, teamOwnerId });
+        } else try {
           const acceptUrl = `${process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com'}/team/accept?token=${inviteToken}`;
           emailSent = await mailer.sendInvite(email, {
             inviterName: req.user.username || req.user.email,
@@ -105,7 +108,7 @@ export function createTeamRouter(paymentsRepo, usersRepo, mailer) {
             expiresAt,
           });
           if (emailSent) log.info('Team invite email sent', { email, teamOwnerId });
-          else log.warn('Team invite stored but no mail provider is configured', { email, teamOwnerId });
+          else log.warn('Team invite email attempted but not delivered', { email, teamOwnerId });
         } catch (err) {
           log.warn('Failed to send invite email', { error: err.message, email });
         }
