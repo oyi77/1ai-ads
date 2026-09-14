@@ -35,6 +35,10 @@ describe('Extended API Integration', () => {
   let authToken;
   let adminToken;
 
+  // NOTE: this hook boots the full app + runs 3 bcrypt cost-12 hashes
+  // (register, user login, seeded admin login). Under full-suite CPU
+  // contention that exceeds vitest's 10s default hook timeout
+  // (flake 2026-09-14) — same class as the disabled-user-auth flake.
   beforeAll(async () => {
     db = createDatabase(':memory:');
     seedDemoData(db);
@@ -61,7 +65,7 @@ describe('Extended API Integration', () => {
       password: 'admin123',
     });
     adminToken = adminRes.body.data.accessToken;
-  });
+  }, 30000);
 
   const auth = (req) => req.set('Authorization', `Bearer ${authToken}`);
   const adminAuth = (req) => req.set('Authorization', `Bearer ${adminToken}`);
