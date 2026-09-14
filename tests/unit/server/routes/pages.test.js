@@ -10,10 +10,10 @@ beforeAll(() => {
 
 /**
  * Build mock req / res objects for the requireSession middleware.
- * @param {string|undefined} tokenCookie - value of the `token` cookie, or omit for no cookie
+ * Cookie name must match auth-cookies.js ACCESS_COOKIE (adforge_access).
  */
 function mockReqRes(tokenCookie) {
-  const req = { cookies: tokenCookie ? { token: tokenCookie } : {} };
+  const req = { cookies: tokenCookie ? { adforge_access: tokenCookie } : {} };
   const res = {
     statusCode: null,
     body: null,
@@ -80,7 +80,7 @@ describe('requireSession middleware', () => {
 
   it('clears cookie and redirects to /login for an invalid token', async () => {
     const result = await callMiddleware('not-a-valid-jwt');
-    expect(result.clearedCookie).toBe('token');
+    expect(result.clearedCookie).toBe('adforge_access');
     expect(result.redirect).toBe('/login');
     expect(result.nextCalled).toBe(false);
   });
@@ -93,7 +93,7 @@ describe('requireSession middleware', () => {
     await new Promise((r) => setTimeout(r, 50));
 
     const result = await callMiddleware(expiredToken);
-    expect(result.clearedCookie).toBe('token');
+    expect(result.clearedCookie).toBe('adforge_access');
     expect(result.redirect).toBe('/login');
     expect(result.nextCalled).toBe(false);
   });
