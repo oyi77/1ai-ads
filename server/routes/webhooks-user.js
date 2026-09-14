@@ -25,10 +25,12 @@ export function createUserWebhookRouter(userMetaAppsRepo, webhookEventsRepo) {
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
-    // If the user has no app secret at all, fail-closed.
+    // If the user has no app secret at all, fail-closed with 401 — never
+    // leak "user has no secret" vs "bad token" to the caller (same class
+    // as the /api/payments/notify fix 2026-09-14). The 500 stays server-side.
     if (!appSecret) {
       log.warn('webhook_user_verify_no_secret', { userId });
-      return res.status(500).send('Configuration error');
+      return res.status(401).send('Invalid signature');
     }
     if (handler.handleVerification(mode, token, verifyToken)) {
       return res.send(challenge);
@@ -41,10 +43,9 @@ export function createUserWebhookRouter(userMetaAppsRepo, webhookEventsRepo) {
     const { appSecret } = resolveWebhookCreds(userId, userMetaAppsRepo);
     const rawBody = req.rawBody;
     const signature = req.headers['x-hub-signature-256'];
-
     if (!appSecret) {
       log.error('webhook_user_no_secret — rejected (fail-closed)', { userId });
-      return res.status(500).send('Configuration error');
+      return res.status(401).send('Invalid signature');
     }
     if (!signature) {
       return res.status(401).send('Missing signature');
