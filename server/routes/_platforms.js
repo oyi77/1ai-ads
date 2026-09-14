@@ -42,12 +42,11 @@ export function createPlatformsGroupRouter({ repos, services, publicRateLimit })
   // ── Platform metadata endpoint (for frontend) ───────────────
   router.get('/platforms', (_req, res) => {
     const platforms = Object.entries(PLATFORM_REGISTRY).map(([, cfg]) => ({
+      // Registry is inconsistent: most entries use `label`, four
+      // (meta/google/linkedin/tiktok) use `name`. Fall back so the
+      // frontend list and generic-router errors never render "undefined".
       key: cfg.key,
-      label: cfg.label,
-      color: cfg.color,
-      desc: cfg.desc,
-      icon: cfg.icon,
-      routePath: cfg.routePath,
+      label: cfg.label || cfg.name,
     }));
     res.json({ success: true, data: platforms });
   });
@@ -78,7 +77,7 @@ export function createPlatformsGroupRouter({ repos, services, publicRateLimit })
       cachedRouter(req, res, next);
       });
     } else {
-      router.use(routePath, requireAuth, createGenericPlatformRouter(key, cfg.label, repos.settingsRepo, repos.platformAccountsRepo));
+      router.use(routePath, requireAuth, createGenericPlatformRouter(key, cfg.label || cfg.name, repos.settingsRepo, repos.platformAccountsRepo));
     }
   }
 
