@@ -62,6 +62,11 @@ export function createRouters({ app, repos, services }) {
     app.use('/', createPagesGroupRouter());
   }
 
+  // ── Per-user Meta ad-accounts (Saved Audiences builder) ──
+  // MUST precede the platforms group: the generic Meta router also serves
+  // GET /meta/accounts (live Graph proxy), which would shadow this DB list
+  // and break the SPA audiences selector contract ({ accounts: [...] }).
+  app.use('/api/meta/accounts', requireAuth, handleListMetaAccounts(repos.settingsRepo));
   // ── Auth & Core ──────────────────────────────────────────────
   app.use('/api', createAuthGroupRouter(deps));
   app.use('/api', createSettingsGroupRouter(deps));
@@ -114,8 +119,6 @@ export function createRouters({ app, repos, services }) {
   app.use('/api/milestones', requireAuth, createMilestonesRouter(repos.paymentsRepo));
   // ── Boost Recommendations ────────────────────────────────────
   app.use('/api/boost', requireAuth, createBoostRouter({ services }));
-  // ── Per-user Meta ad-accounts (Saved Audiences builder) ──
-  app.use('/api/meta/accounts', requireAuth, handleListMetaAccounts(repos.settingsRepo));
   // ── WhatsApp Intelligence ─────────────────────────────────────
   app.use('/', createWhatsappIntelligenceGroupRouter(deps));
   // ── Meta webhook (public, no auth) ───────────────────────
