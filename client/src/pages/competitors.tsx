@@ -44,8 +44,18 @@ export function CompetitorsPage() {
   });
 
   const copyMutation = useMutation({
+    // No dedicated clone endpoint exists (POST /api/ads-library-ai/clone
+    // was never implemented — 404). Clone into the user's own creative
+    // library instead: real, per-user, validated.
     mutationFn: (ad: CompetitorAd) =>
-      api.post('/ads-library-ai/clone', { ad_text: ad.ad_text, platform: ad.platform }),
+      api.post('/creative/library', {
+        name: `Clone: ${(ad.page_name || ad.platform || 'competitor').slice(0, 60)}`,
+        hook: (ad.ad_text || '').slice(0, 200),
+        body: ad.ad_text || '',
+        cta: ad.link_url || '',
+        tags: ['clone', ad.platform].filter(Boolean),
+        type: ad.media_type === 'video' ? 'video' : 'image',
+      }),
   });
 
   const ads = data?.ads || [];
@@ -133,6 +143,11 @@ export function CompetitorsPage() {
               {copyMutation.isError && (
                 <p style={{ color: 'var(--error, #ef4444)', fontSize: '0.75rem', marginTop: 8 }}>
                   Clone failed: {(copyMutation.error as Error).message}
+                </p>
+              )}
+              {copyMutation.isSuccess && (
+                <p style={{ color: 'var(--success, #22c55e)', fontSize: '0.75rem', marginTop: 8 }}>
+                  Saved to Creative Library.
                 </p>
               )}
             </div>
