@@ -55,7 +55,7 @@ export function createAutomationRouter({ rulesRepo }) {
       const rule = rulesRepo.getById ? await rulesRepo.getById(req.params.id) : null;
       if (!rule) return res.status(404).json({ success: false, error: 'Rule not found' });
       const uid = (req.user && req.user.id) ? req.user.id : 'system';
-      if (rule.user_id !== uid) return res.status(404).json({ success: false, error: 'Rule not found' });
+      if ((rule.userId ?? rule.user_id) !== uid) return res.status(404).json({ success: false, error: 'Rule not found' });
       const newEnabled = rule.enabled === 1 ? 0 : 1;
       if (rulesRepo.update) await rulesRepo.update(req.params.id, { enabled: newEnabled });
       res.json({ success: true, is_active: newEnabled });
@@ -70,7 +70,7 @@ export function createAutomationRouter({ rulesRepo }) {
       const rule = rulesRepo.getById ? await rulesRepo.getById(req.params.id) : null;
       if (!rule) return res.status(404).json({ success: false, error: 'Rule not found' });
       const uid = (req.user && req.user.id) ? req.user.id : 'system';
-      if (rule.user_id !== uid) return res.status(404).json({ success: false, error: 'Rule not found' });
+      if ((rule.userId ?? rule.user_id) !== uid) return res.status(404).json({ success: false, error: 'Rule not found' });
       if (rulesRepo.delete) await rulesRepo.delete(req.params.id);
       res.json({ success: true });
     } catch (err) {
