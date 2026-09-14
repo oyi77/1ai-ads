@@ -56,6 +56,14 @@ describe('Routes: Templates', () => {
     expect(res.status).toBe(403);
   });
 
+  it('POST / rejects empty name (admin)', async () => {
+    for (const body of [{}, { name: '' }, { name: '   ' }]) {
+      const res = await auth(request(app).post('/api/templates'), adminToken).send(body);
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/name is required/);
+    }
+  });
+
   it('DELETE /:id deletes template (admin)', async () => {
     const createRes = await auth(request(app).post('/api/templates'), adminToken)
       .send({ name: 'To Delete', type: 'landing', data: {} });
