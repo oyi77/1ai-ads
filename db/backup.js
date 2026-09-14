@@ -26,7 +26,10 @@ export function backupDatabase(dbPath, rootDir) {
         log.warn('Failed to copy sidecar', { src, error: e.message });
       }
     }
-    log.info(`Database backed up to ${backupPath}`);
+    // Restore requires the TRIPLE (.backup + -wal + -shm): the main file
+    // alone can hold a near-empty snapshot (8 vs 314 campaigns observed
+    // 2026-09-14) with live rows still in the WAL sidecar.
+    log.info(`Database backed up to ${backupPath} (+ -wal/-shm triple required for restore)`);
 
     // Retention: keep the newest 7 backup timestamps, deleting the .backup
     // file AND its -shm/-wal sidecars for older timestamps. Grouping by
