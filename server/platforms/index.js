@@ -7,11 +7,10 @@
  *   2. Create server/services/<platform>/index.js with the API class
  *   That's it. Routes, config, and frontend all derive from the manifest.
  *
- * Usage:
+ * Usage (both getters return a bound INSTANCE, not a class):
  *   import { getPlatform, listPlatforms } from './platforms/index.js';
- *   const meta = getPlatform('meta', settingsRepo);
+ *   const meta = await getPlatform('meta', settingsRepo);
  *   const campaigns = await meta.getCampaigns();
- */
 
 import { readdirSync } from 'fs';
 import { join, dirname } from 'path';

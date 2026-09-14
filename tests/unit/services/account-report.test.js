@@ -5,12 +5,10 @@ vi.mock('../../../server/lib/logger.js', () => ({
 }));
 
 vi.mock('../../../server/platforms/index.js', () => ({
-  getPlatformSync: vi.fn((platform) => {
-    return class MockPlatform {
-      constructor() {}
-      setActiveAccount() {}
-    };
-  }),
+  // Production getPlatformSync() returns a bound INSTANCE (not a class).
+  getPlatformSync: vi.fn((platform) => ({
+    setActiveAccount() {},
+  })),
   listPlatformKeys: vi.fn(() => ['meta', 'google', 'tiktok']),
 }));
 

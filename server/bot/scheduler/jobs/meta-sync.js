@@ -55,9 +55,9 @@ export function setupMetaSync(bot, deps) {
               log.debug('Placeholder token — skipping sync', { platform, account: row.user_id });
               continue;
             }
-            const PlatformClass = await getPlatform(platform, settingsRepo);
-            // Bind the OWNER's token so syncAllAccounts() resolves that user's accounts.
-            const api = new PlatformClass();
+            // getPlatform() returns a bound INSTANCE (not a class) — bind the
+            // OWNER's token so syncAllAccounts() resolves that user's accounts.
+            const api = await getPlatform(platform, settingsRepo);
             api.setActiveAccount(null, token, true);
             const results = await api.syncAllAccounts();
             synced += Array.isArray(results) ? results.length : 0;

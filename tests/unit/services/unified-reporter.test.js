@@ -208,12 +208,12 @@ describe('UnifiedReporter', () => {
           { campaignId: 'g-1', costMicros: 100000000, impressions: 3000, clicks: 150, conversions: 8 },
         ]),
       };
-      mockGetPlatformSync.mockImplementation(() => class {
-        constructor() {}
-        setActiveAccount() {}
-        listAccounts = ownerGoogle.listAccounts;
-        getCampaignPerformance = ownerGoogle.getCampaignPerformance;
-      });
+      // Production getPlatformSync() returns a bound INSTANCE (not a class).
+      mockGetPlatformSync.mockImplementation(() => ({
+        setActiveAccount() {},
+        listAccounts: ownerGoogle.listAccounts,
+        getCampaignPerformance: ownerGoogle.getCampaignPerformance,
+      }));
       const ownerMeta = {
         getAdAccounts: vi.fn().mockResolvedValue([{ id: 'act_9' }]),
         getAccountInsights: vi.fn().mockResolvedValue({

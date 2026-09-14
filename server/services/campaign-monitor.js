@@ -41,12 +41,11 @@ export class CampaignMonitorService {
       });
       if (token) {
         if (platform === 'meta') return MetaAdsAPI.withToken(token);
-        const PlatformClass = getPlatformSync(platform, this.settingsRepo);
-        if (PlatformClass) {
-          const api = new PlatformClass();
-          api.setActiveAccount(null, token, true);
-          return api;
-        }
+        // getPlatformSync() returns a bound INSTANCE (not a class).
+        const api = getPlatformSync(platform, this.settingsRepo);
+        if (!api) return null;
+        api.setActiveAccount(null, token, true);
+        return api;
       }
     }
     return null;

@@ -49,11 +49,11 @@ export class AccountReportService {
     // Otherwise, resolve via getPlatformSync and bind the owner token.
     let api = metaApi;
     if (platform !== 'meta' && typeof api.getAccountInsights !== 'function') {
-      const PlatformClass = getPlatformSync(platform);
-      if (!PlatformClass) {
+      // getPlatformSync() returns a bound INSTANCE (not a class).
+      api = getPlatformSync(platform);
+      if (!api) {
         return this._unsupportedReport(accountId, accountName, platform, 'unknown platform');
       }
-      api = new PlatformClass();
     }
 
     // Feature-detect account-level insights. Only Meta implements

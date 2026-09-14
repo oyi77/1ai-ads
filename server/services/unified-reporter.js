@@ -279,9 +279,9 @@ export class UnifiedReporter {
     if (!token) return null;
     if (platform === 'meta') return MetaAdsAPI.withToken(token);
     try {
-      const PlatformClass = getPlatformSync(platform, this.repos.settingsRepo);
-      if (!PlatformClass) return null;
-      const api = new PlatformClass();
+      // getPlatformSync() returns a bound INSTANCE (not a class).
+      const api = getPlatformSync(platform, this.repos.settingsRepo);
+      if (!api) return null;
       api.setActiveAccount(null, token, true);
       return api;
     } catch {

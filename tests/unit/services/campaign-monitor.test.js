@@ -63,17 +63,14 @@ describe('CampaignMonitorService', () => {
       findAllActiveByUserAndPlatform: vi.fn().mockResolvedValue([{ id: 'pa_123', access_token: 'tok', user_id: 'user1' }]),
     };
 
-    // Configure the platform mock to return sample data
-    getPlatformSync.mockImplementation((platform) => {
-      return class MockPlatform {
-        constructor() {}
-        setActiveAccount() {}
-        getCampaigns = vi.fn().mockResolvedValue(sampleCampaigns);
-        getAccountInsights = vi.fn().mockResolvedValue(sampleInsights);
-        getCampaignInsights = vi.fn().mockResolvedValue(sampleInsights);
-        _get = vi.fn().mockResolvedValue({ data: [] });
-      };
-    });
+    // Production getPlatformSync() returns a bound INSTANCE (not a class).
+    getPlatformSync.mockImplementation((platform) => ({
+      setActiveAccount() {},
+      getCampaigns: vi.fn().mockResolvedValue(sampleCampaigns),
+      getAccountInsights: vi.fn().mockResolvedValue(sampleInsights),
+      getCampaignInsights: vi.fn().mockResolvedValue(sampleInsights),
+      _get: vi.fn().mockResolvedValue({ data: [] }),
+    }));
 
     service = new CampaignMonitorService(mockMetaApi, mockCampaignsRepo, mockSettingsRepo, mockPlatformAccountsRepo);
     // Data-shape tests exercise logic, not routing: bind the owner resolver
