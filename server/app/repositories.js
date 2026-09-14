@@ -12,7 +12,6 @@ import { WebhookEventsRepository } from '../repositories/webhook-events.js';
 import { RulesRepository } from '../repositories/rules.js';
 import { PaymentsRepository } from '../repositories/payments.js';
 import { AdUtmMapRepository } from '../repositories/ad-utm-map.js';
-import { ScheduleRepository } from '../repositories/schedule.js';
 import { AttributionRepository } from '../repositories/attribution.js';
 import { ContentSchedulerQueueRepository } from '../repositories/content-scheduler-queue.js';
 import { DraftsRepository } from '../repositories/drafts.js';
@@ -31,9 +30,6 @@ import { AutomationRuleRepository } from '../repositories/automation-rules.js';
 import { MonitoringRepository } from '../repositories/monitoring.js';
 
 export function createRepositories(db) {
-  const scheduleRepo = new ScheduleRepository(db);
-  scheduleRepo.ensureTable();
-
   const contentSchedulerQueueRepo = new ContentSchedulerQueueRepository(db);
 
   // Create platformAccountsRepo first since SettingsRepository delegates to it
@@ -56,7 +52,6 @@ export function createRepositories(db) {
     rulesRepo: new RulesRepository(db),
     paymentsRepo: new PaymentsRepository(db),
     adUtmMapRepo: new AdUtmMapRepository(db),
-    scheduleRepo,
     attributionRepo: new AttributionRepository(db),
     contentSchedulerQueueRepo,
     draftsRepo: new DraftsRepository(db, settingsRepo),
