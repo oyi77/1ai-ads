@@ -17,6 +17,11 @@ import { sanitizeAccessToken } from '../../lib/token-sanitize.js';
 import { verifyMetaTokenApp } from '../../services/meta-connection.js';
 
 const log = createLogger('auth-handlers');
+
+// Precomputed bcrypt cost-12 hash of a never-used dummy password. Compared
+// against on unknown-user logins so both paths cost ~1 verify (timing guard).
+const TIMING_DUMMY_HASH = '$2b$12$VQVB0GebsL9B4HLnu13FJeUmYbtTTQoxT/T1iwqRqbPji8oya90ca';
+
 /**
  * POST /register
  */
@@ -74,7 +79,13 @@ export function handleLogin(usersRepo, refreshTokensRepo) {
     try {
       const { username, password } = req.body;
       const user = usersRepo.findByUsername(username) || usersRepo.findByEmail(username);
-      if (!user || !verifyPassword(password, user.password_hash)) {
+      // Timing-attack guard (proven live 2026-09-14: 0.81s vs 0.08s revealed
+      // user existence): always pay one bcrypt verify, even for unknown users.
+      if (!user) {
+        verifyPassword(password || 'x', TIMING_DUMMY_HASH);
+        return res.status(401).json({ success: false, error: 'Invalid credentials' });
+      }
+      if (!verifyPassword(password, user.password_hash)) {
         return res.status(401).json({ success: false, error: 'Invalid credentials' });
       }
 
