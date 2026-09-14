@@ -119,14 +119,17 @@ startServices(app);
 process.on('SIGTERM', () => {
   log.info('SIGTERM received, shutting down gracefully');
   server.close(() => {
+    // Checkpoint the WAL before exit — otherwise the next boot replays it
+    // (slow start + the orphaned-WAL confusion pattern of 2026-09-12/13).
+    try { db.close(); } catch { /* already closed */ }
     log.info('Server closed');
     process.exit(0);
   });
 });
-
 process.on('SIGINT', () => {
   log.info('SIGINT received, shutting down gracefully');
   server.close(() => {
+    try { db.close(); } catch { /* already closed */ }
     log.info('Server closed');
     process.exit(0);
   });
