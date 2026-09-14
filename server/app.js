@@ -14,6 +14,7 @@ import { createRouters } from './app/routers.js';
 import helmet from 'helmet';
 import { auditLog } from './middleware/audit.js';
 import { AuditLogRepository } from './repositories/audit-log.js';
+import { requireAuth, requireAdmin } from './middleware/auth.js';
 import { getMetricsText, metricsMiddleware } from './lib/metrics.js';
 import { initBot } from './bot/index.js';
 import { resolveOwnerPlatformToken } from './lib/resolve-owner-platform.js';
@@ -296,8 +297,8 @@ export function createApp(params) {
     res.json({ received: true });
   });
 
-  // ── Prometheus Metrics ──────────────────────────────────────
-  app.get('/metrics', (_req, res) => {
+  // ── Prometheus Metrics (admin-only — request counters are recon surface) ─
+  app.get('/metrics', requireAuth, requireAdmin, (_req, res) => {
     res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
     res.send(getMetricsText());
   });
