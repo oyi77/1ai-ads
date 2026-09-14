@@ -151,8 +151,17 @@ export function createApp(params) {
     next();
   });
 
+  // Allowlist: only the configured origins receive ACAO headers. A static
+  // string origin makes Express echo ACAO on every request (even evil
+  // Origins) — browsers still block, but non-browser clients read freely.
+  // Found live 2026-09-14: evil preflight got ACAO: adforge... Same-origin
+  // SPA sends no Origin on GET / no ACAO needed; cookie CSRF has its own gate.
   app.use(cors({
-    origin: config.corsOrigin,
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      const allowed = [config.corsOrigin, config.publicBaseUrl, config.webAppUrl].filter(Boolean);
+      return cb(null, allowed.includes(origin.replace(/\/+$/, '')));
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   }));
