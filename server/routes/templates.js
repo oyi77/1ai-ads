@@ -32,6 +32,9 @@ export function createTemplatesRouter(templatesRepo) {
 
   // POST /api/templates - Create template (admin only)
   router.post('/', requireRole('admin'), (req, res) => {
+    if (!req.body?.name || !String(req.body.name).trim()) {
+      return res.status(400).json({ success: false, error: 'name is required' });
+    }
     const template = templatesRepo.create(req.body);
     res.status(201).json({ success: true, data: template });
   });
