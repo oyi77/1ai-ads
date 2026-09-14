@@ -98,42 +98,9 @@ interface User {
   role: string;
   plan: string;
 }
-
-interface AdminStats {
-  totalUsers: number;
-  activeUsers: number;
-  totalCampaigns: number;
-  totalSpend: number;
-}
-
-interface AdminUser {
-  id: string;
-  username: string;
-  email: string;
-  role: string;
-  plan: string;
-  is_active: number;
-  created_at: string;
-}
-
-interface AdminUsersResponse {
-  data: AdminUser[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-interface ImpersonateResponse {
-  accessToken: string;
-  refreshToken: string;
-  user: User;
-}
-
-interface BillingOverrideData {
-  plan?: string;
-  expiry?: string;
-}
-
+// NOTE: no api.admin helpers — no admin UI surface exists (verified
+// 2026-09-14: zero consumers across client/src and tests). Admin ops run
+// via API + Telegram bot. Re-add with a consuming page, not ahead of one.
 export const api = {
   // Generic CRUD
   get: <T>(path: string) => request<T>('GET', path),
@@ -216,19 +183,5 @@ export const api = {
     } catch {
       return null;
     }
-  },
-
-  // Admin methods
-  admin: {
-    getStats: () => request<AdminStats>('GET', '/admin/stats'),
-    listUsers: (params?: { page?: number; limit?: number; search?: string }) =>
-      request<AdminUsersResponse>('GET', `/admin/users?${new URLSearchParams(params as Record<string, string>).toString()}`),
-    getUser: (id: string) => request<AdminUser>('GET', `/admin/users/${id}`),
-    updateUser: (id: string, data: { role?: string; is_active?: number; email?: string }) =>
-      request<AdminUser>('PUT', `/admin/users/${id}`, data),
-    deactivateUser: (id: string) => request<AdminUser>('DELETE', `/admin/users/${id}`),
-    impersonate: (userId: string) => request<ImpersonateResponse>('POST', `/admin/impersonate/${userId}`),
-    billingOverride: (userId: string, data: BillingOverrideData) =>
-      request<{ success: boolean; data: { plan: string; expiry: string } }>('POST', `/admin/billing/${userId}`, data),
   },
 };
