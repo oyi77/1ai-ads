@@ -5,6 +5,8 @@
 # standard guard (no separate deep-clean: `docker system prune` would evict
 # other projects' build cache on this shared box — owner call if wanted).
 
+LOG=/tmp/1ai-ads-ops.log
+ts() { date -u '+%Y-%m-%dT%H:%M:%SZ'; }
 
 # ── 1. Docker build cache under control (only when disk >85%) ──
 USED_PCT=$(df / | awk 'NR==2 {gsub("%",""); print $5}')
