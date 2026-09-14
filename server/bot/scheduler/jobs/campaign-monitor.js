@@ -77,7 +77,7 @@ export function setupCampaignMonitor(bot, deps) {
           const dedupKey = `campaign_monitor_alerted_${campaign.id}_${today}`;
           if (deps.repos?.settingsRepo?.get(dedupKey)) continue;
 
-          await ownerSend(bot, deps, campaign.user_id, `⚠️ *${campaign.name}*: ${stoploss.reason}`, { parse_mode: 'Markdown' });
+          await ownerSend(bot, deps, campaign.user_id, `⚠️ <b>${campaign.name}</b>: ${stoploss.reason}`, { parse_mode: 'HTML' });
           deps.repos?.settingsRepo?.set(dedupKey, new Date().toISOString());
         }
 
@@ -92,7 +92,7 @@ export function setupCampaignMonitor(bot, deps) {
             // Dedup: max 1 scale alert per campaign per day
             const dedupKey = `campaign_monitor_scale_${campaign.id}_${today}`;
             if (!deps.repos?.settingsRepo?.get(dedupKey)) {
-              await ownerSend(bot, deps, campaign.user_id, `🚀 *${campaign.name}* eligible to scale!\n${scaleResult.reason}`, { parse_mode: 'Markdown' });
+              await ownerSend(bot, deps, campaign.user_id, `🚀 <b>${campaign.name}</b> eligible to scale!\n${scaleResult.reason}`, { parse_mode: 'HTML' });
               deps.repos?.settingsRepo?.set(dedupKey, new Date().toISOString());
             }
           }

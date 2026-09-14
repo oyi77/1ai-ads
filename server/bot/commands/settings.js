@@ -4,7 +4,7 @@
  */
 
 import { PLATFORM_NAMES } from '../scenes/connect-account.js';
-import { escapeMarkdown as escMd } from '../../lib/escape.js';
+import { escapeHtml as esc } from '../../lib/escape.js';
 export function handleSettings(deps) {
   return async (ctx) => {
     const accounts = deps.repos?.platformAccountsRepo?.findByUserId?.(ctx.userId) || [];
@@ -12,7 +12,7 @@ export function handleSettings(deps) {
     const platformRows = Object.entries(PLATFORM_NAMES).map(([key, label]) => {
       const active = accounts.find(a => a.platform === key && a.is_active);
       const status = active
-        ? `✅ Connected (${escMd(active.account_name)})`
+        ? `✅ Connected (${esc(active.account_name)})`
         : '— Belum terhubung';
       const button = key === 'meta'
         ? { text: active ? `🔑 Meta Token — ${active.account_name}` : '🔑 Hubungkan Meta via Token', callback_data: 'settings:connect_meta' }
@@ -23,11 +23,11 @@ export function handleSettings(deps) {
     const body = platformRows.map(r => `• ${r.label}: ${r.status}`).join('\n');
 
     return ctx.reply(
-      '🔧 *Settings*\n\n' +
+      '🔧 <b>Settings</b>\n\n' +
       `${body}\n\n` +
       'Pilih platform untuk terhubung lewat web, atau kelola akun:',
       {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
             ...platformRows.map(r => [r.button]),
@@ -69,9 +69,9 @@ export function handleSettingsCallback(deps) {
             },
           });
         }
-        const list = accounts.map(a => `• ${escMd(a.account_name)} (${escMd(a.platform)}) ${a.is_active ? '✅' : '⏸'}`).join('\n');
-        return ctx.reply(`📊 *Connected Accounts:*\n\n${list}`, {
-          parse_mode: 'Markdown',
+        const list = accounts.map(a => `• ${esc(a.account_name)} (${esc(a.platform)}) ${a.is_active ? '✅' : '⏸'}`).join('\n');
+        return ctx.reply(`📊 <b>Connected Accounts:</b>\n\n${list}`, {
+          parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [
               [{ text: '🔧 Settings', callback_data: 'menu:settings' }],

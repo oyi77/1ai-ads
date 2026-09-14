@@ -5,10 +5,7 @@
  */
 
 import { createLogger } from '../../lib/logger.js';
-function escMd(str) {
-  if (str === null || str === undefined) return '';
-  return String(str).replace(/[_*[\]()~`>#+\-|=.!{}]/g, '\\$&');
-}
+import { escapeHtml as esc } from '../../lib/escape.js';
 import { mainMenuKeyboard } from './menu.js';
 
 const log = createLogger('bot:start');
@@ -30,28 +27,28 @@ export function handleStart() {
     let message;
     const keyboard = mainMenuKeyboard();
     if (!hasMetaAccount && campaignCount === 0) {
-      message = `👋 *Welcome to AdForge, ${escMd(name)}!*\n\n` +
-        '🚀 *Getting started in 3 steps:*\n' +
+      message = `👋 <b>Welcome to AdForge, ${esc(name)}!</b>\n\n` +
+        '🚀 <b>Getting started in 3 steps:</b>\n' +
         '1️⃣ Connect your Meta account\n' +
         '2️⃣ Sync or create campaigns\n' +
         '3️⃣ Set up automation rules\n\n' +
-        'Tap *🔗 Connect Account* below to begin!';
+        'Tap <b>🔗 Connect Account</b> below to begin!';
       keyboard.inline_keyboard.unshift([
         { text: '🔗 Connect Account', callback_data: 'menu:connect' },
       ]);
     } else if (hasMetaAccount && campaignCount === 0) {
-      message = `👋 *Welcome back, ${escMd(name)}!*\n\n` +
+      message = `👋 <b>Welcome back, ${esc(name)}!</b>\n\n` +
         '✅ Meta account connected\n' +
         '📭 No campaigns yet\n\n' +
-        'Tap *🎯 Buat Kampanye* to create your first campaign, or *📣 My Meta Ads* to sync from Meta.';
+        'Tap <b>🎯 Buat Kampanye</b> to create your first campaign, or <b>📣 My Meta Ads</b> to sync from Meta.';
     } else {
-      message = `👋 *Welcome back, ${escMd(name)}!*\n\n` +
+      message = `👋 <b>Welcome back, ${esc(name)}!</b>\n\n` +
         `📊 ${campaignCount} campaign${campaignCount !== 1 ? 's' : ''} tracked\n` +
         `⚡ ${ruleCount} automation rule${ruleCount !== 1 ? 's' : ''} active\n\n` +
         'What would you like to do?';
     }
     await ctx.reply(message, {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: keyboard,
     });
   };

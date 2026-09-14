@@ -119,13 +119,13 @@ export function handleAds(deps) {
 
     const connectedCount = active.length;
     const summary =
-      `📣 *Ads Manager*\n\n` +
+      `📣 <b>Ads Manager</b>\n\n` +
       `Multiple ad platforms — ${connectedCount} connected\n` +
       `Campaigns: ${activeCampaigns} active / ${campaigns.length} total\n\n` +
       `Tap ✅ to manage a connected platform, 🔗 to connect one:`;
 
     return ctx.reply(summary, {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: { inline_keyboard: rows },
     });
   };
@@ -135,9 +135,9 @@ async function showPlatformAccounts(ctx, deps, platform) {
   const { api } = await makeApi(ctx, deps, platform);
   if (!api) {
     return ctx.reply(
-      `⚠️ *${platform.toUpperCase()} API not yet available in the bot.*\n\nUse the dashboard for now:`,
+      `⚠️ <b>${platform.toUpperCase()} API not yet available in the bot.</b>\n\nUse the dashboard for now:`,
       {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [[{ text: '🌐 Open Dashboard', url: BACKEND }]],
         },
@@ -194,7 +194,7 @@ async function replyAccountList(ctx, accounts, page, platform = 'meta') {
     .map((a, i) => `${start + i + 1}. ${escHtml(a.name)} (${a.id}) — ${a.status === 'active' ? '✅ active' : '⏸ disabled'}`)
     .join('\n');
   return ctx.reply(
-    `📣 *${platform.toUpperCase()} Ad Accounts* (${accounts.length})\n\n${lines}\n\nTap an account to manage it.`,
+    `📣 <b>${platform.toUpperCase()} Ad Accounts</b> (${accounts.length})\n\n${lines}\n\nTap an account to manage it.`,
     {
       parse_mode: 'HTML',
       reply_markup: {
@@ -431,7 +431,7 @@ export function handleAdsManage(deps) {
     }
     const lines = rows.map((r, i) => `${i + 1}. ${r.is_active ? '✅' : '⛔️'} <b>${escHtml(r.account_name)}</b>`).join('\n');
     await ctx.reply(
-      `⚙️ *Manage Meta Connections*\n\n${lines}\n\nTap a connection to disconnect it.`,
+      `⚙️ <b>Manage Meta Connections</b>\n\n${lines}\n\nTap a connection to disconnect it.`,
       {
         parse_mode: 'HTML',
         reply_markup: {

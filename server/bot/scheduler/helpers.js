@@ -39,7 +39,7 @@ function describeCondition(condition) {
   return `${metric} ${condition.operator ?? ''} ${threshold ?? ''}`.trim();
 }
 
-/** Send a Markdown message to the admin chat; no-op when chatId missing. */
+/** Send a message to the admin chat; no-op when chatId missing. */
 async function safeSend(bot, text, extra) {
   const chatId = getChatId();
   if (!chatId) return;

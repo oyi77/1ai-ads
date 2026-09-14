@@ -13,19 +13,6 @@ export function escapeHtml(str) {
   const s = String(str);
   return s.replace(ESCAPE_RE, (ch) => ESCAPE_MAP[ch]);
 }
-
-// Telegram legacy-Markdown escaper for dynamic text (rule names, account
-// labels, action types). An unescaped `_` (e.g. increase_budget) opens an
-// entity Telegram can't close → 400 "can't parse entities" (proven live
-// 2026-09-14: Monitor died at byte offset 109 for one underscore action).
-// ONLY the entity-forming set is escaped: _ * [ ] ( ) ~ `. A line-leading
-// `>` (blockquote) is left alone: operators arrive as standalone ">" and a
-// (^|\n)> rule corrupts every one of them (proven live: roas \> 2).
-export function escapeMarkdown(str) {
-  if (str === null || str === undefined) return '';
-  return String(str).replace(/([_*[\]()~`])/g, '\\$1');
-}
-
 const DANGEROUS_PROTOCOLS = /^(javascript|data|vbscript):/i;
 
 export function validateUrl(url) {

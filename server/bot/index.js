@@ -318,10 +318,10 @@ function handleTextMessage(deps) {
       const cmd = text.split(' ')[0].toLowerCase().replace('/', '');
       if (!KNOWN_COMMANDS.includes(cmd)) {
         return ctx.reply(
-          `❓ Unknown command: *${cmd}*\n\n` +
+          `❓ Unknown command: <b>${cmd}</b>\n\n` +
           `Use /menu to see available options, or /help for guidance.`,
           {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: {
               inline_keyboard: [
                 [{ text: '📋 Menu', callback_data: 'quick:menu' }],

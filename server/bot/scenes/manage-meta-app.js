@@ -28,12 +28,12 @@ export const manageMetaAppScene = new Scenes.WizardScene(
       ? `\n\nℹ️ You already have an App configured (AppId ${existing.appIdHint}). Saving new credentials will replace the current one.`
       : '';
     await ctx.reply(
-      '🔧 *Manage Meta App Credentials*\n\n' +
+      '🔧 <b>Manage Meta App Credentials</b>\n\n' +
         'These power your own Meta App (System User, App Secret, Threads).\n' +
         'All values are encrypted at rest and scoped to your Telegram user only.' +
         note +
         '\n\nFirst — give this App a short label (e.g. "My PixelAD App"):',
-      { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
   },
@@ -46,10 +46,10 @@ export const manageMetaAppScene = new Scenes.WizardScene(
     }
     ctx.wizard.state.label = text;
     await ctx.reply(
-      `Got it — *${text}*.\n\n` +
-        'Paste your Meta *System User Access Token* (long-lived).\n' +
+      `Got it — <b>${text}</b>.\n\n` +
+        'Paste your Meta <b>System User Access Token</b> (long-lived).\n' +
         'It is encrypted at rest and never shown back in full.',
-      { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
   },
@@ -62,8 +62,8 @@ export const manageMetaAppScene = new Scenes.WizardScene(
     }
     ctx.wizard.state.systemToken = text;
     await ctx.reply(
-      'Now paste your Meta *App ID* (numeric, e.g. 1234567890).',
-      { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
+      'Now paste your Meta <b>App ID</b> (numeric, e.g. 1234567890).',
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
   },
@@ -75,7 +75,7 @@ export const manageMetaAppScene = new Scenes.WizardScene(
       return;
     }
     ctx.wizard.state.appId = text;
-    await ctx.reply('Now paste your Meta *App Secret*.', { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
+    await ctx.reply('Now paste your Meta <b>App Secret</b>.', { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
     return ctx.wizard.next();
   },
   // Step 4 — Threads (optional) → persist
@@ -87,10 +87,10 @@ export const manageMetaAppScene = new Scenes.WizardScene(
     }
     ctx.wizard.state.appSecret = text;
     await ctx.reply(
-      'Finally — your *Threads App ID* and *Threads App Secret* (optional).\n' +
-        'Send them as `THREADS_ID THREADS_SECRET` (space-separated, no quotes),\n' +
-        'or send `/skip` to finish without Threads.',
-      { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
+      'Finally — your <b>Threads App ID</b> and <b>Threads App Secret</b> (optional).\n' +
+        'Send them as <code>THREADS_ID THREADS_SECRET</code> (space-separated, no quotes),\n' +
+        'or send <code>/skip</code> to finish without Threads.',
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
   },
@@ -129,13 +129,13 @@ export const manageMetaAppScene = new Scenes.WizardScene(
         hasThreads: Boolean(threadsId),
       });
       await ctx.reply(
-        `✅ *${label}* configured!\n\n` +
-          `App ID: \`${appId}\`\n` +
+        `✅ <b>${label}</b> configured!\n\n` +
+          `App ID: <code>${appId}</code>\n` +
           'Your webhook endpoint is now:\n' +
-          `\`/webhooks/u/${ctx.userId}\`\n\n` +
+          `<code>/webhooks/u/${ctx.userId}</code>\n\n` +
           'Subscribe this URL in your Meta App dashboard (verify token = your user id).\n' +
           'All Meta calls now route through your own App credentials.',
-        { parse_mode: 'Markdown' }
+        { parse_mode: 'HTML' }
       );
     } catch (err) {
       log.error('Failed to store Meta App Creds', { userId: ctx.userId, error: err.message });

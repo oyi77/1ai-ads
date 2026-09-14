@@ -81,9 +81,10 @@ describe('monitor — enhanced rule system', () => {
     expect(msg).toContain('Category');
   });
 
-  it('view:all escapes underscores in action types (no Telegram entity crash)', async () => {
-    // Live 2026-09-14: rule action `increase_budget` left a bare `_` at byte
-    // offset 109 → 400 "can't parse entities", Monitor died for the user.
+  it('view:all renders raw action names under HTML parse mode (no entity crash)', async () => {
+    // Live 2026-09-14: rule action `increase_budget` in legacy-Markdown left
+    // a bare `_` at byte offset 109 → 400 "can't parse entities". The bot
+    // migrated to HTML, so raw underscores are safe and must NOT be escaped.
     const deps = makeDeps({
       repos: {
         rulesRepo: {
@@ -101,12 +102,8 @@ describe('monitor — enhanced rule system', () => {
     const ctx = makeCtx('u1', 'view:all');
     await handleMonitorCallback(deps)(ctx);
     const msg = ctx._replies[0].msg;
-    expect(msg).toContain('increase\\_budget');
-    // Entity-balance check: every opener must close (legacy Markdown scan).
-    let depth = 0;
-    for (let i = 0; i < msg.length; i++) {
-      if ((msg[i] === '*' || msg[i] === '_') && msg[i - 1] !== '\\') depth ^= 1;
-    }
-    expect(depth).toBe(0);
+    expect(ctx._replies[0].opts.parse_mode).toBe('HTML');
+    expect(msg).toContain('increase_budget');
+    expect(msg).not.toContain('increase\\_budget');
   });
 });

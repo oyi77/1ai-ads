@@ -6,7 +6,7 @@ import { isActiveStatus } from '../../lib/campaign-status.js';
  */
 import { createLogger } from '../../lib/logger.js';
 import config from '../../config/index.js';
-import { escapeMarkdown as escMd } from '../../lib/escape.js';
+import { escapeHtml as esc } from '../../lib/escape.js';
 const log = createLogger('bot:menu');
 import { buildPlatformKeyboard, buildPlatformAccountKeyboard } from '../nav.js';
 import { getUserMetaAccount, makeApi, isExpiredToken, handleAdsReport, handleAds } from './ads.js';
@@ -54,9 +54,9 @@ export function mainMenuKeyboard() {
 export function handleMenu() {
   return async (ctx) => {
     await ctx.reply(
-      '📋 *AdForge Menu*\n\nPilih fitur:',
+      '📋 <b>AdForge Menu</b>\n\nPilih fitur:',
       {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: mainMenuKeyboard(),
       }
     );
@@ -117,9 +117,9 @@ async function sendPlatformChoice(ctx) {
   }
   inline_keyboard.push([{ text: '⬅️ Menu', callback_data: 'quick:menu' }]);
   await ctx.reply(
-    '🔗 *Connect an Ad Account*\n\nChoose a platform to connect:',
+    '🔗 <b>Connect an Ad Account</b>\n\nChoose a platform to connect:',
     {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: { inline_keyboard },
     }
   );
@@ -154,9 +154,9 @@ async function handleOptimizeAction(ctx, deps, scope) {
     }
 
     return ctx.reply(
-      '🤖 *AI Optimization*\n\nPilih akun iklan yang mau dioptimalkan:',
+      '🤖 <b>AI Optimization</b>\n\nPilih akun iklan yang mau dioptimalkan:',
       {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
             ...accounts.map((a) => [{ text: `⚙️ ${a.name} (${a.id})`, callback_data: `menu:optimize:${a.id}` }]),
@@ -192,8 +192,8 @@ async function handleOptimizeAction(ctx, deps, scope) {
       const active = (live || []).filter(c => c.status === 'active');
       if (active.length === 0) {
         return ctx.reply(
-          '🤖 *AI Optimization*\n\nTidak ada kampanye Meta aktif untuk dioptimalkan.',
-          { parse_mode: 'Markdown' }
+          '🤖 <b>AI Optimization</b>\n\nTidak ada kampanye Meta aktif untuk dioptimalkan.',
+          { parse_mode: 'HTML' }
         );
       }
       const insights = await api.getMultiCampaignInsights(active.map(c => c.id), { datePreset: 'last_30d', accountId: scope });
@@ -215,8 +215,8 @@ async function handleOptimizeAction(ctx, deps, scope) {
 
     if (campaigns.length === 0) {
       return ctx.reply(
-        '🤖 *AI Optimization*\n\nTidak ada kampanye Meta aktif untuk dioptimalkan.',
-        { parse_mode: 'Markdown' }
+        '🤖 <b>AI Optimization</b>\n\nTidak ada kampanye Meta aktif untuk dioptimalkan.',
+        { parse_mode: 'HTML' }
       );
     }
 
@@ -309,23 +309,23 @@ async function proposeOptimizations(ctx, deps, suggestions) {
   }
   if (created.length === 0) {
     return ctx.reply(
-      '🤖 *AI Optimization*\n\nTidak ada saran yang bisa dibuat. Coba lagi nanti.',
-      { parse_mode: 'Markdown' }
+      '🤖 <b>AI Optimization</b>\n\nTidak ada saran yang bisa dibuat. Coba lagi nanti.',
+      { parse_mode: 'HTML' }
     );
   }
   // One summary message with per-draft Apply/Dismiss buttons.
   const lines = created.map(({ suggestion }) => {
     const { type, campaign } = suggestion;
     const label = type === 'pause' ? '⏸ pause' : (type === 'scale_up' ? '📈 naikkan budget' : '📉 turunkan budget');
-    return `• ${label} *${escMd(campaign.name || campaign.id)}*`;
+    return `• ${label} <b>${esc(campaign.name || campaign.id)}</b>`;
   });
   const keyboard = created.map(({ draft }) => ([
     { text: '✅ Apply', callback_data: `approval:approve:${draft.id}` },
     { text: '❌ Dismiss', callback_data: `approval:reject:${draft.id}` },
   ]));
   return ctx.reply(
-    `🤖 *Saran AI (${created.length})*\n\n${lines.join('\n')}\n\nSetujui atau tolak masing-masing:`,
-    { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } }
+    `🤖 <b>Saran AI (${created.length})</b>\n\n${lines.join('\n')}\n\nSetujui atau tolak masing-masing:`,
+    { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
   );
 }
 
@@ -366,17 +366,17 @@ async function proposeOptimization(ctx, deps, suggestion) {
 
   if (!draft) {
     return ctx.reply(
-      '🤖 *AI Optimization*\n\n' +
+      '🤖 <b>AI Optimization</b>\n\n' +
       'AI auto-apply sedang nonaktif. Nyalakan persetujuan di /menu → Settings, ' +
       'atau gunakan dashboard: /menu → Mini App',
-      { parse_mode: 'Markdown' }
+      { parse_mode: 'HTML' }
     );
   }
 
   return ctx.reply(
-    `🤖 *Saran AI*: ${label} *${escMd(campaign.name || campaign.id)}*\n\nSetujui atau tolak:`,
+    `🤖 <b>Saran AI</b>: ${label} <b>${esc(campaign.name || campaign.id)}</b>\n\nSetujui atau tolak:`,
     {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [[
           { text: '✅ Apply', callback_data: `approval:approve:${draft.id}` },
@@ -393,9 +393,9 @@ async function handlePlatforms(ctx, deps) {
     // Note: ctx.answerCbQuery() already called by handleMenuButton
     const keyboard = await buildPlatformKeyboard(deps, ctx.userId);
     await ctx.reply(
-      '🌐 *Platforms*\n\nConnect or manage your ad platforms:',
+      '🌐 <b>Platforms</b>\n\nConnect or manage your ad platforms:',
       {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
             ...keyboard,
@@ -429,9 +429,9 @@ export async function handlePlatformAction(ctx, deps, scope) {
     if (action === 'manage') {
       const accounts = await buildPlatformAccountKeyboard(deps, ctx.userId, platform);
       await ctx.reply(
-        `🌐 *${platform.toUpperCase()} Accounts*\n\nSelect an account to manage:`,
+        `🌐 <b>${esc(platform.toUpperCase())} Accounts</b>\n\nSelect an account to manage:`,
         {
-          parse_mode: 'Markdown',
+          parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [
               ...accounts,
@@ -455,15 +455,15 @@ export async function handlePlatformAction(ctx, deps, scope) {
       const health = row.health_status || 'unknown';
       const adAcct = row.credentials?.ad_account_id || row.credentials?.fb_account_id || '—';
       const lines = [
-        `🔧 *${escMd(row.account_name)}*`,
+        `🔧 <b>${esc(row.account_name)}</b>`,
         ``,
-        `Platform: ${escMd(platform)}`,
+        `Platform: ${esc(platform)}`,
         `Status: ${status}`,
         `Token: ${health}`,
-        `Ad account: ${escMd(String(adAcct))}`,
+        `Ad account: ${esc(String(adAcct))}`,
       ];
       return ctx.reply(lines.join('\n'), {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
             [{ text: row.is_active ? '🔌 Disconnect' : '🗑 Remove', callback_data: `ads:disconnect:${row.id}` }],

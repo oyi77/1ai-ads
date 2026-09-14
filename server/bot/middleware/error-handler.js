@@ -51,7 +51,7 @@ function handleError(err, ctx) {
   // Send user a friendly recovery message
   const userMessage = getRecoveryMessage(domain);
   ctx.reply(userMessage, {
-    parse_mode: 'Markdown',
+    parse_mode: 'HTML',
     reply_markup: {
       inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]],
     },

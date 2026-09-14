@@ -55,7 +55,7 @@ export function calculateCampaignStats(campaigns) {
  */
 export function formatDailyReport(stats, date = new Date().toISOString().split('T')[0]) {
   const lines = [
-    `📊 *Daily Report — ${date}*`,
+    `📊 <b>Daily Report — ${date}</b>`,
     '',
     `Campaigns: ${stats.activeCampaigns} active / ${stats.totalCampaigns} total`,
     `Spend: Rp ${stats.totalSpend.toLocaleString('id-ID')}`,
@@ -67,7 +67,7 @@ export function formatDailyReport(stats, date = new Date().toISOString().split('
   // Top 5 by ROAS
   const top = [...stats.campaigns].sort((a, b) => b.roas - a.roas).slice(0, 5);
   if (top.length > 0) {
-    lines.push('*Top Campaigns:*');
+    lines.push('<b>Top Campaigns:</b>');
     top.forEach((c, i) => {
       lines.push(`${i + 1}. ${c.name} — ROAS ${c.roas.toFixed(2)}x (Rp ${c.spend.toLocaleString('id-ID')})`);
     });

@@ -84,9 +84,9 @@ export function handleDashboardCallback(deps) {
 
     if (action === 'add') {
       return ctx.reply(
-        '🔗 *Add Ad Account*\n\nConnect a new ad account:',
+        '🔗 <b>Add Ad Account</b>\n\nConnect a new ad account:',
         {
-          parse_mode: 'Markdown',
+          parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [
               [{ text: '📘 Meta (FB/IG)', callback_data: 'connect:meta' }],
@@ -116,8 +116,8 @@ export function handleDashboardCallback(deps) {
       keyboard.push([{ text: '⬅️ Back', callback_data: 'quick:menu' }]);
 
       return ctx.reply(
-        '➖ *Remove Account*\n\nSelect an account to remove:',
-        { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } }
+        '➖ <b>Remove Account</b>\n\nSelect an account to remove:',
+        { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
       );
     }
 

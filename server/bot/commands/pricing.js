@@ -7,18 +7,17 @@ export function handlePricing() {
   return async (ctx) => {
     const plan = ctx.user?.plan || 'free';
     const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
-    // NOTE: underscore in the support handle must be escaped under Markdown,
-    // or Telegram rejects the entity parse (400) — and a sync handler without
-    // a `return` turns that rejection into an unhandledRejection crash.
+    // HTML: the support handle needs no escaping — the legacy Markdown
+    // crash class this NOTE used to guard is gone by construction.
     await ctx.reply(
-      `💰 *AdForge Pricing*\n\n` +
-      `Your plan: *${planLabel}*\n\n` +
-      '🆓 *Free* — 3 campaigns, basic analytics\n' +
-      '💎 *Pro* — Unlimited campaigns, AI optimization, priority support\n' +
-      '🏢 *Enterprise* — Custom limits, dedicated support, white-label\n\n' +
-      'Use /menu → Platforms to add integrations. Contact @adforge\\_support for upgrades.',
+      `💰 <b>AdForge Pricing</b>\n\n` +
+      `Your plan: <b>${planLabel}</b>\n\n` +
+      '🆓 <b>Free</b> — 3 campaigns, basic analytics\n' +
+      '💎 <b>Pro</b> — Unlimited campaigns, AI optimization, priority support\n' +
+      '🏢 <b>Enterprise</b> — Custom limits, dedicated support, white-label\n\n' +
+      'Use /menu → Platforms to add integrations. Contact @adforge_support for upgrades.',
       {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
             [{ text: '🌐 Platforms', callback_data: 'menu:platforms' }],

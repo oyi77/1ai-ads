@@ -23,7 +23,7 @@ export function setupDailyDashboard(bot, deps) {
       const { data: campaigns = [] } = deps.repos?.campaignsRepo?.findAll?.() || { data: [] };
       const stats = calculateCampaignStats(campaigns);
       const report = formatDailyReport(stats);
-      await safeSend(bot, report, { parse_mode: 'Markdown' });
+      await safeSend(bot, report, { parse_mode: 'HTML' });
       log.info('Daily dashboard generated', { campaigns: stats.totalCampaigns, active: stats.activeCampaigns });
     } catch (err) {
       log.error('Daily dashboard failed', { error: err.message });

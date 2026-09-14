@@ -4,15 +4,15 @@ import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('monitor');
 import { RULE_TEMPLATES, ConditionGroup, Condition, RuleAction, OPERATORS } from '../../lib/rule-builder.js';
-import { escapeMarkdown as escMd } from '../../lib/escape.js';
+import { escapeHtml as esc } from '../../lib/escape.js';
 
 const MONITOR_HEADER =
-  '⚡ *Campaign Monitor*\n\n' +
+  '⚡ <b>Campaign Monitor</b>\n\n' +
   'Set rules to automatically monitor your campaigns:\n\n' +
-  '• *Delivery* — Impressions, clicks, reach, frequency\n' +
-  '• *Conversion* — CTR, CVR\n' +
-  '• *Cost* — CPC, CPM, CPA, oCPC\n' +
-  '• *Efficiency* — ROAS, ROI\n\n' +
+  '• <b>Delivery</b> — Impressions, clicks, reach, frequency\n' +
+  '• <b>Conversion</b> — CTR, CVR\n' +
+  '• <b>Cost</b> — CPC, CPM, CPA, oCPC\n' +
+  '• <b>Efficiency</b> — ROAS, ROI\n\n' +
   'Choose an action below:';
 
 const INTERVAL_LABELS = {
@@ -53,7 +53,7 @@ export function handleMonitor(deps) {
       { text: '🔄 Sync Now', callback_data: 'monitor:sync' },
     ]);
     keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
-    return ctx.reply(MONITOR_HEADER, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } });
+    return ctx.reply(MONITOR_HEADER, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
   };
 }
 
@@ -67,7 +67,7 @@ function showMetricCategories(ctx) {
     }
   }
   keyboard.push([{ text: '⬅️ Back', callback_data: 'menu:monitor' }]);
-  return ctx.reply('📊 *Choose Metric Category*\n\nSelect the type of metric to monitor:', { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } });
+  return ctx.reply('📊 <b>Choose Metric Category</b>\n\nSelect the type of metric to monitor:', { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
 }
 
 function showMetricsInCategory(ctx, categoryId) {
@@ -77,7 +77,7 @@ function showMetricsInCategory(ctx, categoryId) {
     keyboard.push([{ text: `${m.name}`, callback_data: `rule:add:metric:${key}` }]);
   }
   keyboard.push([{ text: '⬅️ Categories', callback_data: 'rule:add:start' }]);
-  return ctx.reply(`📏 *${METRIC_CATEGORIES[categoryId]}*\n\nChoose a metric:`, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } });
+  return ctx.reply(`📏 <b>${esc(METRIC_CATEGORIES[categoryId])}</b>\n\nChoose a metric:`, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
 }
 
 function showOperators(ctx, metric) {
@@ -89,7 +89,7 @@ function showOperators(ctx, metric) {
     [{ text: '<= (less or equal)', callback_data: `rule:add:op:${metric}:lte` }],
     [{ text: '⬅️ Metrics', callback_data: `rule:add:cat:${m.category}` }],
   ];
-  return ctx.reply(`📐 *${m.name}*\n\nChoose an operator:`, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } });
+  return ctx.reply(`📐 <b>${esc(m.name)}</b>\n\nChoose an operator:`, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
 }
 
 function showTemplates(ctx) {
@@ -100,26 +100,27 @@ function showTemplates(ctx) {
   }
   keyboard.push([{ text: '⬅️ Back', callback_data: 'menu:monitor' }]);
   return ctx.reply(
-    '📦 *Rule Templates*\n\nPre-built rules:\n\n' +
-    '• ROAS Guard — Pause when ROAS < 1x\n' +
-    '• Frequency Cap — Pause when frequency > 5\n' +
-    '• High CTR Alert — CTR > 5%\n' +
-    '• Low CVR Alert — CVR < 1%\n' +
-    '• CPC Spike — CPC > 200\n' +
-    '• CPA Drop — CPA < 50k\n' +
-    '• CPM Control — CPM > 15k\n' +
+    '📦 <b>Rule Templates</b>\n\nPre-built rules:\n\n' +
+    '• ROAS Guard — Pause when ROAS &lt; 1x\n' +
+    '• Frequency Cap — Pause when frequency &gt; 5\n' +
+    '• High CTR Alert — CTR &gt; 5%\n' +
+    '• Low CVR Alert — CVR &lt; 1%\n' +
+    '• CPC Spike — CPC &gt; 200\n' +
+    '• CPA Drop — CPA &lt; 50k\n' +
+    '• CPM Control — CPM &gt; 15k\n' +
     '• Dayparting — Peak hours 6-11PM\n' +
-    '• Auto Increase — ROAS > 2x, +20%\n' +
-    '• Auto Decrease — ROAS < 1x, -30%\n' +
-    '• Auto Duplicate — CVR > 3%, spend > 100k',
-    { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } }
+    '• Auto Increase — ROAS &gt; 2x, +20%\n' +
+    '• Auto Decrease — ROAS &lt; 1x, -30%\n' +
+    '• Auto Duplicate — CVR &gt; 3%, spend &gt; 100k',
+    { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
   );
 }
+
 function renderRuleCondition(c) {
   if (!c) return '';
-  if (c.type === 'leaf') return `${escMd(c.metric)} ${escMd(c.operator)} ${escMd(String(c.value ?? ''))}`;
+  if (c.type === 'leaf') return `${esc(c.metric)} ${esc(c.operator)} ${esc(String(c.value ?? ''))}`;
   if (c.type === 'group') {
-    const op = escMd(String(c.logic || '').toUpperCase());
+    const op = esc(String(c.logic || '').toUpperCase());
     return c.children.map(ch => renderRuleCondition(ch)).join(` ${op} `);
   }
   return '';
@@ -150,17 +151,17 @@ function renderMyRules(deps, userId) {
   const lines = [];
   const keyboard = [];
   for (const [acctId, accountRules] of Object.entries(byAccount)) {
-    const label = acctId === '__all__' ? '🌐 All Accounts' : `📘 ${escMd(acctNames[acctId] || acctId)}`;
-    lines.push(`*${label}*`);
+    const label = acctId === '__all__' ? '🌐 All Accounts' : `📘 ${esc(acctNames[acctId] || acctId)}`;
+    lines.push(`<b>${label}</b>`);
     for (const r of accountRules) {
       const state = r.enabled ? '🟢' : '⚪️';
       const interval = INTERVAL_LABELS[r.intervalMinutes] || INTERVAL_LABELS[15];
-      lines.push(`${state} ${r.enabled ? '' : '(disabled) '}*${escMd(r.name)}*\n   ${renderRuleCondition(r.condition)} → ${escMd(r.action.type)} (${interval})`);
+      lines.push(`${state} ${r.enabled ? '' : '(disabled) '}<b>${esc(r.name)}</b>\n   ${renderRuleCondition(r.condition)} → ${esc(r.action.type)} (${interval})`);
     }
     lines.push('');
   }
 
-  const text = `📋 *My Rules*\n\n${lines.join('\n')}`;
+  const text = `📋 <b>My Rules</b>\n\n${lines.join('\n')}`;
 
   // Per-rule action buttons (edit/disable/enable/delete)
   for (const r of rules.slice(0, 8)) {
@@ -181,7 +182,7 @@ function showAccountPicker(ctx, deps) {
   }
   const keyboard = accounts.map(a => [{ text: `⚙️ ${a.account_name || a.id}`, callback_data: `rule:account:${a.id}` }]);
   keyboard.push([{ text: '⬅️ Back', callback_data: 'menu:monitor' }]);
-  return ctx.reply('⚙️ *Select Account*\n\nChoose an account to manage rules for:', { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } });
+  return ctx.reply('⚙️ <b>Select Account</b>\n\nChoose an account to manage rules for:', { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
 }
 
 function showRulesForAccount(deps, userId, accountId) {
@@ -195,7 +196,7 @@ function showRulesForAccount(deps, userId, accountId) {
   }
   const lines = acctRules.map((r, i) => {
     const state = r.enabled ? '🟢' : '⚪️';
-    return `${i + 1}. ${state} *${escMd(r.name)}*\n   ${renderRuleCondition(r.condition)} → ${escMd(r.action.type)}`;
+    return `${i + 1}. ${state} <b>${esc(r.name)}</b>\n   ${renderRuleCondition(r.condition)} → ${esc(r.action.type)}`;
   });
   const keyboard = [];
   for (const r of acctRules.slice(0, 8)) {
@@ -204,7 +205,7 @@ function showRulesForAccount(deps, userId, accountId) {
   }
   keyboard.push([{ text: '➕ Add Rule', callback_data: 'rule:add:start' }]);
   keyboard.push([{ text: '⬅️ Back', callback_data: 'menu:monitor' }]);
-  return { text: `⚙️ *Rules for account*\n\n${lines.join('\n\n')}`, keyboard };
+  return { text: `⚙️ <b>Rules for account</b>\n\n${lines.join('\n\n')}`, keyboard };
 }
 
 export function handleMonitorCallback(deps) {
@@ -244,13 +245,8 @@ export function handleMonitorCallback(deps) {
         // Ask for the numeric threshold, capture it via the text handler
         ctx.session.ruleBuilder.awaitingValue = true;
         return ctx.reply(
-          `📝 *Threshold Value*
-
-Rule: ${rb.metric} ${rb.operator} [value]
-
-Send the number to compare against.
-Example: for CTR > 5, send \`5\``,
-          { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [[{ text: '⬅️ Cancel', callback_data: 'menu:monitor' }]] } }
+          `📝 <b>Threshold Value</b>\n\nRule: ${esc(rb.metric)} ${esc(rb.operator)} [value]\n\nSend the number to compare against.\nExample: for CTR &gt; 5, send <code>5</code>`,
+          { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '⬅️ Cancel', callback_data: 'menu:monitor' }]] } }
         );
       }
       return createRule(ctx, deps, ctx.session.ruleBuilder.actionType, interval);
@@ -261,8 +257,8 @@ Example: for CTR > 5, send \`5\``,
       if (!rule) return ctx.reply('⚠️ Rule not found.');
       if (rule.userId && rule.userId !== ctx.userId) return ctx.reply('⚠️ Rule not found.');
       deps.repos.rulesRepo.update(ruleId, { enabled: !rule.enabled });
-      return ctx.reply(`✅ Rule *${escMd(rule.name)}* ${rule.enabled ? 'disabled' : 'enabled'}.`, {
-        parse_mode: 'Markdown',
+      return ctx.reply(`✅ Rule <b>${esc(rule.name)}</b> ${rule.enabled ? 'disabled' : 'enabled'}.`, {
+        parse_mode: 'HTML',
         reply_markup: { inline_keyboard: [[{ text: '📋 My Rules', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
       });
     }
@@ -270,7 +266,7 @@ Example: for CTR > 5, send \`5\``,
     if (action.startsWith('template:')) return applyTemplate(ctx, deps, action.split(':')[1]);
     if (action === 'view:all') {
       const { text, keyboard } = renderMyRules(deps, ctx.userId);
-      return ctx.reply(text, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } });
+      return ctx.reply(text, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
     }
     if (action === 'account_picker') return showAccountPicker(ctx, deps);
     if (action.startsWith('account:')) {
@@ -278,7 +274,7 @@ Example: for CTR > 5, send \`5\``,
       ctx.session = ctx.session || {};
       ctx.session.ruleBuilder = { ...(ctx.session.ruleBuilder || {}), accountId };
       const { text, keyboard } = showRulesForAccount(deps, ctx.userId, accountId);
-      return ctx.reply(text, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } });
+      return ctx.reply(text, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
     }
     if (action === 'sync') {
       let synced = 0;
@@ -329,8 +325,8 @@ function showActionPicker(ctx) {
     [{ text: '⬅️ Back', callback_data: `rule:add:metric:${rb.metric}` }],
   ];
   return ctx.reply(
-    `🎯 *Create Rule*\n\nMetric: *${m.name}*\nOperator: ${OPERATORS[rb.operator] || rb.operator}\nValue: ${rb.value || '?'}\n\nChoose an action:`,
-    { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } }
+    `🎯 <b>Create Rule</b>\n\nMetric: <b>${esc(m.name)}</b>\nOperator: ${esc(OPERATORS[rb.operator] || rb.operator)}\nValue: ${esc(rb.value || '?')}\n\nChoose an action:`,
+    { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
   );
 }
 
@@ -353,8 +349,8 @@ function showIntervalPicker(ctx) {
   };
   const opSymbol = OPERATORS[rb.operator] || rb.operator;
   return ctx.reply(
-    `🎯 *Create Rule*\n\nMetric: *${METRICS[rb.metric]?.name}*\nCondition: ${METRICS[rb.metric]?.name} ${opSymbol} ${rb.value || '?'}\nAction: ${ACTION_LABELS[rb.actionType] || rb.actionType}\n\n⏱ *Evaluation Interval*\n\nHow often should this rule be checked?`,
-    { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } }
+    `🎯 <b>Create Rule</b>\n\nMetric: <b>${esc(METRICS[rb.metric]?.name)}</b>\nCondition: ${esc(METRICS[rb.metric]?.name)} ${esc(opSymbol)} ${esc(rb.value || '?')}\nAction: ${esc(ACTION_LABELS[rb.actionType] || rb.actionType)}\n\n⏱ <b>Evaluation Interval</b>\n\nHow often should this rule be checked?`,
+    { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
   );
 }
 
@@ -363,8 +359,8 @@ function createRule(ctx, deps, actionType, intervalMinutes = 15) {
   if (!rb) return ctx.reply('⚠️ Session expired. Start again with /monitor.');
   if (!rb.value) {
     return ctx.reply(
-      `📝 Enter a value for this rule:\n\n${rb.metric} ${rb.operator} [your value]\n\nExample: If CTR > 5, send "5"`,
-      { reply_markup: { inline_keyboard: [[{ text: '⬅️ Cancel', callback_data: 'menu:monitor' }]] } }
+      `📝 Enter a value for this rule:\n\n${esc(rb.metric)} ${esc(rb.operator)} [your value]\n\nExample: If CTR &gt; 5, send "5"`,
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '⬅️ Cancel', callback_data: 'menu:monitor' }]] } }
     );
   }
   // rb.operator comes from callbacks as 'gt'/'lt'/'gte'/'lte'; Condition needs '>'/'<'/'>='/'<='
@@ -385,11 +381,11 @@ function createRule(ctx, deps, actionType, intervalMinutes = 15) {
     });
     delete ctx.session.ruleBuilder;
     return ctx.reply(
-      `✅ Rule created!\n\n${rb.metric} ${OPERATORS[rb.operator] || rb.operator} ${rb.value} → ${actionType}\n⏱ ${intervalMinutes === 0 ? 'Follows FB pacing' : 'Checks every ' + (INTERVAL_LABELS[intervalMinutes] || intervalMinutes + ' min')}`,
-      { reply_markup: { inline_keyboard: [[{ text: '📋 View Rules', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+      `✅ Rule created!\n\n${esc(rb.metric)} ${esc(OPERATORS[rb.operator] || rb.operator)} ${esc(rb.value)} → ${esc(actionType)}\n⏱ ${intervalMinutes === 0 ? 'Follows FB pacing' : 'Checks every ' + (INTERVAL_LABELS[intervalMinutes] || intervalMinutes + ' min')}`,
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 View Rules', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
     );
   } catch (err) {
-    return ctx.reply(`❌ Failed: ${err.message}`);
+    return ctx.reply(`❌ Failed: ${esc(err.message)}`);
   }
 }
 
@@ -409,11 +405,11 @@ function applyTemplate(ctx, deps, tplKey) {
       intervalMinutes: tpl.intervalMinutes || 15,
     });
     return ctx.reply(
-      `✅ Template applied!\n\n📦 ${tpl.name}\n${tpl.description}`,
-      { reply_markup: { inline_keyboard: [[{ text: '📋 View Rules', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+      `✅ Template applied!\n\n📦 ${esc(tpl.name)}\n${esc(tpl.description)}`,
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 View Rules', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
     );
   } catch (err) {
-    return ctx.reply(`❌ Failed: ${err.message}`);
+    return ctx.reply(`❌ Failed: ${esc(err.message)}`);
   }
 }
 

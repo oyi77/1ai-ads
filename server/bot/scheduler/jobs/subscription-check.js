@@ -27,8 +27,8 @@ export function setupSubscriptionCheck(bot, deps) {
           if (u.telegram_id && bot.telegram) {
             await bot.telegram.sendMessage(
               u.telegram_id,
-              `⏰ Paket *${u.plan}* kamu sudah berakhir.\n\nPerpanjang untuk mempertahankan fitur Pro:\n👉 ${process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com'}/billing`,
-              { parse_mode: 'Markdown' }
+              `⏰ Paket <b>${u.plan}</b> kamu sudah berakhir.\n\nPerpanjang untuk mempertahankan fitur Pro:\n👉 ${process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com'}/billing`,
+              { parse_mode: 'HTML' }
             ).catch(() => {});
           }
           log.info('Plan downgraded after expiry', { userId: u.id, plan: u.plan });

@@ -95,10 +95,10 @@ describe('settings — per-platform Connect rows (P4)', () => {
     }
   });
 
-  it('uses Markdown parse mode and inline_keyboard reply_markup', async () => {
+  it('uses HTML parse mode and inline_keyboard reply_markup', async () => {
     await handleSettings(deps)(ctx);
     const opts = ctx._replies[0].opts;
-    expect(opts.parse_mode).toBe('Markdown');
+    expect(opts.parse_mode).toBe('HTML');
     expect(opts.reply_markup.inline_keyboard).toBeDefined();
   });
 

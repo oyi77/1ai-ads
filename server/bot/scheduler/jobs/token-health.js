@@ -113,13 +113,13 @@ export function setupTokenHealth(bot, deps) {
                     await bot.telegram.sendMessage(
                       telegramId,
                       [
-                        `🔴 *Token ${platform} kamu sudah tidak valid*`,
+                        `🔴 <b>Token ${platform} kamu sudah tidak valid</b>`,
                         `Akun: ${esc(safeLabel)}`,
                         '',
                         'Campaign tidak bisa dijalankan atau diubah sampai token diperbarui.',
                         '👉 Hubungkan ulang di /settings → Connections',
                       ].join('\n'),
-                      { parse_mode: 'Markdown' }
+                      { parse_mode: 'HTML' }
                     );
                     settingsRepo.set(dedupKey, new Date().toISOString());
                     notified++;
@@ -129,7 +129,7 @@ export function setupTokenHealth(bot, deps) {
                 } else {
                   // Owner never linked Telegram — surface it to the admin chat
                   // so the failure is not invisible.
-                  await safeSend(bot, `🔴 *Token expired* [${platform}] ${String(account.id).slice(0, 8)} — owner has no Telegram link`, { parse_mode: 'Markdown' });
+                  await safeSend(bot, `🔴 <b>Token expired</b> [${platform}] ${String(account.id).slice(0, 8)} — owner has no Telegram link`, { parse_mode: 'HTML' });
                   settingsRepo.set(dedupKey, new Date().toISOString());
                 }
               }

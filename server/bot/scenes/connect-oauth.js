@@ -35,11 +35,11 @@ export const connectOAuthScene = new Scenes.WizardScene(
     };
 
     await ctx.reply(
-      `🔌 *Connect ${PLATFORM_LABELS[platform]} via OAuth*\n\n` +
+      `🔌 <b>Connect ${PLATFORM_LABELS[platform]} via OAuth</b>\n\n` +
       `Click the button below to authorize AdForge to access your ${PLATFORM_LABELS[platform]} account.\n` +
       `You'll be redirected to ${PLATFORM_LABELS[platform]} to sign in and grant permission.\n\n` +
       `After authorization, you'll be redirected back and this bot will confirm the connection.`,
-      { parse_mode: 'Markdown', reply_markup: keyboard }
+      { parse_mode: 'HTML', reply_markup: keyboard }
     );
 
     return ctx.wizard.next();
@@ -53,7 +53,7 @@ export const connectOAuthScene = new Scenes.WizardScene(
       `Please click the button above to connect ${PLATFORM_LABELS[platform]}. ` +
       `If you already completed the flow, the connection should appear in /status shortly. ` +
       `Type /done when you finish in the browser to leave this flow.`,
-      { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     // Stay in this step, but never trap the user: any /command (handled by
     // the scene-clear middleware) already exits; /done explicitly leaves.

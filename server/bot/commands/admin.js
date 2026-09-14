@@ -5,10 +5,7 @@
 
 import { filterActiveCampaigns } from '../../lib/campaign-status.js';
 
-function escMd(str) {
-  if (str === null || str === undefined) return '';
-  return String(str).replace(/[_*[\]()~`>#+\-=|.!{}]/g, '\\$&');
-}
+import { escapeHtml as esc } from '../../lib/escape.js';
 
 export function handleAdminStats(deps) {
   return async (ctx) => {
@@ -24,12 +21,12 @@ export function handleAdminStats(deps) {
       const accounts = deps.repos?.platformAccountsRepo?.getAccounts?.() || [];
 
       return ctx.reply(
-        `📊 *Admin Stats*\n\n` +
+        `📊 <b>Admin Stats</b>\n\n` +
         `Users: ${users.length}\n` +
         `Campaigns: ${campaigns.length}\n` +
         `Connected accounts: ${accounts.length}\n` +
         `Active campaigns: ${filterActiveCampaigns(campaigns).length}`,
-        { parse_mode: 'Markdown' }
+        { parse_mode: 'HTML' }
       );
     } catch {
       return ctx.reply('⚠️ Failed to load admin stats.');
@@ -47,8 +44,8 @@ export function handleAdminUsers(deps) {
 
     try {
       const users = deps.repos?.usersRepo?.findAll?.() || [];
-      const list = users.slice(0, 20).map(u => `• ${escMd(u.username)} (${escMd(u.role || 'user')})`).join('\n');
-      return ctx.reply(`👥 *Users (${users.length}):*\n\n${list || 'No users found.'}`, { parse_mode: 'Markdown' });
+      const list = users.slice(0, 20).map(u => `• ${esc(u.username)} (${esc(u.role || 'user')})`).join('\n');
+      return ctx.reply(`👥 <b>Users (${users.length}):</b>\n\n${list || 'No users found.'}`, { parse_mode: 'HTML' });
     } catch {
       return ctx.reply('⚠️ Failed to load users.');
     }
