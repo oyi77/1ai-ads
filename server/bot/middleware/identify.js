@@ -39,6 +39,19 @@ export function identify(deps) {
         user = usersRepo.findById(id);
         log.info({ telegramId: tgId, username }, 'auto-created telegram customer');
       }
+      // Banned/deactivated users lose bot access too — otherwise admin
+      // deactivation only locks HTTP while Telegram stays fully usable
+      // (found 2026-09-14: no is_active check anywhere in the bot path).
+      // Deny explicitly (don't just null the identity — that would
+      // masquerade as a fresh unbound account instead of a ban).
+      if (user && user.is_active === 0) {
+        log.warn({ telegramId: tgId, username: user.username }, 'blocked disabled user from bot');
+        try {
+          if (ctx.callbackQuery) await ctx.answerCbQuery();
+          await ctx.reply('⛔ Akun kamu dinonaktifkan. Hubungi admin.');
+        } catch { /* reply best-effort */ }
+        return;
+      }
 
       ctx.user = user;
       ctx.userId = user.id;
