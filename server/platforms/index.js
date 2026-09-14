@@ -11,6 +11,7 @@
  *   import { getPlatform, listPlatforms } from './platforms/index.js';
  *   const meta = await getPlatform('meta', settingsRepo);
  *   const campaigns = await meta.getCampaigns();
+ */
 
 import { readdirSync } from 'fs';
 import { join, dirname } from 'path';
