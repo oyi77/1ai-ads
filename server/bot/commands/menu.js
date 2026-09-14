@@ -6,7 +6,7 @@ import { isActiveStatus } from '../../lib/campaign-status.js';
  */
 import { createLogger } from '../../lib/logger.js';
 import config from '../../config/index.js';
-
+import { escapeHtml } from '../../lib/escape.js';
 const log = createLogger('bot:menu');
 import { buildPlatformKeyboard, buildPlatformAccountKeyboard } from '../nav.js';
 import { getUserMetaAccount, makeApi, isExpiredToken, handleAdsReport, handleAds } from './ads.js';
@@ -414,8 +414,13 @@ async function handlePlatforms(ctx, deps) {
 
 export async function handlePlatformAction(ctx, deps, scope) {
   try {
-    // Note: ctx.answerCbQuery() already called by handleMenuButton
-    const [platform, action] = scope.split(':');
+    // Scope forms: `meta:manage` / `meta:connect` (2-segment, from the
+    // generic ^platform: router) and `platform:account:meta:<id>`
+    // (4-segment, from the pacc: compact router). The id selects the
+    // tapped account.
+    const parts = scope.split(':');
+    const [platform, action] = parts.length > 2 ? [parts[2], parts[1]] : parts;
+    const accountId = parts.length > 2 ? parts[3] : undefined;
 
     if (action === 'connect') {
       return ctx.scene.enter('connect-account', { platform });
@@ -439,16 +444,33 @@ export async function handlePlatformAction(ctx, deps, scope) {
     }
 
     if (action === 'account') {
-      return ctx.reply(
-        `🔧 *Manage ${platform.toUpperCase()} Account*\n\nFeature coming soon...`,
-        {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '⬅️ Back', callback_data: `platform:${platform}:manage` }],
-            ],
-          },
-        }
-      );
+      const repo = deps?.repos?.platformAccountsRepo;
+      const row = accountId && repo ? repo.findById(accountId) : null;
+      if (!row || row.user_id !== ctx.userId) {
+        return ctx.reply('⚠️ Connection not found.', {
+          reply_markup: { inline_keyboard: [[{ text: '⬅️ Back', callback_data: `platform:${platform}:manage` }]] },
+        });
+      }
+      const status = row.is_active ? '✅ Active' : '⏸ Paused';
+      const health = row.health_status || 'unknown';
+      const adAcct = row.credentials?.ad_account_id || row.credentials?.fb_account_id || '—';
+      const lines = [
+        `🔧 *${escapeHtml(row.account_name)}*`,
+        ``,
+        `Platform: ${escapeHtml(platform)}`,
+        `Status: ${status}`,
+        `Token: ${health}`,
+        `Ad account: ${escapeHtml(String(adAcct))}`,
+      ];
+      return ctx.reply(lines.join('\n'), {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: row.is_active ? '🔌 Disconnect' : '🗑 Remove', callback_data: `ads:disconnect:${row.id}` }],
+            [{ text: '⬅️ Back', callback_data: `platform:${platform}:manage` }],
+          ],
+        },
+      });
     }
 
     return ctx.reply('Unknown platform action.', {
