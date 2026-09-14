@@ -136,6 +136,7 @@ export function initBot(app, deps) {
   //   ads:report:<platform>[:<accountId>]
   //   ads:repacc:<platform>:<accountId>
   //   ads:bud:<platform>:<accountId>:<mult>  (compact — pct: form overflowed)
+  //   ads:platform:<platform>  (list accounts for a platform)
   bot.action(/^ads:bud:(.+):(.+):([\d.]+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     const [, platform, acct, mult] = ctx.match;
@@ -147,11 +148,15 @@ export function initBot(app, deps) {
   });
   bot.action(/^menu:(.+)$/, handleMenuButton(deps));
   // Platform keyboard callbacks (nav.js buildPlatformKeyboard / buildPlatformAccountKeyboard)
-  // `pacc:<platform>:<id>` is the compact account key — `platform:account:…`
-  // exceeded Telegram's 64-byte callback_data cap for thetradedesk (66).
+  // `pacc:<platform>:<id>` compact key — `platform:account:` overflowed the 64-byte cap for thetradedesk.
   bot.action(/^pacc:(.+):(.+)$/, async (ctx) => {
     await ctx.answerCbQuery();
     await handlePlatformAction(ctx, deps, `platform:account:${ctx.match[1]}:${ctx.match[2]}`);
+  });
+  bot.action(/^platform:(.+):(.+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    // ctx.match[1]=platform, match[2]=action — reconstruct scope without 'platform:' prefix
+    await handlePlatformAction(ctx, deps, ctx.match[1] + ':' + ctx.match[2]);
   });
   bot.action(/^settings:(.+)$/, handleSettingsCallback(deps));
   bot.action(/^ads:select:(.+):(.+)$/, async (ctx) => {
