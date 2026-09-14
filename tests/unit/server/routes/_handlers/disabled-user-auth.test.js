@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { hashPassword, generateToken, generateRefreshToken } from '../../../../../server/lib/auth.js';
 import { handleLogin, handleRefreshToken } from '../../../../../server/routes/_handlers/auth-handlers.js';
 import { requireAuth } from '../../../../../server/middleware/auth.js';
@@ -21,10 +21,15 @@ function makeRes() {
 }
 
 // Users keyed by id, with proper username/email lookups. Includes a disabled user.
+// bcrypt cost-12 hashSync is slow; under full-suite CPU contention two hashes
+// inside an `it` body can exceed vitest's 5s default timeout (flake 2026-09-14).
+// Hash once in beforeAll and share.
+let pwHash;
+beforeAll(() => { pwHash = hashPassword('pw123456'); });
 function makeUsers() {
   const list = [
-    { id: 'active-u', username: 'active', email: 'active@x.io', password_hash: hashPassword('pw123456'), is_active: 1, role: 'user', plan: 'free' },
-    { id: 'banned-u', username: 'banned', email: 'banned@x.io', password_hash: hashPassword('pw123456'), is_active: 0, role: 'user', plan: 'free' },
+    { id: 'active-u', username: 'active', email: 'active@x.io', password_hash: pwHash, is_active: 1, role: 'user', plan: 'free' },
+    { id: 'banned-u', username: 'banned', email: 'banned@x.io', password_hash: pwHash, is_active: 0, role: 'user', plan: 'free' },
   ];
   const byId = {};
   for (const u of list) byId[u.id] = u;
