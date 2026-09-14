@@ -8,16 +8,18 @@ import { verifyToken } from '../lib/auth.js';
 export function createPagesRouter() {
   const router = Router();
 
-  // Cookie-based session check — redirects to /login if no valid token
+  // Cookie-based session check — redirects to /login if no valid token.
+  // NOTE: only executes when no SPA dist exists (routers.js mounts this
+  // group solely as a fallback). Cookie name matches auth-cookies.js.
   function requireSession(req, res, next) {
-    const token = req.cookies?.token;
+    const token = req.cookies?.adforge_access;
     if (!token) return res.redirect('/login');
     try {
       const payload = verifyToken(token);
       req.user = payload;
       next();
     } catch {
-      res.clearCookie('token');
+      res.clearCookie('adforge_access');
       res.redirect('/login');
     }
   }
