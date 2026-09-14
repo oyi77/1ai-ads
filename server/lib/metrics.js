@@ -42,7 +42,11 @@ export function metricsMiddleware(req, res, next) {
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;
-    const path = req.route?.path || req.path || 'unknown';
+    // Cardinality guard: 404s have no req.route, so the raw path (attacker-
+    // controlled, unbounded: /probe-xyz...) would create one permanent series
+    // per unique path (proven 2026-09-14: 5 random paths -> 15 series that
+    // never expire). Collapse all unmatched paths to a single label.
+    const path = req.route?.path || 'unmatched';
     recordHttpRequest(req.method, path, res.statusCode, duration);
   });
   next();
