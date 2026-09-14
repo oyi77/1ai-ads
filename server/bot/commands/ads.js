@@ -415,7 +415,7 @@ export function handleAdsDisconnect(deps) {
   return async (ctx) => manage(ctx);
 }
 
-// ── Manage Connections: list every stored Meta connection ────
+// ── Manage Connections: list the caller's own stored Meta connections ───
 export function handleAdsManage(deps) {
   return async (ctx) => {
     const repo = deps?.repos?.platformAccountsRepo;
