@@ -53,7 +53,13 @@ export function DraftsPage() {
         <Clock size={10} /> {new Date(d.updated_at || d.created_at).toLocaleDateString()}
       </span>
     )},
-    { key: '_actions', label: 'Actions', width: 100, render: (d) => (
+    { key: '_actions', label: 'Actions', width: 100, render: (d) => {
+      // Approve/reject are admin-only server-side (403 otherwise). Hide the
+      // buttons for non-admins instead of letting every click fail silently
+      // (mutations had no error UI — found 2026-09-14).
+      const user = api.getUser();
+      if (user?.role !== 'admin') return (<span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>—</span>);
+      return (
       <div style={{ display: 'flex', gap: 4 }}>
         <button onClick={() => publishMutation.mutate(d.id)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', background: 'var(--accent)', color: 'var(--bg-deep)', border: 'none', borderRadius: 4, fontWeight: 600, cursor: 'pointer', fontSize: '0.68rem' }}>
           <Send size={10} /> Publish
@@ -62,7 +68,8 @@ export function DraftsPage() {
           <Trash2 size={10} />
         </button>
       </div>
-    )},
+      );
+    } },
   ];
 
   return (
