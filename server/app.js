@@ -278,7 +278,10 @@ export function createApp(params) {
     }
     const secret = config.webhookSecret || config.scalevWebhookSecret;
     if (!secret) {
-      return res.status(500).json({ error: 'Webhook secret not configured' });
+      // Same no-leak rule as /api/payments/notify + /webhooks/u (2026-09-14):
+      // fail closed with 401, never announce the secret is unconfigured.
+      log.error('Video webhook secret not configured — rejecting (fail-closed)');
+      return res.status(401).json({ error: 'Invalid signature' });
     }
     const raw = req.rawBody || Buffer.from(JSON.stringify(req.body || {}));
     const expected = crypto.createHmac('sha256', secret).update(raw).digest('hex');
