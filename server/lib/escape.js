@@ -18,9 +18,13 @@ export function escapeHtml(str) {
 // labels, action types). An unescaped `_` (e.g. increase_budget) opens an
 // entity Telegram can't close → 400 "can't parse entities" (proven live
 // 2026-09-14: Monitor died at byte offset 109 for one underscore action).
+// ONLY the legacy special set is escaped: _ * [ ] ( ) ~ `. Others (>, ., !)
+// render literally mid-line — escaping them shows stray backslashes.
 export function escapeMarkdown(str) {
   if (str === null || str === undefined) return '';
-  return String(str).replace(/[_*[\]()~`>#+\-=|.!{}]/g, '\\$&');
+  return String(str)
+    .replace(/(^|\n)>/g, '$1\\>')
+    .replace(/([_*[\]()~`])/g, '\\$1');
 }
 
 const DANGEROUS_PROTOCOLS = /^(javascript|data|vbscript):/i;
