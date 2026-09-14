@@ -21,10 +21,12 @@ export function createTemplatesRouter(templatesRepo) {
   });
 
 
-  // GET /api/templates/:id - Get single template
+  // GET /api/templates/:id - Get single template (owner-only; 404 otherwise
+  // so existence never leaks across tenants — same idiom as landing.js
+  // getOwnedPage; proven live 2026-09-14: cross-user read returned 200).
   router.get('/:id', (req, res) => {
     const template = templatesRepo.getById(req.params.id);
-    if (!template) {
+    if (!template || template.user_id !== req.user.id) {
       return res.status(404).json({ success: false, error: 'Template not found' });
     }
     res.json({ success: true, data: template });
