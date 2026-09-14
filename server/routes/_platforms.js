@@ -47,6 +47,9 @@ export function createPlatformsGroupRouter({ repos, services, publicRateLimit })
       // frontend list and generic-router errors never render "undefined".
       key: cfg.key,
       label: cfg.label || cfg.name,
+      name: cfg.name || cfg.label,
+      icon: cfg.icon,
+      routePath: cfg.routePath,
     }));
     res.json({ success: true, data: platforms });
   });
