@@ -10,7 +10,10 @@ export function createLearningRouter(learningService) {
 
   router.get('/status', async (req, res) => {
     try {
-      const response = await fetch(`${config.bkHubUrl}/kb/status`);
+      // Bound the wait: a black-holed hub (not refused, just silent) would
+      // otherwise hang this endpoint indefinitely (found 2026-09-14: the
+      // container has no route to host :9099 at all) — fail fast instead.
+      const response = await fetch(`${config.bkHubUrl}/kb/status`, { signal: AbortSignal.timeout(8000) });
       const kbStatus = await response.json();
       res.json({ success: true, data: { kb: kbStatus, connected: response.ok } });
     } catch (err) {
