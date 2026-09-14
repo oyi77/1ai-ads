@@ -129,7 +129,10 @@ export function createRouters({ app, repos, services }) {
   app.use('/api/meta-app', createMetaAppRouter(repos.userMetaAppsRepo));
 
   // ── Tracking (public) ────────────────────────────────────────
-  app.use('/t', createTrackRouter(repos.adUtmMapRepo, services.utmTagger));
+  // publicRateLimit: unauthenticated DB-write per hit; without it a flood
+  // of /t/:ad_id requests writes unbounded rows (proven 2026-09-14: no
+  // RateLimit headers on the pixel while auth/ads-library were limited).
+  app.use('/t', publicRateLimit, createTrackRouter(repos.adUtmMapRepo, services.utmTagger));
 
   // ── Approvals (API + server-rendered page; works even with SPA present) ──
   app.use('/', createApprovalsRouter({ repos, services }));
