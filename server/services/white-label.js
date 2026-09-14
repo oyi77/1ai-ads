@@ -69,9 +69,12 @@ export class WhiteLabelService {
     return this.getClient(id);
   }
 
-  updateClient(clientId, updates) {
+  updateClient(clientId, updates, agencyId = null) {
     const client = this.getClient(clientId);
     if (!client) throw new Error(`Client ${clientId} not found`);
+    // Cross-tenant guard (proven live 2026-09-14: any user could rename
+    // any agency's client). When the caller passes agencyId, enforce it.
+    if (agencyId && client.agency_id !== agencyId) throw new Error(`Client ${clientId} not found`);
 
     const fields = [];
     const values = [];
@@ -89,7 +92,11 @@ export class WhiteLabelService {
     return this.getClient(clientId);
   }
 
-  deleteClient(clientId) {
+  deleteClient(clientId, agencyId = null) {
+    if (agencyId) {
+      const client = this.getClient(clientId);
+      if (!client || client.agency_id !== agencyId) throw new Error(`Client ${clientId} not found`);
+    }
     this.db.prepare('DELETE FROM reports WHERE client_id = ?').run(clientId);
     this.db.prepare('DELETE FROM clients WHERE id = ?').run(clientId);
   }
@@ -106,7 +113,9 @@ export class WhiteLabelService {
 
     const client = this.getClient(clientId);
     if (!client) throw new Error(`Client ${clientId} not found`);
-
+    // Cross-tenant guard: the caller's agency must own the client, otherwise
+    // any user could generate (and LLM-bill) reports for anyone's clients.
+    if (client.agency_id !== agencyId) throw new Error(`Client ${clientId} not found`);
     const id = crypto.randomUUID();
 
     // If LLM available, generate summary text
@@ -147,9 +156,16 @@ export class WhiteLabelService {
    */
   getReports({ clientId, agencyId, limit = 50 } = {}) {
     if (clientId) {
-      return this.db.prepare(
+      // When the caller passes agencyId, the client must belong to it —
+      // otherwise any user could read anyone's client reports by id
+      // (proven live pattern 2026-09-14: agency update/delete were open).
+      const rows = this.db.prepare(
         'SELECT * FROM reports WHERE client_id = ? ORDER BY created_at DESC LIMIT ?'
       ).all(clientId, limit);
+      if (!agencyId) return rows;
+      const client = this.getClient(clientId);
+      if (!client || client.agency_id !== agencyId) return [];
+      return rows;
     }
     if (agencyId) {
       return this.db.prepare(

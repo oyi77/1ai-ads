@@ -23,19 +23,19 @@ export function createAgencyRouter(whiteLabelService) {
 
   router.put('/clients/:id', (req, res) => {
     try {
-      const data = whiteLabelService.updateClient(req.params.id, req.body);
+      const data = whiteLabelService.updateClient(req.params.id, req.body, req.user?.id);
       res.json({ success: true, data });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(err.message?.includes('not found') ? 404 : 500).json({ success: false, error: err.message });
     }
   });
 
   router.delete('/clients/:id', (req, res) => {
     try {
-      whiteLabelService.deleteClient(req.params.id);
+      whiteLabelService.deleteClient(req.params.id, req.user?.id);
       res.json({ success: true });
     } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(err.message?.includes('not found') ? 404 : 500).json({ success: false, error: err.message });
     }
   });
 

@@ -243,4 +243,50 @@ describe('WhiteLabelService', () => {
       expect(service._formatValue(null, 'status')).toBe('—');
     });
   });
+
+  describe('cross-tenant ownership guards (proven live 2026-09-14)', () => {
+    it('updateClient rejects a foreign agency', () => {
+      store.clients.c1 = { id: 'c1', agency_id: 'a1', name: 'Victim' };
+      expect(() => service.updateClient('c1', { name: 'PWNED' }, 'a2')).toThrow('not found');
+      expect(store.clients.c1.name).toBe('Victim');
+    });
+
+    it('updateClient allows the owning agency', () => {
+      store.clients.c1 = { id: 'c1', agency_id: 'a1', name: 'Victim' };
+      // Mock UPDATE path: emulate the repo write for the mock store.
+      const origPrepare = mockDb.prepare;
+      mockDb.prepare = vi.fn((sql) => {
+        const st = origPrepare(sql);
+        if (sql.trim().toLowerCase().startsWith('update clients set')) {
+          const prevRun = st.run;
+          st.run = vi.fn((...args) => {
+            const nameVal = args[0];
+            store.clients.c1 = { ...store.clients.c1, name: nameVal };
+            return prevRun(...args);
+          });
+        }
+        return st;
+      });
+      service.updateClient('c1', { name: 'Renamed' }, 'a1');
+      expect(store.clients.c1.name).toBe('Renamed');
+    });
+
+    it('deleteClient rejects a foreign agency', () => {
+      store.clients.c1 = { id: 'c1', agency_id: 'a1', name: 'Victim' };
+      expect(() => service.deleteClient('c1', 'a2')).toThrow('not found');
+      expect(store.clients.c1).toBeDefined();
+    });
+
+    it('generateReport rejects a foreign agency', async () => {
+      store.clients.c1 = { id: 'c1', agency_id: 'a1', name: 'Victim' };
+      await expect(service.generateReport({ clientId: 'c1', agencyId: 'a2' })).rejects.toThrow('not found');
+    });
+
+    it('getReports hides foreign-agency client rows', () => {
+      store.clients.c1 = { id: 'c1', agency_id: 'a1', name: 'Victim' };
+      store.reports.r1 = { id: 'r1', client_id: 'c1', agency_id: 'a1' };
+      expect(service.getReports({ clientId: 'c1', agencyId: 'a2' })).toEqual([]);
+      expect(service.getReports({ clientId: 'c1', agencyId: 'a1' })).toHaveLength(1);
+    });
+  });
 });
