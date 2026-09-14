@@ -81,10 +81,32 @@ describe('monitor — enhanced rule system', () => {
     expect(msg).toContain('Category');
   });
 
-  it('view:all shows rules list', async () => {
+  it('view:all escapes underscores in action types (no Telegram entity crash)', async () => {
+    // Live 2026-09-14: rule action `increase_budget` left a bare `_` at byte
+    // offset 109 → 400 "can't parse entities", Monitor died for the user.
+    const deps = makeDeps({
+      repos: {
+        rulesRepo: {
+          getAll: () => [{
+            id: 'r1', name: 'Auto Increase Budget', enabled: 1,
+            condition: { type: 'group', logic: 'and', children: [
+              { type: 'leaf', metric: 'roas', operator: '>', value: 2 },
+            ]},
+            action: { type: 'increase_budget' },
+            intervalMinutes: 15,
+          }],
+        },
+      },
+    });
     const ctx = makeCtx('u1', 'view:all');
-    await handleMonitorCallback(makeDeps())(ctx);
+    await handleMonitorCallback(deps)(ctx);
     const msg = ctx._replies[0].msg;
-    expect(msg).toBeDefined();
+    expect(msg).toContain('increase\\_budget');
+    // Entity-balance check: every opener must close (legacy Markdown scan).
+    let depth = 0;
+    for (let i = 0; i < msg.length; i++) {
+      if ((msg[i] === '*' || msg[i] === '_') && msg[i - 1] !== '\\') depth ^= 1;
+    }
+    expect(depth).toBe(0);
   });
 });

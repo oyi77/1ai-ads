@@ -4,6 +4,7 @@ import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('monitor');
 import { RULE_TEMPLATES, ConditionGroup, Condition, RuleAction, OPERATORS } from '../../lib/rule-builder.js';
+import { escapeMarkdown as escMd } from '../../lib/escape.js';
 
 const MONITOR_HEADER =
   '⚡ *Campaign Monitor*\n\n' +
@@ -114,12 +115,11 @@ function showTemplates(ctx) {
     { parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } }
   );
 }
-
 function renderRuleCondition(c) {
   if (!c) return '';
-  if (c.type === 'leaf') return `${c.metric} ${c.operator} ${c.value}`;
+  if (c.type === 'leaf') return `${escMd(c.metric)} ${escMd(c.operator)} ${escMd(String(c.value ?? ''))}`;
   if (c.type === 'group') {
-    const op = c.logic.toUpperCase();
+    const op = escMd(String(c.logic || '').toUpperCase());
     return c.children.map(ch => renderRuleCondition(ch)).join(` ${op} `);
   }
   return '';
@@ -150,12 +150,12 @@ function renderMyRules(deps, userId) {
   const lines = [];
   const keyboard = [];
   for (const [acctId, accountRules] of Object.entries(byAccount)) {
-    const label = acctId === '__all__' ? '🌐 All Accounts' : `📘 ${acctNames[acctId] || acctId}`;
+    const label = acctId === '__all__' ? '🌐 All Accounts' : `📘 ${escMd(acctNames[acctId] || acctId)}`;
     lines.push(`*${label}*`);
     for (const r of accountRules) {
       const state = r.enabled ? '🟢' : '⚪️';
       const interval = INTERVAL_LABELS[r.intervalMinutes] || INTERVAL_LABELS[15];
-      lines.push(`${state} ${r.enabled ? '' : '(disabled) '}*${r.name}*\n   ${renderRuleCondition(r.condition)} → ${r.action.type} (${interval})`);
+      lines.push(`${state} ${r.enabled ? '' : '(disabled) '}*${escMd(r.name)}*\n   ${renderRuleCondition(r.condition)} → ${escMd(r.action.type)} (${interval})`);
     }
     lines.push('');
   }
@@ -195,7 +195,7 @@ function showRulesForAccount(deps, userId, accountId) {
   }
   const lines = acctRules.map((r, i) => {
     const state = r.enabled ? '🟢' : '⚪️';
-    return `${i + 1}. ${state} *${r.name}*\n   ${renderRuleCondition(r.condition)} → ${r.action.type}`;
+    return `${i + 1}. ${state} *${escMd(r.name)}*\n   ${renderRuleCondition(r.condition)} → ${escMd(r.action.type)}`;
   });
   const keyboard = [];
   for (const r of acctRules.slice(0, 8)) {
@@ -261,7 +261,7 @@ Example: for CTR > 5, send \`5\``,
       if (!rule) return ctx.reply('⚠️ Rule not found.');
       if (rule.userId && rule.userId !== ctx.userId) return ctx.reply('⚠️ Rule not found.');
       deps.repos.rulesRepo.update(ruleId, { enabled: !rule.enabled });
-      return ctx.reply(`✅ Rule *${rule.name}* ${rule.enabled ? 'disabled' : 'enabled'}.`, {
+      return ctx.reply(`✅ Rule *${escMd(rule.name)}* ${rule.enabled ? 'disabled' : 'enabled'}.`, {
         parse_mode: 'Markdown',
         reply_markup: { inline_keyboard: [[{ text: '📋 My Rules', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
       });

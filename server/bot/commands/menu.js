@@ -6,7 +6,7 @@ import { isActiveStatus } from '../../lib/campaign-status.js';
  */
 import { createLogger } from '../../lib/logger.js';
 import config from '../../config/index.js';
-import { escapeHtml } from '../../lib/escape.js';
+import { escapeMarkdown as escMd } from '../../lib/escape.js';
 const log = createLogger('bot:menu');
 import { buildPlatformKeyboard, buildPlatformAccountKeyboard } from '../nav.js';
 import { getUserMetaAccount, makeApi, isExpiredToken, handleAdsReport, handleAds } from './ads.js';
@@ -317,7 +317,7 @@ async function proposeOptimizations(ctx, deps, suggestions) {
   const lines = created.map(({ suggestion }) => {
     const { type, campaign } = suggestion;
     const label = type === 'pause' ? '⏸ pause' : (type === 'scale_up' ? '📈 naikkan budget' : '📉 turunkan budget');
-    return `• ${label} *${campaign.name || campaign.id}*`;
+    return `• ${label} *${escMd(campaign.name || campaign.id)}*`;
   });
   const keyboard = created.map(({ draft }) => ([
     { text: '✅ Apply', callback_data: `approval:approve:${draft.id}` },
@@ -374,7 +374,7 @@ async function proposeOptimization(ctx, deps, suggestion) {
   }
 
   return ctx.reply(
-    `🤖 *Saran AI*: ${label} *${campaign.name || campaign.id}*\n\nSetujui atau tolak:`,
+    `🤖 *Saran AI*: ${label} *${escMd(campaign.name || campaign.id)}*\n\nSetujui atau tolak:`,
     {
       parse_mode: 'Markdown',
       reply_markup: {
@@ -455,12 +455,12 @@ export async function handlePlatformAction(ctx, deps, scope) {
       const health = row.health_status || 'unknown';
       const adAcct = row.credentials?.ad_account_id || row.credentials?.fb_account_id || '—';
       const lines = [
-        `🔧 *${escapeHtml(row.account_name)}*`,
+        `🔧 *${escMd(row.account_name)}*`,
         ``,
-        `Platform: ${escapeHtml(platform)}`,
+        `Platform: ${escMd(platform)}`,
         `Status: ${status}`,
         `Token: ${health}`,
-        `Ad account: ${escapeHtml(String(adAcct))}`,
+        `Ad account: ${escMd(String(adAcct))}`,
       ];
       return ctx.reply(lines.join('\n'), {
         parse_mode: 'Markdown',
