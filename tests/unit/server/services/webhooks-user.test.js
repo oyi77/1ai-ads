@@ -30,15 +30,19 @@ describe('per-user webhook /webhooks/u/:userId (1ai-ads #adforge)', () => {
     process.env.FB_APP_SECRET = savedFbSecret;
   });
 
-  it('POST without app secret configured -> 500 (fail-closed)', async () => {
+  it('POST without app secret configured -> 401 (fail-closed, no config leak)', async () => {
     const saved = process.env.FB_APP_SECRET;
     process.env.FB_APP_SECRET = '';
-    const res = await request(app)
-      .post('/webhooks/u/user-1')
-      .set('Content-Type', 'application/json')
-      .send('{}');
-    expect(res.status).toBe(500);
-    process.env.FB_APP_SECRET = saved;
+    try {
+      const res = await request(app)
+        .post('/webhooks/u/user-1')
+        .set('Content-Type', 'application/json')
+        .send('{}');
+      expect(res.status).toBe(401);
+      expect(res.text).not.toMatch(/Configuration error/);
+    } finally {
+      process.env.FB_APP_SECRET = saved;
+    }
   });
 
   it('POST missing signature -> 401', async () => {
