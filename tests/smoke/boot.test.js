@@ -93,6 +93,19 @@ describe('Smoke Tests', () => {
     db.close();
   });
 
+  it('unknown /api/* paths answer JSON 404, never the SPA shell', { timeout: 15000 }, async () => {
+    // Live 2026-09-15: /api/nope answered 200 + index.html, so API clients
+    // parsing JSON threw obscure errors. The SPA fallback must not swallow
+    // API-namespace misses.
+    const db = createDatabase(':memory:');
+    const app = createApp({ db, llmClient: mockLLM, mcpClient: mockMCP });
+    const res = await request(app).get('/api/definitely-not-a-route');
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toMatch(/Unknown API endpoint/);
+    db.close();
+  });
+
   it('dist/index.html exists (production build)', () => {
     // Skip if no build has been run (CI runs build separately)
     if (!existsSync('dist/index.html')) {

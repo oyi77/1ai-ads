@@ -341,6 +341,14 @@ export function createApp(params) {
     });
   });
 
+  // Unknown /api/* paths: JSON 404, never the SPA shell. Without this,
+  // Express falls through to its default HTML error page and API clients
+  // parsing JSON throw obscure errors (proven live 2026-09-15: /api/nope
+  // answered HTML). Must sit AFTER createRouters + bot mount.
+  app.use('/api', (req, res) => {
+    res.status(404).json({ success: false, error: `Unknown API endpoint: ${req.method} ${req.path}` });
+  });
+
   app.use((err, req, res, _next) => {
     const status = err.status || err.statusCode || 500;
     log.error('Request error', { timestamp: new Date().toISOString(), method: req.method, path: req.path, status, error: err.message });
