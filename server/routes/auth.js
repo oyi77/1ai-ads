@@ -137,11 +137,20 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
     const base = isLocal || !hostname ? 'https://adforge.aitradepulse.com' : `https://${hostname}`;
     res.json({ url: `${base}/data-deletion-status`, confirmation_code: `del_${Date.now()}` });
   });
-
   // Google compliance — data deletion endpoint
   // Required by Google API Services User Data Policy (Limited Use)
   router.get('/google/deauthorize', (_req, res) => {
     res.json({ success: true, message: 'AdForge is ready to process Google data deletion requests via POST.' });
+  });
+
+  // GET /me — current user profile for the SPA shell (username/plan display).
+  // requireAuth runs inline here (the /auth group itself is public for
+  // login/register). The JWT payload already carries id/username/role/plan,
+  // so no DB hit needed. The shell calls this on every load — it 404d
+  // before this route existed (found 2026-09-14: setUser never fired).
+  router.get('/me', requireAuth, (req, res) => {
+    const u = req.user || {};
+    res.json({ success: true, data: { id: u.id, username: u.username, role: u.role, plan: u.plan } });
   });
   router.post('/google/deauthorize', async (req, res) => {
     const hostname = req.get('host');
