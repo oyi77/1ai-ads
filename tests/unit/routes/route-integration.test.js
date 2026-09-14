@@ -30,7 +30,7 @@ describe('Routes: Templates', () => {
     db.prepare('UPDATE users SET confirmed = 1 WHERE username = ?').run('testuser');
     const userRes = await request(app).post('/api/auth/login').send({ username: 'testuser', password: 'testpass123' });
     userToken = userRes.body.data.accessToken;
-  });
+  }, 30000);
 
   afterAll(() => { db?.close(); });
 

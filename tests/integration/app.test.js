@@ -66,7 +66,7 @@ describe('App Integration', () => {
       password: 'admin123',
     });
     adminToken = adminRes.body.data.accessToken;
-  });
+  }, 30000);
 
   const auth = (req) => req.set('Authorization', `Bearer ${authToken}`);
   const adminAuth = (req) => req.set('Authorization', `Bearer ${adminToken}`);

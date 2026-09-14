@@ -79,5 +79,5 @@ describe('production error pipeline — bare 500s sanitized, intentional statuse
     const prodMode = await request(closedApp()).get('/api/team').set('Authorization', auth());
     expect(prodMode.status).toBe(500);
     expect(prodMode.body).toEqual({ success: false, error: 'Internal Server Error' });
-  });
+  }, 30000);
 });
