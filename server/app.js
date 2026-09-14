@@ -214,8 +214,12 @@ export function createApp(params) {
     }
     const secret = config.scalevWebhookSecret;
     if (!secret) {
+      // Fail closed, but answer 401 — never leak "secret unconfigured"
+      // vs "bad signature" to the caller (proven live 2026-09-14: garbage
+      // signature got 500 "Webhook secret not configured"). The 500 stays
+      // in the server log.
       log.error('SCALEV_WEBHOOK_SECRET not configured — rejecting Scalev payment webhook (fail-closed)');
-      return res.status(500).json({ error: 'Webhook secret not configured' });
+      return res.status(401).json({ error: 'Invalid signature' });
     }
     const raw = req.rawBody || Buffer.from(JSON.stringify(req.body || {}));
     const expected = crypto.createHmac('sha256', secret).update(raw).digest('hex');
