@@ -154,6 +154,17 @@ describe('Automation Router', () => {
       expect(rulesRepo.update).not.toHaveBeenCalled();
     });
 
+    // Live-shape regression (2026-09-14): RulesRepository._hydrate returns
+    // camelCase `userId`, not `user_id`. The toggle/delete handlers read
+    // rule.user_id and 404d every owned row until the `??` fallback.
+    it('toggles a live-shape (camelCase userId) owned row', async () => {
+      rulesRepo.getById.mockResolvedValueOnce({ id: 'rc', userId: 'test-user-1', name: 'Live', enabled: 1 });
+      const res = await request(app).post('/api/automation/toggle/rc');
+      expect(res.status).toBe(200);
+      expect(res.body.is_active).toBe(0);
+      expect(rulesRepo.update).toHaveBeenCalledWith('rc', { enabled: 0 });
+    });
+
     it('returns 500 when getById throws', async () => {
       rulesRepo.getById.mockRejectedValue(new Error('db crash'));
       const res = await request(app).post('/api/automation/toggle/r1');
