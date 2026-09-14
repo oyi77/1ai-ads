@@ -64,14 +64,14 @@ export async function getPlatform(platform, settingsRepo) {
     throw new Error(`Unknown platform: ${platform}`);
   }
   const instance = new PlatformClass(settingsRepo);
-  validatePlatform(instance);
+  // Custom-route platforms (e.g. whatsapp) legitimately lack campaign
+  // methods — they serve their own router, not the generic interface
+  // (proven 2026-09-14: getPlatform('whatsapp') threw on every call).
+  if (!PLATFORM_REGISTRY[platform]?.hasCustomRoutes) validatePlatform(instance);
   return instance;
 }
 
 /**
- * Synchronous access after the map has been loaded.
- * Throws if called before loadPlatformMap() has resolved.
- */
 export function getPlatformSync(platform, settingsRepo) {
   if (!_PLATFORM_MAP) {
     throw new Error('Platform map not loaded. Call getPlatform() or loadPlatforms() first.');
@@ -81,7 +81,7 @@ export function getPlatformSync(platform, settingsRepo) {
     throw new Error(`Unknown platform: ${platform}`);
   }
   const instance = new PlatformClass(settingsRepo);
-  validatePlatform(instance);
+  if (!PLATFORM_REGISTRY[platform]?.hasCustomRoutes) validatePlatform(instance);
   return instance;
 }
 
