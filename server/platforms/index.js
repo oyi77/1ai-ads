@@ -72,6 +72,9 @@ export async function getPlatform(platform, settingsRepo) {
 }
 
 /**
+ * Synchronous access after the map has been loaded.
+ * Throws if called before loadPlatformMap() has resolved.
+ */
 export function getPlatformSync(platform, settingsRepo) {
   if (!_PLATFORM_MAP) {
     throw new Error('Platform map not loaded. Call getPlatform() or loadPlatforms() first.');
