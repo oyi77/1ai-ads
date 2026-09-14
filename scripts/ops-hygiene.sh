@@ -9,7 +9,7 @@ ts() { date -u '+%Y-%m-%dT%H:%M:%SZ'; }
 USED_PCT=$(df / | awk 'NR==2 {gsub("%",""); print $5}')
 if [ "$USED_PCT" -ge 85 ]; then
   echo "$(ts) disk ${USED_PCT}% — pruning docker builder cache (keep 8GB)" >> "$LOG"
-  docker builder prune -f --keep-storage 8GB >> "$LOG" 2>&1
+  docker builder prune -f --max-used-space 8GB >> "$LOG" 2>&1
   docker image prune -f >> "$LOG" 2>&1
 fi
 
