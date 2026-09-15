@@ -28,6 +28,44 @@ function metaAccounts(deps, userId) {
   return rows.filter((r) => r.platform === 'meta');
 }
 
+/**
+ * Nama ASLI ad account dari Meta (live), bukan nama koneksi saat submit token.
+ * Sapu tiap token user → getAdAccounts(). Return Map realAccountId → nama.
+ * Best-effort: gagal = Map kosong, caller fallback ke nama koneksi / id.
+ */
+export async function liveAdAccountNames(deps, userId) {
+  const names = new Map();
+  const seen = new Set();
+  for (const row of metaAccounts(deps, userId)) {
+    const token = row.credentials?.access_token || row.access_token;
+    if (!token || seen.has(token)) continue;
+    seen.add(token);
+    try {
+      const api = MetaAdsAPI.withToken(token);
+      const live = await api.getAdAccounts();
+      for (const a of live || []) {
+        if (a?.id && !names.has(String(a.id))) names.set(String(a.id), a.name || String(a.id));
+        // Meta id kadang act_123 / 123 — daftarkan dua-duanya.
+        const bare = String(a?.id || '').replace(/^act_/, '');
+        if (bare && !names.has(bare)) names.set(bare, a.name || String(a.id));
+      }
+    } catch { /* token mati → skip, bukan fatal */ }
+  }
+  return names;
+}
+
+function resolveAcctName(liveNames, accounts, accountId) {
+  const id = String(accountId || '');
+  if (liveNames?.has(id)) return liveNames.get(id);
+  const bare = id.replace(/^act_/, '');
+  if (liveNames?.has(bare)) return liveNames.get(bare);
+  const row = (accounts || []).find(a =>
+    String(a.credentials?.ad_account_id || '') === id ||
+    String(a.credentials?.ad_account_id || '').replace(/^act_/, '') === bare);
+  if (row?.account_name) return row.account_name;
+  return id;
+}
+
 function metricsByCategory() {
   const cats = {};
   for (const [key, m] of Object.entries(METRICS)) {
@@ -57,7 +95,60 @@ export function handleMonitor(deps) {
   };
 }
 
-function showMetricCategories(ctx) {
+function scopeLabel(rb, liveNames, accounts) {
+  if (!rb?.accountId) return '🌐 Semua Akun';
+  if (rb.accountId === '__all__') return '🌐 Semua Akun';
+  return `📘 ${resolveAcctName(liveNames, accounts, rb.accountId)}`;
+}
+
+async function showAccountStep(ctx, deps) {
+  // Langkah 1 bikin rule: PILIH AKUN dulu (live dari Meta, bukan nama koneksi).
+  const accounts = metaAccounts(deps, ctx.userId);
+  if (!accounts.length) {
+    return ctx.reply('🔌 Hubungkan akun Meta dulu via /status → ➕ Tambah Akun, baru bisa bikin aturan.', {
+      reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+    });
+  }
+  const seen = new Set();
+  const liveList = [];
+  const seenTokens = new Set();
+  for (const row of accounts) {
+    const token = row.credentials?.access_token || row.access_token;
+    if (!token || seenTokens.has(token)) continue;
+    seenTokens.add(token);
+    try {
+      const api = MetaAdsAPI.withToken(token);
+      for (const a of (await api.getAdAccounts()) || []) {
+        const key = String(a.id);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        liveList.push(a);
+      }
+    } catch { /* token mati → skip */ }
+  }
+  const keyboard = liveList.slice(0, 8).map(a => [{
+    text: `📘 ${a.name || a.id}`,
+    callback_data: `rule:add:account:${a.id}`,
+  }]);
+  keyboard.push([{ text: '🌐 Semua Akun', callback_data: 'rule:add:account:__all__' }]);
+  keyboard.push([{ text: '⬅️ Kembali', callback_data: 'menu:monitor' }]);
+  keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
+  ctx.session = ctx.session || {};
+  ctx.session.ruleBuilder = {};
+  return ctx.reply(
+    '🎯 <b>Bikin Aturan Baru — Langkah 1/5: buat akun iklan mana?</b>\n\nPilih akun yang mau dijaga aturannya:',
+    { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
+  );
+}
+
+async function scopedLabel(ctx, deps) {
+  const rb = ctx.session?.ruleBuilder;
+  const liveNames = await liveAdAccountNames(deps, ctx.userId);
+  return scopeLabel(rb, liveNames, metaAccounts(deps, ctx.userId));
+}
+
+async function showMetricCategories(ctx, deps) {
+  const scope = await scopedLabel(ctx, deps);
   const cats = metricsByCategory();
   const keyboard = [];
   for (const [catId, catName] of Object.entries(METRIC_CATEGORIES)) {
@@ -66,30 +157,36 @@ function showMetricCategories(ctx) {
       keyboard.push([{ text: catName, callback_data: `rule:add:cat:${catId}` }]);
     }
   }
-  keyboard.push([{ text: '⬅️ Back', callback_data: 'menu:monitor' }]);
-  return ctx.reply('📊 <b>Choose Metric Category</b>\n\nSelect the type of metric to monitor:', { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
+  keyboard.push([{ text: '⬅️ Ganti Akun', callback_data: 'rule:add:start' }]);
+  keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
+  return ctx.reply(`📊 <b>Langkah 2/5: mau pantau apa?</b>\n\nAturan untuk: <b>${esc(scope)}</b>\n\nPilih jenis metrik:`, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
 }
 
-function showMetricsInCategory(ctx, categoryId) {
+async function showMetricsInCategory(ctx, deps, categoryId) {
+  const scope = await scopedLabel(ctx, deps);
   const metrics = Object.entries(METRICS).filter(([, m]) => m.category === categoryId);
   const keyboard = [];
   for (const [key, m] of metrics) {
     keyboard.push([{ text: `${m.name}`, callback_data: `rule:add:metric:${key}` }]);
   }
-  keyboard.push([{ text: '⬅️ Categories', callback_data: 'rule:add:start' }]);
-  return ctx.reply(`📏 <b>${esc(METRIC_CATEGORIES[categoryId])}</b>\n\nChoose a metric:`, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
+  keyboard.push([{ text: '⬅️ Kategori', callback_data: 'rule:add:start' }]);
+  keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
+  return ctx.reply(`📏 <b>${esc(METRIC_CATEGORIES[categoryId])}</b> — buat <b>${esc(scope)}</b>\n\nPilih metriknya:`, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
 }
 
-function showOperators(ctx, metric) {
+async function showOperators(ctx, deps, metric) {
+  const scope = await scopedLabel(ctx, deps);
   const m = METRICS[metric];
+  if (!m) return ctx.reply('⚠️ Metrik nggak dikenal. Ulangi dari /monitor.');
   const keyboard = [
-    [{ text: '> (greater than)', callback_data: `rule:add:op:${metric}:gt` }],
-    [{ text: '< (less than)', callback_data: `rule:add:op:${metric}:lt` }],
-    [{ text: '>= (greater or equal)', callback_data: `rule:add:op:${metric}:gte` }],
-    [{ text: '<= (less or equal)', callback_data: `rule:add:op:${metric}:lte` }],
-    [{ text: '⬅️ Metrics', callback_data: `rule:add:cat:${m.category}` }],
+    [{ text: '> (lebih dari)', callback_data: `rule:add:op:${metric}:gt` }],
+    [{ text: '< (kurang dari)', callback_data: `rule:add:op:${metric}:lt` }],
+    [{ text: '>= (lebih/sama)', callback_data: `rule:add:op:${metric}:gte` }],
+    [{ text: '<= (kurang/sama)', callback_data: `rule:add:op:${metric}:lte` }],
+    [{ text: '⬅️ Metrik', callback_data: `rule:add:cat:${m.category}` }],
+    [{ text: '📋 Menu', callback_data: 'quick:menu' }],
   ];
-  return ctx.reply(`📐 <b>${esc(m.name)}</b>\n\nChoose an operator:`, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
+  return ctx.reply(`📐 <b>${esc(m.name)}</b> — buat <b>${esc(scope)}</b>\n\nPilih pembandingnya:`, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
 }
 
 function showTemplates(ctx) {
@@ -126,17 +223,17 @@ function renderRuleCondition(c) {
   return '';
 }
 
-// Render My Rules grouped per connected account, with edit/disable buttons
-function renderMyRules(deps, userId) {
+
+// Render My Rules grouped per ad account (nama ASLI dari Meta), with edit/disable buttons
+async function renderMyRules(deps, userId) {
   const rules = deps?.repos?.rulesRepo?.getAll?.(userId) || [];
   const accounts = metaAccounts(deps, userId);
-  const acctNames = {};
-  for (const a of accounts) acctNames[a.id] = a.account_name || a.id;
+  const liveNames = await liveAdAccountNames(deps, userId);
 
   if (!rules.length) {
     return {
-      text: '📭 No rules yet. Tap ➕ Add Rule or 📦 Templates to create your first rule!',
-      keyboard: [[{ text: '➕ Add Rule', callback_data: 'rule:add:start' }]],
+      text: '📭 Belum ada aturan. Pencet ➕ Bikin Aturan atau 📦 Template buat bikin yang pertama!',
+      keyboard: [[{ text: '➕ Bikin Aturan', callback_data: 'rule:add:start' }, { text: '📋 Menu', callback_data: 'quick:menu' }]],
     };
   }
 
@@ -151,47 +248,85 @@ function renderMyRules(deps, userId) {
   const lines = [];
   const keyboard = [];
   for (const [acctId, accountRules] of Object.entries(byAccount)) {
-    const label = acctId === '__all__' ? '🌐 All Accounts' : `📘 ${esc(acctNames[acctId] || acctId)}`;
+    const label = acctId === '__all__' ? '🌐 Semua Akun' : `📘 ${esc(resolveAcctName(liveNames, accounts, acctId))}`;
     lines.push(`<b>${label}</b>`);
     for (const r of accountRules) {
       const state = r.enabled ? '🟢' : '⚪️';
       const interval = INTERVAL_LABELS[r.intervalMinutes] || INTERVAL_LABELS[15];
-      lines.push(`${state} ${r.enabled ? '' : '(disabled) '}<b>${esc(r.name)}</b>\n   ${renderRuleCondition(r.condition)} → ${esc(r.action.type)} (${interval})`);
+      lines.push(`${state} ${r.enabled ? '' : '(nonaktif) '}<b>${esc(r.name)}</b>\n   ${renderRuleCondition(r.condition)} → ${esc(r.action.type)} (${interval})`);
     }
     lines.push('');
   }
 
-  const text = `📋 <b>My Rules</b>\n\n${lines.join('\n')}`;
+  const text = `📋 <b>Aturanku</b>\n\n${lines.join('\n')}`;
 
   // Per-rule action buttons (edit/disable/enable/delete)
   for (const r of rules.slice(0, 8)) {
-    const toggle = r.enabled ? '⏸ Disable' : '▶️ Enable';
+    const toggle = r.enabled ? '⏸ Matikan' : '▶️ Nyalakan';
     keyboard.push([
       { text: `${toggle}: ${r.name.slice(0, 20)}`, callback_data: `rule:toggle:${r.id}` },
     ]);
   }
-  keyboard.push([{ text: '➕ Add Rule', callback_data: 'rule:add:start' }]);
-  keyboard.push([{ text: '⬅️ Back', callback_data: 'menu:monitor' }]);
+  keyboard.push([{ text: '➕ Bikin Aturan', callback_data: 'rule:add:start' }]);
+  keyboard.push([{ text: '⬅️ Kembali', callback_data: 'menu:monitor' }]);
+  keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
   return { text, keyboard };
 }
 
-function showAccountPicker(ctx, deps) {
+async function showAccountPicker(ctx, deps) {
+  // Lihat aturan per akun: daftar LIVE ad accounts (nama asli Meta).
   const accounts = metaAccounts(deps, ctx.userId);
-  if (accounts.length === 0) {
-    return ctx.reply('🔌 Connect a Meta account first via /settings to create account-scoped rules.');
+  if (!accounts.length) {
+    return ctx.reply('🔌 Hubungkan akun Meta dulu via /status → ➕ Tambah Akun.', {
+      reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+    });
   }
-  const keyboard = accounts.map(a => [{ text: `⚙️ ${a.account_name || a.id}`, callback_data: `rule:account:${a.id}` }]);
-  keyboard.push([{ text: '⬅️ Back', callback_data: 'menu:monitor' }]);
-  return ctx.reply('⚙️ <b>Select Account</b>\n\nChoose an account to manage rules for:', { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
+  const liveNames = await liveAdAccountNames(deps, ctx.userId);
+  const seen = new Set();
+  const keyboard = [];
+  // Tampilkan tiap real ad account unik (nama live), bukan nama koneksi.
+  const seenTokens = new Set();
+  for (const row of accounts) {
+    const token = row.credentials?.access_token || row.access_token;
+    if (!token || seenTokens.has(token)) continue;
+    seenTokens.add(token);
+    try {
+      const api = MetaAdsAPI.withToken(token);
+      for (const a of (await api.getAdAccounts()) || []) {
+        const key = String(a.id);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        keyboard.push([{ text: `⚙️ ${a.name || a.id}`, callback_data: `rule:account:${a.id}` }]);
+        if (keyboard.length >= 8) break;
+      }
+    } catch { /* skip */ }
+    if (keyboard.length >= 8) break;
+  }
+  if (!keyboard.length) {
+    for (const a of accounts.slice(0, 8)) {
+      keyboard.push([{ text: `⚙️ ${a.account_name || a.id}`, callback_data: `rule:account:${a.credentials?.ad_account_id || a.id}` }]);
+    }
+  }
+  void liveNames;
+  keyboard.push([{ text: '⬅️ Kembali', callback_data: 'menu:monitor' }]);
+  keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
+  return ctx.reply('⚙️ <b>Lihat Aturan per Akun</b>\n\nPilih akun iklannya:', { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
 }
 
-function showRulesForAccount(deps, userId, accountId) {
+async function showRulesForAccount(deps, userId, accountId) {
   const rules = deps?.repos?.rulesRepo?.getAll?.(userId) || [];
-  const acctRules = rules.filter(r => r.accountId === accountId || !r.accountId);
+  const accounts = metaAccounts(deps, userId);
+  const liveNames = await liveAdAccountNames(deps, userId);
+  const name = resolveAcctName(liveNames, accounts, accountId);
+  const bare = String(accountId || '').replace(/^act_/, '');
+  const acctRules = rules.filter(r => {
+    const rid = String(r.accountId || '');
+    return rid === String(accountId) || rid === bare || rid === `act_${bare}` || !r.accountId;
+  });
   if (!acctRules.length) {
     return {
-      text: '📭 No rules for this account yet. Create one now!',
-      keyboard: [[{ text: '➕ Add Rule', callback_data: 'rule:add:start' }]],
+      text: `📭 Belum ada aturan buat <b>${esc(name)}</b>. Bikin sekarang ya!`,
+      keyboard: [[{ text: '➕ Bikin Aturan', callback_data: 'rule:add:start' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]],
     };
   }
   const lines = acctRules.map((r, i) => {
@@ -200,12 +335,13 @@ function showRulesForAccount(deps, userId, accountId) {
   });
   const keyboard = [];
   for (const r of acctRules.slice(0, 8)) {
-    const toggle = r.enabled ? '⏸ Disable' : '▶️ Enable';
+    const toggle = r.enabled ? '⏸ Matikan' : '▶️ Nyalakan';
     keyboard.push([{ text: `${toggle}: ${r.name.slice(0, 20)}`, callback_data: `rule:toggle:${r.id}` }]);
   }
-  keyboard.push([{ text: '➕ Add Rule', callback_data: 'rule:add:start' }]);
-  keyboard.push([{ text: '⬅️ Back', callback_data: 'menu:monitor' }]);
-  return { text: `⚙️ <b>Rules for account</b>\n\n${lines.join('\n\n')}`, keyboard };
+  keyboard.push([{ text: '➕ Bikin Aturan', callback_data: 'rule:add:start' }]);
+  keyboard.push([{ text: '⬅️ Kembali', callback_data: 'menu:monitor' }]);
+  keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
+  return { text: `⚙️ <b>Aturan buat ${esc(name)}</b>\n\n${lines.join('\n\n')}`, keyboard };
 }
 
 export function handleMonitorCallback(deps) {
@@ -213,28 +349,35 @@ export function handleMonitorCallback(deps) {
     const action = ctx.match[1];
     await ctx.answerCbQuery();
 
-    if (action === 'add:start') return showMetricCategories(ctx);
-    if (action.startsWith('add:cat:')) return showMetricsInCategory(ctx, action.split(':')[2]);
+    if (action === 'add:start') return showAccountStep(ctx, deps);
+    if (action.startsWith('add:account:')) {
+      const accountId = action.split(':')[2];
+      ctx.session = ctx.session || {};
+      ctx.session.ruleBuilder = { accountId };
+      return showMetricCategories(ctx, deps);
+    }
+    if (action.startsWith('add:cat:')) return showMetricsInCategory(ctx, deps, action.split(':')[2]);
     if (action.startsWith('add:metric:')) {
       // FIX: use pop() instead of [3] since callback is rule:add:metric:ctr
       const metric = action.split(':').pop();
-      return showOperators(ctx, metric);
+      return showOperators(ctx, deps, metric);
     }
     if (action.startsWith('add:op:')) {
       // callback is rule:add:op:<metric>:<operator> → action='add:op:<metric>:<operator>'
       const parts = action.split(':');
       const metric = parts[2];
       const op = parts[3];
-      if (!metric || !METRICS[metric] || !op) return ctx.reply('⚠️ Invalid operator selection. Start again with /monitor → Add Rule.');
+      if (!metric || !METRICS[metric] || !op) return ctx.reply('⚠️ Pilihan nggak valid. Ulangi dari /monitor → ➕ Bikin Aturan.');
       ctx.session = ctx.session || {};
-      ctx.session.ruleBuilder = { metric, operator: op };
-      return showActionPicker(ctx);
+      // JANGAN reset accountId — itu dipilih di langkah 1.
+      ctx.session.ruleBuilder = { ...(ctx.session.ruleBuilder || {}), metric, operator: op };
+      return showActionPicker(ctx, deps);
     }
     if (action.startsWith('add:action:')) {
       const actionType = action.split(':')[2];
       ctx.session = ctx.session || {};
       ctx.session.ruleBuilder = { ...(ctx.session.ruleBuilder || {}), actionType };
-      return showIntervalPicker(ctx);
+      return showIntervalPicker(ctx, deps);
     }
     if (action.startsWith('add:interval:')) {
       const interval = parseInt(action.split(':')[2], 10);
@@ -244,9 +387,11 @@ export function handleMonitorCallback(deps) {
       if (!rb.value) {
         // Ask for the numeric threshold, capture it via the text handler
         ctx.session.ruleBuilder.awaitingValue = true;
+        const liveNames = await liveAdAccountNames(deps, ctx.userId);
+        const scope = scopeLabel(rb, liveNames, metaAccounts(deps, ctx.userId));
         return ctx.reply(
-          `📝 <b>Threshold Value</b>\n\nRule: ${esc(rb.metric)} ${esc(rb.operator)} [value]\n\nSend the number to compare against.\nExample: for CTR &gt; 5, send <code>5</code>`,
-          { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '⬅️ Cancel', callback_data: 'menu:monitor' }]] } }
+          `📝 <b>Langkah 5/5: batas angkanya berapa?</b>\n\nAturan untuk: <b>${esc(scope)}</b>\n${esc(rb.metric)} ${esc(rb.operator)} [angka]\n\nContoh: kalau CTR &gt; 5, kirim <code>5</code>`,
+          { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '⬅️ Batal', callback_data: 'menu:monitor' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
         );
       }
       return createRule(ctx, deps, ctx.session.ruleBuilder.actionType, interval);
@@ -265,7 +410,7 @@ export function handleMonitorCallback(deps) {
     if (action === 'templates') { delete ctx.session.ruleBuilder; return showTemplates(ctx); }
     if (action.startsWith('template:')) return applyTemplate(ctx, deps, action.split(':')[1]);
     if (action === 'view:all') {
-      const { text, keyboard } = renderMyRules(deps, ctx.userId);
+      const { text, keyboard } = await renderMyRules(deps, ctx.userId);
       return ctx.reply(text, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
     }
     if (action === 'account_picker') return showAccountPicker(ctx, deps);
@@ -273,20 +418,44 @@ export function handleMonitorCallback(deps) {
       const accountId = action.split(':')[1];
       ctx.session = ctx.session || {};
       ctx.session.ruleBuilder = { ...(ctx.session.ruleBuilder || {}), accountId };
-      const { text, keyboard } = showRulesForAccount(deps, ctx.userId, accountId);
+      const { text, keyboard } = await showRulesForAccount(deps, ctx.userId, accountId);
       return ctx.reply(text, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
     }
     if (action === 'sync') {
       let synced = 0;
       let failed = 0;
-      const accounts = (deps.repos?.platformAccountsRepo?.findByUserId?.(ctx.userId) || [])
-        .filter(a => a.platform === 'meta' && a.credentials?.access_token);
-      for (const acct of accounts) {
+      const rows = (deps.repos?.platformAccountsRepo?.findByUserId?.(ctx.userId) || [])
+        .filter(a => a.platform === 'meta' && (a.credentials?.access_token || a.access_token));
+      // Kumpulkan target: ad_account_id tersimpan; kalau koneksi tidak punya
+      // (koneksi lama), sapu SEMUA akun live dari token itu juga.
+      const targets = [];
+      const seenTokens = new Set();
+      for (const acct of rows) {
+        const token = acct.credentials?.access_token || acct.access_token;
+        if (!token || seenTokens.has(token)) continue;
+        seenTokens.add(token);
+        const savedId = acct.credentials?.ad_account_id;
+        if (savedId) {
+          targets.push({ token, adAccountId: savedId });
+          continue;
+        }
         try {
-          const adAccountId = acct.credentials?.ad_account_id;
-          if (!adAccountId) { failed++; continue; }
-          const api = MetaAdsAPI.withToken(acct.credentials.access_token);
-          const campaigns = await api.getCampaigns(adAccountId, { limit: 50 });
+          const api = MetaAdsAPI.withToken(token);
+          for (const a of (await api.getAdAccounts()) || []) {
+            targets.push({ token, adAccountId: a.id });
+          }
+        } catch {
+          failed++;
+        }
+      }
+      const seenTargets = new Set();
+      for (const t of targets) {
+        const key = `${t.adAccountId}`;
+        if (seenTargets.has(key)) continue;
+        seenTargets.add(key);
+        try {
+          const api = MetaAdsAPI.withToken(t.token);
+          const campaigns = await api.getCampaigns(t.adAccountId, { limit: 50 });
           for (const c of campaigns) {
             deps.repos?.campaignsRepo?.upsert?.({
               platform: 'meta',
@@ -300,19 +469,19 @@ export function handleMonitorCallback(deps) {
           synced += campaigns.length;
         } catch (e) {
           failed++;
-          log.warn('Sync failed for account', { accountId: acct.id, error: e.message });
+          log.warn('Sync failed for account', { adAccountId: t.adAccountId, error: e.message });
         }
       }
-      return ctx.reply(`🔄 Campaign sync selesai. ${synced} campaign dari Meta${failed ? `, ${failed} gagal.` : '.'}`);
+      return ctx.reply(`🔄 Sync selesai: ${synced} campaign ketarik dari Meta${failed ? `, ${failed} gagal` : ''}. Cek /status buat hasilnya.`);
     }
     return ctx.reply('Unknown rule action.');
   };
 }
 
-function showActionPicker(ctx) {
+async function showActionPicker(ctx, deps) {
   const rb = ctx.session?.ruleBuilder;
-  if (!rb) return ctx.reply('⚠️ Session expired. Start again with /monitor.');
-  const m = METRICS[rb.metric];
+  if (!rb) return ctx.reply('⚠️ Sesi habis. Ulangi dari /monitor.');
+  const scope = await scopedLabel(ctx, deps);
   const keyboard = [
     [{ text: '🔴 Pause', callback_data: 'rule:add:action:pause' }],
     [{ text: '🟢 Resume', callback_data: 'rule:add:action:resume' }],
@@ -322,24 +491,27 @@ function showActionPicker(ctx) {
     [{ text: '💰 Scale Budget', callback_data: 'rule:add:action:scale_budget' }],
     [{ text: '📢 Notify', callback_data: 'rule:add:action:notify' }],
     [{ text: '🔴📢 Notify + Pause', callback_data: 'rule:add:action:notify_and_pause' }],
-    [{ text: '⬅️ Back', callback_data: `rule:add:metric:${rb.metric}` }],
+    [{ text: '⬅️ Kembali', callback_data: `rule:add:metric:${rb.metric}` }],
+    [{ text: '📋 Menu', callback_data: 'quick:menu' }],
   ];
   return ctx.reply(
-    `🎯 <b>Create Rule</b>\n\nMetric: <b>${esc(m.name)}</b>\nOperator: ${esc(OPERATORS[rb.operator] || rb.operator)}\nValue: ${esc(rb.value || '?')}\n\nChoose an action:`,
+    `🎯 <b>Langkah 3/5: kalau kejadian, ngapain?</b>\n\nAturan untuk: <b>${esc(scope)}</b>\nMetrik: <b>${esc(METRICS[rb.metric]?.name || rb.metric)}</b> ${esc(OPERATORS[rb.operator] || rb.operator)}\n\nPilih aksinya:`,
     { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
   );
 }
 
-function showIntervalPicker(ctx) {
+async function showIntervalPicker(ctx, deps) {
   const rb = ctx.session?.ruleBuilder;
-  if (!rb) return ctx.reply('⚠️ Session expired. Start again with /monitor.');
+  if (!rb) return ctx.reply('⚠️ Sesi habis. Ulangi dari /monitor.');
+  const scope = await scopedLabel(ctx, deps);
   const keyboard = [
-    [{ text: '⏱ Every 15 minutes', callback_data: 'rule:add:interval:15' }],
-    [{ text: '⏱ Every 30 minutes', callback_data: 'rule:add:interval:30' }],
-    [{ text: '⏱ Every 1 hour', callback_data: 'rule:add:interval:60' }],
-    [{ text: '⏱ Every 6 hours', callback_data: 'rule:add:interval:360' }],
-    [{ text: '⏱ Follow FB pacing', callback_data: 'rule:add:interval:0' }],
-    [{ text: '⬅️ Back', callback_data: `rule:add:action:${rb.actionType || 'notify'}` }],
+    [{ text: '⏱ Tiap 15 menit', callback_data: 'rule:add:interval:15' }],
+    [{ text: '⏱ Tiap 30 menit', callback_data: 'rule:add:interval:30' }],
+    [{ text: '⏱ Tiap 1 jam', callback_data: 'rule:add:interval:60' }],
+    [{ text: '⏱ Tiap 6 jam', callback_data: 'rule:add:interval:360' }],
+    [{ text: '⏱ Ngikutin pacing FB', callback_data: 'rule:add:interval:0' }],
+    [{ text: '⬅️ Kembali', callback_data: `rule:add:action:${rb.actionType || 'notify'}` }],
+    [{ text: '📋 Menu', callback_data: 'quick:menu' }],
   ];
   const ACTION_LABELS = {
     pause: 'Pause campaign', resume: 'Resume campaign',
@@ -349,18 +521,18 @@ function showIntervalPicker(ctx) {
   };
   const opSymbol = OPERATORS[rb.operator] || rb.operator;
   return ctx.reply(
-    `🎯 <b>Create Rule</b>\n\nMetric: <b>${esc(METRICS[rb.metric]?.name)}</b>\nCondition: ${esc(METRICS[rb.metric]?.name)} ${esc(opSymbol)} ${esc(rb.value || '?')}\nAction: ${esc(ACTION_LABELS[rb.actionType] || rb.actionType)}\n\n⏱ <b>Evaluation Interval</b>\n\nHow often should this rule be checked?`,
+    `🎯 <b>Langkah 4/5: seberapa sering dicek?</b>\n\nAturan untuk: <b>${esc(scope)}</b>\n${esc(METRICS[rb.metric]?.name)} ${esc(opSymbol)} ${esc(rb.value || '?')} → ${esc(ACTION_LABELS[rb.actionType] || rb.actionType)}\n\nPilih jadwal pengecekan:`,
     { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
   );
 }
 
-function createRule(ctx, deps, actionType, intervalMinutes = 15) {
+async function createRule(ctx, deps, actionType, intervalMinutes = 15) {
   const rb = ctx.session?.ruleBuilder;
-  if (!rb) return ctx.reply('⚠️ Session expired. Start again with /monitor.');
+  if (!rb) return ctx.reply('⚠️ Sesi habis. Ulangi dari /monitor.');
   if (!rb.value) {
     return ctx.reply(
-      `📝 Enter a value for this rule:\n\n${esc(rb.metric)} ${esc(rb.operator)} [your value]\n\nExample: If CTR &gt; 5, send "5"`,
-      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '⬅️ Cancel', callback_data: 'menu:monitor' }]] } }
+      `📝 <b>Langkah 5/5: batas angkanya berapa?</b>\n\nAturan untuk: <b>${esc(scopeLabel(rb, null, null))}</b>\n${esc(rb.metric)} ${esc(rb.operator)} [angka]\n\nContoh: kalau CTR &gt; 5, kirim "5"`,
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '⬅️ Batal', callback_data: 'menu:monitor' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
     );
   }
   // rb.operator comes from callbacks as 'gt'/'lt'/'gte'/'lte'; Condition needs '>'/'<'/'>='/'<='
@@ -368,11 +540,13 @@ function createRule(ctx, deps, actionType, intervalMinutes = 15) {
   const condition = ConditionGroup.and().add(new Condition(rb.metric, opSymbol, parseFloat(rb.value)));
   const action = new RuleAction(actionType);
   try {
+    const liveNames = await liveAdAccountNames(deps, ctx.userId);
+    const scope = scopeLabel(rb, liveNames, metaAccounts(deps, ctx.userId));
     deps.repos.rulesRepo.create({
       userId: ctx.userId,
       accountId: rb.accountId || null,
       name: `${rb.metric} ${rb.operator} ${rb.value}`,
-      description: 'Auto-created rule',
+      description: `Aturan untuk ${scope}`,
       condition: condition.toJSON(),
       action: action.toJSON(),
       priority: 1,
@@ -381,11 +555,11 @@ function createRule(ctx, deps, actionType, intervalMinutes = 15) {
     });
     delete ctx.session.ruleBuilder;
     return ctx.reply(
-      `✅ Rule created!\n\n${esc(rb.metric)} ${esc(OPERATORS[rb.operator] || rb.operator)} ${esc(rb.value)} → ${esc(actionType)}\n⏱ ${intervalMinutes === 0 ? 'Follows FB pacing' : 'Checks every ' + (INTERVAL_LABELS[intervalMinutes] || intervalMinutes + ' min')}`,
-      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 View Rules', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+      `✅ <b>Aturan dibuat buat ${esc(scope)}!</b>\n\n${esc(rb.metric)} ${esc(OPERATORS[rb.operator] || rb.operator)} ${esc(rb.value)} → ${esc(actionType)}\n⏱ ${intervalMinutes === 0 ? 'Ngikutin pacing FB' : 'Dicek tiap ' + (INTERVAL_LABELS[intervalMinutes] || intervalMinutes + ' mnt')}`,
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Lihat Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
     );
   } catch (err) {
-    return ctx.reply(`❌ Failed: ${esc(err.message)}`);
+    return ctx.reply(`❌ Gagal: ${esc(err.message)}`);
   }
 }
 

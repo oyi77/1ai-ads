@@ -32,6 +32,33 @@ function shortName(name, max = 22) {
   return s.length > max ? `${s.slice(0, max - 1)}…` : s;
 }
 
+// Periode laporan: key → date_preset Meta + label user-friendly.
+export const REPORT_PERIODS = {
+  '7d': { preset: 'last_7d', label: '7 hari' },
+  '30d': { preset: 'last_30d', label: '30 hari' },
+  '90d': { preset: 'last_90d', label: '90 hari' },
+};
+
+/**
+ * Sapu live ad accounts untuk SATU koneksi tersimpan (owner row).
+ * Return { api, live } — live = [{ id, name, ... }] nama asli dari Meta,
+ * bukan nama koneksi saat submit token.
+ */
+export async function liveAccountsForOwner(owner) {
+  const token = owner?.credentials?.access_token || owner?.access_token;
+  if (!token) return { api: null, live: [] };
+  let api = null;
+  try {
+    api = MetaAdsAPI.withToken(token);
+  } catch { return { api: null, live: [] }; }
+  try {
+    const live = await api.getAdAccounts();
+    return { api, live: live || [] };
+  } catch {
+    return { api, live: [] };
+  }
+}
+
 function countByStatus(campaigns) {
   let active = 0;
   let deleted = 0;
@@ -174,9 +201,19 @@ export function handleDashboardCallback(deps) {
     const action = ctx.match[1];
     await ctx.answerCbQuery();
 
+    if (action.startsWith('pick:')) {
+      const [, ownerId, idxStr] = action.split(':');
+      return showPeriodPicker(ctx, ownerId, parseInt(idxStr, 10));
+    }
+
+    if (action.startsWith('rep:')) {
+      const [, ownerId, idxStr, periodKey] = action.split(':');
+      return showAccountReport(ctx, deps, ownerId, parseInt(idxStr, 10), periodKey);
+    }
+
     if (action.startsWith('account:')) {
-      const accountId = action.split(':')[1];
-      return showAccountReport(ctx, deps, accountId);
+      const ownerId = action.split(':')[1];
+      return showAccountPicker(ctx, deps, ownerId);
     }
 
     if (action === 'add') {
@@ -238,55 +275,145 @@ export function handleDashboardCallback(deps) {
   };
 }
 
-async function showAccountReport(ctx, deps, accountId) {
+/**
+ * Alur laporan: dash:account:<ownerUuid> → daftar LIVE ad accounts milik
+ * token itu (nama asli dari Meta) → user pilih → pilih periode (7/30/90d)
+ * → laporan kinerja. Bukan langsung tembak 1 insights yang sering kosong.
+ */
+async function showAccountPicker(ctx, deps, ownerId) {
+  const owner = deps.repos?.platformAccountsRepo?.findById?.(ownerId);
+  if (!owner || owner.user_id !== ctx.userId) return ctx.reply('⚠️ Koneksi tidak ditemukan.');
+  const { live } = await liveAccountsForOwner(owner);
+  if (!live.length) {
+    return ctx.reply(
+      `📭 <b>${escHtml(owner.account_name || 'Koneksi')}</b> belum kebaca akun iklannya.\n\n` + BM_NOTE,
+      {
+        parse_mode: 'HTML',
+        reply_markup: { inline_keyboard: [[{ text: '📊 Dashboard', callback_data: 'menu:status' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+      }
+    );
+  }
+  const keyboard = live.slice(0, 8).map(a => [{
+    // Callback ringkas: dash:pick:<ownerUuid>:<idx> — id Meta numeric 16-18 digit
+    // + uuid 36 + prefix bisa jebol cap 64B, jadi referensi via index.
+    text: `📊 ${shortName(a.name || a.id)}`,
+    callback_data: `dash:pick:${ownerId}:${live.indexOf(a)}`,
+  }]);
+  keyboard.push([{ text: '📊 Dashboard', callback_data: 'menu:status' }]);
+  keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
+  return ctx.reply(
+    `📊 <b>${escHtml(owner.account_name || 'Koneksi')}</b> — ada <b>${live.length}</b> akun iklan.\n\nPilih akun yang mau dilihat laporannya:`,
+    { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
+  );
+}
+
+async function showPeriodPicker(ctx, ownerId, idx) {
+  return ctx.reply(
+    '🗓 <b>Mau lihat kinerja berapa hari terakhir?</b>',
+    {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          Object.entries(REPORT_PERIODS).map(([key, p]) => ({
+            text: `🗓 ${p.label}`,
+            callback_data: `dash:rep:${ownerId}:${idx}:${key}`,
+          })),
+          [{ text: '⬅️ Pilih akun lain', callback_data: `dash:account:${ownerId}` }],
+          [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+        ],
+      },
+    }
+  );
+}
+
+async function showAccountReport(ctx, deps, ownerId, idx = null, periodKey = '30d') {
   try {
     const platformAccountsRepo = deps.repos?.platformAccountsRepo;
+    const owner = platformAccountsRepo?.findById?.(ownerId);
+    if (!owner || owner.user_id !== ctx.userId) return ctx.reply('⚠️ Koneksi tidak ditemukan.');
 
-    const account = platformAccountsRepo?.findById?.(accountId);
-    if (!account) return ctx.reply('⚠️ Akun tidak ditemukan.');
+    const { api, live } = await liveAccountsForOwner(owner);
+    if (!api) return ctx.reply('🔑 Token koneksi ini bermasalah. Hubungkan ulang via ➕ Tambah Akun.');
+    if (!live.length) {
+      return ctx.reply(
+        `📭 <b>${escHtml(owner.account_name || 'Koneksi')}</b> belum kebaca akun iklannya.\n\n` + BM_NOTE,
+        {
+          parse_mode: 'HTML',
+          reply_markup: { inline_keyboard: [[{ text: '📊 Dashboard', callback_data: 'menu:status' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+        }
+      );
+    }
 
-    // Get account insights via Meta API using the REAL ad account id (not internal UUID)
+    // Belum pilih akun spesifik → tampilkan picker.
+    if (idx === null || idx === undefined || live[idx] === undefined) {
+      return showAccountPicker(ctx, deps, ownerId);
+    }
+
+    const acct = live[idx];
+    const period = REPORT_PERIODS[periodKey] || REPORT_PERIODS['30d'];
+    const periodParam = { datePreset: period.preset };
+
+    await ctx.reply(`🔄 Lagi nyusun laporan <b>${escHtml(acct.name || acct.id)}</b> (${period.label})…`, { parse_mode: 'HTML' });
+
     let insights = null;
-    const token = account.credentials?.access_token || account.access_token;
-    let realAccountId = account.credentials?.ad_account_id;
-    let tokenOk = false;
-    if (token) {
-      try {
-        const api = MetaAdsAPI.withToken(token);
-        if (!realAccountId) {
-          const adAccounts = await api.getAdAccounts();
-          if (adAccounts.length > 0) realAccountId = adAccounts[0].id;
-        }
-        if (realAccountId) {
-          tokenOk = true;
-          insights = await api.getAccountInsights(realAccountId, { datePreset: 'last_30d' });
-        }
-      } catch {
-        // Token expired or API error → tokenOk stays false
+    let tokenOk = true;
+    try {
+      insights = await api.getAccountInsights(acct.id, periodParam);
+    } catch (err) {
+      if (isTokenExpiryError(err)) {
+        tokenOk = false;
+        try { flagAccountTokenInvalid(platformAccountsRepo, ownerId, err); } catch { /* best-effort */ }
+      } else {
+        log.warn('report insights failed', { accountId: acct.id, error: err?.message });
       }
     }
 
-    let message = `📊 <b>Laporan: ${escHtml(account.account_name || account.platform)}</b>\n\n`;
+    // Campaign aktif akun ini (biar laporan ada isinya walau insights kosong).
+    let campaigns = [];
+    try {
+      campaigns = await api.getCampaigns(acct.id, { limit: 50 });
+    } catch (err) {
+      log.warn('report campaigns failed', { accountId: acct.id, error: err?.message });
+    }
+    const counts = countByStatus(campaigns);
+    const topActive = (campaigns || []).filter(c => normalizeCampaignStatus(c?.status) === 'active').slice(0, 5);
 
-    if (insights) {
+    let message = `📊 <b>Laporan: ${escHtml(acct.name || acct.id)}</b> (${period.label})\n\n`;
+    if (!tokenOk) {
+      message += `🔑 Token koneksi ini bermasalah. Hubungkan ulang via ➕ Tambah Akun biar laporannya kebaca lagi.`;
+    } else if (insights && (insights.spend > 0 || insights.impressions > 0)) {
       const roas = insights.spend > 0 ? (insights.revenue / insights.spend).toFixed(2) : '0.00';
-      message += `<b>Performa 30 hari</b>\n`;
       message += `💰 Spend: ${fmtRp(insights.spend)}\n`;
       message += `💵 Revenue: ${fmtRp(insights.revenue)}\n`;
       message += `📈 ROAS: ${roas}x\n`;
       message += `👆 Klik: ${(insights.clicks || 0).toLocaleString('id-ID')}\n`;
-      message += `👁 Impresi: ${(insights.impressions || 0).toLocaleString('id-ID')}`;
-    } else if (!tokenOk) {
-      message += `\n🔑 Token koneksi ini bermasalah. Hubungkan ulang via ➕ Tambah Akun biar laporannya kebaca lagi.`;
+      message += `👁 Impresi: ${(insights.impressions || 0).toLocaleString('id-ID')}\n`;
+      message += `🎯 Campaign: 🟢 ${counts.active} aktif • ⏸️ ${counts.inactive} nonaktif (total ${counts.total})`;
     } else {
-      message += `\n📭 Belum ada aktivitas iklan 30 hari terakhir.`;
+      // Jujur + spesifik: sebut akun + periode + campaign aktifnya, bukan "no insight" generik.
+      message += `📭 <b>Belum ada belanja/klik/impresi</b> di <b>${escHtml(acct.name || acct.id)}</b> selama ${period.label}.\n`;
+      message += `🎯 Campaign di akun ini: 🟢 ${counts.active} aktif • ⏸️ ${counts.inactive} nonaktif (total ${counts.total}).\n`;
+      if (counts.active > 0) {
+        message += `Coba periode lebih panjang (90 hari), atau cek campaign-nya langsung:`;
+      } else {
+        message += `Akun ini belum ada campaign yang jalan — bikin dulu via 🎯 Buat Campaign.`;
+      }
+    }
+    if (topActive.length > 0) {
+      message += `\n\n<b>Campaign aktif:</b>\n`;
+      topActive.forEach((c, i) => { message += `${i + 1}. ${escHtml(c.name || c.id)}\n`; });
     }
 
+    const periodRow = Object.entries(REPORT_PERIODS)
+      .filter(([key]) => key !== periodKey)
+      .map(([key, p]) => ({ text: `🗓 ${p.label}`, callback_data: `dash:rep:${ownerId}:${idx}:${key}` }));
     await ctx.reply(message, {
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
-          [{ text: '📈 Laporan Lengkap', callback_data: `ads:report:${account.platform}:${realAccountId || accountId}` }],
+          ...(periodRow.length ? [periodRow] : []),
+          [{ text: '⬅️ Pilih akun lain', callback_data: `dash:account:${ownerId}` }],
+          [{ text: '📊 Dashboard', callback_data: 'menu:status' }],
           [{ text: '📋 Menu', callback_data: 'quick:menu' }],
         ],
       },

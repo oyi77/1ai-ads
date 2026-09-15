@@ -58,13 +58,13 @@ describe('monitor — enhanced rule system', () => {
     const ctx = makeCtx('u1', 'account_picker');
     await handleMonitorCallback(deps)(ctx);
     const msg = ctx._replies[0].msg;
-    expect(msg).toContain('Account');
+    expect(msg).toContain('Pilih akun iklan');
   });
 
   it('callback acknowledges sync', async () => {
     const ctx = makeCtx('u1', 'sync');
     await handleMonitorCallback(makeDeps())(ctx);
-    expect(ctx._replies[0].msg).toContain('Campaign sync selesai');
+    expect(ctx._replies[0].msg).toContain('campaign ketarik');
   });
 
   it('template:apply applies a template', async () => {
@@ -74,11 +74,27 @@ describe('monitor — enhanced rule system', () => {
     expect(msg).toContain('ROAS Guard');
   });
 
-  it('add:start shows metric categories', async () => {
+  it('add:start asks which ad account first (no silent global rule)', async () => {
+    const deps = makeDeps({
+      repos: {
+        platformAccountsRepo: {
+          findByUserId: vi.fn(() => [{ id: 'acc1', account_name: 'Acc One', platform: 'meta', credentials: {} }]),
+        },
+      },
+    });
+    const ctx = makeCtx('u1', 'add:start');
+    await handleMonitorCallback(deps)(ctx);
+    const msg = ctx._replies[0].msg;
+    expect(msg).toContain('buat akun iklan mana');
+    const flat = ctx._replies[0].opts.reply_markup.inline_keyboard.flat().map((b) => b.callback_data);
+    expect(flat).toContain('rule:add:account:__all__');
+    expect(flat).toContain('quick:menu');
+  });
+
+  it('add:start without accounts tells user to connect first', async () => {
     const ctx = makeCtx('u1', 'add:start');
     await handleMonitorCallback(makeDeps())(ctx);
-    const msg = ctx._replies[0].msg;
-    expect(msg).toContain('Category');
+    expect(ctx._replies[0].msg).toContain('Hubungkan akun Meta dulu');
   });
 
   it('view:all renders raw action names under HTML parse mode (no entity crash)', async () => {

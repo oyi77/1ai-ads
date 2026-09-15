@@ -111,7 +111,7 @@ describe('menu:optimize — AI Optimization (P3)', () => {
     );
   });
 
-  it('replies with a hint (no inline keyboard) when the guard returns no draft (approval disabled)', async () => {
+  it('replies with a hint + Menu button when the guard returns no draft (approval disabled)', async () => {
     deps.services.draftService.guardAutonomousChange.mockResolvedValue(false);
     deps.repos.campaignsRepo.findAll.mockReturnValue({ data: [metaCampaign('c1', { roas: 0.5 })], total: 1 });
 
@@ -120,7 +120,8 @@ describe('menu:optimize — AI Optimization (P3)', () => {
     expect(ctx._replies).toHaveLength(1);
     expect(ctx._replies[0].msg).toContain('nonaktif');
     expect(ctx._replies[0].msg).toContain('/menu → Mini App');
-    expect(ctx._replies[0].opts.reply_markup).toBeUndefined();
+    const flat = ctx._replies[0].opts.reply_markup.inline_keyboard.flat().map((b) => b.callback_data);
+    expect(flat).toContain('quick:menu');
   });
 
   it('replies with a friendly empty message and does NOT call the guard when there are no active Meta campaigns', async () => {
@@ -368,7 +369,7 @@ describe('menu:optimize — AI Optimization (P3)', () => {
     expect(bareDeps.services.draftService.guardAutonomousChange).not.toHaveBeenCalled();
   });
 
-  it('shows an ads-account picker with Global and Back buttons when no scope is given', async () => {
+  it('shows an ads-account picker with Semua Akun + Menu buttons when no scope is given', async () => {
     const bareCtx = makeCtx('u1', ['menu:optimize', 'optimize']);
     deps.repos.platformAccountsRepo.getByPlatform.mockReturnValue({ access_token: 'tok' });
     deps.repos.platformAccountsRepo.findAllActiveByUserAndPlatform.mockReturnValue([{ access_token: 'tok' }]);
@@ -377,15 +378,17 @@ describe('menu:optimize — AI Optimization (P3)', () => {
     await handleMenuButton(deps)(bareCtx);
 
     expect(bareCtx._replies[0].msg).toBe('🔄 Loading your Meta ad accounts…');
-    expect(bareCtx._replies[1].msg).toContain('Pilih akun iklan');
+    expect(bareCtx._replies[1].msg).toContain('pilih akun iklan yang mau dioptimalkan');
     expect(bareCtx._replies[1].opts.reply_markup.inline_keyboard[0][0]).toEqual({
       text: '⚙️ Acc One (acc1)',
       callback_data: 'menu:optimize:acc1',
     });
     expect(bareCtx._replies[1].opts.reply_markup.inline_keyboard[1]).toEqual([
-      { text: '🌐 Global', callback_data: 'menu:optimize:global' },
-      { text: '⬅️ Back', callback_data: 'menu:optimize' },
+      { text: '🌐 Semua Akun', callback_data: 'menu:optimize:global' },
+      { text: '⬅️ Kembali', callback_data: 'quick:menu' },
     ]);
+    const flat = bareCtx._replies[1].opts.reply_markup.inline_keyboard.flat().map((b) => b.callback_data);
+    expect(flat).toContain('quick:menu');
     expect(deps.services.draftService.guardAutonomousChange).not.toHaveBeenCalled();
   });
 

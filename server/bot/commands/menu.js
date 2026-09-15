@@ -153,16 +153,17 @@ async function handleOptimizeAction(ctx, deps, scope) {
     }
 
     return ctx.reply(
-      '🤖 <b>AI Optimization</b>\n\nPilih akun iklan yang mau dioptimalkan:',
+      '🤖 <b>Saran AI — pilih akun iklan yang mau dioptimalkan:</b>',
       {
         parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
             ...accounts.map((a) => [{ text: `⚙️ ${a.name} (${a.id})`, callback_data: `menu:optimize:${a.id}` }]),
             [
-              { text: '🌐 Global', callback_data: 'menu:optimize:global' },
-              { text: '⬅️ Back', callback_data: 'menu:optimize' },
+              { text: '🌐 Semua Akun', callback_data: 'menu:optimize:global' },
+              { text: '⬅️ Kembali', callback_data: 'quick:menu' },
             ],
+            [{ text: '📋 Menu', callback_data: 'quick:menu' }],
           ],
         },
       }
@@ -322,6 +323,8 @@ async function proposeOptimizations(ctx, deps, suggestions) {
     { text: '✅ Apply', callback_data: `approval:approve:${draft.id}` },
     { text: '❌ Dismiss', callback_data: `approval:reject:${draft.id}` },
   ]));
+  keyboard.push([{ text: '🤖 Saran AI lain', callback_data: 'menu:optimize' }]);
+  keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
   return ctx.reply(
     `🤖 <b>Saran AI (${created.length})</b>\n\n${lines.join('\n')}\n\nSetujui atau tolak masing-masing:`,
     { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
@@ -368,7 +371,7 @@ async function proposeOptimization(ctx, deps, suggestion) {
       '🤖 <b>AI Optimization</b>\n\n' +
       'AI auto-apply sedang nonaktif. Nyalakan persetujuan di /menu → Settings, ' +
       'atau gunakan dashboard: /menu → Mini App',
-      { parse_mode: 'HTML' }
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
     );
   }
 
@@ -377,10 +380,14 @@ async function proposeOptimization(ctx, deps, suggestion) {
     {
       parse_mode: 'HTML',
       reply_markup: {
-        inline_keyboard: [[
-          { text: '✅ Apply', callback_data: `approval:approve:${draft.id}` },
-          { text: '❌ Dismiss', callback_data: `approval:reject:${draft.id}` },
-        ]],
+        inline_keyboard: [
+          [
+            { text: '✅ Apply', callback_data: `approval:approve:${draft.id}` },
+            { text: '❌ Dismiss', callback_data: `approval:reject:${draft.id}` },
+          ],
+          [{ text: '🤖 Saran AI lain', callback_data: 'menu:optimize' }],
+          [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+        ],
       },
     }
   );

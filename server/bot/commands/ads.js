@@ -266,6 +266,7 @@ async function replyCampaignList(ctx, accountId, campaigns, page, platform = 'me
           [{ text: '📊 Report', callback_data: `ads:repacc:${platform}:${accountId}` }],
           [{ text: '➕20%', callback_data: `ads:bud:${platform}:${accountId}:1.2` }, { text: '➖20%', callback_data: `ads:bud:${platform}:${accountId}:0.8333` }, { text: '🎯 Create', callback_data: 'menu:create' }],
           [{ text: '◀️ Back to accounts', callback_data: `ads:platform:${platform}` }],
+          [{ text: '📋 Menu', callback_data: 'quick:menu' }],
         ],
       },
     }
@@ -317,26 +318,23 @@ export function handleAdsReport(deps) {
     if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first.`);
 
     if (accountId) {
-      try {
-        const accounts = await api.getAdAccounts();
-        const acct = accounts.find((a) => String(a.id) === String(accountId));
-        if (!acct) return ctx.reply('⚠️ Account not found.');
-        const ins = await api.getAccountInsights(accountId, { datePreset: 'last_30d' });
-        if (!ins) return ctx.reply('📭 No insight data for this account.');
-        const roas = ins.spend > 0 ? (ins.revenue / ins.spend).toFixed(2) : '0.00';
-        const body =
-          `📊 <b>Report: ${acct.name} (30d)</b>\n\n` +
-          `Total Spend: ${fmtCurrency(ins.spend)}\n` +
-          `Total Revenue: ${fmtCurrency(ins.revenue)}\n` +
-          `ROAS: ${roas}x\n` +
-          `Clicks: ${(ins.clicks || 0).toLocaleString('id-ID')}\n` +
-          `Impressions: ${(ins.impressions || 0).toLocaleString('id-ID')}`;
-        return ctx.reply(body, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '🔄 Refresh', callback_data: `menu:reports:${platform}:${accountId}` }]] } });
-      } catch (err) {
-        log.error('ads report scoped failed', { userId: ctx.userId, platform, accountId, error: err?.message });
-        if (isExpiredToken(err)) return ctx.reply('🔑 Your token has expired.');
-        return ctx.reply('⚠️ Could not load report.');
-      }
+      // Alur baru lewat dashboard (pilih akun + periode). Jalur lama ini
+      // dipertahankan biar tombol lama tidak mati — arahkan ke picker.
+      const rows = (deps.repos?.platformAccountsRepo?.findByUserId?.(ctx.userId) || [])
+        .filter(a => a.platform === (platform || 'meta') && a.is_active);
+      if (!rows.length) return ctx.reply('🔌 Belum ada koneksi. Hubungkan dulu via /status → ➕ Tambah Akun.');
+      return ctx.reply(
+        '📊 <b>Laporan pindah ke Dashboard biar bisa pilih akun + periode (7/30/90 hari).</b>\n\nPencet tombol di bawah, pilih koneksimu, lalu pilih akun + periodenya:',
+        {
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '📊 Buka Dashboard', callback_data: 'menu:status' }],
+              [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+            ],
+          },
+        }
+      );
     }
 
     await ctx.reply('📈 Gathering your ad report…');
@@ -367,11 +365,11 @@ export function handleAdsReport(deps) {
         `Clicks: ${totalClicks.toLocaleString('id-ID')}\n` +
         `Impressions: ${totalImpr.toLocaleString('id-ID')}\n\n` +
         (perAcct.length ? `<b>Per account:</b>\n${perAcct.join('\n')}` : '');
-      return ctx.reply(body, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '🔄 Refresh', callback_data: `ads:report:${platform}` }]] } });
+      return ctx.reply(body, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '🔄 Refresh', callback_data: `ads:report:${platform}` }], [{ text: '📊 Dashboard', callback_data: 'menu:status' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } });
     } catch (err) {
       log.error('ads report list failed', { userId: ctx.userId, platform, error: err?.message });
-      if (isExpiredToken(err)) return ctx.reply('🔑 Your token has expired.');
-      return ctx.reply('⚠️ Could not load report.');
+      if (isExpiredToken(err)) return ctx.reply('🔑 Token kamu kedaluwarsa. Hubungkan ulang via /status → ➕ Tambah Akun.');
+      return ctx.reply('⚠️ Gagal memuat laporan. Coba lagi nanti.', { reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] } });
     }
   };
 }
