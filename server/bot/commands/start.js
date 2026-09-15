@@ -27,25 +27,25 @@ export function handleStart() {
     let message;
     const keyboard = mainMenuKeyboard();
     if (!hasMetaAccount && campaignCount === 0) {
-      message = `👋 <b>Welcome to AdForge, ${esc(name)}!</b>\n\n` +
-        '🚀 <b>Getting started in 3 steps:</b>\n' +
-        '1️⃣ Connect your Meta account\n' +
-        '2️⃣ Sync or create campaigns\n' +
-        '3️⃣ Set up automation rules\n\n' +
-        'Tap <b>🔗 Connect Account</b> below to begin!';
+      message = `👋 <b>Halo ${esc(name)}, selamat datang di AdForge!</b>\n\n` +
+        '🚀 <b>Mulai dalam 3 langkah gampang:</b>\n' +
+        '1️⃣ Hubungkan akun iklanmu (pencet tombol 🔗 di bawah)\n' +
+        '2️⃣ Lihat ringkasannya di 📊 Dashboard\n' +
+        '3️⃣ Bikin iklan pertama via 🎯 Create Campaign\n\n' +
+        'Pencet tombol <b>🔗 Connect Account</b> di bawah buat mulai!';
       keyboard.inline_keyboard.unshift([
         { text: '🔗 Connect Account', callback_data: 'menu:connect' },
       ]);
     } else if (hasMetaAccount && campaignCount === 0) {
-      message = `👋 <b>Welcome back, ${esc(name)}!</b>\n\n` +
-        '✅ Meta account connected\n' +
-        '📭 No campaigns yet\n\n' +
-        'Tap <b>🎯 Buat Kampanye</b> to create your first campaign, or <b>📣 My Meta Ads</b> to sync from Meta.';
+      message = `👋 <b>Halo lagi, ${esc(name)}!</b>\n\n` +
+        '✅ Akun iklan sudah terhubung\n' +
+        '📭 Belum ada campaign yang kesimpen\n\n' +
+        'Pencet <b>🎯 Create Campaign</b> buat bikin iklan pertamamu, atau <b>📣 Ads Manager</b> buat tarik data dari Meta.';
     } else {
-      message = `👋 <b>Welcome back, ${esc(name)}!</b>\n\n` +
-        `📊 ${campaignCount} campaign${campaignCount !== 1 ? 's' : ''} tracked\n` +
-        `⚡ ${ruleCount} automation rule${ruleCount !== 1 ? 's' : ''} active\n\n` +
-        'What would you like to do?';
+      message = `👋 <b>Halo lagi, ${esc(name)}!</b>\n\n` +
+        `📊 ${campaignCount} campaign kesimpen\n` +
+        `⚡ ${ruleCount} aturan otomatis aktif\n\n` +
+        'Mau ngapain hari ini? Pilih di bawah ya.';
     }
     await ctx.reply(message, {
       parse_mode: 'HTML',

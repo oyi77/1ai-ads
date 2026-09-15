@@ -89,8 +89,8 @@ export function initBot(app, deps) {
     fbads: handleFbAds(deps),
     ads: handleAds(deps),
     monitor: handleMonitor(deps),
-    optimize: handleMonitor(deps),
-    platforms: handleSettings(deps),
+    optimize: (ctx) => { ctx.match = ['menu:optimize', 'optimize']; return handleMenuButton(deps)(ctx); },
+    platforms: (ctx) => { ctx.match = ['menu:platforms', 'platforms']; return handleMenuButton(deps)(ctx); },
     metaapp: (ctx) => ctx.scene.enter('manage-meta-app'),
     create: (ctx) => ctx.scene.enter('create-campaign'),
   };
@@ -272,8 +272,8 @@ export function initBot(app, deps) {
     { command: 'ads', description: '📣 Kelola akun iklan multi-platform' },
     { command: 'create', description: '🎯 Buat kampanye (wizard)' },
     { command: 'monitor', description: '⚡ Aturan otomatis & alert' },
+    { command: 'optimize', description: '🤖 Saran AI optimasi' },
     { command: 'settings', description: '⚙️ Token & koneksi akun' },
-    { command: 'pricing', description: '💰 Paket & harga' },
     { command: 'cancel', description: '❌ Batalkan wizard/flow aktif' },
     { command: 'help', description: '❓ Bantuan' },
   ];

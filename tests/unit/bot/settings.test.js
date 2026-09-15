@@ -28,8 +28,6 @@ function makeCtx(userId = 'u1', match = ['settings:connect_meta', 'connect_meta'
   };
 }
 
-const URL_BASE = 'https://adforge.aitradepulse.com/platforms?platform=';
-
 describe('settings — per-platform Connect rows (P4)', () => {
   let deps;
   let ctx;
@@ -38,45 +36,40 @@ describe('settings — per-platform Connect rows (P4)', () => {
     deps = makeDeps();
     ctx = makeCtx();
   });
-
   it('lists all 8 platform labels with Belum terhubung when no accounts', async () => {
     await handleSettings(deps)(ctx);
     const msg = ctx._replies[0].msg;
     for (const [, label] of Object.entries(PLATFORM_NAMES)) {
       expect(msg).toContain(`• ${label}: — Belum terhubung`);
     }
-    expect(msg).toContain('Pilih platform untuk terhubung lewat web, atau kelola akun:');
+    expect(msg).toContain('Pencet platform di bawah buat hubungkan akun baru');
   });
 
-  it('renders 8 platform rows + sync + accounts + menu rows (11 total) with url buttons for non-meta', async () => {
+  it('renders 8 platform rows + sync + accounts + menu rows (11 total) with bot callbacks for all', async () => {
     await handleSettings(deps)(ctx);
     const kb = ctx._replies[0].opts.reply_markup.inline_keyboard;
     expect(kb).toHaveLength(11);
     const platformKeys = Object.keys(PLATFORM_NAMES);
     platformKeys.forEach((key, i) => {
       expect(kb[i]).toHaveLength(1);
-      if (key === 'meta') {
-        expect(kb[i][0]).toEqual({ text: '🔑 Hubungkan Meta via Token', callback_data: 'settings:connect_meta' });
-        expect(kb[i][0].url).toBeUndefined();
-      } else {
-        expect(kb[i][0].url).toBe(`${URL_BASE}${key}`);
-        expect(kb[i][0].text).toContain(PLATFORM_NAMES[key]);
-        expect(kb[i][0].callback_data).toBeUndefined();
-      }
+      // Semua platform masuk flow bot (connect:scene), bukan URL web.
+      expect(kb[i][0].callback_data).toBe(`connect:${key}`);
+      expect(kb[i][0].url).toBeUndefined();
+      expect(kb[i][0].text).toContain(PLATFORM_NAMES[key]);
     });
     expect(kb[8]).toEqual([{ text: '🔄 Sync Campaigns', callback_data: 'settings:sync' }]);
     expect(kb[9]).toEqual([{ text: '📊 View Accounts', callback_data: 'settings:accounts' }]);
     expect(kb[10]).toEqual([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
   });
 
-  it('shows ✅ Connected (account_name) for active platform only', async () => {
+  it('shows ✅ Terhubung (account_name) for active platform only', async () => {
     deps.repos.platformAccountsRepo.findByUserId.mockReturnValue([
       { platform: 'google', account_name: 'My Ads', is_active: 1, id: 'g1' },
       { platform: 'tiktok', account_name: 'TK Acct', is_active: 0, id: 't1' },
     ]);
     await handleSettings(deps)(ctx);
     const msg = ctx._replies[0].msg;
-    expect(msg).toContain('• Google Ads: ✅ Connected (My Ads)');
+    expect(msg).toContain('• Google Ads: ✅ Terhubung (My Ads)');
     expect(msg).toContain('• TikTok Ads: — Belum terhubung');
     expect(msg).toContain('• Meta (Facebook/Instagram): — Belum terhubung');
   });
@@ -109,10 +102,10 @@ describe('settings — per-platform Connect rows (P4)', () => {
     expect(cbCtx.answerCbQuery).toHaveBeenCalled();
   });
 
-  it('callback accounts lists connected rows; empty case hints /settings', async () => {
+  it('callback accounts lists connected rows; empty case hints connect', async () => {
     const cbCtx = makeCtx('u1', ['settings:accounts', 'accounts']);
     await handleSettingsCallback(deps)(cbCtx);
-    expect(cbCtx._replies[0].msg).toContain('No accounts connected. Use /settings to connect.');
+    expect(cbCtx._replies[0].msg).toContain('Belum ada akun terhubung');
 
     deps.repos.platformAccountsRepo.findByUserId.mockReturnValue([
       { platform: 'meta', account_name: 'My Page', is_active: 1, id: 'm1' },

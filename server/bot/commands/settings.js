@@ -4,6 +4,7 @@
  */
 
 import { PLATFORM_NAMES } from '../scenes/connect-account.js';
+import { MetaAdsAPI } from '../../services/meta/index.js';
 import { escapeHtml as esc } from '../../lib/escape.js';
 export function handleSettings(deps) {
   return async (ctx) => {
@@ -12,20 +13,20 @@ export function handleSettings(deps) {
     const platformRows = Object.entries(PLATFORM_NAMES).map(([key, label]) => {
       const active = accounts.find(a => a.platform === key && a.is_active);
       const status = active
-        ? `✅ Connected (${esc(active.account_name)})`
+        ? `✅ Terhubung (${esc(active.account_name)})`
         : '— Belum terhubung';
-      const button = key === 'meta'
-        ? { text: active ? `🔑 Meta Token — ${active.account_name}` : '🔑 Hubungkan Meta via Token', callback_data: 'settings:connect_meta' }
-        : { text: `${active ? '✅' : '🔗'} ${label}`, url: `https://adforge.aitradepulse.com/platforms?platform=${key}` };
+      // Semua platform masuk flow bot (connect:scene), bukan URL web —
+      // tombol URL keluar dari Telegram dan halaman web-nya belum tentu ada.
+      const button = { text: `${active ? '✅' : '🔗'} ${label}`, callback_data: `connect:${key}` };
       return { label, status, button };
     });
 
     const body = platformRows.map(r => `• ${r.label}: ${r.status}`).join('\n');
 
     return ctx.reply(
-      '🔧 <b>Settings</b>\n\n' +
+      '🔧 <b>Pengaturan</b>\n\n' +
       `${body}\n\n` +
-      'Pilih platform untuk terhubung lewat web, atau kelola akun:',
+      'Pencet platform di bawah buat hubungkan akun baru, atau kelola yang sudah ada:',
       {
         parse_mode: 'HTML',
         reply_markup: {
@@ -49,32 +50,64 @@ export function handleSettingsCallback(deps) {
     switch (action) {
       case 'connect_meta':
         return ctx.scene.enter('connect-account', { platform: 'meta' });
-      case 'sync':
-        return ctx.reply('🔄 Syncing campaigns... Use the dashboard for real-time sync status.', {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '📋 Menu', callback_data: 'quick:menu' }],
-            ],
-          },
-        });
+      case 'sync': {
+        // Sync beneran (path yang sama dengan monitor:sync): tarik campaign live
+        // per koneksi Meta user ini lalu upsert ke DB lokal.
+        const rows = (deps.repos?.platformAccountsRepo?.findByUserId?.(ctx.userId) || [])
+          .filter(a => a.platform === 'meta' && (a.credentials?.access_token || a.access_token));
+        if (!rows.length) {
+          return ctx.reply('🔌 Belum ada koneksi Meta. Hubungkan dulu via /status → ➕ Tambah Akun.');
+        }
+        await ctx.reply('🔄 Lagi narik data campaign dari Meta…');
+        let synced = 0;
+        let failed = 0;
+        for (const acct of rows) {
+          try {
+            const token = acct.credentials?.access_token || acct.access_token;
+            const api = MetaAdsAPI.withToken(token);
+            const live = await api.getAdAccounts();
+            for (const a of live) {
+              const campaigns = await api.getCampaigns(a.id, { limit: 50 });
+              for (const c of campaigns) {
+                deps.repos?.campaignsRepo?.upsert?.({
+                  platform: 'meta',
+                  campaign_id: c.id,
+                  name: c.name,
+                  status: c.status,
+                  budget: c.dailyBudget || 0,
+                  userId: ctx.userId,
+                });
+              }
+              synced += campaigns.length;
+            }
+          } catch {
+            failed++;
+          }
+        }
+        return ctx.reply(
+          failed
+            ? `🔄 Sync selesai: ${synced} campaign ketarik, ${failed} koneksi gagal. Cek /status buat hasilnya.`
+            : `✅ Sync selesai: ${synced} campaign ketarik. Cek /status buat hasilnya.`
+        );
+      }
       case 'accounts': {
         const accounts = deps.repos?.platformAccountsRepo?.findByUserId?.(ctx.userId) || [];
         if (accounts.length === 0) {
-          return ctx.reply('No accounts connected. Use /settings to connect.', {
+          return ctx.reply('📭 Belum ada akun terhubung. Pencet platform di atas buat hubungkan.', {
             reply_markup: {
               inline_keyboard: [
-                [{ text: '🔧 Settings', callback_data: 'menu:settings' }],
+                [{ text: '🔧 Pengaturan', callback_data: 'menu:settings' }],
                 [{ text: '📋 Menu', callback_data: 'quick:menu' }],
               ],
             },
           });
         }
         const list = accounts.map(a => `• ${esc(a.account_name)} (${esc(a.platform)}) ${a.is_active ? '✅' : '⏸'}`).join('\n');
-        return ctx.reply(`📊 <b>Connected Accounts:</b>\n\n${list}`, {
+        return ctx.reply(`📊 <b>Akun terhubung:</b>\n\n${list}`, {
           parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [
-              [{ text: '🔧 Settings', callback_data: 'menu:settings' }],
+              [{ text: '🔧 Pengaturan', callback_data: 'menu:settings' }],
               [{ text: '📋 Menu', callback_data: 'quick:menu' }],
             ],
           },

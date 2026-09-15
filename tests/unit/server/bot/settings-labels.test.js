@@ -19,34 +19,47 @@ function createCtx(accounts) {
 async function renderSettings(accounts) {
   const { ctx, deps, replies } = createCtx(accounts);
   await handleSettings(deps)(ctx);
-  return replies[0].reply_markup.inline_keyboard.flat().map(b => b.text);
+  return replies[0].reply_markup.inline_keyboard;
 }
 
 describe('/settings — labeled connect buttons (UX polish)', () => {
-  it('labels each non-meta button with its platform name, not generic "Connect"', async () => {
-    const texts = await renderSettings([]);
-    expect(texts).toContain('🔑 Hubungkan Meta via Token');
+  it('labels each button with its platform name, not generic "Connect"', async () => {
+    const kb = await renderSettings([]);
+    const texts = kb.flat().map((b) => b.text);
+    expect(texts).toContain('🔗 Meta (Facebook/Instagram)');
     expect(texts).toContain('🔗 Google Ads');
     expect(texts).toContain('🔗 TikTok Ads');
     expect(texts).toContain('🔗 Pinterest Ads');
-    expect(texts.some(t => t === '🔗 Connect')).toBe(false);
+    expect(texts.some((t) => t === '🔗 Connect')).toBe(false);
   });
 
-  it('marks connected platforms with ✅ and shows the Meta account name', async () => {
-    const texts = await renderSettings([
+  it('marks connected platforms with ✅ and shows the account name in status', async () => {
+    const { ctx, deps } = createCtx([
       { platform: 'meta', is_active: 1, account_name: 'Selow' },
       { platform: 'google', is_active: 1, account_name: 'G-Ads' },
     ]);
-    expect(texts).toContain('🔑 Meta Token — Selow');
-    expect(texts).toContain('✅ Google Ads');
-    expect(texts).toContain('🔗 TikTok Ads'); // unconnected stays 🔗
+    const texts = [];
+    const origReply = ctx.reply;
+    let body = '';
+    ctx.reply = vi.fn((text, opts) => { body = text; return origReply(text, opts); });
+    await handleSettings(deps)(ctx);
+    void texts;
+    expect(body).toContain('✅ Terhubung (Selow)');
+    expect(body).toContain('✅ Terhubung (G-Ads)');
+    expect(body).toContain('TikTok Ads: — Belum terhubung');
   });
 
-  it('keeps deep links per-platform for web connection flow', async () => {
-    const { ctx, deps } = createCtx([]);
-    await handleSettings(deps)(ctx);
-    const kb = ctx.reply.mock.calls[0][1].reply_markup.inline_keyboard;
-    const googleBtn = kb.flat().find(b => b.text.includes('Google Ads'));
-    expect(googleBtn.url).toBe('https://adforge.aitradepulse.com/platforms?platform=google');
+  it('routes every platform into the bot connect flow (no web URL)', async () => {
+    const kb = await renderSettings([]);
+    for (const btn of kb.flat()) {
+      if (!btn.callback_data) continue;
+      if (!btn.callback_data.startsWith('connect:')) continue;
+      expect(btn.url).toBeUndefined();
+    }
+    const flat = kb.flat();
+    const googleBtn = flat.find((b) => b.text.includes('Google Ads'));
+    expect(googleBtn.callback_data).toBe('connect:google');
+    const metaBtn = flat.find((b) => b.text.includes('Meta (Facebook/Instagram)'));
+    expect(metaBtn.callback_data).toBe('connect:meta');
   });
 });

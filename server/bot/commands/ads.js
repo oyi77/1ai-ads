@@ -4,8 +4,10 @@ import { MetaAdsAPI } from '../../services/meta/index.js';
 
 const log = createLogger('bot:ads');
 
-const BACKEND = process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com';
+// Lantai budget harian Meta untuk IDR ≈ Rp 17.715 (sama kayak wizard create-campaign).
+export const MIN_DAILY_BUDGET_IDR = 17500;
 
+const BACKEND = process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com';
 export function getUserPlatformAccount(ctx, deps, platform = 'meta') {
   const repo = deps?.repos?.platformAccountsRepo;
   if (!repo) return [];
@@ -393,7 +395,8 @@ export function handleAdsBudgetScale(deps) {
         try {
           const current = c.dailyBudget || 0; // already major IDR (getCampaigns converts)
           if (current <= 0) continue;
-          const next = Math.max(10000, Math.round(current * mult));
+          // Lantai minimal Facebook ≈ Rp 17.715 — jangan turunkan budget ke bawah itu.
+          const next = Math.max(MIN_DAILY_BUDGET_IDR, Math.round(current * mult));
           await api.updateCampaign(c.id, { dailyBudget: next });
           done++;
         } catch (e) {

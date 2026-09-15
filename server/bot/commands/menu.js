@@ -40,13 +40,13 @@ const PLATFORM_LABELS = {
 export function mainMenuKeyboard() {
   return {
     inline_keyboard: [
-      [{ text: '📊 Dashboard', callback_data: 'menu:status' }, { text: '🎯 Create Campaign', callback_data: 'menu:create' }],
-      [{ text: '⚡ Rules', callback_data: 'menu:monitor' }, { text: '🤖 AI Optimize', callback_data: 'menu:optimize' }],
-      [{ text: '📣 Ads Manager', callback_data: 'menu:ads' }, { text: '🌐 Platforms', callback_data: 'menu:platforms' }],
-      [{ text: '⚙️ Settings', callback_data: 'menu:settings' }, { text: '💰 Pricing', callback_data: 'menu:pricing' }],
-      [{ text: '❓ Help', callback_data: 'menu:help' }],
+      [{ text: '📊 Dashboard', callback_data: 'menu:status' }, { text: '🎯 Buat Campaign', callback_data: 'menu:create' }],
+      [{ text: '⚡ Aturan Otomatis', callback_data: 'menu:monitor' }, { text: '🤖 Saran AI', callback_data: 'menu:optimize' }],
+      [{ text: '📣 Ads Manager', callback_data: 'menu:ads' }, { text: '🌐 Platform', callback_data: 'menu:platforms' }],
+      [{ text: '⚙️ Pengaturan', callback_data: 'menu:settings' }, { text: '💰 Harga', callback_data: 'menu:pricing' }],
+      [{ text: '❓ Bantuan', callback_data: 'menu:help' }],
       [{ text: '📱 AdForge Mini App', web_app: { url: WEB_APP_URL } }],
-      [{ text: '🌐 Open in Browser', url: WEB_APP_URL }],
+      [{ text: '🌐 Buka di Browser', url: WEB_APP_URL }],
     ],
   };
 }
@@ -54,7 +54,7 @@ export function mainMenuKeyboard() {
 export function handleMenu() {
   return async (ctx) => {
     await ctx.reply(
-      '📋 <b>AdForge Menu</b>\n\nPilih fitur:',
+      '📋 <b>Menu AdForge</b>\n\nMau ngapain hari ini? Pilih di bawah ya:',
       {
         parse_mode: 'HTML',
         reply_markup: mainMenuKeyboard(),
@@ -117,14 +117,13 @@ async function sendPlatformChoice(ctx) {
   }
   inline_keyboard.push([{ text: '⬅️ Menu', callback_data: 'quick:menu' }]);
   await ctx.reply(
-    '🔗 <b>Connect an Ad Account</b>\n\nChoose a platform to connect:',
+    '🔗 <b>Hubungkan Akun Iklan</b>\n\nPilih platform yang mau dihubungkan:',
     {
       parse_mode: 'HTML',
       reply_markup: { inline_keyboard },
     }
   );
 }
-
 
 async function handleReportsAction(ctx, deps) {
   if (deps) return handleAdsReport(deps)(ctx);
@@ -134,10 +133,10 @@ async function handleReportsAction(ctx, deps) {
 async function handleOptimizeAction(ctx, deps, scope) {
   if (!scope) {
     const acct = getUserMetaAccount(ctx, deps);
-    if (!acct) return ctx.reply('🔌 Connect a Meta account first via /start.');
+    if (!acct) return ctx.reply('🔌 Belum ada akun Meta terhubung. Hubungkan dulu via /status → ➕ Tambah Akun.');
 
     const { api } = await makeApi(ctx, deps);
-    if (!api) return ctx.reply('🔌 Connect a Meta account first via /start.');
+    if (!api) return ctx.reply('🔌 Belum ada akun Meta terhubung. Hubungkan dulu via /status → ➕ Tambah Akun.');
 
     let accounts;
     try {

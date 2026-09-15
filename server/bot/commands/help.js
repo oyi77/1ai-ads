@@ -6,20 +6,20 @@
 export function handleHelp() {
   return async (ctx) => {
     await ctx.reply(
-      '❓ <b>AdForge Help</b>\n\n' +
+      '❓ <b>Bantuan AdForge</b>\n\n' +
       '<b>Perintah utama:</b>\n' +
-      '/start — Menu utama &amp; onboarding\n' +
+      '/start — Menu utama & perkenalan\n' +
       '/menu — Buka semua fitur\n' +
-      '/status — Ringkasan kampanye &amp; ROAS\n' +
-      '/ads — Kelola akun iklan multi-platform\n' +
-      '/create — Wizard buat kampanye baru\n' +
-      '/monitor — Aturan otomatis (spend guard, alert)\n' +
-      '/metaapp — Kredensial Meta App milik kamu\n' +
-      '/settings — Token &amp; koneksi akun\n' +
+      '/status — Dashboard: akun terhubung, campaign aktif/nonaktif/dihapus, draft\n' +
+      '/ads — Kelola akun iklan + campaign per akun\n' +
+      '/create — Bikin campaign baru (dipandu langkah per langkah)\n' +
+      '/monitor — Aturan otomatis (jaga spend, alert)\n' +
+      '/metaapp — Kredensial Meta App milikmu\n' +
+      '/settings — Token & koneksi akun\n' +
       '/pricing — Lihat paket\n' +
-      '/cancel — Batalkan wizard/flow aktif\n' +
+      '/cancel — Batalkan langkah yang lagi jalan\n' +
       '/help — Pesan ini\n\n' +
-      '<b>Quick actions:</b>',
+      '<b>Aksi cepat:</b>',
       {
         parse_mode: 'HTML',
         reply_markup: {

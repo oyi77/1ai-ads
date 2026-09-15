@@ -364,7 +364,7 @@ describe('menu:optimize — AI Optimization (P3)', () => {
 
     await handleMenuButton(bareDeps)(bareCtx);
 
-    expect(bareCtx._replies[0].msg).toBe('🔌 Connect a Meta account first via /start.');
+    expect(bareCtx._replies[0].msg).toBe('🔌 Belum ada akun Meta terhubung. Hubungkan dulu via /status → ➕ Tambah Akun.');
     expect(bareDeps.services.draftService.guardAutonomousChange).not.toHaveBeenCalled();
   });
 
