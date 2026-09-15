@@ -22,7 +22,49 @@ function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 const fmtRp = n => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
+// Lantai budget harian Meta untuk IDR ≈ Rp 17.715 — user melaporkan campaign
+// Rp 10rb ditolak Meta ("minimal harus lebih dari Rp17.715"). Validasi wizard
+// ikut lantai real ini biar user tidak gagal di langkah terakhir.
+export const MIN_DAILY_BUDGET_IDR = 17500;
 const CANCEL_ROW = [{ text: '\u274C Batal', callback_data: 'create:cancel' }];
+
+/**
+ * Parse jawaban audience bahasa bebas (bukan format Country:/Age: kaku).
+ * Ngerti: "Indonesia, umur 20-35, cewek, suka fashion dan skincare",
+ * "cowok 25-40", "semua, 18-55", "Malaysia umur 30-45 pria minat kuliner".
+ * Format lama (Country: ID / Age: 18-45 / ...) tetap didukung.
+ */
+export function parseAudienceText(raw) {
+  const text = String(raw || '');
+  const lower = text.toLowerCase();
+  const out = { countries: ['ID'], ageMin: 18, ageMax: 55, gender: 0, interests: [] };
+
+  const countries = { indonesia: 'ID', malaysia: 'MY', singapura: 'SG', singapore: 'SG', filipina: 'PH', thailand: 'TH', vietnam: 'VN', australia: 'AU', amerika: 'US', usa: 'US', 'united states': 'US', inggris: 'GB', jerman: 'DE', belanda: 'NL' };
+  for (const [name, code] of Object.entries(countries)) {
+    if (lower.includes(name)) { out.countries = [code]; break; }
+  }
+  const codeMatch = lower.match(/\bcountry\s*:\s*([a-z]{2})\b/) || lower.match(/\bnegara\s*:\s*([a-z]{2})\b/);
+  if (codeMatch) out.countries = [codeMatch[1].toUpperCase()];
+
+  const ageMatch = lower.match(/(\d{1,2})\s*[-–—~sampai]+\s*(\d{1,2})/) || lower.match(/umur\s*(\d{1,2})/) || lower.match(/usia\s*(\d{1,2})/) || lower.match(/age\s*:\s*(\d{1,2})\s*-\s*(\d{1,2})/);
+  if (ageMatch) {
+    const a = parseInt(ageMatch[1], 10);
+    const b = parseInt(ageMatch[2] || ageMatch[1], 10);
+    if (Number.isFinite(a)) out.ageMin = Math.max(13, Math.min(65, a));
+    if (Number.isFinite(b)) out.ageMax = Math.max(out.ageMin, Math.min(65, b));
+  }
+
+  if (/(cewek|wanita|perempuan|female|girls?|ibu-ibu)\b/.test(lower)) out.gender = 2;
+  else if (/(cowok|pria|laki|male|boys?|bapak-bapak)\b/.test(lower)) out.gender = 1;
+  else out.gender = 0;
+
+  const interestMatch = text.match(/(?:suka|minat|interests?\s*:|tertarik)\s*(.+)$/i);
+  const interestSrc = interestMatch ? interestMatch[1] : null;
+  if (interestSrc) {
+    out.interests = interestSrc.split(/[,;]| dan | & | \+ /i).map(s => s.trim()).filter(s => s.length > 1).slice(0, 8);
+  }
+  return out;
+}
 
 function getAllMetaTokens(ctx) {
   const repo = ctx.deps?.repos?.platformAccountsRepo;
@@ -89,11 +131,22 @@ async function showConfirmScreen(ctx) {
   else if (source === 'manual') mediaInfo = `Post ${d.postId || '(pending)'}`;
   else if (source === 'skip') mediaInfo = 'AI-generated';
   else if (source === 'custom') { const cr = ctx.wizard.state.creative || {}; mediaInfo = `Custom ${ctx.wizard.state.creativeType} - ${cr.headline || '...'}`; }
-  const summary = `CONFIRMATION\n\nAccount: ${esc((ctx.wizard.state.accounts || []).find(a => a.id === d.accountId)?.name || d.accountId)}\nObjective: ${esc(OBJECTIVES.find(o => o.id === d.objective)?.label || d.objective)}\nName: ${esc(d.name)}\nBudget: ${fmtRp(d.dailyBudget)}/day\nCountry: ${(targeting.countries || ['ID']).join(', ')}\nAge: ${targeting.ageMin || 18}-${targeting.ageMax || 55}\nGender: ${targeting.gender === 1 ? 'Male' : targeting.gender === 2 ? 'Female' : 'All'}\nInterests: ${(targeting.interests || []).join(', ') || 'None'}\nCreative: ${mediaInfo}\n\nStatus: PAUSED (safe to review)`;
-  await ctx.reply(summary, { reply_markup: { inline_keyboard: [
-    [{ text: 'Create Campaign', callback_data: 'create:go' }],
-    [{ text: 'Back', callback_data: 'create:back' }],
-    [{ text: 'Cancel', callback_data: 'create:cancel' }],
+  const genderLabel = targeting.gender === 1 ? 'Cowok' : targeting.gender === 2 ? 'Cewek' : 'Semua';
+  const summary =
+    `📋 <b>Cek dulu sebelum tayang — benerin yang salah tinggal pencet tombolnya:</b>\n\n` +
+    `🏢 Akun: ${esc((ctx.wizard.state.accounts || []).find(a => a.id === d.accountId)?.name || d.accountId)}\n` +
+    `🎯 Tujuan: ${esc(OBJECTIVES.find(o => o.id === d.objective)?.label || d.objective)}\n` +
+    `📝 Nama: ${esc(d.name)}\n` +
+    `💰 Budget: <b>${fmtRp(d.dailyBudget)}/hari</b> (minimal Facebook ${fmtRp(MIN_DAILY_BUDGET_IDR)})\n` +
+    `👥 Target: ${(targeting.countries || ['ID']).join(', ')}, umur ${targeting.ageMin || 18}-${targeting.ageMax || 55}, ${genderLabel}` +
+    `${(targeting.interests || []).length ? `, suka ${(targeting.interests || []).join(', ')}` : ''}\n` +
+    `🎨 Iklan: ${mediaInfo}\n\n` +
+    `Status awal: <b>PAUSED</b> (aman, belum tayang — kamu aktifkan manual setelah dicek).`;
+  await ctx.reply(summary, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [
+    [{ text: '🚀 Buat Campaign', callback_data: 'create:go' }],
+    [{ text: '✏️ Ubah Budget', callback_data: 'create:edit:budget' }, { text: '👥 Ubah Target', callback_data: 'create:edit:audience' }],
+    [{ text: '📝 Ubah Nama', callback_data: 'create:edit:name' }, { text: '⬅️ Kembali', callback_data: 'create:back' }],
+    [{ text: '❌ Batal', callback_data: 'create:cancel' }],
   ] } });
   ctx.wizard.state.confirmShown = true;
 }
@@ -144,39 +197,87 @@ export const createCampaignScene = new Scenes.WizardScene(
   // Step 4: Name -> budget
   async (ctx) => {
     const text = (ctx.message?.text || '').trim();
-    if (!text || text.length > 80 || text === '/skip') { await ctx.reply('Name must be 1-80 characters. Try again:'); return; }
+    if (!text || text.length > 80 || text === '/skip') { await ctx.reply('Kasih nama campaign dulu ya (1-80 karakter), contoh: "Promo Lebaran 2025".'); return; }
     ctx.wizard.state.data.name = text;
-    await ctx.reply('Enter daily budget in Rupiah (min Rp 10,000):', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
+    await ctx.reply(
+      '💰 <b>Berapa budget harian campaign ini?</b>\n\n' +
+      'Ketik angka Rupiah aja, contoh: <b>50000</b> (artinya Rp 50.000/hari).\n' +
+      `Minimal dari Facebook: <b>${fmtRp(MIN_DAILY_BUDGET_IDR)}/hari</b> — kalau di bawah itu iklanmu nggak jalan.`,
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
+    );
     return ctx.wizard.next();
   },
-  // Step 5: Budget -> audience
+  // Step 5: Budget -> audience (edit anggaran bisa dari tombol ✏️ di layar konfirmasi)
   async (ctx) => {
     const budget = parseInt((ctx.message?.text || '').replace(/[^\d]/g, ''), 10);
-    if (!Number.isFinite(budget) || budget < 10000) { await ctx.reply('Minimum budget is Rp 10,000. Try again:'); return; }
+    if (!Number.isFinite(budget) || budget < MIN_DAILY_BUDGET_IDR) {
+      await ctx.reply(
+        `⚠️ Budget minimal ${fmtRp(MIN_DAILY_BUDGET_IDR)}/hari (aturan Facebook). ` +
+        `Ketik ulang angkanya, contoh: <b>50000</b>.`,
+        { parse_mode: 'HTML' }
+      );
+      return;
+    }
     ctx.wizard.state.data.dailyBudget = budget;
-    await ctx.reply('Send audience targeting (Country: ID\\nAge: 18-45\\nGender: all\\nInterests: fashion, beauty) or /skip:', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
+    await ctx.reply(
+      '👥 <b>Siapa yang mau kamu jangkau dengan iklan ini?</b>\n\n' +
+      'Cukup balas dengan <b>bahasa santai</b>, contoh:\n' +
+      '<i>"Indonesia, umur 20-35, cewek, suka fashion dan skincare"</i>\n\n' +
+      'Yang bot butuhkan: <b>negara</b>, <b>umur</b> (misal 20-35), <b>gender</b> (cowok/cewek/semua), ' +
+      'dan <b>minat</b> (opsional, misal fashion, kuliner).\n' +
+      'Nggak mau ribet? Ketik /skip — nanti default <b>Indonesia, 18-55, semua gender</b>.',
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
+    );
     return ctx.wizard.next();
   },
-  // Step 6: Audience -> creative source picker
+  // Step 6: Audience -> creative source picker (parse bahasa bebas, bukan format kaku)
   async (ctx) => {
     const text = (ctx.message?.text || '').trim();
     if (text !== '/skip') {
-      const lines = text.split('\n').reduce((acc, line) => { const [k,...v] = line.split(':'); if (k && v.length) acc[k.trim().toLowerCase()] = v.join(':').trim(); return acc; }, {});
-      ctx.wizard.state.data.targeting = { countries: lines.country ? [lines.country.toUpperCase()] : ['ID'], ageMin: parseInt(lines.age?.split('-')[0]) || 18, ageMax: parseInt(lines.age?.split('-')[1]) || 55, gender: lines.gender === 'male' ? 1 : lines.gender === 'female' ? 2 : 0, interests: lines.interests ? lines.interests.split(',').map(s => s.trim()) : [] };
+      ctx.wizard.state.data.targeting = parseAudienceText(text);
     } else {
       ctx.wizard.state.data.targeting = { countries: ['ID'], ageMin: 18, ageMax: 55, gender: 0, interests: [] };
     }
     await sendCreativePicker(ctx);
     return ctx.wizard.next();
   },
-  // Step 7: Creative handler
+  // Step 7: Creative handler (juga menampung jawaban mode edit dari layar konfirmasi)
   async (ctx) => {
+    const st = ctx.wizard.state;
+    const text = (ctx.message?.text || '').trim();
+    if (st.editingBudget) {
+      const budget = parseInt((text || '').replace(/[^\d]/g, ''), 10);
+      if (!Number.isFinite(budget) || budget < MIN_DAILY_BUDGET_IDR) {
+        await ctx.reply(
+          `⚠️ Budget minimal ${fmtRp(MIN_DAILY_BUDGET_IDR)}/hari (aturan Facebook). Ketik ulang angkanya, contoh: <b>50000</b>.`,
+          { parse_mode: 'HTML' }
+        );
+        return;
+      }
+      st.data.dailyBudget = budget;
+      st.editingBudget = false;
+      st.confirmShown = false;
+      await ctx.reply(`✅ Budget diubah jadi <b>${fmtRp(budget)}/hari</b>.`, { parse_mode: 'HTML' });
+      return showConfirmScreen(ctx);
+    }
+    if (st.editingName) {
+      if (!text || text.length > 80) { await ctx.reply('Nama campaign 1-80 karakter. Ketik ulang ya.'); return; }
+      st.data.name = text;
+      st.editingName = false;
+      st.confirmShown = false;
+      return showConfirmScreen(ctx);
+    }
+    if (st.editingAudience) {
+      st.data.targeting = text !== '/skip' ? parseAudienceText(text) : { countries: ['ID'], ageMin: 18, ageMax: 55, gender: 0, interests: [] };
+      st.editingAudience = false;
+      st.confirmShown = false;
+      return showConfirmScreen(ctx);
+    }
     const source = ctx.wizard.state.creativeSource;
     if (source === 'manual' && !ctx.wizard.state.data.postId) {
-      const text = (ctx.message?.text || '').trim();
       if (text !== '/skip') {
         const postId = text.replace(/[^0-9]/g, '');
-        if (!postId || postId.length < 5) { await ctx.reply('Invalid Post ID. Try again.'); return; }
+        if (!postId || postId.length < 5) { await ctx.reply('ID postingan-nya kurang bener. Cek lagi ya (minimal 5 angka).'); return; }
         ctx.wizard.state.data.postId = postId;
         return showConfirmScreen(ctx);
       }
@@ -362,6 +463,40 @@ createCampaignScene.action(/^create:back$/, async (ctx) => {
   return ctx.wizard.selectStep(7);
 });
 
+// Action: Edit budget langsung dari layar konfirmasi — user salah input angka
+// (misal di bawah minimal Facebook Rp17.715) tidak perlu ulang dari awal.
+createCampaignScene.action(/^create:edit:budget$/, async (ctx) => {
+  await ctx.answerCbQuery();
+  ctx.wizard.state.editingBudget = true;
+  ctx.wizard.state.confirmShown = false;
+  await ctx.reply(
+    `💰 <b>Ubah budget harian</b> (sekarang: <b>${fmtRp(ctx.wizard.state.data.dailyBudget)}</b>)\n\n` +
+    `Ketik angka baru, contoh: <b>50000</b>. Minimal Facebook: <b>${fmtRp(MIN_DAILY_BUDGET_IDR)}/hari</b>.`,
+    { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
+  );
+});
+
+// Action: Edit nama campaign dari layar konfirmasi.
+createCampaignScene.action(/^create:edit:name$/, async (ctx) => {
+  await ctx.answerCbQuery();
+  ctx.wizard.state.editingName = true;
+  ctx.wizard.state.confirmShown = false;
+  await ctx.reply('📝 <b>Ketik nama campaign yang baru</b> (1-80 karakter):', { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
+});
+
+// Action: Edit target audience dari layar konfirmasi.
+createCampaignScene.action(/^create:edit:audience$/, async (ctx) => {
+  await ctx.answerCbQuery();
+  ctx.wizard.state.editingAudience = true;
+  ctx.wizard.state.confirmShown = false;
+  await ctx.reply(
+    '👥 <b>Ubah target iklanmu</b> — balas dengan bahasa santai, contoh:\n' +
+    '<i>"Indonesia, umur 20-35, cewek, suka fashion"</i>\n' +
+    'atau ketik /skip buat default (Indonesia, 18-55, semua gender).',
+    { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
+  );
+});
+
 // Action: BM picker
 createCampaignScene.action(/^create:bm:(.+)$/, async (ctx) => {
   await ctx.answerCbQuery();
@@ -506,13 +641,28 @@ async function handleCreateGo(ctx) {
   } catch (err) {
     log.error('create campaign failed', { userId: ctx.userId, error: err.message });
     const metaErr = err.data?.error || {};
-    const raw = `${err.message || ''} ${metaErr.error_user_msg || ''}`.toLowerCase();
+    const fullRaw = `${err.message || ''} ${metaErr.error_user_msg || ''} ${metaErr.message || ''}`;
+    const raw = fullRaw.toLowerCase();
     // 1885183 means an app in development mode is involved — either ours, or the
     // app that published the SOURCE POST. The second case cannot be fixed by
     // toggling our own app, so keep it a separate, accurate message.
     const isDevMode = metaErr.error_subcode === 1885183
       || (raw.includes('mode') && (raw.includes('perkembangan') || raw.includes('pengembangan') || raw.includes('development')));
+    // Anggaran di bawah lantai Meta (user lapor: "minimal harus lebih dari Rp17.715").
+    // Jangan suruh ulang dari awal — tawarkan edit langsung, state wizard tetap hidup.
+    const isBudgetFloor = /17[.,]?715|minimum.*budget|budget.*minimum|daily budget|anggaran.*minimal|minimal.*anggaran/i.test(fullRaw);
     // Both locales say the material was "created by an app": ID "postingan ... dibuat oleh aplikasi", EN "created by an app".
+    if (isBudgetFloor) {
+      ctx.wizard.state.editingBudget = true;
+      ctx.wizard.state.confirmShown = false;
+      await ctx.reply(
+        `⚠️ <b>Anggaranmu di bawah minimal Facebook</b> (sekarang ${fmtRp(d.dailyBudget)}/hari, minimal ${fmtRp(MIN_DAILY_BUDGET_IDR)}/hari).\n\n` +
+        `Tenang, campaign-mu <b>belum dibuat</b> dan datanya aman. Ketik angka baru aja, contoh: <b>50000</b> — ` +
+        `nanti bot langsung lanjut ke layar konfirmasi, nggak perlu ulang dari awal.`,
+        { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
+      );
+      return;
+    }
     if (isDevMode && /postingan|created by an app/.test(raw)) {
       await ctx.reply('Creative failed: the app that published that post is still in development mode, so Meta will not accept it as ad material. Repost it with a Live app (or pick another post), then add the creative from Creative Library.');
     } else if (isDevMode) {

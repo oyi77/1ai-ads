@@ -5,6 +5,7 @@
  */
 import { Scenes } from 'telegraf';
 import { verifyMetaTokenApp } from '../../services/meta-connection.js';
+import { MetaAdsAPI } from '../../services/meta/index.js';
 import { createLogger } from '../../lib/logger.js';
 import config from '../../config/index.js';
 import { sanitizeAccessToken } from '../../lib/token-sanitize.js';
@@ -137,9 +138,24 @@ export const connectScene = new Scenes.WizardScene(
         platform,
         accountId: created?.id,
       });
+      // Ceritakan ke pemula: token ini kebaca berapa akun iklan (live check, best-effort).
+      let foundNote = '';
+      if (platform === 'meta') {
+        try {
+          const live = await MetaAdsAPI.withToken(token).getAdAccounts();
+          foundNote = live.length > 0
+            ? `\n\n🎉 Token kamu kebaca <b>${live.length} akun iklan</b>: ${live.slice(0, 3).map(a => escapeHtml(a.name || a.id)).join(', ')}${live.length > 3 ? `, dan ${live.length - 3} lainnya` : ''}.`
+            : `\n\n📭 Token valid, tapi <b>belum ada akun iklan yang kebaca</b> dari token ini.`;
+        } catch { /* live check best-effort — pesan sukses tetap terkirim */ }
+      }
       await ctx.reply(
-        `✅ <b>${escapeHtml(accountName)}</b> connected for ${escapeHtml(PLATFORM_NAMES[platform] || platform)}!\n\n` +
-        'You can manage this account from the web dashboard or /status.',
+        `✅ <b>${escapeHtml(accountName)}</b> berhasil dihubungkan untuk ${escapeHtml(PLATFORM_NAMES[platform] || platform)}!` +
+        foundNote +
+        `\n\n💡 <b>Kok akun saya yang lain belum muncul?</b>\n` +
+        `Bot hanya membaca akun iklan yang <b>token-nya terhubung</b> — biasanya semua akun dalam <b>1 Business Manager yang sama</b>.\n` +
+        `Caranya: buka <b>Business Manager → Business Settings → Ad Accounts</b>, pastikan akunnya ada di BM itu, ` +
+        `lalu hubungkan token dari BM yang sama via /status → ➕ Tambah Akun.` +
+        `\n\nLihat ringkasannya di /status.`,
         { parse_mode: 'HTML' }
       );
     } catch (err) {
