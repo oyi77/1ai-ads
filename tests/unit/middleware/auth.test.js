@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
+import crypto from 'crypto';
 import { requireAuth } from '../../../server/middleware/auth.js';
 import { generateToken } from '../../../server/lib/auth.js';
 import { AuthError } from '../../../server/lib/errors.js';
-
 function mockReqRes(authHeader) {
   const req = { headers: {} };
   if (authHeader) req.headers.authorization = authHeader;
@@ -83,5 +83,54 @@ describe('requireAuth middleware', () => {
 
     requireAuth(req, res, next);
     expect(next).toHaveBeenCalled();
+  });
+});
+
+describe('requireAuth with x-api-key', () => {
+  const hash = (s) => crypto.createHash('sha256').update(s).digest('hex');
+
+  function keyReq(key, row) {
+    return {
+      headers: { 'x-api-key': key },
+      app: { locals: { paymentsRepo: {
+        findApiKeyByHash: (h) => (h === hash('good-key') ? row : null),
+        updateApiKeyLastUsed: () => {},
+      } } },
+    };
+  }
+
+  const res = () => {
+    const r = { statusCode: null, body: null,
+      status(code) { this.statusCode = code; return this; },
+      json(data) { this.body = data; return this; } };
+    return r;
+  };
+
+  it('authenticates a valid key and stamps last-used', () => {
+    const stamped = [];
+    const req = keyReq('good-key', { id: 'k1', user_id: 'u9', scopes: '["campaigns:read"]', revoked_at: null, expires_at: null });
+    req.app.locals.paymentsRepo.updateApiKeyLastUsed = (id) => stamped.push(id);
+    const next = vi.fn();
+    requireAuth(req, res(), next);
+    expect(next).toHaveBeenCalled();
+    expect(req.user).toEqual({ id: 'u9', apiKeyId: 'k1', scopes: ['campaigns:read'] });
+    expect(stamped).toEqual(['k1']);
+  });
+
+  it('rejects unknown key with 401', () => {
+    const r = res();
+    requireAuth(keyReq('bad-key', null), r, vi.fn());
+    expect(r.statusCode).toBe(401);
+  });
+
+  it('rejects revoked and expired keys with 401', () => {
+    for (const row of [
+      { id: 'k2', user_id: 'u9', scopes: '[]', revoked_at: '2026-01-01', expires_at: null },
+      { id: 'k3', user_id: 'u9', scopes: '[]', revoked_at: null, expires_at: '2020-01-01' },
+    ]) {
+      const r = res();
+      requireAuth(keyReq('good-key', row), r, vi.fn());
+      expect(r.statusCode).toBe(401);
+    }
   });
 });

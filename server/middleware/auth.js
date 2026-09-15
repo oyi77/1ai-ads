@@ -1,9 +1,18 @@
+import crypto from 'crypto';
 import { verifyToken } from '../lib/auth.js';
 import { AuthError } from '../lib/errors.js';
 import { ACCESS_COOKIE } from '../lib/auth-cookies.js';
+import { createLogger } from '../lib/logger.js';
 
+const log = createLogger('auth');
 export function requireAuth(req, res, next) {
-  // 1. httpOnly access cookie (SPA — tokens never touch localStorage).
+  // 0. API key (external developers): x-api-key → api_keys table. Checked
+  // first so key callers never need cookies/JWT. No header → session path
+  // below, byte-identical behavior for SPA/bot/service callers.
+  const apiKey = req.headers['x-api-key'];
+  if (typeof apiKey === 'string' && apiKey.length > 0) {
+    return requireApiKey(req, res, next);
+  }
   let token = req.cookies?.[ACCESS_COOKIE];
   // 2. Fallback to Bearer header (API clients, service-to-service, backward compat).
   if (!token) {
@@ -27,6 +36,51 @@ export function requireAuth(req, res, next) {
     next();
   } catch {
     throw new AuthError('Invalid or expired token');
+  }
+}
+
+/**
+ * API-key auth for external developers (x-api-key header).
+ * Resolves paymentsRepo from app.locals (wired in server/app.js).
+ * Scopes are recorded at mint time but NOT enforced per-route in v1 — a key
+ * authenticates as its owner with the owner's full permissions.
+ */
+export function requireApiKey(req, res, next) {
+  const raw = req.headers['x-api-key'];
+  // paymentsRepo is exposed directly on app.locals (server/app.js); the
+  // _services bag holds services, not repos.
+  const paymentsRepo = req.app?.locals?.paymentsRepo;
+  if (!paymentsRepo?.findApiKeyByHash) {
+    return res.status(500).json({ success: false, error: 'Internal Server Error' });
+  }
+  try {
+    const hash = crypto.createHash('sha256').update(String(raw)).digest('hex');
+    const row = paymentsRepo.findApiKeyByHash(hash);
+    if (!row) return res.status(401).json({ success: false, error: 'Invalid API key' });
+    if (row.revoked_at) return res.status(401).json({ success: false, error: 'API key revoked' });
+    if (row.expires_at && new Date(row.expires_at) < new Date()) {
+      return res.status(401).json({ success: false, error: 'API key expired' });
+    }
+    try {
+      paymentsRepo.updateApiKeyLastUsed(row.id);
+    } catch (err) {
+      log.warn('api-key last-used stamp failed', { keyId: row.id, error: err.message });
+    }
+    req.user = { id: row.user_id, apiKeyId: row.id, scopes: safeScopes(row.scopes) };
+    req.apiKey = row;
+    return next();
+  } catch (err) {
+    log.error('API key auth failed', { error: err.message });
+    return res.status(500).json({ success: false, error: 'Internal Server Error' });
+  }
+}
+
+function safeScopes(raw) {
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
 }
 
