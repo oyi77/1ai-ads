@@ -41,7 +41,7 @@ describe('handlePlatformAction scope shapes', () => {
     const deps = { repos: { platformAccountsRepo: repoWith([ROW]) } };
     await handlePlatformAction(ctx, deps, 'meta:manage');
     expect(ctx.replies).toHaveLength(1);
-    expect(ctx.replies[0].text).toMatch(/META Accounts/);
+    expect(ctx.replies[0].text).toMatch(/Akun META/);
   });
 
   it('4-segment account scope renders the detail screen for the owner', async () => {
@@ -61,7 +61,7 @@ describe('handlePlatformAction scope shapes', () => {
     const deps = { repos: { platformAccountsRepo: repoWith([ROW]) } };
     await handlePlatformAction(ctx, deps, 'platform:account:meta:acc-1');
     expect(ctx.replies).toHaveLength(1);
-    expect(ctx.replies[0].text).toMatch(/not found/);
+    expect(ctx.replies[0].text).toMatch(/nggak ketemu/);
   });
 
   it('2-segment connect scope enters the connect scene', async () => {

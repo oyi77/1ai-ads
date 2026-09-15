@@ -31,8 +31,8 @@ export function handleStart() {
         '🚀 <b>Mulai dalam 3 langkah gampang:</b>\n' +
         '1️⃣ Hubungkan akun iklanmu (pencet tombol 🔗 di bawah)\n' +
         '2️⃣ Lihat ringkasannya di 📊 Dashboard\n' +
-        '3️⃣ Bikin iklan pertama via 🎯 Create Campaign\n\n' +
-        'Pencet tombol <b>🔗 Connect Account</b> di bawah buat mulai!';
+        '3️⃣ Bikin iklan pertama via 🎯 Buat Campaign\n\n' +
+        'Pencet tombol <b>🔗 Connect Account</b> di bawah buat mulai — atau 🎮 Mode Demo di Dashboard kalau mau jalan-jalan dulu!';
       keyboard.inline_keyboard.unshift([
         { text: '🔗 Connect Account', callback_data: 'menu:connect' },
       ]);
@@ -40,7 +40,7 @@ export function handleStart() {
       message = `👋 <b>Halo lagi, ${esc(name)}!</b>\n\n` +
         '✅ Akun iklan sudah terhubung\n' +
         '📭 Belum ada campaign yang kesimpen\n\n' +
-        'Pencet <b>🎯 Create Campaign</b> buat bikin iklan pertamamu, atau <b>📣 Ads Manager</b> buat tarik data dari Meta.';
+        'Pencet <b>🎯 Buat Campaign</b> buat bikin iklan pertamamu, atau buka <b>🛠️ Kelola Iklan → 📣 Ads Manager</b> buat tarik data dari Meta.';
     } else {
       message = `👋 <b>Halo lagi, ${esc(name)}!</b>\n\n` +
         `📊 ${campaignCount} campaign kesimpen\n` +

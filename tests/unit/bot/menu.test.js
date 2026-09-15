@@ -130,7 +130,7 @@ describe('menu:optimize — AI Optimization (P3)', () => {
     await handleMenuButton(deps)(ctx);
 
     expect(ctx._replies).toHaveLength(1);
-    expect(ctx._replies[0].msg).toContain('Tidak ada kampanye Meta aktif');
+    expect(ctx._replies[0].msg).toContain('nggak ada campaign aktif');
     expect(deps.services.draftService.guardAutonomousChange).not.toHaveBeenCalled();
   });
 
@@ -151,7 +151,7 @@ describe('menu:optimize — AI Optimization (P3)', () => {
   it('does not throw when deps is empty and replies with the friendly empty message', async () => {
     await expect(handleMenuButton({})(ctx)).resolves.toBeDefined();
     expect(ctx._replies).toHaveLength(1);
-    expect(ctx._replies[0].msg).toContain('Tidak ada kampanye Meta aktif');
+    expect(ctx._replies[0].msg).toContain('nggak ada campaign aktif');
   });
 
   it('replies with a generic failure message when the guard throws', async () => {
@@ -377,7 +377,7 @@ describe('menu:optimize — AI Optimization (P3)', () => {
 
     await handleMenuButton(deps)(bareCtx);
 
-    expect(bareCtx._replies[0].msg).toBe('🔄 Loading your Meta ad accounts…');
+    expect(bareCtx._replies[0].msg).toBe('🔄 Lagi ngambil daftar akun iklan Meta-mu…');
     expect(bareCtx._replies[1].msg).toContain('pilih akun iklan yang mau dioptimalkan');
     expect(bareCtx._replies[1].opts.reply_markup.inline_keyboard[0][0]).toEqual({
       text: '⚙️ Acc One (acc1)',

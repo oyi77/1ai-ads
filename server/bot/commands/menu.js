@@ -114,7 +114,7 @@ export function handleMenuButton(deps) {
       case 'help':
         return handleHelp()(ctx);
       default:
-        return ctx.reply('Unknown option. Use /menu to see available options.');
+        return ctx.reply('⚠️ Nggak kenal pilihan itu. Buka /menu buat lihat pilihan yang ada.');
     }
   };
 }
@@ -154,16 +154,16 @@ async function handleOptimizeAction(ctx, deps, scope) {
 
     let accounts;
     try {
-      await ctx.reply('🔄 Loading your Meta ad accounts…');
+      await ctx.reply('🔄 Lagi ngambil daftar akun iklan Meta-mu…');
       accounts = await api.getAdAccounts();
     } catch (e) {
       return ctx.reply(isExpiredToken(e)
-        ? '🔑 Sesi Meta kamu sudah kedaluwarsa. Hubungkan ulang via /start.'
-        : '⚠️ Gagal memuat daftar akun.');
+        ? '🔑 Sesi Meta-mu kedaluwarsa. Hubungkan ulang via /status → ➕ Tambah Akun.'
+        : '⚠️ Gagal memuat daftar akun. Coba lagi nanti.');
     }
 
     if (!accounts || accounts.length === 0) {
-      return ctx.reply('✅ Terhubung, tapi tidak ada akun iklan ditemukan untuk token ini.');
+      return ctx.reply('📭 <b>Token terhubung tapi nggak ada akun iklan yang kebaca.</b>\n\nCek Business Manager-mu, atau hubungkan token dari BM yang sama.', { parse_mode: 'HTML' });
     }
 
     return ctx.reply(
@@ -191,23 +191,23 @@ async function handleOptimizeAction(ctx, deps, scope) {
       campaigns = (result.data || []).filter(c => c.platform === 'meta' && isActiveStatus(c.status));
     } else {
       const acct = getUserMetaAccount(ctx, deps);
-      if (!acct) return ctx.reply('🔌 Connect a Meta account first via /start.');
+      if (!acct) return ctx.reply('🔌 Belum ada akun Meta terhubung. Hubungkan dulu via /status → ➕ Tambah Akun.');
       const { api } = await makeApi(ctx, deps);
-      if (!api) return ctx.reply('🔌 Connect a Meta account first via /start.');
+      if (!api) return ctx.reply('🔌 Belum ada akun Meta terhubung. Hubungkan dulu via /status → ➕ Tambah Akun.');
 
       let live;
       try {
         live = await api.getCampaigns(scope);
       } catch (e) {
         return ctx.reply(isExpiredToken(e)
-          ? '🔑 Sesi Meta kamu sudah kedaluwarsa. Hubungkan ulang via /start.'
-          : '⚠️ Gagal memuat kampanye akun ini.');
+          ? '🔑 Sesi Meta-mu kedaluwarsa. Hubungkan ulang via /status → ➕ Tambah Akun.'
+          : '⚠️ Gagal memuat campaign akun ini. Coba lagi nanti.');
       }
       const active = (live || []).filter(c => c.status === 'active');
       if (active.length === 0) {
         return ctx.reply(
-          '🤖 <b>AI Optimization</b>\n\nTidak ada kampanye Meta aktif untuk dioptimalkan.',
-          { parse_mode: 'HTML' }
+          '🤖 <b>Saran AI</b>\n\nAkun ini lagi nggak ada campaign aktif yang bisa dioptimalkan.',
+          { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
         );
       }
       const insights = await api.getMultiCampaignInsights(active.map(c => c.id), { datePreset: 'last_30d', accountId: scope });
@@ -229,14 +229,16 @@ async function handleOptimizeAction(ctx, deps, scope) {
 
     if (campaigns.length === 0) {
       return ctx.reply(
-        '🤖 <b>AI Optimization</b>\n\nTidak ada kampanye Meta aktif untuk dioptimalkan.',
-        { parse_mode: 'HTML' }
+        '🤖 <b>Saran AI</b>\n\nLagi nggak ada campaign aktif yang bisa dioptimalkan.',
+        { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
       );
     }
 
     return await runOptimize(ctx, deps, campaigns);
   } catch {
-    return ctx.reply('⚠️ Gagal memproses optimasi. Coba lagi nanti.');
+    return ctx.reply('⚠️ Gagal memproses optimasi. Coba lagi nanti.', {
+      reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+    });
   }
 }
 
@@ -413,7 +415,7 @@ async function handlePlatforms(ctx, deps) {
     // Note: ctx.answerCbQuery() already called by handleMenuButton
     const keyboard = await buildPlatformKeyboard(deps, ctx.userId);
     await ctx.reply(
-      '🌐 <b>Platforms</b>\n\nConnect or manage your ad platforms:',
+      '🌐 <b>Platform Iklan</b>\n\nHubungkan atau atur platform iklanmu (✅ = sudah terhubung):',
       {
         parse_mode: 'HTML',
         reply_markup: {
@@ -426,7 +428,7 @@ async function handlePlatforms(ctx, deps) {
     );
   } catch (err) {
     log.error('handlePlatforms failed', { error: err.message });
-    await ctx.reply('⚠️ Failed to load platforms. Try /menu again.', {
+    await ctx.reply('⚠️ Gagal memuat platform. Coba /menu lagi ya.', {
       reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
     });
   }
@@ -449,13 +451,14 @@ export async function handlePlatformAction(ctx, deps, scope) {
     if (action === 'manage') {
       const accounts = await buildPlatformAccountKeyboard(deps, ctx.userId, platform);
       await ctx.reply(
-        `🌐 <b>${esc(platform.toUpperCase())} Accounts</b>\n\nSelect an account to manage:`,
+        `🌐 <b>Akun ${esc(platform.toUpperCase())}</b>\n\nPencet akun buat ngaturnya:`,
         {
           parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [
               ...accounts,
-              [{ text: '⬅️ Back to Platforms', callback_data: 'menu:platforms' }],
+              [{ text: '⬅️ Kembali ke Platform', callback_data: 'menu:platforms' }],
+              [{ text: '📋 Menu', callback_data: 'quick:menu' }],
             ],
           },
         }
@@ -467,11 +470,11 @@ export async function handlePlatformAction(ctx, deps, scope) {
       const repo = deps?.repos?.platformAccountsRepo;
       const row = accountId && repo ? repo.findById(accountId) : null;
       if (!row || row.user_id !== ctx.userId) {
-        return ctx.reply('⚠️ Connection not found.', {
-          reply_markup: { inline_keyboard: [[{ text: '⬅️ Back', callback_data: `platform:${platform}:manage` }]] },
+        return ctx.reply('⚠️ Koneksi nggak ketemu.', {
+          reply_markup: { inline_keyboard: [[{ text: '⬅️ Kembali', callback_data: `platform:${platform}:manage` }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
         });
       }
-      const status = row.is_active ? '✅ Active' : '⏸ Paused';
+      const status = row.is_active ? '✅ Aktif' : '⏸ Nonaktif';
       const health = row.health_status || 'unknown';
       const adAcct = row.credentials?.ad_account_id || row.credentials?.fb_account_id || '—';
       const lines = [
@@ -486,8 +489,9 @@ export async function handlePlatformAction(ctx, deps, scope) {
         parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
-            [{ text: row.is_active ? '🔌 Disconnect' : '🗑 Remove', callback_data: `ads:disconnect:${row.id}` }],
-            [{ text: '⬅️ Back', callback_data: `platform:${platform}:manage` }],
+            [{ text: row.is_active ? '🔌 Putuskan' : '🗑 Hapus', callback_data: `ads:disconnect:${row.id}` }],
+            [{ text: '⬅️ Kembali', callback_data: `platform:${platform}:manage` }],
+            [{ text: '📋 Menu', callback_data: 'quick:menu' }],
           ],
         },
       });

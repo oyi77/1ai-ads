@@ -137,29 +137,37 @@ async function showPlatformAccounts(ctx, deps, platform) {
   const { api } = await makeApi(ctx, deps, platform);
   if (!api) {
     return ctx.reply(
-      `⚠️ <b>${platform.toUpperCase()} API not yet available in the bot.</b>\n\nUse the dashboard for now:`,
+      `🔌 <b>Belum ada koneksi ${platform.toUpperCase()}.</b>\n\nHubungkan dulu biar bisa kelola akun iklanmu:`,
       {
         parse_mode: 'HTML',
         reply_markup: {
-          inline_keyboard: [[{ text: '🌐 Open Dashboard', url: BACKEND }]],
+          inline_keyboard: [
+            [{ text: '📊 Buka Dashboard', callback_data: 'menu:status' }],
+            [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+          ],
         },
       }
     );
   }
 
-  await ctx.reply(`🔄 Loading your ${platform.toUpperCase()} ad accounts…`);
+  await ctx.reply(`🔄 Lagi ngambil daftar akun iklan ${platform.toUpperCase()}-mu…`);
   try {
     const accounts = await api.getAdAccounts();
     if (!accounts.length) {
-      return ctx.reply(`✅ Connected, but no ad accounts were found for this token. Add an ad account in ${platform.toUpperCase()} and retry.`);
+      return ctx.reply(
+        `📭 <b>Token terhubung tapi nggak ada akun iklan yang kebaca.</b>\n\nTambahkan akun iklan di ${platform.toUpperCase()} dulu, atau cek Business Manager-mu, lalu coba lagi.`,
+        { reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+      );
     }
     await replyAccountList(ctx, accounts, 1, platform);
   } catch (err) {
     log.error('ads list failed', { userId: ctx.userId, platform, error: err?.message });
     if (isExpiredToken(err)) {
-      return ctx.reply('🔑 Your Meta token has expired. Reconnect via /settings.');
+      return ctx.reply('🔑 Token Meta-mu kedaluwarsa. Hubungkan ulang via /status → ➕ Tambah Akun.');
     }
-    return ctx.reply('⚠️ Could not load your ad accounts. The token may lack permission or network failed.');
+    return ctx.reply('⚠️ Gagal memuat akun iklan. Mungkin token kurang izin atau jaringan lagi bermasalah. Coba lagi nanti.', {
+      reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+    });
   }
 }
 
@@ -193,17 +201,17 @@ async function replyAccountList(ctx, accounts, page, platform = 'meta') {
   const { slice, pages, p } = pageSlice(accounts, page, ACCOUNTS_PER_PAGE);
   const start = (p - 1) * ACCOUNTS_PER_PAGE;
   const lines = slice
-    .map((a, i) => `${start + i + 1}. ${escHtml(a.name)} (${a.id}) — ${a.status === 'active' ? '✅ active' : '⏸ disabled'}`)
+    .map((a, i) => `${start + i + 1}. ${escHtml(a.name)} (${a.id}) — ${a.status === 'active' ? '✅ aktif' : '⏸ nonaktif'}`)
     .join('\n');
   return ctx.reply(
-    `📣 <b>${platform.toUpperCase()} Ad Accounts</b> (${accounts.length})\n\n${lines}\n\nTap an account to manage it.`,
+    `📣 <b>Akun Iklan ${platform.toUpperCase()}</b> (${accounts.length})\n\n${lines}\n\nPencet akun buat ngaturnya:`,
     {
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
           ...slice.map((a) => [{ text: `⚙️ ${a.name}`, callback_data: `ads:select:${platform}:${a.id}` }]),
           pagerRow(`ads:accts:${platform}`, p, pages),
-          [{ text: '📈 All Accounts Report', callback_data: `ads:report:${platform}` }],
+          [{ text: '📈 Laporan Semua Akun', callback_data: `ads:report:${platform}` }],
           [{ text: '📋 Menu', callback_data: 'quick:menu' }],
         ],
       },
@@ -214,13 +222,15 @@ async function replyAccountList(ctx, accounts, page, platform = 'meta') {
 export function handleAdsAccountsPage(deps) {
   return async (ctx, pageStr, platform = 'meta') => {
     const { api } = await makeApi(ctx, deps, platform);
-    if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first.`);
+    if (!api) return ctx.reply(`🔌 Belum ada koneksi ${platform.toUpperCase()}. Hubungkan dulu via /status → ➕ Tambah Akun.`);
     try {
       const accounts = await api.getAdAccounts();
       await replyAccountList(ctx, accounts, parseInt(pageStr, 10) || 1, platform);
     } catch (err) {
       log.error('ads accounts pager failed', { userId: ctx.userId, platform, error: err?.message });
-      return ctx.reply('⚠️ Could not load your ad accounts.');
+      return ctx.reply('⚠️ Gagal memuat akun iklan. Coba lagi nanti.', {
+        reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+      });
     }
   };
 }
@@ -229,43 +239,45 @@ export function handleAdsAccountsPage(deps) {
 export function handleAdsSelect(deps) {
   return async (ctx, platform, accountId) => {
     const { api } = await makeApi(ctx, deps, platform);
-    if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first.`);
-    await ctx.reply(`🔄 Loading campaigns for ${accountId}…`);
+    if (!api) return ctx.reply(`🔌 Belum ada koneksi ${platform.toUpperCase()}. Hubungkan dulu via /status → ➕ Tambah Akun.`);
+    await ctx.reply(`🔄 Lagi ngambil campaign buat akun ini…`);
     try {
       const campaigns = await api.getCampaigns(accountId);
       if (!campaigns.length) {
-        return ctx.reply(`📭 No campaigns in this account yet.`, {
-          reply_markup: { inline_keyboard: [[{ text: '🎯 Create Campaign', callback_data: 'menu:create' }], [{ text: '◀️ Back to accounts', callback_data: `ads:platform:${platform}` }]] },
+        return ctx.reply(`📭 <b>Belum ada campaign di akun ini.</b>\n\nBikin dulu yuk:`, {
+          parse_mode: 'HTML',
+          reply_markup: { inline_keyboard: [[{ text: '🎯 Buat Campaign', callback_data: 'menu:create' }], [{ text: '◀️ Kembali ke akun', callback_data: `ads:platform:${platform}` }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
         });
       }
       await replyCampaignList(ctx, accountId, campaigns, 1, platform);
     } catch (err) {
       log.error('ads select failed', { userId: ctx.userId, platform, accountId, error: err?.message });
-      return ctx.reply('⚠️ Could not load campaigns for this account.');
+      return ctx.reply('⚠️ Gagal memuat campaign akun ini. Coba lagi nanti.', {
+        reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+      });
     }
   };
 }
-
 async function replyCampaignList(ctx, accountId, campaigns, page, platform = 'meta') {
   const { slice, pages, p } = pageSlice(campaigns, page, CAMPAIGNS_PER_PAGE);
-  const lines = slice.map((c) => `• ${escHtml(c.name)} — ${c.status === 'active' ? '✅ ON' : '⏸ OFF'}`).join('\n');
+  const lines = slice.map((c) => `• ${escHtml(c.name)} — ${c.status === 'active' ? '✅ NYALA' : '⏸ MATI'}`).join('\n');
   return ctx.reply(
-    `⚙️ <b>Campaigns (${campaigns.length}) — ${accountId}</b>\n\n${lines}\n\nTap to toggle on/off:`,
+    `⚙️ <b>Campaign (${campaigns.length}) — ${accountId}</b>\n\n${lines}\n\nPencet buat nyalain/matiin:`,
     {
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
           ...slice.map((c) => [{
-            text: (c.status === 'active' ? '⏸ Pause ' : '▶️ Resume ') + c.name,
+            text: (c.status === 'active' ? '⏸ Matiin ' : '▶️ Nyalain ') + c.name,
             // No accountId segment: `ads:toggle:<p>:<acct>:<camp>:<mode>`
             // overflows Telegram's 64-byte cap (83 worst-case). The toggle
             // mutation needs platform+campaign+mode only; back navigates up.
             callback_data: `ads:toggle:${platform}:${c.id}:${c.status === 'active' ? 'pause' : 'resume'}`,
           }]),
           pagerRow(`ads:camps:${platform}:${accountId}`, p, pages),
-          [{ text: '📊 Report', callback_data: `ads:repacc:${platform}:${accountId}` }],
-          [{ text: '➕20%', callback_data: `ads:bud:${platform}:${accountId}:1.2` }, { text: '➖20%', callback_data: `ads:bud:${platform}:${accountId}:0.8333` }, { text: '🎯 Create', callback_data: 'menu:create' }],
-          [{ text: '◀️ Back to accounts', callback_data: `ads:platform:${platform}` }],
+          [{ text: '📊 Laporan', callback_data: `ads:repacc:${platform}:${accountId}` }],
+          [{ text: '➕20%', callback_data: `ads:bud:${platform}:${accountId}:1.2` }, { text: '➖20%', callback_data: `ads:bud:${platform}:${accountId}:0.8333` }, { text: '🎯 Buat', callback_data: 'menu:create' }],
+          [{ text: '◀️ Kembali ke akun', callback_data: `ads:platform:${platform}` }],
           [{ text: '📋 Menu', callback_data: 'quick:menu' }],
         ],
       },
@@ -276,33 +288,36 @@ async function replyCampaignList(ctx, accountId, campaigns, page, platform = 'me
 export function handleAdsCampaignsPage(deps) {
   return async (ctx, platform, accountId, pageStr) => {
     const { api } = await makeApi(ctx, deps, platform);
-    if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first.`);
+    if (!api) return ctx.reply(`🔌 Belum ada koneksi ${platform.toUpperCase()}. Hubungkan dulu via /status → ➕ Tambah Akun.`);
     try {
       const campaigns = await api.getCampaigns(accountId);
       await replyCampaignList(ctx, accountId, campaigns, parseInt(pageStr, 10) || 1, platform);
     } catch (err) {
       log.error('campaigns pager failed', { userId: ctx.userId, platform, accountId, error: err?.message });
-      return ctx.reply('⚠️ Could not load campaigns.');
+      return ctx.reply('⚠️ Gagal memuat campaign. Coba lagi nanti.', {
+        reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+      });
     }
   };
 }
-
 // ── Pause / Resume ──────────────────────────────────────────
 export function handleAdsToggle(deps) {
   return async (ctx, platform, campaignId, mode) => {
     const { api } = await makeApi(ctx, deps, platform);
-    if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first.`);
-    await ctx.reply(`🔄 ${mode === 'pause' ? 'Pausing' : 'Resuming'} campaign ${campaignId}…`);
+    if (!api) return ctx.reply(`🔌 Belum ada koneksi ${platform.toUpperCase()}. Hubungkan dulu via /status → ➕ Tambah Akun.`);
+    await ctx.reply(`🔄 Lagi ${mode === 'pause' ? 'matiin' : 'nyalain'} campaign…`);
     try {
       await api.updateCampaign(campaignId, { status: mode === 'pause' ? 'PAUSED' : 'ACTIVE' });
-      return ctx.reply(`✅ Campaign <b>${mode === 'pause' ? 'paused' : 'resumed'}</b>.`, {
+      return ctx.reply(`✅ Campaign <b>${mode === 'pause' ? 'dimatiin' : 'dinyalain'}</b>.`, {
         parse_mode: 'HTML',
-        reply_markup: { inline_keyboard: [[{ text: '⚙️ Back to campaigns', callback_data: `ads:platform:${platform}` }]] },
+        reply_markup: { inline_keyboard: [[{ text: '⚙️ Kembali ke campaign', callback_data: `ads:platform:${platform}` }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
       });
     } catch (err) {
       log.error('ads toggle failed', { userId: ctx.userId, platform, campaignId, mode, error: err?.message });
-      if (isExpiredToken(err)) return ctx.reply('🔑 Your token has expired. Reconnect via /settings.');
-      return ctx.reply('⚠️ Could not update the campaign.');
+      if (isExpiredToken(err)) return ctx.reply('🔑 Token Meta-mu kedaluwarsa. Hubungkan ulang via /status → ➕ Tambah Akun.');
+      return ctx.reply('⚠️ Gagal update campaign. Coba lagi nanti.', {
+        reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+      });
     }
   };
 }
@@ -315,7 +330,7 @@ export function handleAdsReport(deps) {
     const accountId = accountIdOrUndefined || null;
 
     const { api } = await makeApi(ctx, deps, platform);
-    if (!api) return ctx.reply(`🔌 Connect a ${platform.toUpperCase()} account first.`);
+    if (!api) return ctx.reply(`🔌 Belum ada koneksi ${platform.toUpperCase()}. Hubungkan dulu via /status → ➕ Tambah Akun.`);
 
     if (accountId) {
       // Alur baru lewat dashboard (pilih akun + periode). Jalur lama ini
@@ -337,10 +352,14 @@ export function handleAdsReport(deps) {
       );
     }
 
-    await ctx.reply('📈 Gathering your ad report…');
+    await ctx.reply('📈 Lagi ngumpulin data laporanmu…');
     try {
       const accounts = await api.getAdAccounts();
-      if (!accounts.length) return ctx.reply('📭 No ad accounts found.');
+      if (!accounts.length) {
+        return ctx.reply('📭 Nggak ada akun iklan yang kebaca dari token ini.', {
+          reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+        });
+      }
       let totalSpend = 0, totalRev = 0, totalClicks = 0, totalImpr = 0;
       const perAcct = [];
       for (const acct of accounts) {
@@ -351,20 +370,21 @@ export function handleAdsReport(deps) {
           totalRev += ins.revenue || 0;
           totalClicks += ins.clicks || 0;
           totalImpr += ins.impressions || 0;
-          perAcct.push(`• ${escHtml(acct.name)}: ${fmtCurrency(ins.spend)} spend · ${money(ins.revenue)} rev · ${ins.clicks || 0} clicks`);
+          perAcct.push(`• ${escHtml(acct.name)}: ${fmtCurrency(ins.spend)} spend · ${money(ins.revenue)} omzet · ${ins.clicks || 0} klik`);
         } catch (err) {
           log.warn('ads report acct failed', { accountId: acct.id, error: err?.message });
         }
       }
       const roas = totalSpend > 0 ? (totalRev / totalSpend).toFixed(2) : '0.00';
       const body =
-        `📊 <b>Your ${platform.toUpperCase()} Ads Report (30d)</b>\n\n` +
+        `📊 <b>Laporan ${platform.toUpperCase()} (30 hari)</b>\n\n` +
         `Total Spend: ${fmtCurrency(totalSpend)}\n` +
-        `Total Revenue: ${fmtCurrency(totalRev)}\n` +
+        `Total Omzet: ${fmtCurrency(totalRev)}\n` +
         `ROAS: ${roas}x\n` +
-        `Clicks: ${totalClicks.toLocaleString('id-ID')}\n` +
-        `Impressions: ${totalImpr.toLocaleString('id-ID')}\n\n` +
-        (perAcct.length ? `<b>Per account:</b>\n${perAcct.join('\n')}` : '');
+        `Klik: ${totalClicks.toLocaleString('id-ID')}\n` +
+        `Impresi: ${totalImpr.toLocaleString('id-ID')}\n\n` +
+        (perAcct.length ? `<b>Per akun:</b>\n${perAcct.join('\n')}` : '') +
+        `\n\n<i>Mau per akun + pilih periode (7/30/90 hari)? Lewat 📊 Dashboard aja.</i>`;
       return ctx.reply(body, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '🔄 Refresh', callback_data: `ads:report:${platform}` }], [{ text: '📊 Dashboard', callback_data: 'menu:status' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } });
     } catch (err) {
       log.error('ads report list failed', { userId: ctx.userId, platform, error: err?.message });

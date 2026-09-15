@@ -95,7 +95,7 @@ describe('per-user ads handlers (multi-platform)', () => {
     const ctx = makeCtx();
     await handleAdsSelect(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', '1181078009580337');
     const text = txt(ctx._replies[1]);
-    expect(text).toContain('Campaigns (2)');
+    expect(text).toContain('Campaign (2)');
     expect(text).toContain('Camp A');
     expect(mockGetCampaigns).toHaveBeenCalledWith('1181078009580337');
   });
@@ -104,14 +104,13 @@ describe('per-user ads handlers (multi-platform)', () => {
     const ctx = makeCtx();
     await handleAdsToggle(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', 'c1', 'pause');
     expect(mockUpdateCampaign).toHaveBeenCalledWith('c1', { status: 'PAUSED' });
-    expect(txt(ctx._replies[1])).toContain('paused');
+    expect(txt(ctx._replies[1])).toContain('dimatiin');
   });
 
   it('handleAdsToggle resumes a paused campaign', async () => {
     const ctx = makeCtx();
     await handleAdsToggle(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', 'c2', 'resume');
     expect(mockUpdateCampaign).toHaveBeenCalledWith('c2', { status: 'ACTIVE' });
-    expect(txt(ctx._replies[1])).toContain('resumed');
+    expect(txt(ctx._replies[1])).toContain('dinyalain');
   });
-
 });
