@@ -8,6 +8,7 @@ import cron from 'node-cron';
 import { createLogger } from '../../lib/logger.js';
 import config from '../../config/index.js';
 import { evaluateCondition, MAX_CONDITION_DEPTH } from '../../lib/rule-condition.js';
+import { describeRuleCondition as describeRuleConditionID } from '../../lib/rule-words.js';
 
 const log = createLogger('bot:scheduler');
 
@@ -31,12 +32,8 @@ function fmtRoas2(v) {
 
 /** Human label for a rule condition; covers every schema stored in the DB. */
 function describeCondition(condition) {
-  if (!condition || typeof condition !== 'object') return 'condition';
-  if (condition.type === 'group') return condition.logic === 'or' ? 'any condition' : 'all conditions';
-  if (Array.isArray(condition.all) || Array.isArray(condition.any)) return 'compound condition';
-  const metric = condition.metric || condition.type || 'condition';
-  const threshold = condition.value !== undefined ? condition.value : condition.threshold;
-  return `${metric} ${condition.operator ?? ''} ${threshold ?? ''}`.trim();
+  // Kalimat Bahasa Indonesia via rule-words (satu sumber dengan layar bot).
+  return describeRuleConditionID(condition);
 }
 
 /** Send a message to the admin chat; no-op when chatId missing. */

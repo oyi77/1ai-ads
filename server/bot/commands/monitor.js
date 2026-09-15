@@ -5,6 +5,7 @@ import { createLogger } from '../../lib/logger.js';
 const log = createLogger('monitor');
 import { RULE_TEMPLATES, ConditionGroup, Condition, RuleAction, OPERATORS } from '../../lib/rule-builder.js';
 import { escapeHtml as esc } from '../../lib/escape.js';
+import { describeRuleCondition, ruleAutoName, actionWord, metricLabel, operatorWord, formatRuleValue, describeFbRule } from '../../lib/rule-words.js';
 
 const MONITOR_HEADER =
   '⚡ <b>Aturan Otomatis</b>\n\n' +
@@ -52,6 +53,36 @@ export async function liveAdAccountNames(deps, userId) {
     } catch { /* token mati → skip, bukan fatal */ }
   }
   return names;
+}
+
+/**
+ * Sapu Automated Rules NATIVE Facebook per token user (read-only).
+ * Return [{ accountId, accountName, rules: [{...fb, summary}] }].
+ * Gagal per akun = skip (token mati / izin kurang), bukan fatal.
+ */
+export async function liveFbRules(deps, userId) {
+  const out = [];
+  const seenTokens = new Set();
+  for (const row of metaAccounts(deps, userId)) {
+    const token = row.credentials?.access_token || row.access_token;
+    if (!token || seenTokens.has(token)) continue;
+    seenTokens.add(token);
+    let api = null;
+    try {
+      api = MetaAdsAPI.withToken(token);
+    } catch { continue; }
+    let live = [];
+    try {
+      live = await api.getAdAccounts();
+    } catch { continue; }
+    for (const a of live || []) {
+      try {
+        const rules = await api.getAdRulesLibrary(a.id, { limit: 50 });
+        if (rules?.length) out.push({ accountId: String(a.id), accountName: a.name || String(a.id), rules });
+      } catch { /* akun ini skip */ }
+    }
+  }
+  return out;
 }
 
 function resolveAcctName(liveNames, accounts, accountId) {
@@ -213,17 +244,18 @@ function showTemplates(ctx) {
     { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
   );
 }
-
-function renderRuleCondition(c) {
-  if (!c) return '';
-  if (c.type === 'leaf') return `${esc(c.metric)} ${esc(c.operator)} ${esc(String(c.value ?? ''))}`;
-  if (c.type === 'group') {
-    const op = esc(String(c.logic || '').toUpperCase());
-    return c.children.map(ch => renderRuleCondition(ch)).join(` ${op} `);
-  }
-  return '';
+function renderRuleLine(state, enabled, rule, interval) {
+  const cond = describeRuleCondition(rule.condition);
+  const act = actionWord(rule.action?.type);
+  const head = `${state} ${enabled ? '' : '(nonaktif) '}<b>${esc(cond)} → ${esc(act)}</b>`;
+  const auto = ruleAutoName(
+    rule.condition?.metric, rule.condition?.operator, rule.condition?.value
+  );
+  const showName = rule.name && rule.name !== auto && !cond.includes(rule.name);
+  return showName
+    ? `${head}\n   "${esc(rule.name)}" (${interval})`
+    : `${head} (${interval})`;
 }
-
 
 // Render My Rules grouped per ad account (nama ASLI dari Meta), with edit/disable buttons
 async function renderMyRules(deps, userId) {
@@ -254,12 +286,35 @@ async function renderMyRules(deps, userId) {
     for (const r of accountRules) {
       const state = r.enabled ? '🟢' : '⚪️';
       const interval = INTERVAL_LABELS[r.intervalMinutes] || INTERVAL_LABELS[15];
-      lines.push(`${state} ${r.enabled ? '' : '(nonaktif) '}<b>${esc(r.name)}</b>\n   ${renderRuleCondition(r.condition)} → ${esc(r.action.type)} (${interval})`);
+      lines.push(renderRuleLine(state, r.enabled, r, interval));
     }
     lines.push('');
   }
+  // ── Aturan NATIVE Facebook (read-only) ──────────────────────
+  // User yang sudah punya Automated Rules di FB tidak lihat kekosongan:
+  // tampilkan di sini + peringatan tabrakan kalau dua-duanya aktif.
+  const fbBlocks = [];
+  let collision = false;
+  try {
+    const fbGroups = await liveFbRules(deps, userId);
+    for (const g of fbGroups) {
+      const rows = (g.rules || []).map(fb => {
+        const s = describeFbRule(fb);
+        return `${s.active ? '🟢' : '⚪️'} ${esc(s.text)}${fb.name ? ` <i>(${esc(fb.name)})</i>` : ''}`;
+      });
+      if (rows.length) fbBlocks.push(`<b>📌 ${esc(g.accountName)} — aturan Facebook</b>\n${rows.join('\n')}`);
+      if ((g.rules || []).some(fb => describeFbRule(fb).active)) {
+        const botActive = rules.some(r => r.enabled && (!r.accountId || String(r.accountId) === String(g.accountId) || String(r.accountId).replace(/^act_/, '') === String(g.accountId).replace(/^act_/, '')));
+        if (botActive) collision = true;
+      }
+    }
+  } catch { /* FB rules best-effort */ }
 
-  const text = `📋 <b>Aturanku</b>\n\n${lines.join('\n')}`;
+  const text =
+    `📋 <b>Aturanku</b>\n` +
+    `<i>Aturan hidup di bot (bukan di dashboard Facebook): bot cek tiap jadwal, kalau kejadian kirim minta setuju, baru eksekusi setelah kamu pencet ✅.</i>\n\n${lines.join('\n')}` +
+    (fbBlocks.length ? `\n${fbBlocks.join('\n\n')}\n\n<i>↑ Itu aturan yang kamu set langsung di Facebook — tetap jalan di sana, bot nggak ganggu. Jangan pasang dua aturan berlawanan di akun yang sama ya.</i>` : '') +
+    (collision ? `\n\n⚠️ <b>Hati-hati tabrakan:</b> akun ini dijaga aturan bot DAN aturan Facebook yang dua-duanya aktif. Misal FB matiin campaign sementara bot nyalain lagi (atau sebaliknya). Matikan salah satunya kalau kelakuannya aneh.` : '');
 
   // Per-rule action buttons (edit/disable/enable/delete)
   for (const r of rules.slice(0, 8)) {
@@ -332,7 +387,8 @@ async function showRulesForAccount(deps, userId, accountId) {
   }
   const lines = acctRules.map((r, i) => {
     const state = r.enabled ? '🟢' : '⚪️';
-    return `${i + 1}. ${state} <b>${esc(r.name)}</b>\n   ${renderRuleCondition(r.condition)} → ${esc(r.action.type)}`;
+    const interval = INTERVAL_LABELS[r.intervalMinutes] || INTERVAL_LABELS[15];
+    return `${i + 1}. ${renderRuleLine(state, r.enabled, r, interval)}`;
   });
   const keyboard = [];
   for (const r of acctRules.slice(0, 8)) {
@@ -500,7 +556,7 @@ async function showActionPicker(ctx, deps) {
     [{ text: '📋 Menu', callback_data: 'quick:menu' }],
   ];
   return ctx.reply(
-    `🎯 <b>Langkah 3/5: kalau kejadian, ngapain?</b>\n\nAturan untuk: <b>${esc(scope)}</b>\nMetrik: <b>${esc(METRICS[rb.metric]?.name || rb.metric)}</b> ${esc(OPERATORS[rb.operator] || rb.operator)}\n\nPilih aksinya:`,
+    `🎯 <b>Langkah 3/5: kalau kejadian, ngapain?</b>\n\nAturan untuk: <b>${esc(scope)}</b>\nKalau: <b>${esc(metricLabel(rb.metric))} ${esc(operatorWord(rb.operator))} ${esc(formatRuleValue(rb.metric, rb.value || '?'))}</b>\n\nPilih aksinya:`,
     { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
   );
 }
@@ -519,14 +575,13 @@ async function showIntervalPicker(ctx, deps) {
     [{ text: '📋 Menu', callback_data: 'quick:menu' }],
   ];
   const ACTION_LABELS = {
-    pause: 'Pause campaign', resume: 'Resume campaign',
-    increase_budget: 'Increase budget', decrease_budget: 'Decrease budget',
-    duplicate_campaign: 'Duplicate campaign', scale_budget: 'Scale budget',
-    notify: 'Notify', notify_and_pause: 'Notify + Pause',
+    pause: 'dimatiin', resume: 'dinyalain',
+    increase_budget: 'budget dinaikin', decrease_budget: 'budget diturunin',
+    duplicate_campaign: 'diduplikat', scale_budget: 'budget diubah',
+    notify: 'kasih kabar', notify_and_pause: 'kasih kabar + dimatiin',
   };
-  const opSymbol = OPERATORS[rb.operator] || rb.operator;
   return ctx.reply(
-    `🎯 <b>Langkah 4/5: seberapa sering dicek?</b>\n\nAturan untuk: <b>${esc(scope)}</b>\n${esc(METRICS[rb.metric]?.name)} ${esc(opSymbol)} ${esc(rb.value || '?')} → ${esc(ACTION_LABELS[rb.actionType] || rb.actionType)}\n\nPilih jadwal pengecekan:`,
+    `🎯 <b>Langkah 4/5: seberapa sering dicek?</b>\n\nAturan untuk: <b>${esc(scope)}</b>\nKalau <b>${esc(metricLabel(rb.metric))} ${esc(operatorWord(rb.operator))} ${esc(formatRuleValue(rb.metric, rb.value || '?'))}</b> → <b>${esc(ACTION_LABELS[rb.actionType] || actionWord(rb.actionType))}</b>\n\nPilih jadwal pengecekan:`,
     { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
   );
 }
@@ -536,7 +591,7 @@ async function createRule(ctx, deps, actionType, intervalMinutes = 15) {
   if (!rb) return ctx.reply('⚠️ Sesi habis. Ulangi dari /monitor.');
   if (!rb.value) {
     return ctx.reply(
-      `📝 <b>Langkah 5/5: batas angkanya berapa?</b>\n\nAturan untuk: <b>${esc(scopeLabel(rb, null, null))}</b>\n${esc(rb.metric)} ${esc(rb.operator)} [angka]\n\nContoh: kalau CTR &gt; 5, kirim "5"`,
+      `📝 <b>Langkah 5/5: batas angkanya berapa?</b>\n\nAturan untuk: <b>${esc(scopeLabel(rb, null, null))}</b>\n${esc(metricLabel(rb.metric))} ${esc(operatorWord(rb.operator))} [angka]\n\nContoh: kalau CTR ${esc(operatorWord(rb.operator))} 5, kirim "5"`,
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '⬅️ Batal', callback_data: 'menu:monitor' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
     );
   }
@@ -550,7 +605,7 @@ async function createRule(ctx, deps, actionType, intervalMinutes = 15) {
     deps.repos.rulesRepo.create({
       userId: ctx.userId,
       accountId: rb.accountId || null,
-      name: `${rb.metric} ${rb.operator} ${rb.value}`,
+      name: ruleAutoName(rb.metric, rb.operator, rb.value),
       description: `Aturan untuk ${scope}`,
       condition: condition.toJSON(),
       action: action.toJSON(),
@@ -560,7 +615,7 @@ async function createRule(ctx, deps, actionType, intervalMinutes = 15) {
     });
     delete ctx.session.ruleBuilder;
     return ctx.reply(
-      `✅ <b>Aturan dibuat buat ${esc(scope)}!</b>\n\n${esc(rb.metric)} ${esc(OPERATORS[rb.operator] || rb.operator)} ${esc(rb.value)} → ${esc(actionType)}\n⏱ ${intervalMinutes === 0 ? 'Ngikutin pacing FB' : 'Dicek tiap ' + (INTERVAL_LABELS[intervalMinutes] || intervalMinutes + ' mnt')}`,
+      `✅ <b>Aturan dibuat buat ${esc(scope)}!</b>\n\nKalau <b>${esc(ruleAutoName(rb.metric, rb.operator, rb.value))}</b> → <b>${esc(actionWord(actionType))}</b>\n⏱ ${intervalMinutes === 0 ? 'Ngikutin pacing FB' : 'Dicek tiap ' + (INTERVAL_LABELS[intervalMinutes] || intervalMinutes + ' mnt')}\n\n<i>Cara kerja: aturan ini hidup di bot (bukan di dashboard Facebook). Bot cek tiap jadwal — kalau kejadian, kamu dapat tombol ✅/❌ dulu, baru eksekusi jalan setelah kamu setuju.</i>`,
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Lihat Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
     );
   } catch (err) {

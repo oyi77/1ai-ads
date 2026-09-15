@@ -1,6 +1,19 @@
 import { describe, it, expect, vi } from 'vitest';
-import { handleMonitor, handleMonitorCallback } from '../../../server/bot/commands/monitor.js';
 
+const mockGetAdAccounts = vi.fn();
+const mockGetAdRulesLibrary = vi.fn();
+
+vi.mock('../../../server/services/meta/index.js', () => ({
+  MetaAdsAPI: {
+    withToken: vi.fn(() => ({
+      getAdAccounts: mockGetAdAccounts,
+      getAdRulesLibrary: mockGetAdRulesLibrary,
+    })),
+  },
+}));
+
+const { handleMonitor, handleMonitorCallback } =
+  await import('../../../server/bot/commands/monitor.js');
 function makeCtx(userId = 'u1', action = 'sync') {
   const replies = [];
   return {
@@ -124,7 +137,7 @@ describe('monitor — enhanced rule system', () => {
     expect(ctx._replies[0].msg).toContain('Hubungkan akun Meta dulu');
   });
 
-  it('view:all renders raw action names under HTML parse mode (no entity crash)', async () => {
+  it('view:all renders kalimat jelas (bukan kode mentah)', async () => {
     // Live 2026-09-14: rule action `increase_budget` in legacy-Markdown left
     // a bare `_` at byte offset 109 → 400 "can't parse entities". The bot
     // migrated to HTML, so raw underscores are safe and must NOT be escaped.
@@ -146,7 +159,40 @@ describe('monitor — enhanced rule system', () => {
     await handleMonitorCallback(deps)(ctx);
     const msg = ctx._replies[0].msg;
     expect(ctx._replies[0].opts.parse_mode).toBe('HTML');
-    expect(msg).toContain('increase_budget');
+    expect(msg).toContain('ROAS lebih dari 2x');
+    expect(msg).toContain('budget dinaikin');
+    expect(msg).toContain('bukan di dashboard Facebook');
     expect(msg).not.toContain('increase\\_budget');
+  });
+
+  it('view:all tampilkan aturan Facebook + peringatan tabrakan', async () => {
+    mockGetAdAccounts.mockResolvedValue([{ id: 'act_A', name: 'Toko A' }]);
+    mockGetAdRulesLibrary.mockResolvedValue([{
+      id: 'fb-1', name: 'FB Roas Rule', status: 'ACTIVE',
+      evaluationSpec: { filters: [{ field: 'spend', operator: 'GREATER_THAN', value: 100000 }] },
+      executionSpec: { execution_type: 'PAUSE' },
+    }]);
+    const deps = makeDeps({
+      repos: {
+        platformAccountsRepo: {
+          findByUserId: vi.fn(() => [{ id: 'c1', platform: 'meta', is_active: 1, credentials: { access_token: 'T' } }]),
+        },
+        rulesRepo: {
+          getAll: () => [{
+            id: 'r1', userId: 'u1', accountId: 'act_A', name: 'Belanja lebih dari Rp 50000',
+            enabled: 1, intervalMinutes: 15,
+            condition: { type: 'leaf', metric: 'spend', operator: '>', value: 50000 },
+            action: { type: 'notify' },
+          }],
+        },
+      },
+    });
+    const ctx = makeCtx('u1', 'view:all');
+    await handleMonitorCallback(deps)(ctx);
+    const msg = ctx._replies[0].msg;
+    expect(msg).toContain('aturan Facebook');
+    expect(msg).toContain('Belanja lebih dari Rp 100.000');
+    expect(msg).toContain('dimatiin');
+    expect(msg).toContain('tabrakan');
   });
 });

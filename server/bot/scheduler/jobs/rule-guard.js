@@ -3,7 +3,8 @@
  *
  * Extracted verbatim from ../scheduler.js. Registered via setupRuleGuard(bot, deps).
  */
-import { describeCondition, safeSend, evaluateRuleForCampaign, scheduleJob, log, esc } from '../helpers.js';
+import { safeSend, evaluateRuleForCampaign, scheduleJob, log, esc } from '../helpers.js';
+import { describeRuleCondition as describeID, actionWord as actionWordID } from '../../../lib/rule-words.js';
 
 /**
  * Register the rule-guard cron job.
@@ -50,9 +51,11 @@ export function setupRuleGuard(bot, deps) {
           const existingDraft = deps.repos?.draftsRepo?.findPendingForRuleCampaign?.(rule.name, campaign.id);
           if (existingDraft) continue;
 
+          const condText = describeID(rule.condition);
+          const actText = actionWordID(action.type);
           const draft = await deps.services?.draftService?.guardAutonomousChange?.({
             type: `rule_${action.type}`,
-            summary: `Rule ${rule.name}: ${describeCondition(rule.condition)} → ${action.type} on ${campaign.name}`,
+            summary: `Aturan "${rule.name}": ${condText} → ${actText} di ${campaign.name}`,
             details: { action: rule.action, campaign },
             proposedBy: 'ai',
             campaignId: campaign.id,
@@ -63,10 +66,10 @@ export function setupRuleGuard(bot, deps) {
           const telegramId = deps.repos?.usersRepo?.getTelegramIdByUserId?.(ownerId)
             || deps.repos?.usersRepo?.findById?.(ownerId)?.telegram_id;
           if (!telegramId) {
-            await safeSend(bot, `⚠️ <b>${esc(campaign.name)}</b> matched rule <b>${esc(rule.name)}</b> — draft awaiting approval in /menu → Mini App`, { parse_mode: 'HTML' });
+            await safeSend(bot, `⚠️ <b>${esc(campaign.name)}</b> kena aturan <b>${esc(rule.name)}</b> — nunggu persetujuan di /menu → Mini App`, { parse_mode: 'HTML' });
             continue;
           }
-          const text = `⚠️ Rule <b>${esc(rule.name)}</b> matched <b>${esc(campaign.name)}</b>\nProposed action: <b>${esc(action.type)}</b>\n\nApprove or reject:`;
+          const text = `⚠️ <b>${esc(campaign.name)}</b> kena aturan "${esc(rule.name)}"\n${esc(condText)} → <b>${esc(actText)}</b>\n\n<i>Aturan bot (bukan aturan Facebook). Pencet ✅ buat jalanin, ❌ buat batalin:</i>`;
           try {
             await bot.telegram.sendMessage(telegramId, text, {
               parse_mode: 'HTML',

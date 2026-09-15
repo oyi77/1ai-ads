@@ -473,6 +473,29 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     }));
   }
 
+  /**
+   * Baca Automated Rules NATIVE yang user set di Facebook
+   * (Ads Manager → Rules). READ-ONLY: bot tidak membuat/mengubah/menghapus
+   * rule FB — cuma tampilkan biar user lihat semua penjaga dalam satu layar
+   * dan sadar kalau dua sistem bisa tabrakan.
+   * Butuh ads_read (sudah termasuk di token bot).
+   */
+  async getAdRulesLibrary(accountId, { limit = 50 } = {}) {
+    const data = await this._get(`/${withAct(accountId)}/adrules_library`, {
+      fields: 'id,name,rule_status,evaluation_spec,execution_spec,created_time,updated_time,created_by',
+      limit: String(limit),
+    });
+    return (data.data || []).map(r => ({
+      id: r.id,
+      name: r.name || r.id,
+      status: String(r.rule_status || '').toLowerCase(),
+      evaluationSpec: r.evaluation_spec || null,
+      executionSpec: r.execution_spec || null,
+      createdTime: r.created_time,
+      updatedTime: r.updated_time,
+    }));
+  }
+
   async getPagePosts(pageId, { limit = 10, pageToken = null } = {}) {
     // Fetch published posts from a Facebook Page so the user can pick one
     // as the ad creative instead of entering a raw Post ID.
