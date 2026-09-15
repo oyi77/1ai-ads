@@ -642,7 +642,7 @@ export function handleMonitorText(deps) {
     if (!rb || !rb.awaitingValue) return false;
     const text = (ctx.message?.text || '').trim();
     if (!text || !/^\d+(\.\d+)?$/.test(text)) {
-      await ctx.reply(`⚠️ Please send a valid number for the threshold (e.g. 5 or 1.5).`);
+      await ctx.reply(`⚠️ Kirim angka yang valid ya buat batasnya (misal 5 atau 1.5).`);
       return true;
     }
     rb.value = text;

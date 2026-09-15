@@ -465,7 +465,7 @@ export function handleAdsBudgetScale(deps) {
     if (!api) return ctx.reply('🔌 Hubungkan akun Meta dulu via /start.');
     const mult = parseFloat(multStr);
     if (!Number.isFinite(mult) || mult <= 0.2 || mult >= 5) {
-      return ctx.reply('⚠️ Multiplier tidak valid.');
+      return ctx.reply('⚠️ Angka nggak valid. Coba lagi ya.');
     }
     await ctx.reply(`🔄 Lagi menyesuaikan budget untuk campaign AKTIF di akun ini…`);
     try {
