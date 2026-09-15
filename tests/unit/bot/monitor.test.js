@@ -67,11 +67,38 @@ describe('monitor — enhanced rule system', () => {
     expect(ctx._replies[0].msg).toContain('campaign ketarik');
   });
 
-  it('template:apply applies a template', async () => {
+  it('template: asks which account first (no silent global template)', async () => {
+    const deps = makeDeps({
+      repos: {
+        platformAccountsRepo: {
+          findByUserId: vi.fn(() => [{ id: 'acc1', account_name: 'Acc One', platform: 'meta', credentials: {} }]),
+        },
+      },
+    });
     const ctx = makeCtx('u1', 'template:roasGuard');
-    await handleMonitorCallback(makeDeps())(ctx);
+    await handleMonitorCallback(deps)(ctx);
     const msg = ctx._replies[0].msg;
     expect(msg).toContain('ROAS Guard');
+    expect(msg).toContain('buat akun mana');
+    const flat = ctx._replies[0].opts.reply_markup.inline_keyboard.flat().map((b) => b.callback_data);
+    expect(flat).toContain('rule:template:roasGuard:__all__');
+    expect(flat).toContain('quick:menu');
+  });
+
+  it('template: with account applies scoped + names the account', async () => {
+    const create = vi.fn();
+    const deps = makeDeps({
+      repos: {
+        platformAccountsRepo: {
+          findByUserId: vi.fn(() => [{ id: 'acc1', account_name: 'Acc One', platform: 'meta', credentials: {} }]),
+        },
+        rulesRepo: { getAll: vi.fn(() => []), create },
+      },
+    });
+    const ctx = makeCtx('u1', 'template:roasGuard:__all__');
+    await handleMonitorCallback(deps)(ctx);
+    expect(ctx._replies[0].msg).toContain('Semua Akun');
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ userId: 'u1', accountId: null }));
   });
 
   it('add:start asks which ad account first (no silent global rule)', async () => {

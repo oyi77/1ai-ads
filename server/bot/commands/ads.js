@@ -384,8 +384,13 @@ export function handleAdsBudgetScale(deps) {
     if (!Number.isFinite(mult) || mult <= 0.2 || mult >= 5) {
       return ctx.reply('⚠️ Multiplier tidak valid.');
     }
-    await ctx.reply(`🔄 Menyesuaikan budget ${Math.round((mult - 1) * 100)}% untuk campaign AKTIF di akun ini…`);
+    await ctx.reply(`🔄 Lagi menyesuaikan budget untuk campaign AKTIF di akun ini…`);
     try {
+      let acctName = accountId;
+      try {
+        const owned = (await api.getAdAccounts()).find(a => String(a.id) === String(accountId));
+        if (owned?.name) acctName = owned.name;
+      } catch { /* nama best-effort */ }
       const campaigns = await api.getCampaigns(accountId, { limit: 50 });
       const active = campaigns.filter(c => c.status === 'active');
       let done = 0;
@@ -401,12 +406,24 @@ export function handleAdsBudgetScale(deps) {
           log.warn('budget scale failed per campaign', { campaignId: c.id, error: e.message });
         }
       }
+      const pct = Math.round((mult - 1) * 100);
       return ctx.reply(
-        `✅ Budget ${done} campaign aktif disesuaikan (${Math.round((mult - 1) * 100) > 0 ? '+' : ''}${Math.round((mult - 1) * 100)}%).\n\nLihat hasil: /ads`
+        `✅ <b>Budget ${done} campaign aktif di ${escHtml(acctName)} disesuaikan (${pct > 0 ? '+' : ''}${pct}%).</b>`,
+        {
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '⚙️ Lihat Campaign', callback_data: `ads:select:${platform || 'meta'}:${accountId}` }],
+              [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+            ],
+          },
+        }
       );
     } catch (err) {
       log.error('budget scale failed', { userId: ctx.userId, accountId, error: err.message });
-      return ctx.reply('⚠️ Gagal menyesuaikan budget.');
+      return ctx.reply('⚠️ Gagal menyesuaikan budget. Coba lagi nanti.', {
+        reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+      });
     }
   };
 }

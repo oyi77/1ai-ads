@@ -7,20 +7,20 @@ import { RULE_TEMPLATES, ConditionGroup, Condition, RuleAction, OPERATORS } from
 import { escapeHtml as esc } from '../../lib/escape.js';
 
 const MONITOR_HEADER =
-  '⚡ <b>Campaign Monitor</b>\n\n' +
-  'Set rules to automatically monitor your campaigns:\n\n' +
-  '• <b>Delivery</b> — Impressions, clicks, reach, frequency\n' +
-  '• <b>Conversion</b> — CTR, CVR\n' +
-  '• <b>Cost</b> — CPC, CPM, CPA, oCPC\n' +
-  '• <b>Efficiency</b> — ROAS, ROI\n\n' +
-  'Choose an action below:';
+  '⚡ <b>Aturan Otomatis</b>\n\n' +
+  'Bikin aturan biar bot jagain campaign-mu 24/7:\n\n' +
+  '• <b>Delivery</b> — Impresi, klik, reach, frekuensi\n' +
+  '• <b>Konversi</b> — CTR, CVR\n' +
+  '• <b>Biaya</b> — CPC, CPM, CPA\n' +
+  '• <b>Efisiensi</b> — ROAS, ROI\n\n' +
+  'Pilih aksi di bawah ya:';
 
 const INTERVAL_LABELS = {
-  0: 'Follow FB pacing',
-  15: 'Every 15 min',
-  30: 'Every 30 min',
-  60: 'Every 1 hour',
-  360: 'Every 6 hours',
+  0: 'Ngikutin pacing FB',
+  15: 'Tiap 15 menit',
+  30: 'Tiap 30 menit',
+  60: 'Tiap 1 jam',
+  360: 'Tiap 6 jam',
 };
 
 function metaAccounts(deps, userId) {
@@ -80,15 +80,15 @@ export function handleMonitor(deps) {
     const accounts = metaAccounts(deps, ctx.userId);
     const keyboard = [];
     if (accounts.length > 0) {
-      keyboard.push([{ text: '⚙️ Account Rules', callback_data: 'rule:account_picker' }]);
+      keyboard.push([{ text: '⚙️ Aturan per Akun', callback_data: 'rule:account_picker' }]);
     }
     keyboard.push([
-      { text: '➕ Add Rule', callback_data: 'rule:add:start' },
-      { text: '📋 My Rules', callback_data: 'rule:view:all' },
+      { text: '➕ Bikin Aturan', callback_data: 'rule:add:start' },
+      { text: '📋 Aturanku', callback_data: 'rule:view:all' },
     ]);
     keyboard.push([
-      { text: '📦 Templates', callback_data: 'rule:templates' },
-      { text: '🔄 Sync Now', callback_data: 'monitor:sync' },
+      { text: '📦 Template', callback_data: 'rule:templates' },
+      { text: '🔄 Sync Sekarang', callback_data: 'monitor:sync' },
     ]);
     keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
     return ctx.reply(MONITOR_HEADER, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
@@ -195,17 +195,18 @@ function showTemplates(ctx) {
     const t = fn();
     keyboard.push([{ text: t.name, callback_data: `rule:template:${key}` }]);
   }
-  keyboard.push([{ text: '⬅️ Back', callback_data: 'menu:monitor' }]);
+  keyboard.push([{ text: '⬅️ Kembali', callback_data: 'menu:monitor' }]);
+  keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
   return ctx.reply(
-    '📦 <b>Rule Templates</b>\n\nPre-built rules:\n\n' +
-    '• ROAS Guard — Pause when ROAS &lt; 1x\n' +
-    '• Frequency Cap — Pause when frequency &gt; 5\n' +
+    '📦 <b>Template Aturan</b>\n\nAturan siap pakai — pencet satu, lalu pilih buat akun mana:\n\n' +
+    '• ROAS Guard — Pause kalau ROAS &lt; 1x\n' +
+    '• Frequency Cap — Pause kalau frekuensi &gt; 5\n' +
     '• High CTR Alert — CTR &gt; 5%\n' +
     '• Low CVR Alert — CVR &lt; 1%\n' +
     '• CPC Spike — CPC &gt; 200\n' +
     '• CPA Drop — CPA &lt; 50k\n' +
     '• CPM Control — CPM &gt; 15k\n' +
-    '• Dayparting — Peak hours 6-11PM\n' +
+    '• Dayparting — Jam rame 6-11 malam\n' +
     '• Auto Increase — ROAS &gt; 2x, +20%\n' +
     '• Auto Decrease — ROAS &lt; 1x, -30%\n' +
     '• Auto Duplicate — CVR &gt; 3%, spend &gt; 100k',
@@ -408,7 +409,11 @@ export function handleMonitorCallback(deps) {
       });
     }
     if (action === 'templates') { delete ctx.session.ruleBuilder; return showTemplates(ctx); }
-    if (action.startsWith('template:')) return applyTemplate(ctx, deps, action.split(':')[1]);
+    if (action.startsWith('template:')) {
+      const parts = action.split(':');
+      if (parts.length >= 3 && parts[2]) return applyTemplate(ctx, deps, parts[1], parts[2]);
+      return showTemplateAccountStep(ctx, deps, parts[1]);
+    }
     if (action === 'view:all') {
       const { text, keyboard } = await renderMyRules(deps, ctx.userId);
       return ctx.reply(text, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
@@ -563,15 +568,20 @@ async function createRule(ctx, deps, actionType, intervalMinutes = 15) {
   }
 }
 
-function applyTemplate(ctx, deps, tplKey) {
+async function applyTemplate(ctx, deps, tplKey, accountId = null) {
   const fn = RULE_TEMPLATES[tplKey];
-  if (!fn) return ctx.reply('⚠️ Template not found.');
+  if (!fn) return ctx.reply('⚠️ Template nggak ketemu.');
   const tpl = fn();
   try {
+    const liveNames = await liveAdAccountNames(deps, ctx.userId);
+    const scope = accountId && accountId !== '__all__'
+      ? resolveAcctName(liveNames, metaAccounts(deps, ctx.userId), accountId)
+      : '🌐 Semua Akun';
     deps.repos.rulesRepo.create({
       userId: ctx.userId,
+      accountId: accountId && accountId !== '__all__' ? accountId : null,
       name: tpl.name,
-      description: tpl.description,
+      description: `${tpl.description} — untuk ${scope}`,
       condition: tpl.condition.toJSON(),
       action: tpl.action.toJSON(),
       priority: tpl.priority,
@@ -579,12 +589,51 @@ function applyTemplate(ctx, deps, tplKey) {
       intervalMinutes: tpl.intervalMinutes || 15,
     });
     return ctx.reply(
-      `✅ Template applied!\n\n📦 ${esc(tpl.name)}\n${esc(tpl.description)}`,
-      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 View Rules', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+      `✅ <b>Template ${esc(tpl.name)} dipasang buat ${esc(scope)}!</b>\n\n${esc(tpl.description)}`,
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Lihat Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
     );
   } catch (err) {
-    return ctx.reply(`❌ Failed: ${esc(err.message)}`);
+    return ctx.reply(`❌ Gagal: ${esc(err.message)}`);
   }
+}
+
+async function showTemplateAccountStep(ctx, deps, tplKey) {
+  const tpl = RULE_TEMPLATES[tplKey]?.();
+  if (!tpl) return ctx.reply('⚠️ Template nggak ketemu.');
+  const accounts = metaAccounts(deps, ctx.userId);
+  if (!accounts.length) {
+    return ctx.reply('🔌 Hubungkan akun Meta dulu via /status → ➕ Tambah Akun, baru bisa pasang template.', {
+      reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+    });
+  }
+  const seen = new Set();
+  const liveList = [];
+  const seenTokens = new Set();
+  for (const row of accounts) {
+    const token = row.credentials?.access_token || row.access_token;
+    if (!token || seenTokens.has(token)) continue;
+    seenTokens.add(token);
+    try {
+      const api = MetaAdsAPI.withToken(token);
+      for (const a of (await api.getAdAccounts()) || []) {
+        const key = String(a.id);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        liveList.push(a);
+      }
+    } catch { /* skip */ }
+  }
+  const keyboard = liveList.slice(0, 8).map(a => [{
+    text: `📘 ${a.name || a.id}`,
+    callback_data: `rule:template:${tplKey}:${a.id}`,
+  }]);
+  keyboard.push([{ text: '🌐 Semua Akun', callback_data: `rule:template:${tplKey}:__all__` }]);
+  keyboard.push([{ text: '⬅️ Kembali', callback_data: 'menu:monitor' }]);
+  keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
+  return ctx.reply(
+    `📦 <b>Pasang template "${esc(tpl.name)}" buat akun mana?</b>\n\n${esc(tpl.description)}`,
+    { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
+  );
 }
 
 export function handleMonitorText(deps) {
