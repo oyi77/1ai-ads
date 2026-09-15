@@ -56,13 +56,13 @@ export const connectScene = new Scenes.WizardScene(
   async (ctx) => {
     const platform = ctx.scene.state?.platform || ctx.wizard.state.platform;
     if (!platform) {
-      await ctx.reply('⚠️ No platform selected. Please tap a platform button from /start.');
+      await ctx.reply('⚠️ Platform belum dipilih. Pencet tombol platform dari /start dulu ya.');
       return ctx.scene.leave();
     }
     ctx.wizard.state.platform = platform;
     await ctx.reply(
-      `🔌 <b>Connecting ${escapeHtml(PLATFORM_NAMES[platform] || platform)}</b>\n\n` +
-      'What would you like to name this connection? (e.g. "Main Google Ads")',
+      `🔌 <b>Hubungkan ${escapeHtml(PLATFORM_NAMES[platform] || platform)}</b>\n\n` +
+      'Kasih nama buat koneksi ini ya (misal "Akun Toko Utama"). Cuma buat pengingat kamu aja:',
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
@@ -71,28 +71,28 @@ export const connectScene = new Scenes.WizardScene(
   async (ctx) => {
     const text = ctx.message?.text?.trim();
     if (!text) {
-      await ctx.reply('Please send a name for this connection (just text).');
+      await ctx.reply('Kirim nama buat koneksi ini ya (tulisan aja).');
       return;
     }
     ctx.wizard.state.accountName = text;
     const platform = ctx.wizard.state.platform;
     const isMeta = platform === 'meta';
-    
-    let msg = `Got it — <b>${escapeHtml(text)}</b>.\n\n`;
-    
+
+    let msg = `Oke — <b>${escapeHtml(text)}</b>.\n\n`;
+
     if (isMeta) {
       msg +=
-        '🔑 <b>How to get your Meta token:</b>\n' +
-        '1. Open https://developers.facebook.com/tools/explorer/\n' +
-        '2. Select your app (or create one)\n' +
-        '3. Click "Generate Access Token"\n' +
-        '4. Select permissions: ads_management, ads_read, business_management, pages_show_list\n' +
-        '5. Paste the token below\n\n' +
-        'Token is encrypted at rest and scoped to your Telegram user only.';
+        '🔑 <b>Cara ambil token Meta:</b>\n' +
+        '1. Buka https://developers.facebook.com/tools/explorer/\n' +
+        '2. Pilih aplikasimu (atau bikin baru)\n' +
+        '3. Klik "Generate Access Token"\n' +
+        '4. Centang: ads_management, ads_read, business_management, pages_show_list\n' +
+        '5. Tempel tokennya di sini\n\n' +
+        'Token dienkripsi dan cuma berlaku buat akun Telegram-mu.';
     } else {
-      msg += 'Now paste the access token / API key for this account. It is encrypted at rest and scoped to your Telegram user only.';
+      msg += 'Sekarang tempel access token / API key akun ini. Dienkripsi dan cuma buat kamu.';
     }
-    
+
     await ctx.reply(msg, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
     return ctx.wizard.next();
   },

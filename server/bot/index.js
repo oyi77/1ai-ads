@@ -18,7 +18,6 @@ import { handleMonitor, handleMonitorCallback, handleMonitorText } from './comma
 import { handleAdminStats, handleAdminUsers, handleAdminBroadcast } from './commands/admin.js';
 import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm, handleAdsAccountReport, handleAdsAccountsPage, handleAdsCampaignsPage, handleAdsBudgetScale, handleAdsPlatform } from './commands/ads.js';
 import { handleApprovalApprove, handleApprovalReject } from './commands/approvals.js';
-import { handleFbAds } from './commands/fbads.js';
 import { handlePricing } from './commands/pricing.js';
 import { initScheduler } from './scheduler.js';
 import { errorHandler } from './middleware/error-handler.js';
@@ -35,7 +34,7 @@ let botInstance = null;
 const KNOWN_COMMANDS = [
   'start', 'menu', 'quick', 'status', 'help', 'pricing',
   'monitor', 'settings', 'ads', 'cancel', 'metaapp', 'create',
-  'fbads', 'admin_stats', 'admin_users', 'admin_broadcast',
+  'admin_stats', 'admin_users', 'admin_broadcast',
   'optimize', 'platforms'
 ];
 
@@ -86,7 +85,6 @@ export function initBot(app, deps) {
     admin_stats: handleAdminStats(deps),
     admin_users: handleAdminUsers(deps),
     admin_broadcast: handleAdminBroadcast(deps),
-    fbads: handleFbAds(deps),
     ads: handleAds(deps),
     monitor: handleMonitor(deps),
     optimize: (ctx) => { ctx.match = ['menu:optimize', 'optimize']; return handleMenuButton(deps)(ctx); },

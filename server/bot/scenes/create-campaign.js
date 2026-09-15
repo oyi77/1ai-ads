@@ -146,7 +146,7 @@ async function showConfirmScreen(ctx) {
     [{ text: '🚀 Buat Campaign', callback_data: 'create:go' }],
     [{ text: '✏️ Ubah Budget', callback_data: 'create:edit:budget' }, { text: '👥 Ubah Target', callback_data: 'create:edit:audience' }],
     [{ text: '📝 Ubah Nama', callback_data: 'create:edit:name' }, { text: '⬅️ Kembali', callback_data: 'create:back' }],
-    [{ text: '❌ Batal', callback_data: 'create:cancel' }],
+    [{ text: '❌ Batal', callback_data: 'create:cancel' }, { text: '📋 Menu', callback_data: 'quick:menu' }],
   ] } });
   ctx.wizard.state.confirmShown = true;
 }
@@ -163,7 +163,13 @@ export const createCampaignScene = new Scenes.WizardScene(
     ctx.wizard.state.creativeType = null;
     ctx.wizard.state.creativeStep = null;
     const tokens = getAllMetaTokens(ctx);
-    if (tokens.length === 0) { await ctx.reply('No Meta accounts connected. Connect first via /settings.'); return ctx.scene.leave(); }
+    if (tokens.length === 0) {
+      await ctx.reply(
+        '🔌 <b>Belum ada akun Meta terhubung.</b>\n\nHubungkan dulu biar bisa bikin campaign — atau jalan-jalan di mode demo.',
+        { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '🔗 Hubungkan Akun', callback_data: 'menu:connect' }], [{ text: '🎮 Mode Demo', callback_data: 'dash:demo' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+      );
+      return ctx.scene.leave();
+    }
     const businessesByToken = [];
     ctx.wizard.state.accountsByToken = [];
     for (const t of tokens) {
@@ -176,24 +182,31 @@ export const createCampaignScene = new Scenes.WizardScene(
     const multiToken = tokens.length > 1;
     if (businessesByToken.length > 0) {
       const keyboard = businessesByToken.map(({ token, business }) => [{ text: `${multiToken ? '['+token.account.account_name+'] ' : ''}${business.name}`, callback_data: `create:bm:${business.id}` }]);
+      keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
       keyboard.push(CANCEL_ROW);
-      await ctx.reply('Select Business Manager:', { reply_markup: { inline_keyboard: keyboard } });
+      await ctx.reply('🏢 <b>Pilih Business Manager yang mau dipakai:</b>', { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
       return ctx.wizard.next();
     }
-    if (accountsByToken.length === 0) { await ctx.reply('No ad accounts found. Connect first via /settings.'); return ctx.scene.leave(); }
+    if (accountsByToken.length === 0) {
+      await ctx.reply(
+        '📭 <b>Token terhubung tapi nggak ada akun iklan yang kebaca.</b>\n\nCek Business Manager-mu, atau hubungkan token dari BM yang sama.',
+        { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '🔗 Hubungkan Akun', callback_data: 'menu:connect' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+      );
+      return ctx.scene.leave();
+    }
     ctx.wizard.state.accounts = accountsByToken.map(a => a.account);
     const kb = accountsByToken.map(({ token, account }) => [{ text: `${multiToken ? '['+token.account.account_name+'] ' : ''}${account.name}`, callback_data: `create:acct:${account.id}` }]);
+    kb.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
     kb.push(CANCEL_ROW);
-    await ctx.reply('Select an ad account:', { reply_markup: { inline_keyboard: kb } });
+    await ctx.reply('📣 <b>Pilih akun iklan yang mau dipakai:</b>', { parse_mode: 'HTML', reply_markup: { inline_keyboard: kb } });
     ctx.wizard.state.data.businessId = 'none';
     return ctx.wizard.selectStep(2);
   },
-  // Step 1: BM guard
-  async (ctx) => { if (!ctx.wizard.state.data.businessId) await ctx.reply('Please select a Business Manager using the buttons above.'); },
+  async (ctx) => { if (!ctx.wizard.state.data.businessId) await ctx.reply('Pencet dulu Business Manager-nya pakai tombol di atas ya.'); },
   // Step 2: Account guard
-  async (ctx) => { if (!ctx.wizard.state.data.accountId) await ctx.reply('Please select an ad account using the buttons above.'); },
+  async (ctx) => { if (!ctx.wizard.state.data.accountId) await ctx.reply('Pencet dulu akun iklannya pakai tombol di atas ya.'); },
   // Step 3: Objective guard
-  async (ctx) => { if (!ctx.wizard.state.data.objective) await ctx.reply('Select an objective using the buttons above.'); },
+  async (ctx) => { if (!ctx.wizard.state.data.objective) await ctx.reply('Pilih dulu tujuannya pakai tombol di atas ya.'); },
   // Step 4: Name -> budget
   async (ctx) => {
     const text = (ctx.message?.text || '').trim();
@@ -552,7 +565,9 @@ createCampaignScene.action(/^create:go$/, async (ctx) => handleCreateGo(ctx));
 createCampaignScene.action(/^create:cancel$/, async (ctx) => {
   await ctx.answerCbQuery();
   ctx.wizard.state.data = {};
-  await ctx.reply('Campaign creation cancelled.');
+  await ctx.reply('❌ Bikin campaign dibatalkan. Santai, nggak ada yang berubah di akun iklanmu.', {
+    reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+  });
   try { await ctx.scene.leave(); } catch { /* ok */ }
 });
 
@@ -637,7 +652,22 @@ async function handleCreateGo(ctx) {
       const metaMsg = creativeErr.data?.error?.error_user_msg || creativeErr.data?.error?.message || creativeErr.message;
       await ctx.reply(`Campaign & Ad Set created, but creative failed: ${esc(String(metaMsg)).slice(0, 200)}\n\nAdd a creative later from the Creative Library.`);
     }
-    await ctx.reply((adCreated ? 'Campaign Created!\n\n' : 'Campaign & Ad Set created - ad NOT created.\n\n') + `${esc(d.name)}\nOptimasi: ${esc(optimizationGoal)}${promotedObject ? ' (pixel)' : ''}\n${fmtRp(d.dailyBudget)}/day - Status: PAUSED\n` + (pixelFallbackNote ? `${pixelFallbackNote}\n` : '') + (creativeFailNote ? `${esc(creativeFailNote)}\n` : '') + (adCreated ? '\nActivate via /ads -> select account -> Resume.' : '\nAdd the ad from Creative Library, then activate via /ads.'));
+    await ctx.reply(
+      (adCreated ? '🎉 <b>Campaign jadi!</b>\n\n' : '✅ <b>Campaign & Ad Set jadi — iklannya belum.</b>\n\n') +
+      `${esc(d.name)}\nOptimasi: ${esc(optimizationGoal)}${promotedObject ? ' (pixel)' : ''}\n${fmtRp(d.dailyBudget)}/hari — Status: PAUSED (aman, belum tayang)\n` +
+      (pixelFallbackNote ? `${pixelFallbackNote}\n` : '') +
+      (creativeFailNote ? `${esc(creativeFailNote)}\n` : '') +
+      (adCreated ? '\nAktifkan lewat 📣 Ads Manager → pilih akun → Resume.' : '\nTambahkan iklannya dulu, lalu aktifkan via 📣 Ads Manager.'),
+      {
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '📊 Dashboard', callback_data: 'menu:status' }],
+            [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+          ],
+        },
+      }
+    );
   } catch (err) {
     log.error('create campaign failed', { userId: ctx.userId, error: err.message });
     const metaErr = err.data?.error || {};
@@ -664,12 +694,20 @@ async function handleCreateGo(ctx) {
       return;
     }
     if (isDevMode && /postingan|created by an app/.test(raw)) {
-      await ctx.reply('Creative failed: the app that published that post is still in development mode, so Meta will not accept it as ad material. Repost it with a Live app (or pick another post), then add the creative from Creative Library.');
+      await ctx.reply(
+        '⚠️ <b>Postingan itu nggak bisa dipakai buat iklan.</b>\n\nAplikasi yang nerbitin postingan itu masih mode development, jadi Meta nolak. Repost pakai aplikasi Live (atau pilih postingan lain).',
+        { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+      );
     } else if (isDevMode) {
-      await ctx.reply('Creative failed: this Meta App is still in development mode. Set it to Live in Meta App Dashboard first.');
+      await ctx.reply(
+        '⚠️ <b>Meta App masih mode development.</b>\n\nUbah ke Live dulu di Meta App Dashboard, baru bikin campaign lagi.',
+        { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+      );
     } else {
       const detail = err.userMessage || err.data?.error?.error_user_msg || err.data?.error?.message || err.message;
-      await ctx.reply(`Failed: ${esc(detail).slice(0, 300)}`);
+      await ctx.reply(`⚠️ <b>Gagal bikin campaign:</b> ${esc(detail).slice(0, 250)}\n\nCoba lagi atau hubungi admin kalau terus gagal.`, {
+        parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+      });
     }
   }
   try { await ctx.scene.leave(); } catch { /* ok */ }

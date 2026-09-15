@@ -72,6 +72,97 @@ function countByStatus(campaigns) {
   return { active, inactive, deleted, total: (campaigns || []).length };
 }
 
+// ── Mode Demo ────────────────────────────────────────────────────
+// Buat pemula yang belum punya token: jalan-jalan lihat dashboard +
+// laporan contoh TANPA takut ngerusak apa-apa. Data statis, jelas label
+// DEMO. Tombol demo TIDAK emit callback mutasi apa pun (pause/budget/
+// approve tidak terjangkau) — aman by construction.
+// Keluar: dash:demoexit, atau otomatis saat user sudah punya koneksi
+// (handleStatus cabang stored.length > 0 mengabaikan session demo).
+const DEMO_ACCOUNTS = [
+  {
+    id: 'demo-act-1', name: 'Toko Contoh A',
+    campaigns: [
+      { name: 'Promo Lebaran — Traffic', status: 'active' },
+      { name: 'Katalog Produk — Sales', status: 'active' },
+      { name: 'Retargeting — Leads', status: 'paused' },
+    ],
+    insights: { '7d': { spend: 350000, revenue: 1200000, clicks: 1200, impressions: 45000 }, '30d': { spend: 1400000, revenue: 5100000, clicks: 4800, impressions: 180000 }, '90d': { spend: 4100000, revenue: 14800000, clicks: 14100, impressions: 520000 } },
+  },
+  {
+    id: 'demo-act-2', name: 'Toko Contoh B',
+    campaigns: [
+      { name: 'Brand Awareness — Video', status: 'active' },
+    ],
+    insights: { '7d': { spend: 120000, revenue: 300000, clicks: 400, impressions: 15000 }, '30d': { spend: 500000, revenue: 1300000, clicks: 1700, impressions: 62000 }, '90d': { spend: 1500000, revenue: 3900000, clicks: 5000, impressions: 180000 } },
+  },
+];
+
+function demoDashboard() {
+  let total = 0, active = 0, inactive = 0;
+  for (const a of DEMO_ACCOUNTS) {
+    const c = countByStatus(a.campaigns);
+    total += c.total; active += c.active; inactive += c.inactive;
+  }
+  return { total, active, inactive };
+}
+
+async function showDemoDashboard(ctx) {
+  const t = demoDashboard();
+  return ctx.reply(
+    `🎮 <b>Mode Demo — data contoh, bukan iklan beneran</b>\n\n` +
+    `🔗 Akun iklan (contoh): <b>2</b>\n` +
+    `🎯 Campaign (contoh): <b>${t.total}</b> (🟢 ${t.active} aktif • ⏸️ ${t.inactive} nonaktif)\n\n` +
+    `<b>Rincian per akun (contoh):</b>\n` +
+    DEMO_ACCOUNTS.map((a, i) => {
+      const c = countByStatus(a.campaigns);
+      return `${i + 1}. ${escHtml(a.name)} — 🟢 ${c.active} aktif • ⏸️ ${c.inactive} nonaktif (total ${c.total})`;
+    }).join('\n') +
+    `\n\nPilih akun buat lihat contoh laporannya — semua aman diklik:`,
+    {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          ...DEMO_ACCOUNTS.map((a, i) => [{ text: `📊 ${a.name}`, callback_data: `dash:demo:pick:${i}` }]),
+          [{ text: '🔗 Hubungkan Akun Asli', callback_data: 'dash:add' }],
+          [{ text: '❌ Keluar Demo', callback_data: 'dash:demoexit' }],
+          [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+        ],
+      },
+    }
+  );
+}
+
+async function showDemoReport(ctx, idx, periodKey = '30d') {
+  const a = DEMO_ACCOUNTS[idx];
+  if (!a) return showDemoDashboard(ctx);
+  const period = REPORT_PERIODS[periodKey] || REPORT_PERIODS['30d'];
+  const ins = a.insights[periodKey] || a.insights['30d'];
+  const roas = ins.spend > 0 ? (ins.revenue / ins.spend).toFixed(2) : '0.00';
+  const periodRow = Object.entries(REPORT_PERIODS)
+    .filter(([key]) => key !== periodKey)
+    .map(([key, p]) => ({ text: `🗓 ${p.label}`, callback_data: `dash:demo:rep:${idx}:${key}` }));
+  return ctx.reply(
+    `🎮 <b>Laporan CONTOH: ${escHtml(a.name)}</b> (${period.label})\n\n` +
+    `💰 Spend: ${fmtRp(ins.spend)}\n` +
+    `💵 Revenue: ${fmtRp(ins.revenue)}\n` +
+    `📈 ROAS: ${roas}x\n` +
+    `👆 Klik: ${ins.clicks.toLocaleString('id-ID')}\n` +
+    `👁 Impresi: ${ins.impressions.toLocaleString('id-ID')}\n\n` +
+    `<i>Ini data contoh. Hubungkan akun aslimu buat lihat data beneran.</i>`,
+    {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          ...(periodRow.length ? [periodRow] : []),
+          [{ text: '⬅️ Pilih akun lain', callback_data: 'dash:demo' }],
+          [{ text: '🔗 Hubungkan Akun Asli', callback_data: 'dash:add' }],
+          [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+        ],
+      },
+    }
+  );
+}
 export function handleStatus(deps) {
   return async (ctx) => {
     try {
@@ -178,9 +269,10 @@ export function handleStatus(deps) {
         message += `\n\n${BM_NOTE}`;
         keyboard.push([{ text: '➕ Tambah Akun', callback_data: 'dash:add' }]);
       } else {
-        message += '\n\n📭 <b>Belum ada akun iklan yang terhubung.</b>\nHubungkan akun iklanmu dulu biar dashboard-nya keisi.';
+        message += '\n\n📭 <b>Belum ada akun iklan yang terhubung.</b>\nHubungkan akun iklanmu dulu biar dashboard-nya keisi — atau jalan-jalan dulu di <b>mode demo</b> (data contoh, aman diklik, nggak ngerusak apa-apa).';
         message += `\n\n${BM_NOTE}`;
         keyboard.push([{ text: '🔗 Hubungkan Akun', callback_data: 'menu:connect' }]);
+        keyboard.push([{ text: '🎮 Coba Mode Demo', callback_data: 'dash:demo' }]);
       }
 
       keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
@@ -200,6 +292,21 @@ export function handleDashboardCallback(deps) {
   return async (ctx) => {
     const action = ctx.match[1];
     await ctx.answerCbQuery();
+
+    if (action === 'demo') return showDemoDashboard(ctx);
+    if (action === 'demoexit') {
+      ctx.session = ctx.session || {};
+      ctx.session.demoMode = false;
+      return handleStatus(deps)(ctx);
+    }
+    if (action.startsWith('demo:pick:')) {
+      const idx = parseInt(action.split(':')[2], 10);
+      return showDemoReport(ctx, idx, '30d');
+    }
+    if (action.startsWith('demo:rep:')) {
+      const [, , idxStr, periodKey] = action.split(':');
+      return showDemoReport(ctx, parseInt(idxStr, 10), periodKey);
+    }
 
     if (action.startsWith('pick:')) {
       const [, ownerId, idxStr] = action.split(':');

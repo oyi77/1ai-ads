@@ -37,16 +37,26 @@ const PLATFORM_LABELS = {
   amazon: 'Amazon Ads',
 };
 
+// Menu utama RAMAH PEMULA: cuma 4 tombol. Yang advanced (Aturan, Saran AI,
+// Ads Manager, Platform, Pengaturan, Harga) masuk sub-menu "Kelola Iklan"
+// (menu:manage) biar user baru nggak lumpuh pilihan.
 export function mainMenuKeyboard() {
   return {
     inline_keyboard: [
       [{ text: '📊 Dashboard', callback_data: 'menu:status' }, { text: '🎯 Buat Campaign', callback_data: 'menu:create' }],
+      [{ text: '🛠️ Kelola Iklan', callback_data: 'menu:manage' }, { text: '❓ Bantuan', callback_data: 'menu:help' }],
+      [{ text: '📱 AdForge Mini App', web_app: { url: WEB_APP_URL } }],
+    ],
+  };
+}
+
+export function manageMenuKeyboard() {
+  return {
+    inline_keyboard: [
       [{ text: '⚡ Aturan Otomatis', callback_data: 'menu:monitor' }, { text: '🤖 Saran AI', callback_data: 'menu:optimize' }],
       [{ text: '📣 Ads Manager', callback_data: 'menu:ads' }, { text: '🌐 Platform', callback_data: 'menu:platforms' }],
       [{ text: '⚙️ Pengaturan', callback_data: 'menu:settings' }, { text: '💰 Harga', callback_data: 'menu:pricing' }],
-      [{ text: '❓ Bantuan', callback_data: 'menu:help' }],
-      [{ text: '📱 AdForge Mini App', web_app: { url: WEB_APP_URL } }],
-      [{ text: '🌐 Buka di Browser', url: WEB_APP_URL }],
+      [{ text: '⬅️ Kembali', callback_data: 'quick:menu' }],
     ],
   };
 }
@@ -81,6 +91,10 @@ export function handleMenuButton(deps) {
         return handleReportsAction(ctx, deps);
       case 'create':
         return ctx.scene.enter('create-campaign');
+      case 'manage':
+        return ctx.reply('🛠️ <b>Kelola Iklan</b>\n\nFitur lanjutan — pilih yang mau dibuka:', {
+          parse_mode: 'HTML', reply_markup: manageMenuKeyboard(),
+        });
       case 'connect':
         return sendPlatformChoice(ctx);
       case 'optimize':
