@@ -25,14 +25,14 @@ export const manageMetaAppScene = new Scenes.WizardScene(
   async (ctx) => {
     const existing = ctx.deps?.repos?.userMetaAppsRepo?.getMasked?.(ctx.userId);
     const note = existing
-      ? `\n\nℹ️ You already have an App configured (AppId ${existing.appIdHint}). Saving new credentials will replace the current one.`
+      ? `\n\nℹ️ Kamu sudah punya App terpasang (AppId ${existing.appIdHint}). Kalau simpan yang baru, yang lama keganti.`
       : '';
     await ctx.reply(
-      '🔧 <b>Manage Meta App Credentials</b>\n\n' +
-        'These power your own Meta App (System User, App Secret, Threads).\n' +
-        'All values are encrypted at rest and scoped to your Telegram user only.' +
+      '🔧 <b>Atur Kredensial Meta App</b>\n\n' +
+        'Ini buat pakai Meta App milikmu sendiri (System User, App Secret, Threads).\n' +
+        'Semua nilai dienkripsi dan cuma berlaku buat akun Telegram-mu.' +
         note +
-        '\n\nFirst — give this App a short label (e.g. "My PixelAD App"):',
+        '\n\nPertama — kasih nama pendek buat App ini (misal "App Toko Saya"):',
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
@@ -41,14 +41,14 @@ export const manageMetaAppScene = new Scenes.WizardScene(
   async (ctx) => {
     const text = ctx.message?.text?.trim();
     if (!text) {
-      await ctx.reply('Please send a label (just text).');
+      await ctx.reply('Kirim nama dulu ya (tulisan aja).');
       return;
     }
     ctx.wizard.state.label = text;
     await ctx.reply(
-      `Got it — <b>${text}</b>.\n\n` +
-        'Paste your Meta <b>System User Access Token</b> (long-lived).\n' +
-        'It is encrypted at rest and never shown back in full.',
+      `Oke — <b>${text}</b>.\n\n` +
+        'Tempel <b>System User Access Token</b> Meta-mu (yang awet, long-lived).\n' +
+        'Dienkripsi dan nggak pernah ditampilin balik utuh.',
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
@@ -57,12 +57,12 @@ export const manageMetaAppScene = new Scenes.WizardScene(
   async (ctx) => {
     const text = ctx.message?.text?.trim();
     if (!text) {
-      await ctx.reply('Please paste your System User Access Token (just text).');
+      await ctx.reply('Tempel System User Access Token-nya dulu ya (tulisan aja).');
       return;
     }
     ctx.wizard.state.systemToken = text;
     await ctx.reply(
-      'Now paste your Meta <b>App ID</b> (numeric, e.g. 1234567890).',
+      'Sekarang tempel <b>App ID</b> Meta-mu (angka, misal 1234567890).',
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
@@ -71,25 +71,25 @@ export const manageMetaAppScene = new Scenes.WizardScene(
   async (ctx) => {
     const text = ctx.message?.text?.trim();
     if (!text) {
-      await ctx.reply('Please paste your App ID (just text).');
+      await ctx.reply('Tempel App ID-nya dulu ya (tulisan aja).');
       return;
     }
     ctx.wizard.state.appId = text;
-    await ctx.reply('Now paste your Meta <b>App Secret</b>.', { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
+    await ctx.reply('Sekarang tempel <b>App Secret</b>-mu.', { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
     return ctx.wizard.next();
   },
   // Step 4 — Threads (optional) → persist
   async (ctx) => {
     const text = ctx.message?.text?.trim();
     if (!text) {
-      await ctx.reply('Please paste your App Secret (just text).');
+      await ctx.reply('Tempel App Secret-nya dulu ya (tulisan aja).');
       return;
     }
     ctx.wizard.state.appSecret = text;
     await ctx.reply(
-      'Finally — your <b>Threads App ID</b> and <b>Threads App Secret</b> (optional).\n' +
-        'Send them as <code>THREADS_ID THREADS_SECRET</code> (space-separated, no quotes),\n' +
-        'or send <code>/skip</code> to finish without Threads.',
+      'Terakhir — <b>Threads App ID</b> dan <b>Threads App Secret</b> (opsional).\n' +
+        'Kirim sebagai <code>ID_THREADS SECRET_THREADS</code> (dipisah spasi, tanpa kutip),\n' +
+        'atau kirim <code>/skip</code> buat selesai tanpa Threads.',
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
@@ -107,7 +107,7 @@ export const manageMetaAppScene = new Scenes.WizardScene(
     const { label, systemToken, appId, appSecret } = ctx.wizard.state;
     const repo = ctx.deps?.repos?.userMetaAppsRepo;
     if (!repo) {
-      await ctx.reply('⚠️ Storage unavailable. Please try again later.');
+      await ctx.reply('⚠️ Penyimpanan lagi bermasalah. Coba lagi nanti ya.');
       return ctx.scene.leave();
     }
     try {
@@ -129,17 +129,19 @@ export const manageMetaAppScene = new Scenes.WizardScene(
         hasThreads: Boolean(threadsId),
       });
       await ctx.reply(
-        `✅ <b>${label}</b> configured!\n\n` +
+        `✅ <b>${label}</b> kepasang!\n\n` +
           `App ID: <code>${appId}</code>\n` +
-          'Your webhook endpoint is now:\n' +
+          'Webhook endpoint-mu sekarang:\n' +
           `<code>/webhooks/u/${ctx.userId}</code>\n\n` +
-          'Subscribe this URL in your Meta App dashboard (verify token = your user id).\n' +
-          'All Meta calls now route through your own App credentials.',
-        { parse_mode: 'HTML' }
+          'Daftarkan URL ini di dashboard Meta App-mu (verify token = user id-mu).\n' +
+          'Semua panggilan Meta sekarang lewat kredensial App milikmu sendiri.',
+        { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
       );
     } catch (err) {
       log.error('Failed to store Meta App Creds', { userId: ctx.userId, error: err.message });
-      await ctx.reply('⚠️ Could not save credentials. Please try again or use the web dashboard.');
+      await ctx.reply('⚠️ Gagal simpan kredensial. Coba lagi atau pakai dashboard web.', {
+        reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+      });
     }
     return ctx.scene.leave();
   }
