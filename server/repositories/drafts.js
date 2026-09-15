@@ -102,20 +102,6 @@ export class DraftsRepository {
     return this.findById(id);
   }
 
-  count(status) {
-    if (status) {
-      const row = this.db.prepare('SELECT COUNT(*) as count FROM approval_drafts WHERE status = ?').get(status);
-      return row.count;
-    }
-    const row = this.db.prepare('SELECT COUNT(*) as count FROM approval_drafts').get();
-    return row.count;
-  }
-
-  findPendingByCampaignAndType(campaignId, typePrefix) {
-    return this.db.prepare(
-      "SELECT id FROM approval_drafts WHERE campaign_id = ? AND status = 'pending' AND type LIKE ? LIMIT 1"
-    ).get(campaignId, `${typePrefix}%`) || null;
-  }
 
   findPendingForRuleCampaign(ruleName, campaignId) {
     // `_` and `%` are LIKE wildcards; rule names such as "ROAS_Guard" would
@@ -124,13 +110,5 @@ export class DraftsRepository {
     return this.db.prepare(
       "SELECT id FROM approval_drafts WHERE campaign_id = ? AND status = 'pending' AND summary LIKE ? ESCAPE '\\' LIMIT 1"
     ).get(campaignId, `%Rule ${escaped}%`) || null;
-  }
-
-  /** Delete all pending drafts for a campaign+type prefix (cleanup helper) */
-  deletePendingByCampaignAndType(campaignId, typePrefix) {
-    const result = this.db.prepare(
-      "DELETE FROM approval_drafts WHERE campaign_id = ? AND status = 'pending' AND type LIKE ?"
-    ).run(campaignId, `${typePrefix}%`);
-    return result.changes;
-  }
+}
 }

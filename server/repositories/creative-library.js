@@ -122,22 +122,4 @@ export class CreativeLibraryRepository {
   getTopPerformers({ userId, limit = 10 } = {}) {
     return this.db.prepare('SELECT * FROM creative_library WHERE user_id = ? ORDER BY usage_count DESC LIMIT ?').all(userId, limit);
   }
-
-  attachToCampaign(creativeId, campaignId, platform) {
-    const id = uuid();
-    this.db.prepare(`
-      INSERT OR REPLACE INTO creative_campaigns (id, creative_id, campaign_id, platform)
-      VALUES (?, ?, ?, ?)
-    `).run(id, creativeId, campaignId, platform);
-    this.incrementUsage(creativeId);
-    return { id, creativeId, campaignId, platform };
-  }
-
-  getCampaignCreatives(campaignId, platform) {
-    return this.db.prepare(`
-      SELECT cl.* FROM creative_library cl
-      JOIN creative_campaigns cc ON cl.id = cc.creative_id
-      WHERE cc.campaign_id = ? AND cc.platform = ?
-    `).all(campaignId, platform);
-  }
 }

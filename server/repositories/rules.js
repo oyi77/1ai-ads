@@ -127,12 +127,6 @@ export class RulesRepository {
     return rows.map(r => this._hydrate(r));
   }
 
-  getAllEnabledForScope(userId, accountId) {
-    const rows = this.db.prepare(
-      `SELECT * FROM ${this.table} WHERE user_id = ? AND enabled = 1 AND (account_id = ? OR account_id IS NULL) ORDER BY priority DESC`
-    ).all(userId, accountId);
-    return rows.map(r => this._hydrate(r));
-  }
 
   countEnabled(userId) {
     return this.db.prepare(`SELECT COUNT(*) as count FROM ${this.table} WHERE user_id = ? AND enabled = 1`).get(userId).count;

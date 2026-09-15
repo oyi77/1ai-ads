@@ -81,10 +81,22 @@ describe('RuleEvaluator — new actions', () => {
   });
 
   describe('duplicate_campaign', () => {
-    it('logs duplication intent', async () => {
-      const campaign = { id: 'c1', name: 'Test Campaign', platform: 'meta' };
+    it('calls the owner Meta duplicateCampaign and returns the new id', async () => {
+      const campaign = { id: 'c1', campaign_id: 'meta_1', name: 'Test Campaign', platform: 'meta' };
+      const duplicateCampaign = vi.fn(async () => ({ newCampaignId: 'meta_2' }));
+      vi.spyOn(evaluator, '_platformApiForOwner').mockReturnValue({ duplicateCampaign });
 
-      await expect(evaluator._duplicateCampaign(campaign, '_auto_copy')).resolves.not.toThrow();
+      const result = await evaluator._duplicateCampaign(campaign, '_auto_copy');
+
+      expect(duplicateCampaign).toHaveBeenCalledWith(null, 'meta_1', { suffix: '_auto_copy' });
+      expect(result.newCampaignId).toBe('meta_2');
+    });
+
+    it('skips platforms without duplicateCampaign support', async () => {
+      const campaign = { id: 'c9', name: 'T', platform: 'tiktok' };
+      vi.spyOn(evaluator, '_platformApiForOwner').mockReturnValue({});
+
+      await expect(evaluator._duplicateCampaign(campaign, '_copy')).resolves.toBeUndefined();
     });
 
     it('handles missing campaign gracefully', async () => {

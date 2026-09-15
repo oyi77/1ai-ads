@@ -49,7 +49,6 @@ import { BoostApprovalService } from '../services/boost-approval.js';
 import { TargetingService } from '../services/targeting.js';
 import { CreativeLibraryRepository } from '../repositories/creative-library.js';
 import { CampaignWizardRepository } from '../repositories/campaign-wizard.js';
-import { ReportingRepository } from '../repositories/reporting.js';
 import { AutomationRuleRepository } from '../repositories/automation-rules.js';
 import { DashboardWidgetsRepository } from '../repositories/dashboard-widgets.js';
 import { AccountReportService } from '../services/account-report-service.js';
@@ -160,7 +159,6 @@ export function createServices({ db, repos, params }) {
   const accountReportService = new AccountReportService({ llmClient });
   const nangoAuth = new NangoAuthService();
   const campaignWizardRepo = new CampaignWizardRepository(db);
-  const reportingRepo = new ReportingRepository(db);
   const automationRulesRepo = new AutomationRuleRepository(db);
   // Alerting service
   const alertingService = new AlertingService(null); // Bot will be set in app.js
@@ -178,6 +176,6 @@ export function createServices({ db, repos, params }) {
     imageGenerator, audienceIntelligence, creativeScorer, whiteLabelService,
     alertingService, boostApproval, targeting, mailer,
     creativeLibraryRepo, dashboardWidgetsRepo, accountReportService, nangoAuth,
-    campaignWizardRepo, reportingRepo, automationRulesRepo, monitoringRepo: repos.monitoringRepo,
+    campaignWizardRepo, automationRulesRepo, monitoringRepo: repos.monitoringRepo,
   };
 }

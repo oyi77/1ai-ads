@@ -159,7 +159,17 @@ export class RuleEvaluator {
   async _duplicateCampaign(campaign, nameSuffix) {
     const campaignId = campaign?.id;
     if (!campaignId) return;
-    log.info('Duplicating campaign', { campaignId, nameSuffix });
+    const api = this._platformApiForOwner(campaign.platform, campaign);
+    // Only Meta implements duplicateCampaign today (deep+shallow fallback in
+    // services/meta). Without it, approving a duplicate draft would silently
+    // do nothing (proven 2026-09-15: handler was log-only).
+    if (!api || typeof api.duplicateCampaign !== 'function') {
+      log.warn('Duplicate not supported for platform, skipping', { platform: campaign.platform, campaignId });
+      return;
+    }
+    const result = await api.duplicateCampaign(null, campaign.campaign_id || campaignId, { suffix: nameSuffix || ' (Copy)' });
+    log.info('Campaign duplicated', { campaignId, newCampaignId: result?.newCampaignId });
+    return result;
   }
 
   async _pauseCampaign(campaign) {

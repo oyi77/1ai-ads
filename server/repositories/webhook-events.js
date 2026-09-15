@@ -14,9 +14,6 @@ export class WebhookEventsRepository {
     return { id, ...event };
   }
 
-  findBySource(source) {
-    return this.db.prepare('SELECT * FROM webhook_events WHERE source = ? ORDER BY created_at DESC').all(source);
-  }
 
   findUnprocessed(limit = 100) {
     return this.db.prepare('SELECT * FROM webhook_events WHERE processed = 0 ORDER BY created_at ASC LIMIT ?').all(limit);

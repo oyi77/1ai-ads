@@ -25,7 +25,6 @@ import { SavedAudiencesRepository } from '../repositories/saved-audiences.js';
 import { TargetingSuggestionsRepository } from '../repositories/targeting-suggestions.js';
 import { CreativeLibraryRepository } from '../repositories/creative-library.js';
 import { CampaignWizardRepository } from '../repositories/campaign-wizard.js';
-import { ReportingRepository } from '../repositories/reporting.js';
 import { AutomationRuleRepository } from '../repositories/automation-rules.js';
 import { MonitoringRepository } from '../repositories/monitoring.js';
 
@@ -65,7 +64,6 @@ export function createRepositories(db) {
     userMetaAppsRepo: new UserMetaAppsRepository(db),
     creativeLibraryRepo: new CreativeLibraryRepository(db),
     campaignWizardRepo: new CampaignWizardRepository(db),
-    reportingRepo: new ReportingRepository(db),
     automationRulesRepo: new AutomationRuleRepository(db),
     // Consumed by routes/_campaigns.js and routes/_ai.js. Commit a45a1a3
     // dropped these registrations along with the boost/targeting pair while

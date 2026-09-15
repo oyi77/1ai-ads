@@ -132,27 +132,6 @@ export class AutomationRuleRepository {
     return this.db.prepare('DELETE FROM automation_rules WHERE id = ? AND user_id = ?').run(id, userId);
   }
 
-  recordExecution(data) {
-    const id = uuid();
-    this.db.prepare(`
-      INSERT INTO automation_rule_executions (id, rule_id, campaign_id, platform, condition_met, action_taken, action_result, metadata)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, data.ruleId, data.campaignId || null, data.platform || null,
-      data.conditionMet ? 1 : 0, data.actionTaken || null, data.actionResult || null,
-      JSON.stringify(data.metadata || {}));
-    
-    // Update rule trigger count
-    this.db.prepare(`
-      UPDATE automation_rules SET trigger_count = trigger_count + 1, last_triggered = CURRENT_TIMESTAMP, last_evaluated = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(data.ruleId);
-    
-    return id;
-  }
-
-  updateLastEvaluated(id) {
-    this.db.prepare('UPDATE automation_rules SET last_evaluated = CURRENT_TIMESTAMP WHERE id = ?').run(id);
-  }
 
   getExecutions(ruleId, { limit = 50 } = {}) {
     return this.db.prepare('SELECT * FROM automation_rule_executions WHERE rule_id = ? ORDER BY triggered_at DESC LIMIT ?').all(ruleId, limit);

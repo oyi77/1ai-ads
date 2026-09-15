@@ -18,7 +18,6 @@ import { createLinkedInRouter } from '../routes/linkedin.js';
 import { createMicrosoftRouter } from '../routes/microsoft.js';
 import { createCreativeLibraryRouter } from '../routes/creative-library.js';
 import { createCampaignWizardRouter } from '../routes/campaign-wizard.js';
-import { createReportingRouter } from '../routes/reporting.js';
 import { createAutomationRulesRouter } from '../routes/automation-rules.js';
 import { createMonitoringRouter } from '../routes/monitoring.js';
 import { createCreativeGroupRouter } from '../routes/_creative.js';
@@ -100,8 +99,6 @@ export function createRouters({ app, repos, services }) {
   app.use('/api', createCreativeGroupRouter(deps));
   // ── Campaign Wizard ────────────────────────────────────────
   app.use('/api/wizards', requireAuth, createCampaignWizardRouter(repos.campaignWizardRepo, services));
-  // ── Reporting ──────────────────────────────────────────────
-  app.use('/api/reporting', requireAuth, createReportingRouter(repos.reportingRepo));
   // ── Automation Rules ──────────────────────────────────────
   app.use('/api/automation/rules', requireAuth, createAutomationRulesRouter(repos.automationRulesRepo));
   // ── Monitoring ────────────────────────────────────────────

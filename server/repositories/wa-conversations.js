@@ -96,10 +96,6 @@ export class WaConversationsRepository {
     return this.db.prepare("SELECT * FROM wa_conversations WHERE labels = '[]' AND status = 'active' AND intent_score IS NOT NULL AND user_id IS ? ORDER BY updated_at DESC LIMIT ?").all(userId, limit);
   }
 
-  findByLabel(label, limit = 50, userId = undefined) {
-    if (userId === undefined) return this.db.prepare("SELECT * FROM wa_conversations WHERE labels LIKE ? ORDER BY updated_at DESC LIMIT ?").all(`%"${label}"%`, limit);
-    return this.db.prepare("SELECT * FROM wa_conversations WHERE labels LIKE ? AND user_id IS ? ORDER BY updated_at DESC LIMIT ?").all(`%"${label}"%`, userId, limit);
-  }
 
   // ── WABA number → owner map (admin-managed) ──────────────────────
   // Inbound webhooks carry only the business phone_number_id, so ingress

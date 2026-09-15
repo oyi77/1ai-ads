@@ -72,9 +72,6 @@ export class PaymentsRepository {
     return this.db.prepare('SELECT * FROM api_keys WHERE id = ?').get(id);
   }
 
-  findApiKeyByHash(keyHash) {
-    return this.db.prepare('SELECT * FROM api_keys WHERE key_hash = ?').get(keyHash);
-  }
 
   findApiKeysByUserId(userId) {
     return this.db.prepare('SELECT * FROM api_keys WHERE user_id = ? AND revoked_at IS NULL ORDER BY created_at DESC').all(userId);
@@ -85,9 +82,6 @@ export class PaymentsRepository {
     return this.findApiKeyById(id);
   }
 
-  updateApiKeyLastUsed(id) {
-    this.db.prepare('UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?').run(id);
-  }
 
   updateApiKey(id, userId, { name, scopes, rateLimitTier, expiresAt }) {
     const updates = [];

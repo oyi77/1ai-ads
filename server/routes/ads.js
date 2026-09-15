@@ -35,46 +35,6 @@ export function createAdsRouter(adsRepo, adGenerator) {
     `;
   }
 
-  // Wizard mode endpoints
-  router.post('/wizard/start', async (req, res) => {
-    const wizardSessionId = `wizard_${req.user.id}_${Date.now()}`;
-    res.json({
-      success: true,
-      data: { wizardSessionId }
-    });
-  });
-
-  router.post('/wizard/step', async (req, res) => {
-    const { sessionId, step, data: _data } = req.body;
-    if (!sessionId || !step) {
-      return res.status(400).json({ success: false, error: 'sessionId and step are required' });
-    }
-
-    res.json({ success: true, data: { acknowledged: true } });
-  });
-
-  router.get('/wizard/session/:sessionId', async (req, res) => {
-    // In production, this would fetch from Redis/database
-    res.json({ success: true, data: { step: 1, totalSteps: 6 } });
-  });
-
-  router.post('/wizard/complete', async (req, res) => {
-    const { sessionId, finalData } = req.body;
-    if (!sessionId || !finalData) {
-      return res.status(400).json({ success: false, error: 'sessionId and finalData are required' });
-    }
-
-    const { userId: _clientUserId, ...cleanFinal } = finalData || {};
-    const adData = {
-      ...cleanFinal,
-      status: finalData?.status || 'draft',
-      userId: req.user?.id,
-      created_at: new Date().toISOString()
-    };
-    const id = adsRepo.create(adData);
-    res.json({ success: true, data: { id } });
-  });
-
   router.post('/preview', (req, res) => {
     try {
       const { id } = req.body;
