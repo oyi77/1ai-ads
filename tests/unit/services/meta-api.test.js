@@ -492,4 +492,21 @@ describe('MetaAdsAPI', () => {
       expect(result.camp_missing).toBeNull();
     });
   });
+
+  describe('act_ prefix normalization', () => {
+    // Live 2026-09-15: a bare numeric id 400d with OAuthException #100
+    // "Tried accessing nonexisting field". Stored credentials keep the bare
+    // id; the client must prefix centrally so no caller can get it wrong.
+    it('prefixes a bare numeric account id', async () => {
+      const getSpy = vi.spyOn(api, '_get').mockResolvedValue({ data: [] });
+      await api.getCampaigns('1181078009580337', { limit: 5 });
+      expect(getSpy).toHaveBeenCalledWith('/act_1181078009580337/campaigns', expect.anything());
+    });
+
+    it('leaves an already-prefixed id untouched', async () => {
+      const getSpy = vi.spyOn(api, '_get').mockResolvedValue({ data: [] });
+      await api.getCampaigns('act_1181078009580337', { limit: 5 });
+      expect(getSpy).toHaveBeenCalledWith('/act_1181078009580337/campaigns', expect.anything());
+    });
+  });
 });

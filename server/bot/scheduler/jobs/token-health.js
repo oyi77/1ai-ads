@@ -71,6 +71,21 @@ export function setupTokenHealth(bot, deps) {
               }
               checked++;
               await verify.call(api);
+              // Prove ADS access, not just token validity: a page-scoped token
+              // passes getMe but 400s every ad call (proven live 2026-09-15:
+              // page token flagged 'ok' while syncs failed). An empty list is
+              // fine (valid token, no accounts yet) — only a thrown OAuth /
+              // permission error demotes the account, via the catch below.
+              if (platform === 'meta' && typeof api.getAdAccounts === 'function') {
+                try {
+                  await api.getAdAccounts();
+                } catch (adsErr) {
+                  // Token is valid (getMe passed) but cannot reach the ads
+                  // API — typically a page-scoped token. Surface THAT, not a
+                  // generic 400, so the reconnect prompt makes sense.
+                  throw new Error(`token valid but no ad-account access: ${String(adsErr?.message || adsErr).slice(0, 120)}`);
+                }
+              }
               // Success — clear any stale flag so one transient blip doesn't
               // permanently mark the account dead, and re-arm the alert.
               if (account.health_status !== 'ok' || account.last_error) {

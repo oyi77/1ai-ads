@@ -7,6 +7,17 @@ import { toMinorUnits, fromMinorUnits } from '../../lib/money.js';
 
 const BASE = `https://graph.facebook.com/${config.metaApiVersion}`;
 
+/**
+ * Normalize a Meta ad-account id to the `act_<id>` form the Graph API
+ * requires. Stored credentials keep the bare numeric id; every caller used
+ * to prefix ad hoc (4 sites) and a bare id 400s with OAuthException #100
+ * (proven live 2026-09-15). Centralized here so no caller can get it wrong.
+ */
+function withAct(accountId) {
+  const raw = String(accountId ?? '');
+  return raw.startsWith('act_') ? raw : `act_${raw}`;
+}
+
 export class MetaAdsAPI extends BasePlatformApiClient {
   /**
    * @param {object|string} settingsRepoOrToken - SettingsRepo instance or explicit token string
@@ -43,6 +54,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     }
     throw new ConfigurationError('Meta access token not configured. Connect a Facebook account in Settings.');
   }
+
 
   // Convert '/me/adaccounts' → ['v19.0', 'me', 'adaccounts'] for SDK array-path mode
   _sdkPath(path) {
@@ -146,7 +158,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
 
   // --- Campaign Management ---
   async getCampaigns(accountId, { limit = 50, currency = 'IDR' } = {}) {
-    const data = await this._get(`/${accountId}/campaigns`, {
+    const data = await this._get(`/${withAct(accountId)}/campaigns`, {
       fields: 'id,name,status,objective,daily_budget,lifetime_budget,created_time,updated_time',
       limit: String(limit),
     });
@@ -183,7 +195,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       const filtering = JSON.stringify([
         { field: 'campaign.id', operator: 'IN', value: campaignIds },
       ]);
-      const data = await this._get(`/${accountId}/insights`, {
+      const data = await this._get(`/${withAct(accountId)}/insights`, {
         level: 'campaign',
         filtering,
         fields: 'campaign_id,spend,impressions,clicks,ctr,cpc,actions,action_values,cost_per_action_type',
@@ -224,7 +236,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       date_preset: datePreset,
       limit: '100',
     };
-    const data = await this._get(`/${accountId}/insights`, params);
+    const data = await this._get(`/${withAct(accountId)}/insights`, params);
     const buckets = {};
     for (const row of (data.data || [])) {
       // hourly_stats_aggregated_by_* rows carry the window in
@@ -278,14 +290,14 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       // e.g. ['7d_click','1d_view'] — switches the attribution model
       params.attribution_window = JSON.stringify(attributionWindows);
     }
-    const data = await this._get(`/${accountId}/insights`, params);
+    const data = await this._get(`/${withAct(accountId)}/insights`, params);
     return this._parseInsights(data.data?.[0]);
   }
 
   // --- Ad Creatives ---
 
   async getAds(accountId, { limit = 50 } = {}) {
-    const data = await this._get(`/${accountId}/ads`, {
+    const data = await this._get(`/${withAct(accountId)}/ads`, {
       fields: 'id,name,status,creative{id,title,body,image_url,thumbnail_url,link_url,call_to_action_type}',
       limit: String(limit),
     });
@@ -316,7 +328,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     };
     if (isAdsetBudgetSharing && dailyBudget) body.daily_budget = toMinorUnits(dailyBudget, currency);
     else if (!isAdsetBudgetSharing && dailyBudget) body.daily_budget = toMinorUnits(dailyBudget, currency);
-    const data = await this._post(`/${accountId}/campaigns`, body);
+    const data = await this._post(`/${withAct(accountId)}/campaigns`, body);
     this.log.info('Campaign created successfully', { campaignId: data.id });
     return { id: data.id };
   }
@@ -334,7 +346,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     else body.bid_amount = 500;
     if (promotedObject) body.promoted_object = promotedObject;
     if (startTime) body.start_time = startTime;
-    const data = await this._post(`/${accountId}/adsets`, body);
+    const data = await this._post(`/${withAct(accountId)}/adsets`, body);
     return { id: data.id };
   }
 
@@ -361,7 +373,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       objectStorySpec.video_id = videoId;
     }
 
-    const data = await this._post(`/${accountId}/adcreatives`, {
+    const data = await this._post(`/${withAct(accountId)}/adcreatives`, {
       name: name || `Creative_${Date.now()}`,
       object_story_spec: objectStorySpec,
     });
@@ -370,7 +382,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
 
 
   async createAd(accountId, { adsetId, creativeId, name, status = 'PAUSED' }) {
-    const data = await this._post(`/${accountId}/ads`, {
+    const data = await this._post(`/${withAct(accountId)}/ads`, {
       name: name || `Ad_${Date.now()}`,
       adset_id: adsetId,
       creative: { creative_id: creativeId },
@@ -381,7 +393,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
 
   async uploadAdImage(accountId, imageUrl) {
     // Upload image from URL using the bytes endpoint
-    const data = await this._post(`/${accountId}/adimages`, { url: imageUrl });
+    const data = await this._post(`/${withAct(accountId)}/adimages`, { url: imageUrl });
     const images = data.images || {};
     const firstKey = Object.keys(images)[0];
     if (!firstKey) throw new Error('Image upload failed: no image returned');
@@ -444,14 +456,14 @@ export class MetaAdsAPI extends BasePlatformApiClient {
   }
   async uploadAdVideo(accountId, videoUrl) {
     this.log.info('Uploading video', { accountId, videoUrl });
-    const data = await this._post(`/${accountId}/advideos`, { file_url: videoUrl });
+    const data = await this._post(`/${withAct(accountId)}/advideos`, { file_url: videoUrl });
     if (!data.id) throw new Error('Video upload failed: no id returned');
     return { id: data.id };
   }
 
   
   async getPixels(accountId) {
-    const data = await this._get(`/${accountId}/adspixels`, {
+    const data = await this._get(`/${withAct(accountId)}/adspixels`, {
       fields: 'id,name,last_fired_time',
       limit: '50',
     });

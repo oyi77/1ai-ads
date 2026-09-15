@@ -5,12 +5,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('node-cron', () => ({ default: { schedule: vi.fn() } }));
 
 let getMeImpl = async () => ({ id: 'fb-1', name: 'QA' });
+let getAdAccountsImpl = async () => [{ id: 'act_1' }];
 
 // Collapse the platform fan-out to a single controllable platform.
 let getPlatformImpl = async () => ({
   setActiveAccount() {},
   getMe() {
     return getMeImpl();
+  },
+  getAdAccounts() {
+    return getAdAccountsImpl();
   },
 });
 vi.mock('../../../../server/platforms/index.js', () => ({
@@ -74,10 +78,14 @@ const deadAccount = (extra = {}) => ({
 
 beforeEach(() => {
   getMeImpl = async () => ({ id: 'fb-1', name: 'QA' });
+  getAdAccountsImpl = async () => [{ id: 'act_1' }];
   getPlatformImpl = async () => ({
     setActiveAccount() {},
     getMe() {
       return getMeImpl();
+    },
+    getAdAccounts() {
+      return getAdAccountsImpl();
     },
   });
 });
@@ -139,6 +147,33 @@ describe('token health check', () => {
       id: 'acct-dead',
       fields: { health_status: 'ok', last_error: null },
     });
+  });
+
+  it('demotes a page-scoped token that passes getMe but cannot reach ads', async () => {
+    // Live 2026-09-15: a page token passed getMe, stayed flagged 'ok', and
+    // every sync/report 400d. Health must prove ads access, not just validity.
+    getAdAccountsImpl = async () => {
+      throw new Error('meta API returned 400: (#100) Tried accessing nonexisting field');
+    };
+    const { run, updates, sendMessage } = healthCheckWith({ accounts: [deadAccount()] });
+
+    await run();
+
+    expect(updates).toContainEqual({
+      id: 'acct-dead',
+      fields: { health_status: 'expired', last_error: expect.stringContaining('no ad-account access') },
+    });
+    expect(sendMessage).toHaveBeenCalledWith('555', expect.stringContaining('tidak valid'), expect.anything());
+  });
+
+  it('keeps ok when ads list is empty but reachable', async () => {
+    getAdAccountsImpl = async () => [];
+    const { run, updates, sendMessage } = healthCheckWith({ accounts: [deadAccount()] });
+
+    await run();
+
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(updates).toEqual([]);
   });
 
   it('does not treat a transient network failure as token expiry', async () => {
