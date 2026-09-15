@@ -269,14 +269,12 @@ async function replyCampaignList(ctx, accountId, campaigns, page, platform = 'me
         inline_keyboard: [
           ...slice.map((c) => [{
             text: (c.status === 'active' ? '⏸ Matiin ' : '▶️ Nyalain ') + c.name,
-            // No accountId segment: `ads:toggle:<p>:<acct>:<camp>:<mode>`
-            // overflows Telegram's 64-byte cap (83 worst-case). The toggle
-            // mutation needs platform+campaign+mode only; back navigates up.
-            callback_data: `ads:toggle:${platform}:${c.id}:${c.status === 'active' ? 'pause' : 'resume'}`,
+            // Dua langkah biar kepencet nggak langsung eksekusi: ask → toggle.
+            // accountId tetap di luar (cap 64B) — ask resolve nama via repo lokal.
+            callback_data: `ads:ask:${platform}:${c.id}:${c.status === 'active' ? 'pause' : 'resume'}`,
           }]),
           pagerRow(`ads:camps:${platform}:${accountId}`, p, pages),
-          [{ text: '📊 Laporan', callback_data: `ads:repacc:${platform}:${accountId}` }],
-          [{ text: '➕20%', callback_data: `ads:bud:${platform}:${accountId}:1.2` }, { text: '➖20%', callback_data: `ads:bud:${platform}:${accountId}:0.8333` }, { text: '🎯 Buat', callback_data: 'menu:create' }],
+          [{ text: '➕20%', callback_data: `ads:abud:${platform}:${accountId}:1.2` }, { text: '➖20%', callback_data: `ads:abud:${platform}:${accountId}:0.8` }, { text: '🎯 Buat', callback_data: 'menu:create' }],
           [{ text: '◀️ Kembali ke akun', callback_data: `ads:platform:${platform}` }],
           [{ text: '📋 Menu', callback_data: 'quick:menu' }],
         ],
@@ -322,7 +320,72 @@ export function handleAdsToggle(deps) {
   };
 }
 
-// ── Reports ─────────────────────────────────────────────────
+// ── Konfirmasi sebelum mutasi ─────────────────────────────────
+// Kepencet tombol Matiin/Nyalain/±20% TIDAK langsung eksekusi ke Meta.
+// ask-* tampilkan nama + dampak, eksekusi cuma lewat tombol "Ya".
+export function handleAdsAsk(deps) {
+  return async (ctx, platform, campaignId, mode) => {
+    const local = deps.repos?.campaignsRepo?.findByCampaignId?.(campaignId);
+    const name = local?.name || campaignId;
+    const verb = mode === 'pause' ? 'matiin' : 'nyalain';
+    return ctx.reply(
+      `⚠️ <b>Yakin mau ${verb} "${escHtml(name)}"?</b>\n\n` +
+      (mode === 'pause'
+        ? 'Campaign berhenti tayang dan nggak makan budget lagi.'
+        : 'Campaign mulai tayang lagi dan makan budget lagi.') +
+      `\n\nPencet Ya buat lanjut:`,
+      {
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: `✅ Ya, ${verb}`, callback_data: `ads:toggle:${platform}:${campaignId}:${mode}` },
+              { text: '❌ Batal', callback_data: `ads:platform:${platform}` },
+            ],
+            [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+          ],
+        },
+      }
+    );
+  };
+}
+
+export function handleAdsAskBud(deps) {
+  return async (ctx, platform, accountId, multStr) => {
+    const { api } = await makeApi(ctx, deps, platform || 'meta');
+    if (!api) return ctx.reply(`🔌 Belum ada koneksi ${(platform || 'meta').toUpperCase()}. Hubungkan dulu via /status → ➕ Tambah Akun.`);
+    const mult = parseFloat(multStr);
+    if (!Number.isFinite(mult) || mult <= 0.2 || mult >= 5) return ctx.reply('⚠️ Angka nggak valid.');
+    const pct = Math.round((mult - 1) * 100);
+    let acctName = accountId;
+    let activeCount = null;
+    try {
+      const owned = (await api.getAdAccounts()).find(a => String(a.id) === String(accountId));
+      if (owned?.name) acctName = owned.name;
+      const campaigns = await api.getCampaigns(accountId, { limit: 50 });
+      activeCount = campaigns.filter(c => c.status === 'active').length;
+    } catch {
+      // nama/jumlah best-effort — konfirmasi tetap jalan
+    }
+    return ctx.reply(
+      `⚠️ <b>Ubah budget ${activeCount === null ? 'campaign aktif' : `${activeCount} campaign aktif`} di "${escHtml(acctName)}" ${pct > 0 ? '+' : ''}${pct}%?</b>\n\n` +
+      `Contoh: budget Rp 50.000/hari ${pct > 0 ? 'jadi' : 'turun ke'} <b>${fmtCurrency(Math.round(50000 * mult))}/hari</b>.\n` +
+      `Nggak bisa undo otomatis — tapi bisa balikin manual dengan pencet kebalikannya.\n\nPencet Ya buat lanjut:`,
+      {
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: `✅ Ya, ubah ${pct > 0 ? '+' : ''}${pct}%`, callback_data: `ads:bud:${platform}:${accountId}:${multStr}` },
+              { text: '❌ Batal', callback_data: `ads:platform:${platform}` },
+            ],
+            [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+          ],
+        },
+      }
+    );
+  };
+}
 export function handleAdsReport(deps) {
   return async (ctx, platformOrAccountId, accountIdOrUndefined) => {
     const platform = accountIdOrUndefined ? platformOrAccountId : 'meta';

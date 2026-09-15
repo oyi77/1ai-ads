@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 // Menu ramping 2026-09-15: utama 4 tombol (Dashboard, Buat Campaign,
 // Kelola Iklan, Bantuan) + Mini App. Advanced masuk menu:manage.
 // Mode demo: user tanpa token bisa jalan-jalan aman.
+// /help gabung ke /menu: satu pintu, bukan dua layar mirip.
 
 const { mainMenuKeyboard, manageMenuKeyboard, handleMenuButton } =
   await import('../../../server/bot/commands/menu.js');
@@ -116,5 +117,23 @@ describe('mode demo — aman buat pemula', () => {
     const cb = flatCb(ctx._replies[ctx._replies.length - 1]).join(' ');
     expect(cb).toContain('dash:demo:rep:0:30d');
     expect(cb).toContain('quick:menu');
+  });
+});
+
+const { handleHelp } = await import('../../../server/bot/commands/help.js');
+
+describe('/help gabung ke /menu — satu pintu', () => {
+  it('render penjelasan + keyboard utama yang sama', async () => {
+    const replies = [];
+    const ctx = {
+      reply: async (msg, opts) => { replies.push({ msg, opts }); },
+    };
+    await handleHelp()(ctx);
+    expect(replies[0].msg).toContain('Dashboard');
+    expect(replies[0].msg).toContain('Buat Campaign');
+    expect(replies[0].msg).toContain('Kelola Iklan');
+    const cb = (replies[0].opts.reply_markup.inline_keyboard || []).flat().map((b) => b.callback_data).join(' ');
+    expect(cb).toContain('menu:status');
+    expect(cb).toContain('menu:manage');
   });
 });

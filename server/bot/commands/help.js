@@ -1,34 +1,22 @@
 /**
- * /help command — full, accurate guide kept in sync with the handlers
- * actually registered in index.js and the buttons in mainMenuKeyboard().
+ * /help — satu pintu dengan /menu (kontrak 2026-09-15): tidak ada lagi
+ * dua layar mirip yang bikin pemula bingung. Render menu utama + penjelasan
+ * tiap tombol. Single source of truth keyboard tetap mainMenuKeyboard().
  */
+import { mainMenuKeyboard } from './menu.js';
 
 export function handleHelp() {
   return async (ctx) => {
     await ctx.reply(
-      '❓ <b>Bantuan AdForge</b>\n\n' +
-      '<b>Perintah utama:</b>\n' +
-      '/start — Menu utama & perkenalan\n' +
-      '/menu — Buka semua fitur\n' +
-      '/status — Dashboard: akun terhubung, campaign aktif/nonaktif/dihapus, draft\n' +
-      '/ads — Kelola akun iklan + campaign per akun\n' +
-      '/create — Bikin campaign baru (dipandu langkah per langkah)\n' +
-      '/monitor — Aturan otomatis (jaga spend, alert)\n' +
-      '/metaapp — Kredensial Meta App milikmu\n' +
-      '/settings — Token & koneksi akun\n' +
-      '/pricing — Lihat paket\n' +
-      '/cancel — Batalkan langkah yang lagi jalan\n' +
-      '/help — Pesan ini\n\n' +
-      '<b>Aksi cepat:</b>',
+      '❓ <b>Bantuan AdForge — semua lewat tombol di bawah:</b>\n\n' +
+      '📊 <b>Dashboard</b> — ringkasan akun iklan + campaign (aktif/nonaktif/dihapus) + laporan per akun\n' +
+      '🎯 <b>Buat Campaign</b> — bikin iklan baru, dipandu langkah per langkah\n' +
+      '🛠️ <b>Kelola Iklan</b> — Aturan otomatis, Saran AI, Ads Manager, Platform, Pengaturan, Harga\n' +
+      '📱 <b>Mini App</b> — versi aplikasi di dalam Telegram\n\n' +
+      '<b>Perintah cepat:</b> /status /create /monitor /ads /settings /cancel',
       {
         parse_mode: 'HTML',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '📊 Dashboard', callback_data: 'menu:status' }, { text: '📣 Ads Manager', callback_data: 'menu:ads' }],
-            [{ text: '⚡ Rules', callback_data: 'menu:monitor' }, { text: '🌐 Platforms', callback_data: 'menu:platforms' }],
-            [{ text: '📋 Menu', callback_data: 'quick:menu' }],
-          ],
-        },
+        reply_markup: mainMenuKeyboard(),
       }
     );
   };

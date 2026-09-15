@@ -16,8 +16,8 @@ import { handleHelp } from './commands/help.js';
 import { handleSettings, handleSettingsCallback } from './commands/settings.js';
 import { handleMonitor, handleMonitorCallback, handleMonitorText } from './commands/monitor.js';
 import { handleAdminStats, handleAdminUsers, handleAdminBroadcast } from './commands/admin.js';
-import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm, handleAdsAccountReport, handleAdsAccountsPage, handleAdsCampaignsPage, handleAdsBudgetScale, handleAdsPlatform } from './commands/ads.js';
 import { handleApprovalApprove, handleApprovalReject } from './commands/approvals.js';
+import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsAsk, handleAdsAskBud, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm, handleAdsAccountReport, handleAdsAccountsPage, handleAdsCampaignsPage, handleAdsBudgetScale, handleAdsPlatform } from './commands/ads.js';
 import { handlePricing } from './commands/pricing.js';
 import { initScheduler } from './scheduler.js';
 import { errorHandler } from './middleware/error-handler.js';
@@ -29,8 +29,6 @@ import { createCampaignScene } from './scenes/create-campaign.js';
 const log = createLogger('bot');
 
 let botInstance = null;
-
-// Known bot commands (for unknown-command detection)
 const KNOWN_COMMANDS = [
   'start', 'menu', 'quick', 'status', 'help', 'pricing',
   'monitor', 'settings', 'ads', 'cancel', 'metaapp', 'create',
@@ -166,6 +164,16 @@ export function initBot(app, deps) {
     await ctx.answerCbQuery();
     const [, platform, camp, mode] = ctx.match;
     await handleAdsToggle(deps)(ctx, platform, camp, mode);
+  });
+  bot.action(/^ads:ask:(.+):(.+):(.+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const [, platform, camp, mode] = ctx.match;
+    await handleAdsAsk(deps)(ctx, platform, camp, mode);
+  });
+  bot.action(/^ads:abud:(.+):(.+):([\d.]+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const [, platform, acct, mult] = ctx.match;
+    await handleAdsAskBud(deps)(ctx, platform, acct, mult);
   });
   bot.action(/^ads:report:(.+?)(?::(.+))?$/, async (ctx) => {
     await ctx.answerCbQuery();

@@ -21,7 +21,7 @@ vi.mock('../../../server/services/meta/index.js', () => {
   };
 });
 
-const { handleAds, handleAdsSelect, handleAdsToggle, handleAdsReport } =
+const { handleAds, handleAdsSelect, handleAdsToggle, handleAdsAsk, handleAdsAskBud, handleAdsReport } =
   await import('../../../server/bot/commands/ads.js');
 
 function makeCtx(userId = 'u1') {
@@ -112,5 +112,39 @@ describe('per-user ads handlers (multi-platform)', () => {
     await handleAdsToggle(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', 'c2', 'resume');
     expect(mockUpdateCampaign).toHaveBeenCalledWith('c2', { status: 'ACTIVE' });
     expect(txt(ctx._replies[1])).toContain('dinyalain');
+  });
+
+  it('campaign list buttons ask first (no direct toggle/budget)', async () => {
+    const ctx = makeCtx();
+    await handleAdsSelect(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', '1181078009580337');
+    const flat = kbOf(ctx._replies[1]).flat().map((b) => b.callback_data).join(' ');
+    expect(flat).toContain('ads:ask:meta:c1:pause');
+    expect(flat).toContain('ads:abud:meta:1181078009580337:1.2');
+    expect(flat).not.toMatch(/callback ads:toggle/);
+    expect(flat).not.toContain('ads:bud:meta');
+  });
+
+  it('handleAdsAsk asks with campaign name + Ya/Batal + Menu', async () => {
+    const deps = makeDeps({ accessToken: 'USER_TOKEN' });
+    deps.repos.campaignsRepo = { findByCampaignId: () => ({ name: 'Promo Lebaran' }) };
+    const ctx = makeCtx();
+    await handleAdsAsk(deps)(ctx, 'meta', 'c1', 'pause');
+    expect(txt(ctx._replies[0])).toContain('Promo Lebaran');
+    expect(txt(ctx._replies[0])).toContain('Yakin');
+    const flat = kbOf(ctx._replies[0]).flat().map((b) => b.callback_data).join(' ');
+    expect(flat).toContain('ads:toggle:meta:c1:pause');
+    expect(flat).toContain('quick:menu');
+    expect(mockUpdateCampaign).not.toHaveBeenCalled();
+  });
+  it('handleAdsAskBud asks with count + example + Ya/Batal + Menu', async () => {
+    const ctx = makeCtx();
+    await handleAdsAskBud(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', '1181078009580337', '1.2');
+    const t = txt(ctx._replies[0]);
+    expect(t).toContain('1 campaign aktif');
+    expect(t).toContain('+20%');
+    const flat = kbOf(ctx._replies[0]).flat().map((b) => b.callback_data).join(' ');
+    expect(flat).toContain('ads:bud:meta:1181078009580337:1.2');
+    expect(flat).toContain('quick:menu');
+    expect(mockUpdateCampaign).not.toHaveBeenCalled();
   });
 });
