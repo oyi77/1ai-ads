@@ -144,9 +144,22 @@ const FB_EXECUTION_WORDS = {
   DECREASE_BUDGET: 'budget diturunin',
 };
 
+// Filter teknis FB yang bukan kondisi bermakna buat user — disembunyikan
+// (return null), bukan dirender mentah. Contoh dari live API:
+// entity_type=CAMPAIGN, time_preset=TODAY, campaign.name CONTAIN "Tes".
+const FB_NOISE_FIELDS = new Set([
+  'entity_type', 'entity_id', 'time_preset', 'timepreset',
+  'adaccount_id', 'ad_account_id', 'account_id', 'campaign_id', 'campaign_group_id',
+]);
 function fbFilterWord(f) {
   if (!f || typeof f !== 'object') return null;
   const field = String(f.field || '').toLowerCase();
+  // Noise 1: field teknis murni (scope/waktu/id) — bukan kondisi.
+  if (FB_NOISE_FIELDS.has(field)) return null;
+  // Noise 2: filter nama (campaign/adset/ad NAME + CONTAIN/EQUAL string) —
+  // itu "target mana", bukan "kondisi apa". Lafaz mentahnya
+  // ("campaign.name CONTAIN Tes") yang bikin user bingung di screenshot.
+  if (/\.?name$/i.test(field) && typeof f.value === 'string') return null;
   const label = FB_FIELD_LABELS[field] || FB_FIELD_LABELS[field.replace(/^campaign\./, '')] || field || 'metrik';
   const op = FB_OPERATOR_WORDS[String(f.operator || '').toUpperCase()] || String(f.operator || '');
   const val = f.value;

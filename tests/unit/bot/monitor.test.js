@@ -165,7 +165,7 @@ describe('monitor — enhanced rule system', () => {
     expect(msg).not.toContain('increase\\_budget');
   });
 
-  it('view:all tampilkan aturan Facebook + peringatan tabrakan', async () => {
+  it('view:all ringkas aturan Facebook 1 baris + tombol detail + tabrakan', async () => {
     mockGetAdAccounts.mockResolvedValue([{ id: 'act_A', name: 'Toko A' }]);
     mockGetAdRulesLibrary.mockResolvedValue([{
       id: 'fb-1', name: 'FB Roas Rule', status: 'ACTIVE',
@@ -190,9 +190,83 @@ describe('monitor — enhanced rule system', () => {
     const ctx = makeCtx('u1', 'view:all');
     await handleMonitorCallback(deps)(ctx);
     const msg = ctx._replies[0].msg;
-    expect(msg).toContain('aturan Facebook');
-    expect(msg).toContain('Belanja lebih dari Rp 100.000');
-    expect(msg).toContain('dimatiin');
+    // Ringkas: 1 baris per akun, bukan dump kondisi mentah.
+    expect(msg).toContain('Aturan Facebook');
+    expect(msg).toContain('Toko A — 1 aturan Facebook (1 aktif)');
+    expect(msg).not.toContain('FB Roas Rule');
     expect(msg).toContain('tabrakan');
+    const flat = ctx._replies[0].opts.reply_markup.inline_keyboard.flat().map((b) => b.callback_data);
+    expect(flat).toContain('rule:fb:act_A');
+  });
+
+  it('fb: detail per akun tampil nama + kondisi bersih', async () => {
+    mockGetAdAccounts.mockResolvedValue([{ id: 'act_A', name: 'Toko A' }]);
+    mockGetAdRulesLibrary.mockResolvedValue([{
+      id: 'fb-1', name: 'FB Roas Rule', status: 'ACTIVE',
+      evaluationSpec: { filters: [{ field: 'spend', operator: 'GREATER_THAN', value: 100000 }] },
+      executionSpec: { execution_type: 'PAUSE' },
+    }]);
+    const deps = makeDeps({
+      repos: {
+        platformAccountsRepo: {
+          findByUserId: vi.fn(() => [{ id: 'c1', platform: 'meta', is_active: 1, credentials: { access_token: 'T' } }]),
+        },
+      },
+    });
+    const ctx = makeCtx('u1', 'fb:act_A');
+    await handleMonitorCallback(deps)(ctx);
+    const msg = ctx._replies[0].msg;
+    expect(msg).toContain('FB Roas Rule');
+    expect(msg).toContain('Belanja lebih dari Rp 100.000 → dimatiin');
+  });
+
+  it('fb: filter noise teknis disembunyikan', async () => {
+    mockGetAdAccounts.mockResolvedValue([{ id: 'act_A', name: 'Toko A' }]);
+    mockGetAdRulesLibrary.mockResolvedValue([{
+      id: 'fb-2', name: 'Tes On 00.00', status: 'DISABLED',
+      evaluationSpec: { filters: [
+        { field: 'campaign.name', operator: 'CONTAIN', value: 'Tes' },
+        { field: 'entity_type', operator: 'EQUAL', value: 'CAMPAIGN' },
+        { field: 'time_preset', operator: 'EQUAL', value: 'TODAY' },
+      ] },
+      executionSpec: { execution_type: 'UNPAUSE' },
+    }]);
+    const deps = makeDeps({
+      repos: {
+        platformAccountsRepo: {
+          findByUserId: vi.fn(() => [{ id: 'c1', platform: 'meta', is_active: 1, credentials: { access_token: 'T' } }]),
+        },
+      },
+    });
+    const ctx = makeCtx('u1', 'fb:act_A');
+    await handleMonitorCallback(deps)(ctx);
+    const msg = ctx._replies[0].msg;
+    expect(msg).toContain('Tes On 00.00');
+    expect(msg).not.toContain('CONTAIN');
+    expect(msg).not.toContain('entity_type');
+    expect(msg).not.toContain('time_preset');
+  });
+
+  it('fb: dua token akun sama tidak dobel', async () => {
+    mockGetAdAccounts.mockResolvedValue([{ id: 'act_A', name: 'Toko A' }]);
+    mockGetAdRulesLibrary.mockResolvedValue([{
+      id: 'fb-1', name: 'R1', status: 'ACTIVE',
+      evaluationSpec: { filters: [{ field: 'spend', operator: 'GREATER_THAN', value: 1 }] },
+      executionSpec: { execution_type: 'PAUSE' },
+    }]);
+    const deps = makeDeps({
+      repos: {
+        platformAccountsRepo: {
+          findByUserId: vi.fn(() => [
+            { id: 'c1', platform: 'meta', is_active: 1, credentials: { access_token: 'T1' } },
+            { id: 'c2', platform: 'meta', is_active: 1, credentials: { access_token: 'T2' } },
+          ]),
+        },
+      },
+    });
+    const ctx = makeCtx('u1', 'view:all');
+    await handleMonitorCallback(deps)(ctx);
+    const msg = ctx._replies[0].msg;
+    expect(msg.match(/Toko A — 1 aturan Facebook/g).length).toBe(1);
   });
 });

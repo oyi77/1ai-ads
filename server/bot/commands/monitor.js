@@ -128,7 +128,9 @@ export async function liveAdAccountNames(deps, userId) {
  * Gagal per akun = skip (token mati / izin kurang), bukan fatal.
  */
 export async function liveFbRules(deps, userId) {
-  const out = [];
+  // Dedup per akun: 2 token bisa menaungi akun yang sama (dulu grup dobel —
+  // "Akun 7" dan "Akun 9" muncul 2x dengan isi sama di layar Aturanku).
+  const byAccount = new Map();
   const seenTokens = new Set();
   for (const row of metaAccounts(deps, userId)) {
     const token = row.credentials?.access_token || row.access_token;
@@ -143,13 +145,16 @@ export async function liveFbRules(deps, userId) {
       live = await api.getAdAccounts();
     } catch { continue; }
     for (const a of live || []) {
+      const key = String(a.id);
+      if (byAccount.has(key)) continue;
+      let rules = [];
       try {
-        const rules = await api.getAdRulesLibrary(a.id, { limit: 50 });
-        if (rules?.length) out.push({ accountId: String(a.id), accountName: a.name || String(a.id), rules });
+        rules = await api.getAdRulesLibrary(a.id, { limit: 50 });
       } catch { /* akun ini skip */ }
+      if (rules?.length) byAccount.set(key, { accountId: key, accountName: a.name || String(a.id), rules });
     }
   }
-  return out;
+  return [...byAccount.values()];
 }
 
 function resolveAcctName(liveNames, accounts, accountId) {
@@ -344,10 +349,47 @@ async function renderMyRules(deps, userId) {
   const accounts = metaAccounts(deps, userId);
   const liveNames = await liveAdAccountNames(deps, userId);
 
+  // ── Aturan NATIVE Facebook (read-only) ──────────────────────
+  // Dulu tiap rule FB di-dump lengkap di layar ini (kondisi mentah
+  // "campaign.name CONTAIN ..." + nama kurung) — user bingung. Sekarang
+  // cukup 1 baris ringkas per akun + tombol Lihat buat detailnya.
+  // Diambil DULU sebelum early-return: user tanpa bot rules tapi punya
+  // FB rules tetap lihat infonya, bukan layar kosong.
+  const fbSummaries = [];
+  const fbDetailButtons = [];
+  let collision = false;
+  try {
+    const fbGroups = await liveFbRules(deps, userId);
+    for (const g of fbGroups) {
+      const total = (g.rules || []).length;
+      if (!total) continue;
+      const activeN = (g.rules || []).filter(fb => describeFbRule(fb).active).length;
+      const state = activeN > 0 ? '🟢' : '⚪️';
+      fbSummaries.push(`${state} 📌 ${esc(g.accountName)} — ${total} aturan Facebook (${activeN} aktif)`);
+      if (fbDetailButtons.length < 6) {
+        fbDetailButtons.push([{ text: `🔍 ${g.accountName.slice(0, 20)}`, callback_data: `rule:fb:${g.accountId}` }]);
+      }
+      if (activeN > 0) {
+        const botActive = rules.some(r => r.enabled && (!r.accountId || String(r.accountId) === String(g.accountId) || String(r.accountId).replace(/^act_/, '') === String(g.accountId).replace(/^act_/, '')));
+        if (botActive) collision = true;
+      }
+    }
+  } catch { /* FB rules best-effort */ }
+  const fbBlock = fbSummaries.length
+    ? `\n<b>📌 Aturan Facebook (jalan di sana, bot nggak ganggu):</b>\n${fbSummaries.join('\n')}\n<i>Pencet 🔍 buat lihat detail per akun. Jangan pasang dua aturan berlawanan di akun yang sama ya.</i>`
+    : '';
+  const collisionBlock = collision
+    ? `\n\n⚠️ <b>Hati-hati tabrakan:</b> akun ini dijaga aturan bot DAN aturan Facebook yang dua-duanya aktif. Misal FB matiin campaign sementara bot nyalain lagi (atau sebaliknya). Matikan salah satunya kalau kelakuannya aneh.`
+    : '';
+
   if (!rules.length) {
+    const keyboard = [[{ text: '➕ Bikin Aturan', callback_data: 'rule:add:start' }, { text: '📋 Menu', callback_data: 'quick:menu' }]];
+    for (const row of fbDetailButtons) keyboard.splice(keyboard.length - 1, 0, row);
     return {
-      text: '📭 Belum ada aturan. Pencet ➕ Bikin Aturan atau 📦 Template buat bikin yang pertama!',
-      keyboard: [[{ text: '➕ Bikin Aturan', callback_data: 'rule:add:start' }, { text: '📋 Menu', callback_data: 'quick:menu' }]],
+      text: fbSummaries.length
+        ? `📋 <b>Aturanku</b>\n\n📭 Belum ada aturan bot. Tapi akunmu dijaga Facebook:\n${fbBlock}`
+        : '📭 Belum ada aturan. Pencet ➕ Bikin Aturan atau 📦 Template buat bikin yang pertama!',
+      keyboard,
     };
   }
 
@@ -371,31 +413,10 @@ async function renderMyRules(deps, userId) {
     }
     lines.push('');
   }
-  // ── Aturan NATIVE Facebook (read-only) ──────────────────────
-  // User yang sudah punya Automated Rules di FB tidak lihat kekosongan:
-  // tampilkan di sini + peringatan tabrakan kalau dua-duanya aktif.
-  const fbBlocks = [];
-  let collision = false;
-  try {
-    const fbGroups = await liveFbRules(deps, userId);
-    for (const g of fbGroups) {
-      const rows = (g.rules || []).map(fb => {
-        const s = describeFbRule(fb);
-        return `${s.active ? '🟢' : '⚪️'} ${esc(s.text)}${fb.name ? ` <i>(${esc(fb.name)})</i>` : ''}`;
-      });
-      if (rows.length) fbBlocks.push(`<b>📌 ${esc(g.accountName)} — aturan Facebook</b>\n${rows.join('\n')}`);
-      if ((g.rules || []).some(fb => describeFbRule(fb).active)) {
-        const botActive = rules.some(r => r.enabled && (!r.accountId || String(r.accountId) === String(g.accountId) || String(r.accountId).replace(/^act_/, '') === String(g.accountId).replace(/^act_/, '')));
-        if (botActive) collision = true;
-      }
-    }
-  } catch { /* FB rules best-effort */ }
-
   const text =
     `📋 <b>Aturanku</b>\n` +
     `<i>Aturan hidup di bot (bukan di dashboard Facebook): bot cek tiap jadwal, kalau kejadian kirim minta setuju, baru eksekusi setelah kamu pencet ✅.</i>\n\n${lines.join('\n')}` +
-    (fbBlocks.length ? `\n${fbBlocks.join('\n\n')}\n\n<i>↑ Itu aturan yang kamu set langsung di Facebook — tetap jalan di sana, bot nggak ganggu. Jangan pasang dua aturan berlawanan di akun yang sama ya.</i>` : '') +
-    (collision ? `\n\n⚠️ <b>Hati-hati tabrakan:</b> akun ini dijaga aturan bot DAN aturan Facebook yang dua-duanya aktif. Misal FB matiin campaign sementara bot nyalain lagi (atau sebaliknya). Matikan salah satunya kalau kelakuannya aneh.` : '');
+    fbBlock + collisionBlock;
 
   // Per-rule action buttons (edit/disable/enable/delete)
   for (const r of rules.slice(0, 8)) {
@@ -404,10 +425,36 @@ async function renderMyRules(deps, userId) {
       { text: `${toggle}: ${r.name.slice(0, 20)}`, callback_data: `rule:toggle:${r.id}` },
     ]);
   }
+  for (const row of fbDetailButtons) keyboard.push(row);
   keyboard.push([{ text: '➕ Bikin Aturan', callback_data: 'rule:add:start' }]);
   keyboard.push([{ text: '⬅️ Kembali', callback_data: 'menu:monitor' }]);
   keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
   return { text, keyboard };
+}
+
+// Layar detail aturan Facebook SATU akun (dari tombol 🔍). Read-only:
+// nama rule + kondisi bersih (tanpa noise teknis) + status aktif/mati.
+export async function showFbRulesForAccount(ctx, deps, accountId) {
+  const groups = await liveFbRules(deps, ctx.userId).catch(() => []);
+  const g = (groups || []).find(x => String(x.accountId) === String(accountId)
+    || String(x.accountId).replace(/^act_/, '') === String(accountId).replace(/^act_/, ''));
+  if (!g) {
+    return ctx.reply('📌 Aturan Facebook buat akun ini nggak ketemu (mungkin token mati / izin kurang).', {
+      parse_mode: 'HTML',
+      reply_markup: { inline_keyboard: [[{ text: '📋 Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+    });
+  }
+  const rows = (g.rules || []).map(fb => {
+    const s = describeFbRule(fb);
+    return `${s.active ? '🟢' : '⚪️'} <b>${esc(fb.name || 'Aturan Facebook')}</b>\n   ${esc(s.text)}`;
+  });
+  return ctx.reply(
+    `📌 <b>Aturan Facebook — ${esc(g.accountName)}</b>\n<i>Read-only, jalan di Facebook. Bot nggak ganggu.</i>\n\n${rows.join('\n\n') || '📭 Nggak ada.'}`,
+    {
+      parse_mode: 'HTML',
+      reply_markup: { inline_keyboard: [[{ text: '⬅️ Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+    }
+  );
 }
 
 async function showAccountPicker(ctx, deps) {
@@ -608,6 +655,7 @@ export function handleMonitorCallback(deps) {
       return ctx.reply(text, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
     }
     if (action === 'history') return showRuleHistory(ctx, deps);
+    if (action.startsWith('fb:')) return showFbRulesForAccount(ctx, deps, action.split(':')[1]);
     if (action === 'account_picker') return showAccountPicker(ctx, deps);
     if (action.startsWith('account:')) {
       const accountId = action.split(':')[1];
