@@ -270,3 +270,64 @@ describe('monitor — enhanced rule system', () => {
     expect(msg.match(/Toko A — 1 aturan Facebook/g).length).toBe(1);
   });
 });
+
+describe('wizard anti-ganda — edit + debounce', () => {
+  function wizardCtx(action, session = {}) {
+    const replies = [];
+    const edits = [];
+    return {
+      userId: 'u1',
+      match: [`rule:${action}`, action],
+      answerCbQuery: vi.fn(async () => {}),
+      reply: async (msg, opts) => { replies.push({ msg, opts }); return { message: msg }; },
+      editMessageText: async (msg, opts) => { edits.push({ msg, opts }); return true; },
+      session: { ruleBuilder: { accountId: 'act_A' }, ...session },
+      _replies: replies,
+      _edits: edits,
+    };
+  }
+
+  it('langkah wizard edit pesan lama, bukan kirim baru', async () => {
+    const ctx = wizardCtx('add:cat:delivery');
+    await handleMonitorCallback(makeDeps())(ctx);
+    expect(ctx._edits.length).toBe(1);
+    expect(ctx._replies.length).toBe(0);
+    expect(ctx._edits[0].msg).toContain('Pilih metriknya');
+  });
+
+  it('klik-ganda tombol sama <3 detik diabaikan', async () => {
+    const deps = makeDeps();
+    const session = { ruleBuilder: { accountId: 'act_A' } };
+    const ctx1 = wizardCtx('add:cat:delivery', session);
+    await handleMonitorCallback(deps)(ctx1);
+    expect(ctx1._edits.length).toBe(1);
+    // Klik sama persis 1 detik kemudian → diam, tidak ada edit/reply baru.
+    const ctx2 = wizardCtx('add:cat:delivery', ctx1.session);
+    await handleMonitorCallback(deps)(ctx2);
+    expect(ctx2._edits.length).toBe(0);
+    expect(ctx2._replies.length).toBe(0);
+  });
+
+  it('klik beda tetap diproses walau cepat', async () => {
+    const deps = makeDeps();
+    const session = { ruleBuilder: { accountId: 'act_A' } };
+    const ctx1 = wizardCtx('add:cat:delivery', session);
+    await handleMonitorCallback(deps)(ctx1);
+    const ctx2 = wizardCtx('add:cat:cost', ctx1.session);
+    await handleMonitorCallback(deps)(ctx2);
+    expect(ctx2._edits.length).toBe(1);
+  });
+
+  it('fallback reply kalau bukan dari callback (tanpa editMessageText)', async () => {
+    const replies = [];
+    const ctx = {
+      userId: 'u1',
+      match: ['rule:add:cat:delivery', 'add:cat:delivery'],
+      answerCbQuery: vi.fn(async () => {}),
+      reply: async (msg, opts) => { replies.push({ msg, opts }); return { message: msg }; },
+      session: { ruleBuilder: { accountId: 'act_A' } },
+    };
+    await handleMonitorCallback(makeDeps())(ctx);
+    expect(replies.length).toBe(1);
+  });
+});

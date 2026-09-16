@@ -91,6 +91,35 @@ const INTERVAL_LABELS = {
   360: 'Tiap 6 jam',
 };
 
+/**
+ * Balas langkah wizard dengan EDIT pesan lama (bukan pesan baru).
+ * Klik-ganda user dulu bikin tiap langkah muncul 2-4x sebagai pesan baru.
+ * Fallback ke reply kalau bukan dari callback (tidak ada pesan buat diedit).
+ * "Message is not modified" = klik ganda lolos debounce → diam, jangan reply.
+ */
+async function stepReply(ctx, text, extra = {}) {
+  const opts = { parse_mode: 'HTML', ...extra };
+  if (typeof ctx.editMessageText === 'function') {
+    try {
+      return await ctx.editMessageText(text, { ...opts, reply_markup: extra.reply_markup });
+    } catch (err) {
+      if (/not modified|message to edit not found/i.test(String(err?.message || err?.description || ''))) return;
+    }
+  }
+  return ctx.reply(text, opts);
+}
+
+// Abaikan klik-ganda tombol wizard yang sama dalam 3 detik (user tekan ulang
+// karena koneksi lambat). Disimpan di session, hanya untuk jalur add:*.
+function isDoubleTap(ctx, action) {
+  if (!action.startsWith('add:')) return false;
+  ctx.session = ctx.session || {};
+  const prev = ctx.session._lastWizard;
+  const now = Date.now();
+  if (prev && prev.action === action && now - prev.ts < 3000) return true;
+  ctx.session._lastWizard = { action, ts: now };
+  return false;
+}
 function metaAccounts(deps, userId) {
   const rows = deps?.repos?.platformAccountsRepo?.findByUserId?.(userId) ?? [];
   return rows.filter((r) => r.platform === 'meta');
@@ -259,8 +288,7 @@ async function showMetricCategories(ctx, deps) {
     }
   }
   keyboard.push([{ text: '⬅️ Ganti Akun', callback_data: 'rule:add:start' }]);
-  keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
-  return ctx.reply(`📊 <b>Langkah 2/5: mau pantau apa?</b>\n\nAturan untuk: <b>${esc(scope)}</b>\n\nPilih jenis metrik:`, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
+  return stepReply(ctx, `📊 <b>Langkah 2/5: mau pantau apa?</b>\n\nAturan untuk: <b>${esc(scope)}</b>\n\nPilih jenis metrik:`, { reply_markup: { inline_keyboard: keyboard } });
 }
 
 async function showMetricsInCategory(ctx, deps, categoryId) {
@@ -272,7 +300,7 @@ async function showMetricsInCategory(ctx, deps, categoryId) {
   }
   keyboard.push([{ text: '⬅️ Kategori', callback_data: 'rule:add:start' }]);
   keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
-  return ctx.reply(`📏 <b>${esc(METRIC_CATEGORIES[categoryId])}</b> — buat <b>${esc(scope)}</b>\n\nPilih metriknya:`, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
+  return stepReply(ctx, `📏 <b>${esc(METRIC_CATEGORIES[categoryId])}</b> — buat <b>${esc(scope)}</b>\n\nPilih metriknya:`, { reply_markup: { inline_keyboard: keyboard } });
 }
 
 async function showOperators(ctx, deps, metric) {
@@ -287,7 +315,7 @@ async function showOperators(ctx, deps, metric) {
     [{ text: '⬅️ Metrik', callback_data: `rule:add:cat:${m.category}` }],
     [{ text: '📋 Menu', callback_data: 'quick:menu' }],
   ];
-  return ctx.reply(`📐 <b>${esc(m.name)}</b> — buat <b>${esc(scope)}</b>\n\nPilih pembandingnya:`, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
+  return stepReply(ctx, `📐 <b>${esc(m.name)}</b> — buat <b>${esc(scope)}</b>\n\nPilih pembandingnya:`, { reply_markup: { inline_keyboard: keyboard } });
 }
 
 function showTemplates(ctx) {
@@ -580,19 +608,24 @@ export function handleMonitorCallback(deps) {
 
     if (action === 'add:start') return showAccountStep(ctx, deps);
     if (action.startsWith('add:account:')) {
+      if (isDoubleTap(ctx, action)) return;
       const accountId = action.split(':')[2];
       ctx.session = ctx.session || {};
       ctx.session.ruleBuilder = { accountId };
       return showMetricCategories(ctx, deps);
     }
-    if (action.startsWith('add:cat:')) return showMetricsInCategory(ctx, deps, action.split(':')[2]);
+    if (action.startsWith('add:cat:')) {
+      if (isDoubleTap(ctx, action)) return;
+      return showMetricsInCategory(ctx, deps, action.split(':')[2]);
+    }
     if (action.startsWith('add:metric:')) {
+      if (isDoubleTap(ctx, action)) return;
       // FIX: use pop() instead of [3] since callback is rule:add:metric:ctr
       const metric = action.split(':').pop();
       return showOperators(ctx, deps, metric);
     }
     if (action.startsWith('add:op:')) {
-      // callback is rule:add:op:<metric>:<operator> → action='add:op:<metric>:<operator>'
+      if (isDoubleTap(ctx, action)) return;
       const parts = action.split(':');
       const metric = parts[2];
       const op = parts[3];
@@ -603,12 +636,14 @@ export function handleMonitorCallback(deps) {
       return showActionPicker(ctx, deps);
     }
     if (action.startsWith('add:action:')) {
+      if (isDoubleTap(ctx, action)) return;
       const actionType = action.split(':')[2];
       ctx.session = ctx.session || {};
       ctx.session.ruleBuilder = { ...(ctx.session.ruleBuilder || {}), actionType };
       return showIntervalPicker(ctx, deps);
     }
     if (action.startsWith('add:interval:')) {
+      if (isDoubleTap(ctx, action)) return;
       const interval = parseInt(action.split(':')[2], 10);
       ctx.session = ctx.session || {};
       ctx.session.ruleBuilder = { ...(ctx.session.ruleBuilder || {}), interval };
@@ -618,9 +653,9 @@ export function handleMonitorCallback(deps) {
         ctx.session.ruleBuilder.awaitingValue = true;
         const liveNames = await liveAdAccountNames(deps, ctx.userId);
         const scope = scopeLabel(rb, liveNames, metaAccounts(deps, ctx.userId));
-        return ctx.reply(
+        return stepReply(ctx,
           `📝 <b>Langkah 5/5: batas angkanya berapa?</b>\n\nAturan untuk: <b>${esc(scope)}</b>\n${esc(metricLabel(rb.metric))} ${esc(operatorWord(rb.operator))} [angka]\n\nContoh: kalau ${esc(metricLabel(rb.metric))} ${esc(operatorWord(rb.operator))} 5, kirim <code>5</code>`,
-          { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '⬅️ Batal', callback_data: 'menu:monitor' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+          { reply_markup: { inline_keyboard: [[{ text: '⬅️ Batal', callback_data: 'menu:monitor' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
         );
       }
       return createRule(ctx, deps, ctx.session.ruleBuilder.actionType, interval);
@@ -746,9 +781,9 @@ async function showActionPicker(ctx, deps) {
     [{ text: '⬅️ Kembali', callback_data: `rule:add:metric:${rb.metric}` }],
     [{ text: '📋 Menu', callback_data: 'quick:menu' }],
   ];
-  return ctx.reply(
+  return stepReply(ctx,
     `🎯 <b>Langkah 3/5: kalau kejadian, ngapain?</b>\n\nAturan untuk: <b>${esc(scope)}</b>\nKalau: <b>${esc(metricLabel(rb.metric))} ${esc(operatorWord(rb.operator))} ${esc(formatRuleValue(rb.metric, rb.value || '?'))}</b>\n\nPilih aksinya:`,
-    { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
+    { reply_markup: { inline_keyboard: keyboard } }
   );
 }
 
@@ -771,9 +806,9 @@ async function showIntervalPicker(ctx, deps) {
     duplicate_campaign: 'diduplikat', scale_budget: 'budget diubah',
     notify: 'kasih kabar', notify_and_pause: 'kasih kabar + dimatiin',
   };
-  return ctx.reply(
+  return stepReply(ctx,
     `🎯 <b>Langkah 4/5: seberapa sering dicek?</b>\n\nAturan untuk: <b>${esc(scope)}</b>\nKalau <b>${esc(metricLabel(rb.metric))} ${esc(operatorWord(rb.operator))} ${esc(formatRuleValue(rb.metric, rb.value || '?'))}</b> → <b>${esc(ACTION_LABELS[rb.actionType] || actionWord(rb.actionType))}</b>\n\nPilih jadwal pengecekan:`,
-    { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
+    { reply_markup: { inline_keyboard: keyboard } }
   );
 }
 
