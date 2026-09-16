@@ -3,7 +3,7 @@
  *
  * Extracted verbatim from ../scheduler.js. Registered via setupRuleGuard(bot, deps).
  */
-import { safeSend, evaluateRuleForCampaign, scheduleJob, log, esc } from '../helpers.js';
+import { safeSend, evaluateRuleForCampaign, isRuleDue, filterCampaignsForRule, scheduleJob, log, esc } from '../helpers.js';
 import { describeRuleCondition as describeID, actionWord as actionWordID } from '../../../lib/rule-words.js';
 
 /**
@@ -40,7 +40,9 @@ export function setupRuleGuard(bot, deps) {
         // rule was evaluated against system-owned campaigns. That cross-tenant
         // leak produced ~93 spurious matches on every 5-minute run.
         const ownerId = rule.userId || rule.user_id || 'system';
-        const campaigns = campaignsByUser[ownerId] || [];
+        if (!isRuleDue(rule)) continue;
+        try { deps.repos?.rulesRepo?.markEvaluated?.(rule.id); } catch { /* best-effort */ }
+        const campaigns = filterCampaignsForRule(campaignsByUser[ownerId] || [], rule);
         if (campaigns.length === 0) continue;
 
         for (const campaign of campaigns) {

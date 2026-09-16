@@ -3,6 +3,17 @@ import { v4 as uuid } from 'uuid';
 export class CampaignsRepository {
   constructor(db) {
     this.db = db;
+    // Kolom pre-049 belum ada di DB lama — tambahkan idempoten agar upsert
+    // ber-account_id tidak pecah sebelum migrasi 049 jalan.
+    try {
+      const cols = this.db.prepare('PRAGMA table_info(campaigns)').all().map((c) => c.name);
+      if (!cols.includes('account_id')) {
+        this.db.exec('ALTER TABLE campaigns ADD COLUMN account_id TEXT');
+      }
+    } catch { /* tabel belum ada / race — migrasi yang vonis */ }
+    try {
+      this.db.exec('CREATE INDEX IF NOT EXISTS idx_campaigns_account ON campaigns(account_id)');
+    } catch { /* abaikan */ }
   }
 
   findAll({ platform, userId } = {}) {
@@ -31,16 +42,18 @@ export class CampaignsRepository {
     if (campaignId === undefined || campaignId === null || campaignId === '') {
       throw new Error('CampaignsRepository.upsert requires campaign_id (or campaignId)');
     }
+    const accountId = data.account_id ?? data.accountId ?? data.ad_account_id ?? null;
     this.db.prepare(`
-      INSERT INTO campaigns (id, user_id, platform, campaign_id, name, status, budget, spend, revenue, impressions, clicks, conversions, roas, last_synced)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      INSERT INTO campaigns (id, user_id, platform, campaign_id, account_id, name, status, budget, spend, revenue, impressions, clicks, conversions, roas, last_synced)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       ON CONFLICT(platform, campaign_id) DO UPDATE SET
-        user_id = excluded.user_id, name = excluded.name, status = excluded.status,
+        user_id = excluded.user_id, account_id = COALESCE(excluded.account_id, campaigns.account_id),
+        name = excluded.name, status = excluded.status,
         budget = excluded.budget, spend = excluded.spend, revenue = excluded.revenue,
         impressions = excluded.impressions, clicks = excluded.clicks, conversions = excluded.conversions,
         roas = excluded.roas, last_synced = CURRENT_TIMESTAMP
     `).run(
-      id, data.userId || data.user_id || 'system', data.platform, campaignId, data.name || null, data.status || null,
+      id, data.userId || data.user_id || 'system', data.platform, campaignId, accountId, data.name || null, data.status || null,
       data.budget || null, data.spend || null, data.revenue || null,
       data.impressions || 0, data.clicks || 0, data.conversions || 0,
       data.roas || null

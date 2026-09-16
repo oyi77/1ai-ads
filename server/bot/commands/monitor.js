@@ -96,46 +96,17 @@ function metaAccounts(deps, userId) {
   return rows.filter((r) => r.platform === 'meta');
 }
 
-/**
- * Nama ASLI ad account dari Meta (live), bukan nama koneksi saat submit token.
- * Sapu tiap token user → getAdAccounts(). Return Map realAccountId → nama.
- * Best-effort: gagal = Map kosong, caller fallback ke nama koneksi / id.
- */
-export async function liveAdAccountNames(deps, userId) {
+// Sapu live SATU KALI per token: nama ad account + Automated Rules native FB.
+// Dulu renderMyRules panggil liveAdAccountNames + liveFbRules = sapu SEMUA
+// token 2x (tiap token mati ~400ms). User bertoken banyak → reply >14 detik.
+export async function liveFbData(deps, userId) {
   const names = new Map();
+  const byAccount = new Map();
   const seen = new Set();
   for (const row of metaAccounts(deps, userId)) {
     const token = row.credentials?.access_token || row.access_token;
     if (!token || seen.has(token)) continue;
     seen.add(token);
-    try {
-      const api = MetaAdsAPI.withToken(token);
-      const live = await api.getAdAccounts();
-      for (const a of live || []) {
-        if (a?.id && !names.has(String(a.id))) names.set(String(a.id), a.name || String(a.id));
-        // Meta id kadang act_123 / 123 — daftarkan dua-duanya.
-        const bare = String(a?.id || '').replace(/^act_/, '');
-        if (bare && !names.has(bare)) names.set(bare, a.name || String(a.id));
-      }
-    } catch { /* token mati → skip, bukan fatal */ }
-  }
-  return names;
-}
-
-/**
- * Sapu Automated Rules NATIVE Facebook per token user (read-only).
- * Return [{ accountId, accountName, rules: [{...fb, summary}] }].
- * Gagal per akun = skip (token mati / izin kurang), bukan fatal.
- */
-export async function liveFbRules(deps, userId) {
-  // Dedup per akun: 2 token bisa menaungi akun yang sama (dulu grup dobel —
-  // "Akun 7" dan "Akun 9" muncul 2x dengan isi sama di layar Aturanku).
-  const byAccount = new Map();
-  const seenTokens = new Set();
-  for (const row of metaAccounts(deps, userId)) {
-    const token = row.credentials?.access_token || row.access_token;
-    if (!token || seenTokens.has(token)) continue;
-    seenTokens.add(token);
     let api = null;
     try {
       api = MetaAdsAPI.withToken(token);
@@ -145,6 +116,9 @@ export async function liveFbRules(deps, userId) {
       live = await api.getAdAccounts();
     } catch { continue; }
     for (const a of live || []) {
+      if (a?.id && !names.has(String(a.id))) names.set(String(a.id), a.name || String(a.id));
+      const bare = String(a?.id || '').replace(/^act_/, '');
+      if (bare && !names.has(bare)) names.set(bare, a.name || String(a.id));
       const key = String(a.id);
       if (byAccount.has(key)) continue;
       let rules = [];
@@ -154,9 +128,31 @@ export async function liveFbRules(deps, userId) {
       if (rules?.length) byAccount.set(key, { accountId: key, accountName: a.name || String(a.id), rules });
     }
   }
-  return [...byAccount.values()];
+  return { names, groups: [...byAccount.values()] };
 }
 
+
+/**
+ * Nama ASLI ad account dari Meta (live), bukan nama koneksi saat submit token.
+ * Thin wrapper di atas liveFbData (1 sapuan per token).
+ */
+export async function liveAdAccountNames(deps, userId) {
+  try {
+    return (await liveFbData(deps, userId)).names;
+  } catch { return new Map(); }
+}
+
+/**
+ * Sapu Automated Rules NATIVE Facebook per token user (read-only).
+ * Return [{ accountId, accountName, rules: [{...fb, summary}] }].
+ * Gagal per akun = skip (token mati / izin kurang), bukan fatal.
+ * Thin wrapper di atas liveFbData (1 sapuan per token, dedup per akun).
+ */
+export async function liveFbRules(deps, userId) {
+  try {
+    return (await liveFbData(deps, userId)).groups;
+  } catch { return []; }
+}
 function resolveAcctName(liveNames, accounts, accountId) {
   const id = String(accountId || '');
   if (liveNames?.has(id)) return liveNames.get(id);
@@ -177,7 +173,6 @@ function metricsByCategory() {
   }
   return cats;
 }
-
 export function handleMonitor(deps) {
   return (ctx) => {
     const accounts = metaAccounts(deps, ctx.userId);
@@ -347,7 +342,7 @@ function renderRuleLine(state, enabled, rule, interval, hist) {
 async function renderMyRules(deps, userId) {
   const rules = deps?.repos?.rulesRepo?.getAll?.(userId) || [];
   const accounts = metaAccounts(deps, userId);
-  const liveNames = await liveAdAccountNames(deps, userId);
+  const { names: liveNames, groups: fbGroups } = await liveFbData(deps, userId).catch(() => ({ names: new Map(), groups: [] }));
 
   // ── Aturan NATIVE Facebook (read-only) ──────────────────────
   // Dulu tiap rule FB di-dump lengkap di layar ini (kondisi mentah
@@ -358,23 +353,20 @@ async function renderMyRules(deps, userId) {
   const fbSummaries = [];
   const fbDetailButtons = [];
   let collision = false;
-  try {
-    const fbGroups = await liveFbRules(deps, userId);
-    for (const g of fbGroups) {
-      const total = (g.rules || []).length;
-      if (!total) continue;
-      const activeN = (g.rules || []).filter(fb => describeFbRule(fb).active).length;
-      const state = activeN > 0 ? '🟢' : '⚪️';
-      fbSummaries.push(`${state} 📌 ${esc(g.accountName)} — ${total} aturan Facebook (${activeN} aktif)`);
-      if (fbDetailButtons.length < 6) {
-        fbDetailButtons.push([{ text: `🔍 ${g.accountName.slice(0, 20)}`, callback_data: `rule:fb:${g.accountId}` }]);
-      }
-      if (activeN > 0) {
-        const botActive = rules.some(r => r.enabled && (!r.accountId || String(r.accountId) === String(g.accountId) || String(r.accountId).replace(/^act_/, '') === String(g.accountId).replace(/^act_/, '')));
-        if (botActive) collision = true;
-      }
+  for (const g of fbGroups || []) {
+    const total = (g.rules || []).length;
+    if (!total) continue;
+    const activeN = (g.rules || []).filter(fb => describeFbRule(fb).active).length;
+    const state = activeN > 0 ? '🟢' : '⚪️';
+    fbSummaries.push(`${state} 📌 ${esc(g.accountName)} — ${total} aturan Facebook (${activeN} aktif)`);
+    if (fbDetailButtons.length < 6) {
+      fbDetailButtons.push([{ text: `🔍 ${g.accountName.slice(0, 20)}`, callback_data: `rule:fb:${g.accountId}` }]);
     }
-  } catch { /* FB rules best-effort */ }
+    if (activeN > 0) {
+      const botActive = rules.some(r => r.enabled && (!r.accountId || String(r.accountId) === String(g.accountId) || String(r.accountId).replace(/^act_/, '') === String(g.accountId).replace(/^act_/, '')));
+      if (botActive) collision = true;
+    }
+  }
   const fbBlock = fbSummaries.length
     ? `\n<b>📌 Aturan Facebook (jalan di sana, bot nggak ganggu):</b>\n${fbSummaries.join('\n')}\n<i>Pencet 🔍 buat lihat detail per akun. Jangan pasang dua aturan berlawanan di akun yang sama ya.</i>`
     : '';
@@ -698,14 +690,32 @@ export function handleMonitorCallback(deps) {
         seenTargets.add(key);
         try {
           const api = MetaAdsAPI.withToken(t.token);
-          const campaigns = await api.getCampaigns(t.adAccountId, { limit: 50 });
+          const campaigns = await api.getCampaigns(t.adAccountId, { limit: 200 });
+          // Metrik 30d per campaign — tanpa ini semua rule spend/roas/konversi
+          // tidak pernah match (nilai NULL → evaluateLeaf false selamanya).
+          let insightsById = {};
+          try {
+            insightsById = await api.getMultiCampaignInsights(campaigns.map(c => c.id), { datePreset: 'last_30d', accountId: t.adAccountId }) || {};
+          } catch (e) {
+            log.warn('Sync insights failed for account', { adAccountId: t.adAccountId, error: e.message });
+          }
           for (const c of campaigns) {
+            const ins = insightsById[c.id] || {};
+            const spend = Number(ins.spend || 0);
+            const revenue = Number(ins.revenue || 0);
             deps.repos?.campaignsRepo?.upsert?.({
               platform: 'meta',
               campaign_id: c.id,
+              account_id: t.adAccountId,
               name: c.name,
               status: c.status,
               budget: c.dailyBudget || 0,
+              spend,
+              revenue,
+              impressions: Number(ins.impressions || 0),
+              clicks: Number(ins.clicks || ins.linkClicks || 0),
+              conversions: Number(ins.conversions || 0),
+              roas: spend > 0 && revenue > 0 ? revenue / spend : 0,
               userId: ctx.userId,
             });
           }

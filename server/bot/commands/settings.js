@@ -67,14 +67,28 @@ export function handleSettingsCallback(deps) {
             const api = MetaAdsAPI.withToken(token);
             const live = await api.getAdAccounts();
             for (const a of live) {
-              const campaigns = await api.getCampaigns(a.id, { limit: 50 });
+              const campaigns = await api.getCampaigns(a.id, { limit: 200 });
+              let insightsById = {};
+              try {
+                insightsById = await api.getMultiCampaignInsights(campaigns.map(c => c.id), { datePreset: 'last_30d', accountId: a.id }) || {};
+              } catch { /* metrik best-effort */ }
               for (const c of campaigns) {
+                const ins = insightsById[c.id] || {};
+                const spend = Number(ins.spend || 0);
+                const revenue = Number(ins.revenue || 0);
                 deps.repos?.campaignsRepo?.upsert?.({
                   platform: 'meta',
                   campaign_id: c.id,
+                  account_id: a.id,
                   name: c.name,
                   status: c.status,
                   budget: c.dailyBudget || 0,
+                  spend,
+                  revenue,
+                  impressions: Number(ins.impressions || 0),
+                  clicks: Number(ins.clicks || ins.linkClicks || 0),
+                  conversions: Number(ins.conversions || 0),
+                  roas: spend > 0 && revenue > 0 ? revenue / spend : 0,
                   userId: ctx.userId,
                 });
               }

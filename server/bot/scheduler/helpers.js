@@ -93,6 +93,36 @@ export function evaluateRuleForCampaign(rule, campaign) {
 }
 
 /**
+ * True kalau rule jatuh tempo dievaluasi sekarang. Cron tick tiap 5 menit;
+ * rule 1 jam dilewati sampai lastEvaluatedAt cukup tua. interval 0/null =
+ * ikut pacing (tiap tick). Murni — bisa dites tanpa cron/DB.
+ */
+export function isRuleDue(rule, nowMs = Date.now()) {
+  const intervalMin = Number(rule?.intervalMinutes ?? rule?.interval_minutes ?? 5);
+  if (!(intervalMin > 0)) return true;
+  const lastEval = rule?.lastEvaluatedAt || rule?.last_evaluated_at;
+  if (!lastEval) return true;
+  return nowMs - new Date(lastEval).getTime() >= intervalMin * 60000;
+}
+
+/**
+ * Scope campaign ke akun rule. Banding toleran prefix act_. Baris legacy
+ * ber-account_id NULL ikut semua (lebih baik false-positive minta setuju
+ * daripada rule diam total). Murni — bisa dites tanpa cron/DB.
+ */
+export function filterCampaignsForRule(campaigns, rule) {
+  const ruleAcct = String(rule?.accountId ?? rule?.account_id ?? '');
+  if (!ruleAcct) return campaigns || [];
+  const bare = ruleAcct.replace(/^act_/, '');
+  const scoped = (campaigns || []).filter(c => {
+    const ca = String(c.account_id ?? '');
+    if (!ca) return true;
+    return ca === ruleAcct || ca === bare || ca === `act_${bare}`;
+  });
+  return scoped;
+}
+
+/**
  * Initialize all scheduled jobs.
  * @param {import('telegraf').Telegraf} bot — Telegram bot instance
  * @param {{ repos: object, services: object }} deps
