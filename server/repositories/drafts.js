@@ -26,6 +26,7 @@ export class DraftsRepository {
         execution_result TEXT,
         campaign_id TEXT,
         approval_request_id TEXT,
+        rule_id TEXT,
         created_at TEXT DEFAULT (datetime('now')),
         updated_at TEXT DEFAULT (datetime('now'))
       );
@@ -34,6 +35,18 @@ export class DraftsRepository {
       CREATE INDEX IF NOT EXISTS idx_drafts_user ON approval_drafts(user_id);
       CREATE INDEX IF NOT EXISTS idx_drafts_campaign ON approval_drafts(campaign_id);
       CREATE INDEX IF NOT EXISTS idx_drafts_request ON approval_drafts(approval_request_id);
+    `);
+    // Tabel legacy (pre-048, mis. hasil rebuild 030 di DB lama) belum punya
+    // rule_id — tambahkan idempoten agar index di bawah tidak pecah.
+    try {
+      const cols = this.db.prepare('PRAGMA table_info(approval_drafts)').all().map((c) => c.name);
+      if (!cols.includes('rule_id')) {
+        this.db.exec('ALTER TABLE approval_drafts ADD COLUMN rule_id TEXT');
+      }
+    } catch { /* kolom sudah ada / race — index di bawah yang vonis */ }
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_drafts_rule ON approval_drafts(rule_id);
+      CREATE INDEX IF NOT EXISTS idx_drafts_rule_status ON approval_drafts(rule_id, status);
     `);
     log.debug('approval_drafts table ready');
   }
@@ -67,12 +80,12 @@ export class DraftsRepository {
     return { data, total, page, limit };
   }
 
-  create({ type, summary, details, proposedBy = 'ai', userId = null, campaignId, approvalRequestId = null }) {
+  create({ type, summary, details, proposedBy = 'ai', userId = null, campaignId, approvalRequestId = null, ruleId = null }) {
     const id = uuidv4();
     this.db.prepare(`
-      INSERT INTO approval_drafts (id, type, summary, details_json, user_id, proposed_by, campaign_id, approval_request_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, type, summary, details ? JSON.stringify(details) : null, userId || null, proposedBy, campaignId || null, approvalRequestId || null);
+      INSERT INTO approval_drafts (id, type, summary, details_json, user_id, proposed_by, campaign_id, approval_request_id, rule_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, type, summary, details ? JSON.stringify(details) : null, userId || null, proposedBy, campaignId || null, approvalRequestId || null, ruleId || null);
     return this.findById(id);
   }
 
@@ -102,13 +115,32 @@ export class DraftsRepository {
     return this.findById(id);
   }
 
+  /** Riwayat draft satu rule (buat "terakhir match" + laporan kinerja). */
+  findByRuleId(ruleId, { status = null, limit = 50 } = {}) {
+    const where = ['rule_id = ?'];
+    const params = [ruleId];
+    if (status) { where.push('status = ?'); params.push(status); }
+    const data = this.db.prepare(
+      `SELECT * FROM approval_drafts WHERE ${where.join(' AND ')} ORDER BY created_at DESC LIMIT ?`
+    ).all(...params, limit);
+    return { data, total: data.length };
+  }
 
-  findPendingForRuleCampaign(ruleName, campaignId) {
-    // `_` and `%` are LIKE wildcards; rule names such as "ROAS_Guard" would
-    // otherwise match unrelated summaries and silently suppress a real draft.
+  findPendingForRuleCampaign(ruleName, campaignId, ruleId = null) {
+    // `_` dan `%` adalah wildcard LIKE; escape agar nama seperti "ROAS_Guard"
+    // tidak match summary aturan lain.
     const escaped = String(ruleName ?? '').replace(/[\\%_]/g, (ch) => `\\${ch}`);
+    // ruleId ada: exact match dulu; fallback summary HANYA untuk baris legacy
+    // ber-rule_id NULL (tanpa ini, draft rule lain dengan nama mirip ikut ke-dedup).
+    if (ruleId) {
+      return this.db.prepare(
+        "SELECT id FROM approval_drafts WHERE campaign_id = ? AND status = 'pending' AND (rule_id = ? OR (rule_id IS NULL AND (summary LIKE ? ESCAPE '\\' OR summary LIKE ? ESCAPE '\\'))) LIMIT 1"
+      ).get(campaignId, ruleId, `%Rule ${escaped}%`, `%Aturan \"${escaped}\"%`) || null;
+    }
+    // Tanpa ruleId (legacy caller): cocokkan kedua format summary.
+    // Format lama "Rule NAME:" vs baru 'Aturan "NAME":' — satu pola selalu miss.
     return this.db.prepare(
-      "SELECT id FROM approval_drafts WHERE campaign_id = ? AND status = 'pending' AND summary LIKE ? ESCAPE '\\' LIMIT 1"
-    ).get(campaignId, `%Rule ${escaped}%`) || null;
-}
+      "SELECT id FROM approval_drafts WHERE campaign_id = ? AND status = 'pending' AND (summary LIKE ? ESCAPE '\\' OR summary LIKE ? ESCAPE '\\') LIMIT 1"
+    ).get(campaignId, `%Rule ${escaped}%`, `%Aturan \"${escaped}\"%`) || null;
+  }
 }

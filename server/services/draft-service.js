@@ -22,7 +22,7 @@ export class DraftService {
     return this.draftsRepo.findAll({ status, page, limit });
   }
 
-  async createDraft({ type, summary, details, proposedBy = 'ai', userId = null, campaignId = null, approvalRequestId = null }) {
+  async createDraft({ type, summary, details, proposedBy = 'ai', userId = null, campaignId = null, approvalRequestId = null, ruleId = null }) {
     if (!type) throw new ValidationError('type is required');
     if (!summary) throw new ValidationError('summary is required');
 
@@ -34,6 +34,7 @@ export class DraftService {
       userId,
       campaignId,
       approvalRequestId,
+      ruleId,
     });
     this._notify(draft, 'created').catch(err =>
       log.error('notification failed', { draftId: draft.id, error: err.message })
@@ -100,12 +101,12 @@ export class DraftService {
    * of being applied live. Returns the created draft when approval is required,
    * or false when the caller may proceed with the live mutation.
    */
-  async guardAutonomousChange({ type, summary, details, proposedBy = 'ai', userId = null, campaignId = null }) {
+  async guardAutonomousChange({ type, summary, details, proposedBy = 'ai', userId = null, campaignId = null, ruleId = null }) {
     if (!this.draftsRepo.settingsRepo || !this.draftsRepo.settingsRepo.getApprovalRequired()) {
       return false;
     }
     const reqId = `apr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const draft = await this.createDraft({ type, summary, details, proposedBy, userId, campaignId, approvalRequestId: reqId });
+    const draft = await this.createDraft({ type, summary, details, proposedBy, userId, campaignId, approvalRequestId: reqId, ruleId });
     return draft;
   }
 

@@ -148,7 +148,7 @@ describe('DETAIL rules — rantai 5 langkah', () => {
     const deps = monitorDeps({ rules });
     const ctx = makeCtx('u1', 'toggle:r9');
     await handleMonitorCallback(deps)(ctx);
-    expect(txt(ctx._replies[0])).toContain('not found');
+    expect(txt(ctx._replies[0])).toContain('Aturan nggak ketemu');
     expect(deps.repos.rulesRepo.update).not.toHaveBeenCalled();
   });
 

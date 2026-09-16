@@ -7,7 +7,6 @@ const log = createLogger('bot:ads');
 // Lantai budget harian Meta untuk IDR ≈ Rp 17.715 (sama kayak wizard create-campaign).
 export const MIN_DAILY_BUDGET_IDR = 17500;
 
-const BACKEND = process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com';
 export function getUserPlatformAccount(ctx, deps, platform = 'meta') {
   const repo = deps?.repos?.platformAccountsRepo;
   if (!repo) return [];
@@ -441,7 +440,7 @@ export function handleAdsReport(deps) {
       const roas = totalSpend > 0 ? (totalRev / totalSpend).toFixed(2) : '0.00';
       const body =
         `📊 <b>Laporan ${platform.toUpperCase()} (30 hari)</b>\n\n` +
-        `Total Spend: ${fmtCurrency(totalSpend)}\n` +
+        `Total Belanja: ${fmtCurrency(totalSpend)}\n` +
         `Total Omzet: ${fmtCurrency(totalRev)}\n` +
         `ROAS: ${roas}x\n` +
         `Klik: ${totalClicks.toLocaleString('id-ID')}\n` +
@@ -596,20 +595,30 @@ export function handleAdsAccountReport(deps) {
       const y = report.comparison.yesterdayFullDay;
       const avg = report.comparison.avg7d;
       const ai = report.ai;
+      const anomalies = report.anomalies || [];
+      const delta = (cur, prev) => {
+        if (cur === null || cur === undefined || prev === null || prev === undefined) return '';
+        if (prev === 0) return cur > 0 ? ' (baru)' : '';
+        const pct = Math.round((cur / prev - 1) * 100);
+        if (pct === 0) return ' (sama)';
+        return ` (${pct > 0 ? '+' : ''}${pct}%)`;
+      };
+      const aiTag = ai?.source === 'ai' ? '🤖 <b>ANALISIS AI</b>' : '🤖 <b>Analisis otomatis</b> <i>(AI lagi sibuk, pakai analisa pola)</i>';
       const body =
         `📊 <b>LAPORAN AKUN — ${escHtml(report.accountName)}</b>\n` +
         `🗓 Hari ini sampai sekarang (WIB)\n\n` +
-        `💰 <b>Belanja:</b> ${fmtCurrency(s.spend)}\n` +
+        `💰 <b>Belanja:</b> ${fmtCurrency(s.spend)}${delta(s.spend, y.spend)}\n` +
         `👁 Tayangan: ${(s.impressions).toLocaleString('id-ID')}\n` +
         `🔗 Klik link: ${(s.linkClicks).toLocaleString('id-ID')} · CTR ${Number(s.ctr).toFixed(2)}%\n` +
         `🛒 Purchase: ${(s.purchases).toLocaleString('id-ID')}\n` +
         `💵 CPR: ${fmtCpr(s.cpr)} · CPC ${fmtCurrency(s.cpc)}\n` +
-        `📈 <b>ROAS:</b> ${fmtRoas(s.roas)}\n\n` +
+        `📈 <b>ROAS:</b> ${fmtRoas(s.roas)}${delta(s.roas, y.roas)}\n\n` +
         `⚖️ <b>PERBANDINGAN</b>\n` +
         `• Hari ini: ${fmtCurrency(s.spend)} · ROAS ${fmtRoas(s.roas)}\n` +
         `• Kemarin: ${fmtCurrency(y.spend)} · ROAS ${fmtRoas(y.roas)}\n` +
-        `• Rata-rata 7 hari: ${fmtCurrency(avg.spend)} · ROAS ${fmtRoas(avg.roas)}\n\n` +
-        `🤖 <b>ANALISIS &amp; REKOMENDASI AI</b>\n` +
+        `• Rata-rata 7 hari: ${fmtCurrency(avg.spend)} · ROAS ${fmtRoas(avg.roas)}\n` +
+        (anomalies.length ? `\n🚨 <b>PERHATIAN:</b>\n${anomalies.map(a => `• ${escHtml(a)}`).join('\n')}\n` : `\n✅ <b>Aman:</b> nggak ada anomali hari ini.\n`) +
+        `\n${aiTag}\n` +
         `✅ Kekuatan: ${escHtml(ai.strengths)}\n` +
         `⚠️ Kelemahan: ${escHtml(ai.weaknesses)}\n` +
         `📈 Peluang: ${escHtml(ai.opportunities)}\n` +
@@ -621,7 +630,9 @@ export function handleAdsAccountReport(deps) {
         reply_markup: {
           inline_keyboard: [
             [{ text: '🔄 Refresh', callback_data: `ads:repacc:meta:${accountId}` }],
-            [{ text: '📱 Lihat di AdForge Mini App', web_app: { url: `${BACKEND}/reports` } }],
+            [{ text: '⚡ Bikin Aturan dari Ini', callback_data: 'rule:add:start' }],
+            [{ text: '🤖 Minta Saran AI', callback_data: 'menu:optimize' }],
+            [{ text: '📋 Menu', callback_data: 'quick:menu' }],
           ],
         },
       });

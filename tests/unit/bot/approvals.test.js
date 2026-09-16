@@ -37,11 +37,18 @@ describe('approval:approve / approval:reject callbacks', () => {
     ctx = makeCtx('u1');
   });
 
-  it('approves when the draft belongs to the caller', async () => {
+  it('approves with campaign name + action + Menu buttons', async () => {
     deps.services.draftService.draftsRepo.findById.mockResolvedValue({ id: 'd1', user_id: 'u1', status: 'pending' });
+    deps.services.draftService.approveDraft.mockResolvedValue({
+      id: 'd1', status: 'approved', summary: 'Aturan X',
+      details_json: JSON.stringify({ action: { type: 'pause' }, campaign: { name: 'Promo Lebaran' } }),
+      execution_result: 'paused ok',
+    });
     await handleApprovalApprove(deps)(ctx, 'd1');
     expect(deps.services.draftService.approveDraft).toHaveBeenCalledWith('d1', 'u1');
-    expect(ctx._replies).toContain('✅ Approved');
+    expect(ctx._replies[0]).toContain('Promo Lebaran');
+    expect(ctx._replies[0]).toContain('dimatiin');
+    expect(ctx._replies[0]).toContain('paused ok');
   });
 
   it('rejects a draft owned by another user without calling approveDraft', async () => {
@@ -64,11 +71,16 @@ describe('approval:approve / approval:reject callbacks', () => {
     expect(deps.services.draftService.approveDraft).not.toHaveBeenCalled();
   });
 
-  it('rejects when the draft belongs to the caller', async () => {
-    deps.services.draftService.draftsRepo.findById.mockResolvedValue({ id: 'd1', user_id: 'u1', status: 'pending' });
+  it('rejects with campaign name + reassurance', async () => {
+    deps.services.draftService.draftsRepo.findById.mockResolvedValue({
+      id: 'd1', user_id: 'u1', status: 'pending', summary: 'Aturan X',
+      details_json: JSON.stringify({ action: { type: 'pause' }, campaign: { name: 'Promo' } }),
+    });
     await handleApprovalReject(deps)(ctx, 'd1');
     expect(deps.services.draftService.rejectDraft).toHaveBeenCalledWith('d1', 'u1');
-    expect(ctx._replies).toContain('❌ Rejected');
+    expect(ctx._replies[0]).toContain('Dibatalkan');
+    expect(ctx._replies[0]).toContain('Promo');
+    expect(ctx._replies[0]).toContain('Nggak ada yang berubah');
   });
 
   it('surfaces ValidationError messages (e.g. draft already actioned)', async () => {

@@ -7,6 +7,73 @@ import { RULE_TEMPLATES, ConditionGroup, Condition, RuleAction, OPERATORS } from
 import { escapeHtml as esc } from '../../lib/escape.js';
 import { describeRuleCondition, ruleAutoName, actionWord, metricLabel, operatorWord, formatRuleValue, describeFbRule } from '../../lib/rule-words.js';
 
+/**
+ * Riwayat match satu rule: dari drafts ber-rule_id (baru) + parse summary
+ * lama ("Rule NAME:" / 'Aturan "NAME":'). Return { total, approved,
+ * rejected, pending, last } — last = { at, campaign, action, status }.
+ */
+export function ruleHistory(draftsRepo, userId, rule) {
+  const empty = { total: 0, approved: 0, rejected: 0, pending: 0, last: null };
+  if (!draftsRepo || !rule) return empty;
+  let rows = [];
+  try {
+    if (rule.id && draftsRepo.findByRuleId) {
+      rows = draftsRepo.findByRuleId(rule.id, { limit: 50 })?.data || [];
+    }
+    if (!rows.length) {
+      const all = draftsRepo.findByUser
+        ? draftsRepo.findByUser(userId, { limit: 50 })?.data || []
+        : [];
+      const nm = String(rule.name || '');
+      rows = all.filter(d => String(d.summary || '').includes(`"${nm}"`) || String(d.summary || '').includes(`Rule ${nm}`));
+    }
+  } catch { return empty; }
+  const out = { ...empty, total: rows.length };
+  for (const d of rows) {
+    if (d.status === 'approved') out.approved++;
+    else if (d.status === 'rejected') out.rejected++;
+    else out.pending++;
+  }
+  const first = rows[0];
+  if (first) {
+    let campaign = '';
+    try {
+      const det = typeof first.details_json === 'string' ? JSON.parse(first.details_json) : (first.details_json || {});
+      campaign = det.campaign?.name || det.campaign?.id || '';
+    } catch { /* abaikan */ }
+    if (!campaign) {
+      const m = String(first.summary || '').match(/ di (.+)$/);
+      if (m) campaign = m[1];
+    }
+    out.last = {
+      at: first.created_at || first.reviewed_at || '',
+      campaign,
+      action: actionWord(safeAction(first)),
+      status: first.status,
+    };
+  }
+  return out;
+}
+
+function safeAction(draft) {
+  try {
+    const det = typeof draft.details_json === 'string' ? JSON.parse(draft.details_json) : (draft.details_json || {});
+    return det.action?.type || '';
+  } catch { return ''; }
+}
+
+function relTime(iso) {
+  if (!iso) return '';
+  const ms = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return '';
+  const min = Math.floor(ms / 60000);
+  if (min < 1) return 'baru aja';
+  if (min < 60) return `${min} mnt lalu`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h} jam lalu`;
+  const d = Math.floor(h / 24);
+  return `${d} hari lalu`;
+}
 const MONITOR_HEADER =
   '⚡ <b>Aturan Otomatis</b>\n\n' +
   'Bikin aturan biar bot jagain campaign-mu 24/7:\n\n' +
@@ -120,6 +187,9 @@ export function handleMonitor(deps) {
     keyboard.push([
       { text: '📦 Template', callback_data: 'rule:templates' },
       { text: '🔄 Sync Sekarang', callback_data: 'monitor:sync' },
+    ]);
+    keyboard.push([
+      { text: '📊 Kinerja Aturan', callback_data: 'rule:history' },
     ]);
     keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
     return ctx.reply(MONITOR_HEADER, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
@@ -244,7 +314,7 @@ function showTemplates(ctx) {
     { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
   );
 }
-function renderRuleLine(state, enabled, rule, interval) {
+function renderRuleLine(state, enabled, rule, interval, hist) {
   const cond = describeRuleCondition(rule.condition);
   const act = actionWord(rule.action?.type);
   const head = `${state} ${enabled ? '' : '(nonaktif) '}<b>${esc(cond)} → ${esc(act)}</b>`;
@@ -252,9 +322,20 @@ function renderRuleLine(state, enabled, rule, interval) {
     rule.condition?.metric, rule.condition?.operator, rule.condition?.value
   );
   const showName = rule.name && rule.name !== auto && !cond.includes(rule.name);
-  return showName
+  const base = showName
     ? `${head}\n   "${esc(rule.name)}" (${interval})`
     : `${head} (${interval})`;
+  // Tanda rule berjalan: match terakhir + hasilnya. Tanpa ini user tidak tahu
+  // rule-nya pernah match atau cuma pajangan.
+  if (hist?.last) {
+    const mark = hist.last.status === 'approved' ? '✅' : hist.last.status === 'rejected' ? '❌' : '⏳';
+    const camp = hist.last.campaign ? `, ${hist.last.campaign}` : '';
+    return `${base}\n   <i>Terakhir: ${relTime(hist.last.at)}${camp} → ${hist.last.action} ${mark}</i>`;
+  }
+  if ((hist?.total || 0) === 0) {
+    return `${base}\n   <i>Belum pernah match</i>`;
+  }
+  return base;
 }
 
 // Render My Rules grouped per ad account (nama ASLI dari Meta), with edit/disable buttons
@@ -286,7 +367,7 @@ async function renderMyRules(deps, userId) {
     for (const r of accountRules) {
       const state = r.enabled ? '🟢' : '⚪️';
       const interval = INTERVAL_LABELS[r.intervalMinutes] || INTERVAL_LABELS[15];
-      lines.push(renderRuleLine(state, r.enabled, r, interval));
+      lines.push(renderRuleLine(state, r.enabled, r, interval, ruleHistory(deps.repos?.draftsRepo, userId, r)));
     }
     lines.push('');
   }
@@ -388,17 +469,69 @@ async function showRulesForAccount(deps, userId, accountId) {
   const lines = acctRules.map((r, i) => {
     const state = r.enabled ? '🟢' : '⚪️';
     const interval = INTERVAL_LABELS[r.intervalMinutes] || INTERVAL_LABELS[15];
-    return `${i + 1}. ${renderRuleLine(state, r.enabled, r, interval)}`;
+    return `${i + 1}. ${renderRuleLine(state, r.enabled, r, interval, ruleHistory(deps.repos?.draftsRepo, userId, r))}`;
   });
   const keyboard = [];
   for (const r of acctRules.slice(0, 8)) {
     const toggle = r.enabled ? '⏸ Matikan' : '▶️ Nyalakan';
     keyboard.push([{ text: `${toggle}: ${r.name.slice(0, 20)}`, callback_data: `rule:toggle:${r.id}` }]);
   }
-  keyboard.push([{ text: '➕ Bikin Aturan', callback_data: 'rule:add:start' }]);
   keyboard.push([{ text: '⬅️ Kembali', callback_data: 'menu:monitor' }]);
   keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
   return { text: `⚙️ <b>Aturan buat ${esc(name)}</b>\n\n${lines.join('\n\n')}`, keyboard };
+}
+
+/**
+ * Layar "📊 Kinerja Aturan": tiap rule + berapa kali match (total/setuju/
+ * tolak/nunggu) + match terakhir. Ini jawaban "rule-nya jalan nggak?".
+ */
+export async function showRuleHistory(ctx, deps) {
+  const rules = deps?.repos?.rulesRepo?.getAll?.(ctx.userId) || [];
+  const accounts = metaAccounts(deps, ctx.userId);
+  const liveNames = await liveAdAccountNames(deps, ctx.userId);
+  if (!rules.length) {
+    return ctx.reply('📭 Belum ada aturan. Bikin dulu via ➕ Bikin Aturan.', {
+      reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+    });
+  }
+  const byAccount = {};
+  for (const r of rules) {
+    const key = r.accountId || '__all__';
+    if (!byAccount[key]) byAccount[key] = [];
+    byAccount[key].push(r);
+  }
+  const lines = [];
+  for (const [acctId, accountRules] of Object.entries(byAccount)) {
+    const label = acctId === '__all__' ? '🌐 Semua Akun' : `📘 ${esc(resolveAcctName(liveNames, accounts, acctId))}`;
+    lines.push(`<b>${label}</b>`);
+    for (const r of accountRules) {
+      const h = ruleHistory(deps.repos?.draftsRepo, ctx.userId, r);
+      const state = r.enabled ? '🟢' : '⚪️';
+      const cond = describeRuleCondition(r.condition);
+      if (!h.total) {
+        lines.push(`${state} <b>${esc(cond)}</b>\n   <i>Belum pernah match — aturan standby.</i>`);
+        continue;
+      }
+      const lastBit = h.last
+        ? `Terakhir ${relTime(h.last.at)}${h.last.campaign ? ` di "${h.last.campaign}"` : ''} → ${h.last.action} ${h.last.status === 'approved' ? '✅' : h.last.status === 'rejected' ? '❌' : '⏳'}`
+        : '';
+      lines.push(
+        `${state} <b>${esc(cond)}</b>\n` +
+        `   Match ${h.total}x (✅ ${h.approved} • ❌ ${h.rejected} • ⏳ ${h.pending})${lastBit ? `\n   <i>${esc(lastBit)}</i>` : ''}`
+      );
+    }
+    lines.push('');
+  }
+  return ctx.reply(`📊 <b>Kinerja Aturan (30 hari terakhir data)</b>\n\n${lines.join('\n')}`, {
+    parse_mode: 'HTML',
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '📋 Aturanku', callback_data: 'rule:view:all' }],
+        [{ text: '⬅️ Kembali', callback_data: 'menu:monitor' }],
+        [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+      ],
+    },
+  });
 }
 
 export function handleMonitorCallback(deps) {
@@ -447,7 +580,7 @@ export function handleMonitorCallback(deps) {
         const liveNames = await liveAdAccountNames(deps, ctx.userId);
         const scope = scopeLabel(rb, liveNames, metaAccounts(deps, ctx.userId));
         return ctx.reply(
-          `📝 <b>Langkah 5/5: batas angkanya berapa?</b>\n\nAturan untuk: <b>${esc(scope)}</b>\n${esc(rb.metric)} ${esc(rb.operator)} [angka]\n\nContoh: kalau CTR &gt; 5, kirim <code>5</code>`,
+          `📝 <b>Langkah 5/5: batas angkanya berapa?</b>\n\nAturan untuk: <b>${esc(scope)}</b>\n${esc(metricLabel(rb.metric))} ${esc(operatorWord(rb.operator))} [angka]\n\nContoh: kalau ${esc(metricLabel(rb.metric))} ${esc(operatorWord(rb.operator))} 5, kirim <code>5</code>`,
           { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '⬅️ Batal', callback_data: 'menu:monitor' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
         );
       }
@@ -456,12 +589,12 @@ export function handleMonitorCallback(deps) {
     if (action.startsWith('toggle:')) {
       const ruleId = action.split(':')[1];
       const rule = deps.repos.rulesRepo.getById(ruleId);
-      if (!rule) return ctx.reply('⚠️ Rule not found.');
-      if (rule.userId && rule.userId !== ctx.userId) return ctx.reply('⚠️ Rule not found.');
+      if (!rule) return ctx.reply('⚠️ Aturan nggak ketemu.');
+      if (rule.userId && rule.userId !== ctx.userId) return ctx.reply('⚠️ Aturan nggak ketemu.');
       deps.repos.rulesRepo.update(ruleId, { enabled: !rule.enabled });
-      return ctx.reply(`✅ Rule <b>${esc(rule.name)}</b> ${rule.enabled ? 'disabled' : 'enabled'}.`, {
+      return ctx.reply(`✅ Aturan <b>${esc(rule.name)}</b> ${rule.enabled ? 'dimatikan' : 'dinyalakan'}.`, {
         parse_mode: 'HTML',
-        reply_markup: { inline_keyboard: [[{ text: '📋 My Rules', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+        reply_markup: { inline_keyboard: [[{ text: '📋 Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
       });
     }
     if (action === 'templates') { delete ctx.session.ruleBuilder; return showTemplates(ctx); }
@@ -474,6 +607,7 @@ export function handleMonitorCallback(deps) {
       const { text, keyboard } = await renderMyRules(deps, ctx.userId);
       return ctx.reply(text, { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
     }
+    if (action === 'history') return showRuleHistory(ctx, deps);
     if (action === 'account_picker') return showAccountPicker(ctx, deps);
     if (action.startsWith('account:')) {
       const accountId = action.split(':')[1];
@@ -535,10 +669,9 @@ export function handleMonitorCallback(deps) {
       }
       return ctx.reply(`🔄 Sync selesai: ${synced} campaign ketarik dari Meta${failed ? `, ${failed} gagal` : ''}. Cek /status buat hasilnya.`);
     }
-    return ctx.reply('Unknown rule action.');
+    return ctx.reply('⚠️ Pilihan nggak dikenal. Balik ke /monitor ya.');
   };
 }
-
 async function showActionPicker(ctx, deps) {
   const rb = ctx.session?.ruleBuilder;
   if (!rb) return ctx.reply('⚠️ Sesi habis. Ulangi dari /monitor.');

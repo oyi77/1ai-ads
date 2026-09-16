@@ -48,7 +48,7 @@ export function setupRuleGuard(bot, deps) {
 
           // Dedup: skip if a pending draft already exists for this rule+campaign.
           // Only effective while campaigns.id is stable - see CampaignsRepository.upsert.
-          const existingDraft = deps.repos?.draftsRepo?.findPendingForRuleCampaign?.(rule.name, campaign.id);
+          const existingDraft = deps.repos?.draftsRepo?.findPendingForRuleCampaign?.(rule.name, campaign.id, rule.id);
           if (existingDraft) continue;
 
           const condText = describeID(rule.condition);
@@ -60,6 +60,7 @@ export function setupRuleGuard(bot, deps) {
             proposedBy: 'ai',
             campaignId: campaign.id,
             userId: ownerId,
+            ruleId: rule.id,
           });
           if (!draft) continue;
 

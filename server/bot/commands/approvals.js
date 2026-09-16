@@ -10,6 +10,8 @@
  */
 import { createLogger } from '../../lib/logger.js';
 import { ValidationError } from '../../lib/errors.js';
+import { escapeHtml as esc } from '../../lib/escape.js';
+import { actionWord } from '../../lib/rule-words.js';
 
 const log = createLogger('bot:approvals');
 
@@ -23,17 +25,47 @@ async function resolveOwnedDraft(deps, ctx, draftId) {
   return { draft };
 }
 
+function safeJson(s) {
+  try {
+    return typeof s === 'string' ? JSON.parse(s) : (s || {});
+  } catch { return {}; }
+}
+
+/** Kalimat hasil: nama campaign + aksi + sukses/gagal eksekusi. */
+function resultLine(draft) {
+  const details = safeJson(draft.details_json);
+  const campaign = details.campaign?.name || details.campaign?.id || '';
+  const act = actionWord(details.action?.type);
+  const summary = draft.summary || '';
+  const base = campaign ? `"${campaign}" → ${act}` : summary;
+  if (draft.execution_result) {
+    return `${base}\nHasil eksekusi: ${draft.execution_result}`;
+  }
+  return base;
+}
+
 export function handleApprovalApprove(deps) {
   return async (ctx, draftId) => {
     try {
       const { draft, error } = await resolveOwnedDraft(deps, ctx, draftId);
       if (!draft) return ctx.reply(error);
-      await deps.services.draftService.approveDraft(draftId, ctx.userId);
-      return ctx.reply('✅ Approved');
+      const done = await deps.services.draftService.approveDraft(draftId, ctx.userId);
+      return ctx.reply(
+        `✅ <b>Jalan!</b> ${esc(resultLine(done || draft))}`,
+        {
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '📋 Lihat Aturanku', callback_data: 'rule:view:all' }],
+              [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+            ],
+          },
+        }
+      );
     } catch (err) {
       if (err instanceof ValidationError) return ctx.reply(err.message);
       log.error('approval approve failed', { userId: ctx.userId, draftId, error: err?.message });
-      return ctx.reply('⚠️ Gagal menyetujui draft.');
+      return ctx.reply('⚠️ Gagal menyetujui. Coba lagi nanti.');
     }
   };
 }
@@ -44,11 +76,22 @@ export function handleApprovalReject(deps) {
       const { draft, error } = await resolveOwnedDraft(deps, ctx, draftId);
       if (!draft) return ctx.reply(error);
       await deps.services.draftService.rejectDraft(draftId, ctx.userId);
-      return ctx.reply('❌ Rejected');
+      return ctx.reply(
+        `❌ <b>Dibatalkan.</b> ${esc(resultLine(draft))}\n<i>Nggak ada yang berubah di akun iklanmu.</i>`,
+        {
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '📋 Lihat Aturanku', callback_data: 'rule:view:all' }],
+              [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+            ],
+          },
+        }
+      );
     } catch (err) {
       if (err instanceof ValidationError) return ctx.reply(err.message);
       log.error('approval reject failed', { userId: ctx.userId, draftId, error: err?.message });
-      return ctx.reply('⚠️ Gagal menolak draft.');
+      return ctx.reply('⚠️ Gagal menolak. Coba lagi nanti.');
     }
   };
 }
