@@ -845,7 +845,7 @@ async function createRule(ctx, deps, actionType, intervalMinutes = 15) {
     });
     delete ctx.session.ruleBuilder;
     return ctx.reply(
-      `✅ <b>Aturan dibuat buat ${esc(scope)}!</b>\n\nKalau <b>${esc(ruleAutoName(rb.metric, rb.operator, rb.value))}</b> → <b>${esc(actionWord(actionType))}</b>\n⏱ ${intervalMinutes === 0 ? 'Ngikutin pacing FB' : 'Dicek tiap ' + (INTERVAL_LABELS[intervalMinutes] || intervalMinutes + ' mnt')}\n\n<i>Cara kerja: aturan ini hidup di bot (bukan di dashboard Facebook). Bot cek tiap jadwal — kalau kejadian, kamu dapat tombol ✅/❌ dulu, baru eksekusi jalan setelah kamu setuju.</i>`,
+      `✅ <b>Aturan dibuat buat ${esc(scope)}!</b>\n\nKalau <b>${esc(ruleAutoName(rb.metric, rb.operator, rb.value))}</b> → <b>${esc(actionWord(actionType))}</b>\n⏱ ${intervalMinutes === 0 ? 'Ngikutin pacing FB' : 'Dicek tiap ' + (INTERVAL_LABELS[intervalMinutes] || intervalMinutes + ' mnt')}\n\n<i>Cara kerja: aturan ini hidup di bot (bukan di dashboard Facebook). Bot cek tiap jadwal — kalau kejadian, kamu dapat tombol ✅/❌ dulu, baru eksekusi jalan setelah kamu setuju.</i>\n\n<i>Kalau 30 menit tidak ada kabar: (1) sync dulu via /monitor → 🔄 Sync Sekarang, (2) cek draft menunggu di 📋 Aturanku → 📊 Kinerja.</i>`,
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Lihat Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
     );
   } catch (err) {
