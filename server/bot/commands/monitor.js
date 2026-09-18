@@ -50,6 +50,9 @@ export function ruleHistory(draftsRepo, userId, rule) {
       campaign,
       action: actionWord(safeAction(first)),
       status: first.status,
+      // Gagal eksekusi walau status pending: tampilkan sebabnya biar user
+      // tahu kenapa approve kemarin tidak jalan di Facebook.
+      lastError: first.last_error || null,
     };
   }
   return out;
@@ -358,7 +361,8 @@ function renderRuleLine(state, enabled, rule, interval, hist) {
   if (hist?.last) {
     const mark = hist.last.status === 'approved' ? '✅' : hist.last.status === 'rejected' ? '❌' : '⏳';
     const camp = hist.last.campaign ? `, ${hist.last.campaign}` : '';
-    return `${base}\n   <i>Terakhir: ${relTime(hist.last.at)}${camp} → ${hist.last.action} ${mark}</i>`;
+    const errBit = hist.last.lastError ? `\n   ⚠️ <i>Gagal: ${esc(String(hist.last.lastError).slice(0, 120))}</i>` : '';
+    return `${base}\n   <i>Terakhir: ${relTime(hist.last.at)}${camp} → ${hist.last.action} ${mark}</i>${errBit}`;
   }
   if ((hist?.total || 0) === 0) {
     return `${base}\n   <i>Belum pernah match</i>`;

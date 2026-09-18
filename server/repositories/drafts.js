@@ -43,6 +43,13 @@ export class DraftsRepository {
       if (!cols.includes('rule_id')) {
         this.db.exec('ALTER TABLE approval_drafts ADD COLUMN rule_id TEXT');
       }
+      // Kolom pre-050 (visibilitas gagal + reminder) belum ada di DB lama.
+      if (!cols.includes('last_error')) {
+        this.db.exec('ALTER TABLE approval_drafts ADD COLUMN last_error TEXT');
+      }
+      if (!cols.includes('reminded_at')) {
+        this.db.exec('ALTER TABLE approval_drafts ADD COLUMN reminded_at TEXT');
+      }
     } catch { /* kolom sudah ada / race — index di bawah yang vonis */ }
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_drafts_rule ON approval_drafts(rule_id);
@@ -115,6 +122,27 @@ export class DraftsRepository {
     return this.findById(id);
   }
 
+  /** Catat sebab gagal eksekusi tanpa ubah status (tetap pending, retryable). */
+  noteExecutionFailure(id, message) {
+    this.db.prepare(
+      "UPDATE approval_drafts SET last_error = ?, updated_at = datetime('now') WHERE id = ?"
+    ).run(String(message || '').slice(0, 500), id);
+    return this.findById(id);
+  }
+
+  /** Draft pending lama yang belum diingatkan (buat cron reminder anti-spam). */
+  findStalePending({ olderThanMinutes = 60, limit = 100 } = {}) {
+    return this.db.prepare(
+      `SELECT * FROM approval_drafts WHERE status = 'pending'
+       AND datetime(created_at) <= datetime('now', '-' || ? || ' minutes')
+       AND (reminded_at IS NULL OR datetime(reminded_at) <= datetime('now', '-' || ? || ' minutes'))
+       ORDER BY created_at ASC LIMIT ?`
+    ).all(olderThanMinutes, olderThanMinutes, limit);
+  }
+
+  markReminded(id) {
+    this.db.prepare("UPDATE approval_drafts SET reminded_at = datetime('now') WHERE id = ?").run(id);
+  }
   /** Riwayat draft satu rule (buat "terakhir match" + laporan kinerja). */
   findByRuleId(ruleId, { status = null, limit = 50 } = {}) {
     const where = ['rule_id = ?'];

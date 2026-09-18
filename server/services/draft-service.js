@@ -5,6 +5,25 @@ const log = createLogger('draft-service');
 
 const TELEGRAM_API = 'https://api.telegram.org';
 
+// Saran aksi Bahasa Indonesia berdasar pola pesan error Meta/executor.
+// Biar user yang pencet ✅ tapi gagal tahu harus ngapain, bukan cuma "gagal".
+export function hintForExecutionError(msg) {
+  const m = String(msg || '').toLowerCase();
+  if (/expired|invalid.*token|cannot parse access token|session has expired|190/.test(m)) {
+    return 'Token Meta kedaluwarsa — hubungkan ulang via /status → ➕ Tambah Akun.';
+  }
+  if (/permission|permissions|803|10\)|not.*authorized|forbidden/.test(m)) {
+    return 'Token kurang izin — hubungkan ulang dengan izin ads_management + ads_read.';
+  }
+  if (/does not exist|not found|803|missing|deleted/.test(m)) {
+    return 'Campaign tidak ketemu di Meta — sync dulu via /monitor → 🔄 Sync Sekarang.';
+  }
+  if (/rate|limit|throttl|429/.test(m)) {
+    return 'Kena rate-limit Meta — coba ✅ lagi 10 menit lagi.';
+  }
+  return 'Coba ✅ lagi nanti. Kalau masih gagal, hubungi admin.';
+}
+
 export class DraftService {
   constructor(draftsRepo, telegramService = null, executor = null) {
     this.draftsRepo = draftsRepo;
@@ -68,10 +87,17 @@ export class DraftService {
         );
         return draft;
       } catch (err) {
-        log.error('Draft execution failed; draft left pending', { draftId: id, error: err.message });
+        const msg = String(err?.message || err || 'unknown error');
+        log.error('Draft execution failed; draft left pending', { draftId: id, error: msg });
+        // Visibilitas: tulis sebab gagal ke draft biar user yang cek /approvals
+        // tahu kenapa, bukan cuma "pending selamanya". Draft tetap pending
+        // (retryable) — status TIDAK diubah.
+        try {
+          this.draftsRepo.noteExecutionFailure?.(id, msg);
+        } catch { /* kolom belum ada di DB lama — migrasi 050 yang vonis */ }
         this._notify({ ...existing, summary: `Execution failed: ${existing.summary}` }, 'failed').catch(err =>
           log.error('draft notification failed', { draftId: id, error: err.message }));
-        throw new ValidationError(`Execution failed: ${err.message}`);
+        throw new ValidationError(`Eksekusi gagal: ${msg}. ${hintForExecutionError(msg)}`);
       }
     }
 
