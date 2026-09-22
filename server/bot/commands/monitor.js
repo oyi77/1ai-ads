@@ -154,13 +154,26 @@ export async function liveFbData(deps, userId) {
       if (a?.id && !names.has(String(a.id))) names.set(String(a.id), a.name || String(a.id));
       const bare = String(a?.id || '').replace(/^act_/, '');
       if (bare && !names.has(bare)) names.set(bare, a.name || String(a.id));
-      const key = String(a.id);
-      if (byAccount.has(key)) continue;
-      let rules = [];
-      try {
-        rules = await api.getAdRulesLibrary(a.id, { limit: 50 });
-      } catch { /* akun ini skip */ }
-      if (rules?.length) byAccount.set(key, { accountId: key, accountName: a.name || String(a.id), rules });
+    }
+    // Rules per akun PARALEL (batch 5) + timeout 8s/akun. Dulu serial:
+    // 32 akun × ~1s = 36 detik → tombol Aturanku tidak pernah dibalas.
+    // Tanpa ini 100 user = semua layar Aturan hang.
+    const targets = (live || []).filter(a => a?.id && !byAccount.has(String(a.id)));
+    const withTimeout = (p, ms) => Promise.race([
+      p,
+      new Promise((_, rej) => setTimeout(() => rej(new Error('rules timeout')), ms)),
+    ]);
+    const canReadRules = api && typeof api.getAdRulesLibrary === 'function';
+    for (let i = 0; i < targets.length && canReadRules; i += 5) {
+      const chunk = targets.slice(i, i + 5);
+      const results = await Promise.allSettled(
+        chunk.map(a => withTimeout(api.getAdRulesLibrary(a.id, { limit: 50 }), 8000))
+      );
+      results.forEach((r, j) => {
+        if (r.status !== 'fulfilled' || !r.value?.length) return;
+        const a = chunk[j];
+        byAccount.set(String(a.id), { accountId: String(a.id), accountName: a.name || String(a.id), rules: r.value });
+      });
     }
   }
   return { names, groups: [...byAccount.values()] };

@@ -4,9 +4,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // threshold text-handler, toggle, template scoped, sync fallback.
 
 const mockGetAdAccounts = vi.fn();
+const mockGetAdRulesLibrary = vi.fn(async () => []);
 
 vi.mock('../../../server/services/meta/index.js', () => ({
-  MetaAdsAPI: { withToken: vi.fn(() => ({ getAdAccounts: mockGetAdAccounts })) },
+  MetaAdsAPI: { withToken: vi.fn(() => ({ getAdAccounts: mockGetAdAccounts, getAdRulesLibrary: mockGetAdRulesLibrary })) },
 }));
 
 const { handleMonitor, handleMonitorCallback, handleMonitorText, liveAdAccountNames } =
@@ -49,6 +50,8 @@ function monitorDeps({ stored = [ROW()], rules = [], create = null } = {}) {
 describe('DETAIL rules — rantai 5 langkah', () => {
   beforeEach(() => {
     mockGetAdAccounts.mockReset();
+    mockGetAdRulesLibrary.mockReset();
+    mockGetAdRulesLibrary.mockResolvedValue([]);
     mockGetAdAccounts.mockResolvedValue([
       { id: 'act_A', name: 'Toko A' },
       { id: 'act_B', name: 'Toko B' },
