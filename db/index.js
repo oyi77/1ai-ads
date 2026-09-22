@@ -10,6 +10,9 @@ const schemaPath = join(__dirname, 'schema.sql');
 export function createDatabase(dbPath) {
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
+  // 12 cron + request paths berbagi 1 file SQLite: tanpa ini writer kedua
+  // langsung SQLITE_BUSY saat cron tabrakan (100 user = tabrakan pasti).
+  db.pragma('busy_timeout = 5000');
   db.pragma('foreign_keys = ON');
 
   // Only apply schema.sql to a brand-new (empty) database. On an existing

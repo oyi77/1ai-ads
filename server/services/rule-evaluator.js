@@ -124,15 +124,33 @@ export class RuleEvaluator {
     return this._executeAction(action, campaign);
   }
 
+  // Budget fresh dari Meta sebelum hitung scale: snapshot draft/guard bisa
+  // basi (approve telat berminggu-minggu). Fallback ke snapshot lokal kalau
+  // fetch gagal — lebih baik angka lama + eksekusi jalan daripada throw buta.
+  async _freshBudget(api, campaign) {
+    try {
+      const metaCampaignId = campaign?.campaign_id;
+      if (api && metaCampaignId && typeof api.getCampaign === 'function') {
+        const fresh = await api.getCampaign(metaCampaignId);
+        const b = Number(fresh?.dailyBudget ?? fresh?.daily_budget ?? fresh?.budget);
+        if (Number.isFinite(b) && b > 0) return b;
+      }
+    } catch { /* fallback snapshot */ }
+    return Number(campaign?.budget) || 0;
+  }
+
   async _scaleCampaign(campaign, multiplier, direction) {
-    // Campaign object comes from a scoped list (checkCampaigns) or an
-    // approved draft's stored details — never re-fetched unscoped.
+    // Fail LOUD, never silent: approveDraft hanya tandai approved kalau
+    // mutasi Meta beneran jalan. Return diam dulu bikin reply "Jalan!"
+    // padahal Facebook tidak berubah (token mati / campaign tak terikat).
     const campaignId = campaign?.id;
-    if (!campaignId) return;
+    const metaCampaignId = campaign?.campaign_id;
+    if (!campaignId) throw new Error('Campaign tidak lengkap (id hilang) — sync dulu.');
+    if (!metaCampaignId) throw new Error(`Campaign "${campaign?.name || campaignId}" belum terikat ke Meta — sync dulu.`);
     const api = this._platformApiForOwner(campaign.platform, campaign);
-    if (!api) return;
-    const metaCampaignId = campaign.campaign_id || campaignId;
-    const currentBudget = campaign.budget || 0;
+    if (!api) throw new Error('Token Meta pemilik tidak tersedia — hubungkan ulang via /status.');
+    // Re-fetch budget fresh: snapshot draft bisa basi berminggu-minggu.
+    const currentBudget = await this._freshBudget(api, campaign);
     let newBudget = direction === 'up'
       ? Math.round(currentBudget * (1 + multiplier / 100))
       : Math.round(currentBudget * (1 - multiplier / 100));
@@ -167,26 +185,32 @@ export class RuleEvaluator {
       log.warn('Duplicate not supported for platform, skipping', { platform: campaign.platform, campaignId });
       return;
     }
-    const result = await api.duplicateCampaign(null, campaign.campaign_id || campaignId, { suffix: nameSuffix || ' (Copy)' });
+    const metaCampaignId = campaign.campaign_id;
+    if (!metaCampaignId) throw new Error(`Campaign "${campaign?.name || campaignId}" belum terikat ke Meta — sync dulu.`);
+    const result = await api.duplicateCampaign(null, metaCampaignId, { suffix: nameSuffix || ' (Copy)' });
     log.info('Campaign duplicated', { campaignId, newCampaignId: result?.newCampaignId });
     return result;
   }
 
   async _pauseCampaign(campaign) {
     const campaignId = campaign?.id;
-    if (!campaignId) return;
+    const metaCampaignId = campaign?.campaign_id;
+    if (!campaignId) throw new Error('Campaign tidak lengkap (id hilang) — sync dulu.');
+    if (!metaCampaignId) throw new Error(`Campaign "${campaign?.name || campaignId}" belum terikat ke Meta — sync dulu.`);
     const api = this._platformApiForOwner(campaign.platform, campaign);
-    if (!api) return;
-    await api.updateCampaign(campaign.campaign_id || campaignId, { status: 'PAUSED' });
+    if (!api) throw new Error('Token Meta pemilik tidak tersedia — hubungkan ulang via /status.');
+    await api.updateCampaign(metaCampaignId, { status: 'PAUSED' });
     log.info('Campaign paused', { campaignId });
   }
 
   async _resumeCampaign(campaign) {
     const campaignId = campaign?.id;
-    if (!campaignId) return;
+    const metaCampaignId = campaign?.campaign_id;
+    if (!campaignId) throw new Error('Campaign tidak lengkap (id hilang) — sync dulu.');
+    if (!metaCampaignId) throw new Error(`Campaign "${campaign?.name || campaignId}" belum terikat ke Meta — sync dulu.`);
     const api = this._platformApiForOwner(campaign.platform, campaign);
-    if (!api) return;
-    await api.updateCampaign(campaign.campaign_id || campaignId, { status: 'ACTIVE' });
+    if (!api) throw new Error('Token Meta pemilik tidak tersedia — hubungkan ulang via /status.');
+    await api.updateCampaign(metaCampaignId, { status: 'ACTIVE' });
     log.info('Campaign resumed', { campaignId });
   }
 

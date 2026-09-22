@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import Database from 'better-sqlite3';
-import { isRuleDue, filterCampaignsForRule } from '../../../server/bot/scheduler/helpers.js';
+import { isRuleDue, filterCampaignsForRule, adoptSystemCampaigns } from '../../../server/bot/scheduler/helpers.js';
 import { CampaignsRepository } from '../../../server/repositories/campaigns.js';
 
 function memDb() {
@@ -53,5 +53,35 @@ describe('rule-guard scope + interval', () => {
     repo.upsert({ platform: 'meta', campaign_id: 'x1', name: 'W', status: 'active', userId: 'u1' });
     expect(db.prepare('SELECT account_id FROM campaigns WHERE id=?').get(id).account_id).toBe('act_A');
     db.close();
+  });
+});
+
+describe('adoptSystemCampaigns — adopsi campaign system', () => {
+  it('adopsi campaign system yang account-nya milik owner + relabel user_id', () => {
+    const sys = [
+      { id: 's1', account_id: 'act_A', user_id: 'system' },
+      { id: 's2', account_id: 'act_B', user_id: 'system' },
+      { id: 's3', account_id: null, user_id: 'system' },
+    ];
+    const out = adoptSystemCampaigns(sys, ['act_A'], 'u1', {});
+    expect(out.map(c => c.id)).toEqual(['s1']);
+    expect(out[0].user_id).toBe('u1');
+  });
+  it('toleran prefix act_', () => {
+    const sys = [{ id: 's1', account_id: 'act_123', user_id: 'system' }];
+    expect(adoptSystemCampaigns(sys, ['123'], 'u1', {}).length).toBe(1);
+    expect(adoptSystemCampaigns(sys, ['act_999'], 'u1', {}).length).toBe(0);
+  });
+  it('tanpa akun owner → kosong (tidak bocor)', () => {
+    const sys = [{ id: 's1', account_id: 'act_A', user_id: 'system' }];
+    expect(adoptSystemCampaigns(sys, [], 'u1', {}).length).toBe(0);
+  });
+  it('hormati scope rule: hanya akun rule', () => {
+    const sys = [
+      { id: 's1', account_id: 'act_A', user_id: 'system' },
+      { id: 's2', account_id: 'act_B', user_id: 'system' },
+    ];
+    const out = adoptSystemCampaigns(sys, ['act_A', 'act_B'], 'u1', { accountId: 'act_A' });
+    expect(out.map(c => c.id)).toEqual(['s1']);
   });
 });

@@ -110,6 +110,29 @@ export function isRuleDue(rule, nowMs = Date.now()) {
  * ber-account_id NULL ikut semua (lebih baik false-positive minta setuju
  * daripada rule diam total). Murni — bisa dites tanpa cron/DB.
  */
+/**
+ * Adopsi campaign 'system' untuk owner yang bucket-nya kosong. Campaign lama
+ * tersync dengan user_id='system'; tanpa ini rule user tersebut TIDAK PERNAH
+ * dievaluasi. Cocokkan via account_id milik owner. Hasil di-relabel user_id
+ * owner biar draft/notif jatuh ke orang yang benar. Murni — testable.
+ */
+export function adoptSystemCampaigns(systemCampaigns, ownerAccountIds, ownerId, rule) {
+  const owned = new Set((ownerAccountIds || []).map(String).filter(Boolean));
+  if (!owned.size) return [];
+  const scoped = filterCampaignsForRule(systemCampaigns || [], rule)
+    .filter(c => {
+      const ca = String(c.account_id || '');
+      if (!ca) return false;
+      const bare = ca.replace(/^act_/, '');
+      return [...owned].some(o => {
+        const ob = String(o).replace(/^act_/, '');
+        return ca === String(o) || bare === ob || ca === `act_${ob}`;
+      });
+    })
+    .map(c => ({ ...c, user_id: ownerId }));
+  return scoped;
+}
+
 export function filterCampaignsForRule(campaigns, rule) {
   const ruleAcct = String(rule?.accountId ?? rule?.account_id ?? '');
   if (!ruleAcct) return campaigns || [];

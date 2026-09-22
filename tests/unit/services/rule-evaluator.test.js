@@ -99,9 +99,13 @@ describe('RuleEvaluator', () => {
         condition: { type: 'leaf', metric: 'roas', operator: '<', value: 1.5 },
         action: { type: 'pause' },
       };
-      const campaign = { id: 'c1', name: 'Camp', insights: { roas: 1.2 } };
+      const campaign = { id: 'c1', campaign_id: 'm1', platform: 'meta', user_id: 'u1', name: 'Camp', insights: { roas: 1.2 } };
+      mockPlatformAccountsRepo.findAllActiveByUserAndPlatform = vi.fn(() => [{ access_token: 'tok' }]);
+      const { MetaAdsAPI } = await import('../../../server/services/meta/index.js');
+      MetaAdsAPI.mockImplementation(function () { this.updateCampaign = () => ({}); });
       const result = await evaluator.evaluateRule(rule, campaign);
       expect(result).toBe(true);
+      MetaAdsAPI.mockReset();
     });
 
     it('should return false when condition does not match', async () => {
@@ -174,15 +178,19 @@ describe('RuleEvaluator', () => {
   describe('checkCampaigns', () => {
     it('should check all campaigns against all rules', async () => {
       const campaigns = [
-        { id: 'c1', insights: { roas: 0.5 } },
-        { id: 'c2', insights: { roas: 3.0 } },
+        { id: 'c1', campaign_id: 'm1', platform: 'meta', user_id: 'u1', insights: { roas: 0.5 } },
+        { id: 'c2', campaign_id: 'm2', platform: 'meta', user_id: 'u1', insights: { roas: 3.0 } },
       ];
       mockCampaignsRepo.findAll.mockReturnValue({ data: campaigns, total: campaigns.length });
       mockRulesRepo.getAllEnabled.mockReturnValue([
         { id: 'r1', condition: { type: 'leaf', metric: 'roas', operator: '<', value: 1 }, action: { type: 'pause' } },
       ]);
+      mockPlatformAccountsRepo.findAllActiveByUserAndPlatform = vi.fn(() => [{ access_token: 'tok' }]);
+      const { MetaAdsAPI } = await import('../../../server/services/meta/index.js');
+      MetaAdsAPI.mockImplementation(function () { this.updateCampaign = vi.fn(async () => ({})); });
       const matched = await evaluator.checkCampaigns('u1');
       expect(matched).toBe(2);
+      MetaAdsAPI.mockReset();
     });
   });
   describe('_scaleCampaign guards', () => {
@@ -220,13 +228,14 @@ describe('RuleEvaluator', () => {
       MetaAdsAPI.mockReset();
     });
 
-    it('skips mutation when the owner has no bound token', async () => {
+    it('throws (fail-loud) when the owner has no bound token', async () => {
       const shared = { updateCampaign: vi.fn() };
       const owned = new RuleEvaluator(
         mockSettingsRepo, mockCampaignsRepo, mockRulesRepo, {},
         { metaAdsAPI: shared, platformAccountsRepo: { findAllActiveByUserAndPlatform: () => [] } }, null
       );
-      await owned._pauseCampaign({ id: 'c1', campaign_id: 'm1', platform: 'meta', user_id: 'u-nobody' });
+      await expect(owned._pauseCampaign({ id: 'c1', campaign_id: 'm1', platform: 'meta', user_id: 'u-nobody' }))
+        .rejects.toThrow(/Token Meta/);
       expect(shared.updateCampaign).not.toHaveBeenCalled();
     });
   });

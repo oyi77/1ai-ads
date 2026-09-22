@@ -174,6 +174,21 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     }));
   }
 
+  // SATU campaign fresh (buat re-fetch budget sebelum scale — snapshot
+  // draft/guard bisa basi berminggu-minggu kalau approve telat).
+  async getCampaign(campaignId) {
+    const data = await this._get(`/${campaignId}`, {
+      fields: 'id,name,status,daily_budget,lifetime_budget',
+    });
+    return {
+      id: data.id,
+      name: data.name,
+      status: (data.status || '').toLowerCase(),
+      dailyBudget: parseFloat(data.daily_budget || 0),
+      lifetimeBudget: parseFloat(data.lifetime_budget || 0),
+    };
+  }
+
   async getCampaignInsights(campaignId, { datePreset = 'last_30d' } = {}) {
     const data = await this._get(`/${campaignId}/insights`, {
       fields: 'campaign_name,spend,impressions,clicks,ctr,cpc,actions,action_values,cost_per_action_type',

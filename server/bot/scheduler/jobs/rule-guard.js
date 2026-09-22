@@ -3,7 +3,7 @@
  *
  * Extracted verbatim from ../scheduler.js. Registered via setupRuleGuard(bot, deps).
  */
-import { safeSend, evaluateRuleForCampaign, isRuleDue, filterCampaignsForRule, scheduleJob, log, esc } from '../helpers.js';
+import { safeSend, evaluateRuleForCampaign, isRuleDue, filterCampaignsForRule, adoptSystemCampaigns, scheduleJob, log, esc } from '../helpers.js';
 import { describeRuleCondition as describeID, actionWord as actionWordID } from '../../../lib/rule-words.js';
 
 /**
@@ -33,6 +33,24 @@ export function setupRuleGuard(bot, deps) {
         campaignsByUser[uid].push(c);
       }
 
+
+      // Akun Meta milik tiap owner (buat adopsi campaign 'system').
+      const ownerAccounts = {};
+      try {
+        const paRepo = deps.repos?.platformAccountsRepo;
+        if (paRepo?.findByUserId) {
+          for (const r of activeRules) {
+            const oid = r.userId || r.user_id || 'system';
+            if (!ownerAccounts[oid]) {
+              ownerAccounts[oid] = (paRepo.findByUserId(oid) || [])
+                .filter(a => a.platform === 'meta')
+                .flatMap(a => [a.credentials?.ad_account_id || a.ad_account_id || '', String(a.id || '')])
+                .filter(Boolean);
+            }
+          }
+        }
+      } catch { /* adopsi best-effort */ }
+
       for (const rule of activeRules) {
         const action = rule.action || {};
         // `findAll()` hydrates camelCase (`userId`). Reading `rule.user_id` always
@@ -42,7 +60,14 @@ export function setupRuleGuard(bot, deps) {
         const ownerId = rule.userId || rule.user_id || 'system';
         if (!isRuleDue(rule)) continue;
         try { deps.repos?.rulesRepo?.markEvaluated?.(rule.id); } catch { /* best-effort */ }
-        const campaigns = filterCampaignsForRule(campaignsByUser[ownerId] || [], rule);
+        let campaigns = filterCampaignsForRule(campaignsByUser[ownerId] || [], rule);
+        if (campaigns.length === 0 && ownerId !== 'system') {
+          const adopted = adoptSystemCampaigns(campaignsByUser['system'] || [], ownerAccounts[ownerId] || [], ownerId, rule);
+          if (adopted.length) {
+            campaigns = adopted;
+            log.info('Adopted system campaigns for owner', { ownerId, count: adopted.length, rule: rule.name });
+          }
+        }
         if (campaigns.length === 0) continue;
 
         for (const campaign of campaigns) {

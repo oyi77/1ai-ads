@@ -174,6 +174,9 @@ export function handleStatus(deps) {
       const seenTokens = new Set();
       const tokenOwners = [];
       for (const row of stored) {
+        // Token mati tetap dihitung sebagai "koneksi bermasalah" di bawah
+        // (deadOwners), tapi tidak disapu live — hemat 400ms per token mati.
+        if (row.health_status === 'expired') { deadOwnersPre.push(row); continue; }
         const token = row.credentials?.access_token || row.access_token;
         if (!token || seenTokens.has(token)) continue;
         seenTokens.add(token);
@@ -183,6 +186,7 @@ export function handleStatus(deps) {
       // Sapu live: tiap token → daftar ad account → campaign per akun.
       const accounts = [];
       const deadOwners = [];
+      const deadOwnersPre = [];
       for (const owner of tokenOwners) {
         const token = owner.credentials?.access_token || owner.access_token;
         let api = null;
@@ -236,6 +240,7 @@ export function handleStatus(deps) {
       message += `🔗 Akun iklan terhubung: <b>${accounts.length}</b> (dari ${tokenOwners.length} koneksi token)\n`;
       message += `🎯 Campaign total: <b>${totals.total}</b> (🟢 ${totals.active} aktif • ⏸️ ${totals.inactive} nonaktif • 🗑️ ${totals.deleted} dihapus)\n`;
       message += `📝 Draft menunggu persetujuan: <b>${draftPending}</b>`;
+      deadOwners.push(...deadOwnersPre);
       if (deadOwners.length > 0) {
         message += `\n\n🔑 <b>${deadOwners.length} koneksi token bermasalah</b> (kedaluwarsa/dicabut) — hubungkan ulang biar datanya kebaca lagi.`;
       }

@@ -136,6 +136,9 @@ export async function liveFbData(deps, userId) {
   const byAccount = new Map();
   const seen = new Set();
   for (const row of metaAccounts(deps, userId)) {
+    // Skip token yang sudah ditandai mati: tiap 400ms sia-sia × N token ×
+    // 100 user = semua layar lambat. Flag ditulis isTokenExpiryError.
+    if (row.health_status === 'expired') continue;
     const token = row.credentials?.access_token || row.access_token;
     if (!token || seen.has(token)) continue;
     seen.add(token);
