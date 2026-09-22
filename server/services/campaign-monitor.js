@@ -195,13 +195,27 @@ export class CampaignMonitorService {
       const campaigns = await api.getCampaigns(accountId, { currency: 'IDR' });
       const alerts = [];
 
+      // Batch 1 call/account (bukan 1 call/campaign): N campaign aktif =
+      // N HTTP ke Meta = rate-limit 403 code 4 saat 100 user buka bareng.
+      let insightsById = {};
+      try {
+        if (typeof api.getMultiCampaignInsights === 'function') {
+          insightsById = await api.getMultiCampaignInsights(
+            campaigns.filter(c => c.status === 'active').map(c => c.id),
+            { datePreset: 'today', accountId }
+          ) || {};
+        }
+      } catch { /* fallback per-campaign di bawah */ }
+
       for (const campaign of campaigns) {
         if (campaign.status !== 'active') continue;
 
-        let insights = null;
-        try {
-          insights = await api.getCampaignInsights(campaign.id, { datePreset: 'today' });
-        } catch { /* no insights */ }
+        let insights = insightsById[campaign.id] || null;
+        if (!insights) {
+          try {
+            insights = await api.getCampaignInsights(campaign.id, { datePreset: 'today' });
+          } catch { /* no insights */ }
+        }
 
         // Campaign exceeding daily budget
         if (campaign.dailyBudget > 0 && insights && insights.spend > campaign.dailyBudget) {
@@ -329,13 +343,26 @@ export class CampaignMonitorService {
       const campaigns = await api.getCampaigns(accountId, { currency: 'IDR' });
       const toPause = [];
 
+      // Batch 1 call/account — lihat komentar di getAlerts.
+      let insightsById = {};
+      try {
+        if (typeof api.getMultiCampaignInsights === 'function') {
+          insightsById = await api.getMultiCampaignInsights(
+            campaigns.filter(c => c.status === 'active' && c.dailyBudget).map(c => c.id),
+            { datePreset: 'today', accountId }
+          ) || {};
+        }
+      } catch { /* fallback per-campaign di bawah */ }
+
       for (const campaign of campaigns) {
         if (campaign.status !== 'active' || !campaign.dailyBudget) continue;
 
-        let insights = null;
-        try {
-          insights = await api.getCampaignInsights(campaign.id, { datePreset: 'today' });
-        } catch { continue; }
+        let insights = insightsById[campaign.id] || null;
+        if (!insights) {
+          try {
+            insights = await api.getCampaignInsights(campaign.id, { datePreset: 'today' });
+          } catch { continue; }
+        }
 
         if (!insights) continue;
         const conversions = insights.conversions || 0;

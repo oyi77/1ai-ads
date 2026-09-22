@@ -390,6 +390,28 @@ describe('CampaignMonitorService', () => {
       const svc = new CampaignMonitorService(googleApi, mockCampaignsRepo, mockSettingsRepo);
       });
 
+    it('getAlerts pakai batch 1 call per akun (anti rate-limit)', async () => {
+      mockMetaApi.getCampaigns.mockResolvedValue([
+        { id: 'c1', name: 'A', status: 'active', dailyBudget: 10000 },
+        { id: 'c2', name: 'B', status: 'active', dailyBudget: 10000 },
+      ]);
+      mockMetaApi.getMultiCampaignInsights = vi.fn(async () => ({}));
+      await service.getAlerts('act_123');
+      expect(mockMetaApi.getMultiCampaignInsights).toHaveBeenCalledTimes(1);
+      expect(mockMetaApi.getMultiCampaignInsights).toHaveBeenCalledWith(
+        ['c1', 'c2'], { datePreset: 'today', accountId: 'act_123' }
+      );
+    });
+
+    it('autoPauseCheck pakai batch 1 call per akun', async () => {
+      mockMetaApi.getCampaigns.mockResolvedValue([
+        { id: 'c1', name: 'A', status: 'active', dailyBudget: 10000 },
+      ]);
+      mockMetaApi.getMultiCampaignInsights = vi.fn(async () => ({}));
+      await service.autoPauseCheck('act_123');
+      expect(mockMetaApi.getMultiCampaignInsights).toHaveBeenCalledTimes(1);
+    });
+
     it('works with non-meta platform that implements getAccountInsights', async () => {
       // Test via the constructor that gets a fresh platform from getPlatformSync
       const svc = new CampaignMonitorService(mockMetaApi, mockCampaignsRepo, mockSettingsRepo, mockPlatformAccountsRepo);
