@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { createLogger } from '../lib/logger.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { exchangeCodeForToken } from '../services/meta-connection.js';
+import { ruleQuotaCheckByUser } from '../lib/rule-quota.js';
 
 const log = createLogger('autonomous-routes');
 
@@ -101,6 +102,15 @@ export function createAutonomousRouter(settingsRepo, platformAccountsRepo, campa
         return res.status(400).json({ success: false, error: 'Missing required fields' });
       }
 
+      const quotaHit = ruleQuotaCheckByUser({
+        rulesRepo,
+        plan: req.user?.plan || 'free',
+        role: req.user?.role,
+        userId,
+      });
+      if (quotaHit) {
+        return res.status(403).json({ success: false, error: 'Paket Free max 3 aturan aktif. Upgrade ke Pro untuk unlimited.' });
+      }
       const rule = await rulesRepo.create({
         user_id: userId,
         name,

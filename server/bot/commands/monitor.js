@@ -5,6 +5,7 @@ import { createLogger } from '../../lib/logger.js';
 const log = createLogger('monitor');
 import { RULE_TEMPLATES, ConditionGroup, Condition, RuleAction, OPERATORS } from '../../lib/rule-builder.js';
 import { escapeHtml as esc } from '../../lib/escape.js';
+import { ruleQuotaCheck as quotaCheckLib } from '../../lib/rule-quota.js';
 import { describeRuleCondition, ruleAutoName, actionWord, metricLabel, operatorWord, formatRuleValue, describeFbRule } from '../../lib/rule-words.js';
 
 /**
@@ -250,21 +251,15 @@ function scopeLabel(rb, liveNames, accounts) {
   return `📘 ${resolveAcctName(liveNames, accounts, rb.accountId)}`;
 }
 
-// Batas SaaS: paket free max 3 RULE AKTIF (pro/enterprise/admin unlimited).
-// Konstanta kode — plans tidak punya kolom max_rules; jangan tambah migrasi
-// hanya untuk satu angka ini. Naikkan di sini bila kebijakan berubah.
-const MAX_FREE_RULES = 3;
-
+// Batas SaaS free (MAX_FREE_RULES) di server/lib/rule-quota.js — dipakai
+// bersama bot + web routes. Adapter tipis ctx -> lib:
 function ruleQuotaCheck(deps, ctx) {
-  const plan = ctx.user?.plan || 'free';
-  if (plan === 'pro' || plan === 'enterprise') return null;
-  if (ctx.user?.role === 'admin') return null;
   const rules = deps?.repos?.rulesRepo?.getAll?.(ctx.userId) || [];
-  const active = rules.filter(r => r.enabled).length;
-  if (active >= MAX_FREE_RULES) {
-    return `🔒 <b>Paket Free max ${MAX_FREE_RULES} aturan aktif.</b>\n\nKamu punya ${active} aktif. Upgrade ke Pro (Rp 99rb/bln) buat aturan unlimited + optimasi AI.`;
-  }
-  return null;
+  return quotaCheckLib({
+    plan: ctx.user?.plan || 'free',
+    role: ctx.user?.role,
+    activeCount: rules.filter(r => r.enabled).length,
+  });
 }
 
 async function showAccountStep(ctx, deps) {
