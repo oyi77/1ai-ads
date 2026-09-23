@@ -74,7 +74,7 @@ describe('per-user ads handlers (multi-platform)', () => {
     // AdForge is multi-platform: always show Ads Manager overview, with
     // connect buttons for every platform (never a Meta-only prompt).
     expect(text).toContain('Ads Manager');
-    expect(text).toContain('Multiple ad platforms');
+    expect(text).toContain('Banyak platform iklan');
   });
 
   it('handleAds shows multi-platform overview with connected platform marked', async () => {
@@ -82,7 +82,7 @@ describe('per-user ads handlers (multi-platform)', () => {
     await handleAds(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx);
     const text = txt(ctx._replies[0]);
     expect(text).toContain('Ads Manager');
-    expect(text).toContain('1 connected');
+    expect(text).toContain('1 terhubung');
     // Connected Meta listed with ✅; others shown as 🔗 connect
     const flat = kbOf(ctx._replies[0]).flat().map(b => b.text);
     expect(flat.some(t => t.includes('✅') && t.includes('Meta'))).toBe(true);

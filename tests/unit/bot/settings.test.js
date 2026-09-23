@@ -117,9 +117,9 @@ describe('settings — per-platform Connect rows (P4)', () => {
     expect(cbCtx2._replies[0].msg).toContain('• Ads Acct (google) ⏸');
   });
 
-  it('callback unknown action replies Unknown settings action', async () => {
+  it('callback unknown action replies Indonesian fallback', async () => {
     const cbCtx = makeCtx('u1', ['settings:bogus', 'bogus']);
     await handleSettingsCallback(deps)(cbCtx);
-    expect(cbCtx._replies[0].msg).toBe('Unknown settings action.');
+    expect(cbCtx._replies[0].msg).toContain('nggak dikenal');
   });
 });

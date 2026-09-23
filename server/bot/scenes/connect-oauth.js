@@ -19,7 +19,7 @@ export const connectOAuthScene = new Scenes.WizardScene(
   async (ctx) => {
     const platform = ctx.scene.state?.platform || ctx.wizard.state.platform;
     if (!platform || !PLATFORM_LABELS[platform]) {
-      await ctx.reply('⚠️ Invalid platform. Please start over from /start.');
+      await ctx.reply('⚠️ Platform nggak dikenal. Mulai lagi dari /start ya.');
       return ctx.scene.leave();
     }
     ctx.wizard.state.platform = platform;
@@ -35,10 +35,10 @@ export const connectOAuthScene = new Scenes.WizardScene(
     };
 
     await ctx.reply(
-      `🔌 <b>Connect ${PLATFORM_LABELS[platform]} via OAuth</b>\n\n` +
-      `Click the button below to authorize AdForge to access your ${PLATFORM_LABELS[platform]} account.\n` +
-      `You'll be redirected to ${PLATFORM_LABELS[platform]} to sign in and grant permission.\n\n` +
-      `After authorization, you'll be redirected back and this bot will confirm the connection.`,
+      `🔌 <b>Hubungkan ${PLATFORM_LABELS[platform]} via OAuth</b>\n\n` +
+      `Pencet tombol di bawah biar AdForge bisa akses akun ${PLATFORM_LABELS[platform]}-mu.\n` +
+      `Kamu bakal dibuka ke ${PLATFORM_LABELS[platform]} buat login dan kasih izin.\n\n` +
+      `Abis itu kamu balik lagi dan bot konfirmasi koneksinya.`,
       { parse_mode: 'HTML', reply_markup: keyboard }
     );
 
@@ -50,9 +50,9 @@ export const connectOAuthScene = new Scenes.WizardScene(
     // If user sends anything here, remind them to use the button.
     const platform = ctx.wizard.state.platform;
     await ctx.reply(
-      `Please click the button above to connect ${PLATFORM_LABELS[platform]}. ` +
-      `If you already completed the flow, the connection should appear in /status shortly. ` +
-      `Type /done when you finish in the browser to leave this flow.`,
+      `Pencet tombol di atas buat hubungkan ${PLATFORM_LABELS[platform]}. ` +
+      `Kalau udah selesai di browser, koneksinya muncul di /status bentar lagi. ` +
+      `Ketik /done kalau udah selesai biar keluar dari sini.`,
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     // Stay in this step, but never trap the user: any /command (handled by

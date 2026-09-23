@@ -128,7 +128,7 @@ export function handleSettingsCallback(deps) {
         });
       }
       default:
-        return ctx.reply('Unknown settings action.');
+        return ctx.reply('⚠️ Pilihan nggak dikenal. Balik ke /menu ya.');
     }
   };
 }

@@ -109,7 +109,7 @@ export function initBot(app, deps) {
       return handler(ctx);
     }
     return ctx.reply(
-      `Unknown command: ${cmd}. Use /menu to see available options, or /help for guidance.`,
+      `⚠️ Nggak kenal perintah <code>${cmd}</code>. Buka /menu buat lihat pilihan yang ada.`,
       {
         reply_markup: {
           inline_keyboard: [

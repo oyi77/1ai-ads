@@ -141,7 +141,7 @@ async function sendPlatformChoice(ctx) {
 
 async function handleReportsAction(ctx, deps) {
   if (deps) return handleAdsReport(deps)(ctx);
-  return ctx.reply('📈 Reports feature — use /menu → Mini App or Open in Browser for detailed analytics.');
+  return ctx.reply('📈 Laporan lengkap ada di /menu → Mini App atau buka di browser buat analitik detail.');
 }
 
 async function handleOptimizeAction(ctx, deps, scope) {
@@ -502,7 +502,8 @@ export async function handlePlatformAction(ctx, deps, scope) {
     });
   } catch (err) {
     log.error('handlePlatformAction failed', { error: err.message });
-    await ctx.reply('⚠️ Platform action failed. Try /menu again.', {
+    await ctx.reply('⚠️ Gagal buka platform. Coba /menu lagi ya.', {
+      parse_mode: 'HTML',
       reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
     });
   }

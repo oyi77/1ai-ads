@@ -71,10 +71,10 @@ function detectDomain(ctx) {
 
 function getRecoveryMessage(domain) {
   const messages = {
-    Settings: '⚠️ Settings action failed. Try again via /menu → Settings.',
-    Monitor: '⚠️ Monitor action failed. Your campaigns are still running. Use /status to check.',
-    Menu: '⚠️ Menu error. Try /start to restart.',
-    General: '😅 Something went wrong. Use /menu to try again.',
+    Settings: '⚠️ Pengaturan gagal. Coba lagi via /menu → Pengaturan.',
+    Monitor: '⚠️ Aturan gagal diproses. Campaign-mu tetap jalan. Cek via /status ya.',
+    Menu: '⚠️ Menu error. Coba /start buat mulai ulang.',
+    General: '😅 Ada yang salah. Coba /menu buat ulangi ya.',
   };
   return messages[domain] || messages.General;
 }

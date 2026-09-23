@@ -121,9 +121,9 @@ export function handleAds(deps) {
     const connectedCount = active.length;
     const summary =
       `📣 <b>Ads Manager</b>\n\n` +
-      `Multiple ad platforms — ${connectedCount} connected\n` +
-      `Campaigns: ${activeCampaigns} active / ${campaigns.length} total\n\n` +
-      `Tap ✅ to manage a connected platform, 🔗 to connect one:`;
+      `Banyak platform iklan — ${connectedCount} terhubung\n` +
+      `Campaign: ${activeCampaigns} aktif / ${campaigns.length} total\n\n` +
+      `Pencet ✅ buat atur platform yang terhubung, 🔗 buat hubungkan yang baru:`;
 
     return ctx.reply(summary, {
       parse_mode: 'HTML',

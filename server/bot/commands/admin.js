@@ -29,7 +29,7 @@ export function handleAdminStats(deps) {
         { parse_mode: 'HTML' }
       );
     } catch {
-      return ctx.reply('⚠️ Failed to load admin stats.');
+      return ctx.reply('⚠️ Gagal muat statistik admin.');
     }
   };
 }
@@ -45,9 +45,9 @@ export function handleAdminUsers(deps) {
     try {
       const users = deps.repos?.usersRepo?.findAll?.() || [];
       const list = users.slice(0, 20).map(u => `• ${esc(u.username)} (${esc(u.role || 'user')})`).join('\n');
-      return ctx.reply(`👥 <b>Users (${users.length}):</b>\n\n${list || 'No users found.'}`, { parse_mode: 'HTML' });
+      return ctx.reply(`👥 <b>Users (${users.length}):</b>\n\n${list || 'Belum ada user.'}`, { parse_mode: 'HTML' });
     } catch {
-      return ctx.reply('⚠️ Failed to load users.');
+      return ctx.reply('⚠️ Gagal muat daftar user.');
     }
   };
 }
@@ -62,7 +62,7 @@ export function handleAdminBroadcast(deps) {
 
     const text = (ctx.message?.text || '').replace(/^\/admin_broadcast\s*/, '').trim();
     if (!text) {
-      return ctx.reply('📢 Broadcast feature — send a message to all users. Usage: /admin_broadcast <message>');
+      return ctx.reply('📢 Fitur broadcast — kirim pesan ke semua user. Cara: /admin_broadcast <pesan>');
     }
 
     try {
@@ -82,9 +82,9 @@ export function handleAdminBroadcast(deps) {
           failed++;
         }
       }
-      return ctx.reply(`📢 Broadcast sent to ${sent} user${sent !== 1 ? 's' : ''}${failed ? `, ${failed} failed` : ''}.`);
+      return ctx.reply(`📢 Broadcast kekirim ke ${sent} user${failed ? `, ${failed} gagal` : ''}.`);
     } catch (err) {
-      return ctx.reply(`⚠️ Broadcast failed: ${err?.message || 'unknown error'}`);
+      return ctx.reply(`⚠️ Broadcast gagal: ${err?.message || 'error tidak dikenal'}`);
     }
   };
 }

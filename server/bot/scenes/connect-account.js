@@ -100,7 +100,7 @@ export const connectScene = new Scenes.WizardScene(
   async (ctx) => {
     const token = sanitizeAccessToken(ctx.message?.text);
     if (!token) {
-      await ctx.reply('Please paste your access token (just text).');
+      await ctx.reply('Tempel access token-nya ya (tulisan aja).');
       return;
     }
     const { platform, accountName } = ctx.wizard.state;
