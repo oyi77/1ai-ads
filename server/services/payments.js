@@ -18,9 +18,10 @@ function isEventProcessed(orderId, eventType) {
 }
 
 export class PaymentService {
-  constructor(paymentsRepo, usersRepo) {
+  constructor(paymentsRepo, usersRepo, invoicesRepo = null) {
     this.paymentsRepo = paymentsRepo;
     this.usersRepo = usersRepo;
+    this.invoicesRepo = invoicesRepo;
     // 1ai-payment merchant API base, e.g. http://172.17.0.1:3100/api/payments
     this.paymentApiUrl = process.env['1AI_PAYMENT_URL'] || 'http://localhost:3100/api/payments';
     this.paymentApiKey = process.env['1AI_PAYMENT_API_KEY'] || '';
@@ -345,6 +346,28 @@ export class PaymentService {
 
     this.paymentsRepo.updateStatus(payment.id, 'completed');
     log.info('Payment marked as completed', { paymentId: payment.id });
+    // Invoice otomatis: histori /invoices terisi tiap pembayaran sukses.
+    // Best-effort: gagal buat invoice tidak menggagalkan fulfill plan.
+    try {
+      if (this.invoicesRepo?.create) {
+        const meta2 = metadata || {};
+        this.invoicesRepo.create({
+          userId: payment.user_id,
+          amount: payment.amount,
+          currency: payment.currency || 'IDR',
+          description: `AdForge ${meta2.planName || 'Pro'} — ${payment.order_id}`,
+          lineItems: [{ label: `Paket ${meta2.planName || ''} (30 hari)`, amount: payment.amount, qty: 1 }],
+          dueDate: new Date().toISOString().slice(0, 10),
+        });
+        const inv = this.invoicesRepo.findAll?.({ userId: payment.user_id, page: 1, limit: 1 });
+        const invId = inv?.data?.[0]?.id;
+        if (invId && this.invoicesRepo.updateStatus) {
+          try { this.invoicesRepo.updateStatus(invId, 'paid', { paidAt: new Date().toISOString() }, payment.user_id); } catch { /* status best-effort */ }
+        }
+      }
+    } catch (err) {
+      log.warn('Auto-invoice failed (plan fulfill unaffected)', { paymentId: payment.id, error: err.message });
+    }
     return { success: true };
   }
 

@@ -68,7 +68,7 @@ export function createServices({ db, repos, params }) {
 
   const adspirerClient = new AdspirerMcpClient(repos.platformAccountsRepo);
   const trendingService = new TrendingService(repos.campaignsRepo);
-  const paymentService = new PaymentService(repos.paymentsRepo, repos.usersRepo);
+  const paymentService = new PaymentService(repos.paymentsRepo, repos.usersRepo, repos.invoicesRepo || null);
   const learningService = new LearningService(repos.campaignsRepo, repos.adsRepo, repos.landingRepo);
   const utmTagger = new UtmTaggerService(repos.adUtmMapRepo);
 
