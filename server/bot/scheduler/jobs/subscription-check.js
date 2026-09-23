@@ -51,6 +51,35 @@ export function setupSubscriptionCheck(bot, deps) {
       if (expiring.length > 0) {
         await safeSend(bot, `💳 ${expiring.length} subscription(s) expiring within 7 days`);
       }
+
+      // Rekonsiliasi pending: poll provider untuk order pending/processing
+      // berumur <7 hari (mungkin user sudah bayar tapi callback telat/gagal).
+      // >7 hari tanpa bayar → cancelled. Tanpa ini order menggantung selamanya.
+      try {
+        const svc = deps.services?.paymentService;
+        const stale = (deps.repos?.paymentsRepo?.findAll?.() || [])
+          .filter(p => p.status === 'pending' || p.status === 'processing');
+        let reconciled = 0, expired = 0;
+        for (const pay of stale) {
+          const ageMs = now - new Date(pay.created_at).getTime();
+          if (ageMs > 7 * 24 * 3600 * 1000) {
+            try {
+              deps.repos.paymentsRepo.updateStatus(pay.id, 'cancelled');
+              expired++;
+            } catch { /* best-effort */ }
+            continue;
+          }
+          try {
+            if (typeof svc?.checkPaymentStatusWithProvider === 'function') {
+              await svc.checkPaymentStatusWithProvider(pay.order_id);
+              reconciled++;
+            }
+          } catch { /* poll berikutnya */ }
+        }
+        log.info('Payment reconciliation complete', { reconciled, expired });
+      } catch (err) {
+        log.warn('Payment reconciliation failed', { error: err.message });
+      }
       log.info('Subscription check complete', { expiring: expiring.length });
     } catch (err) {
       log.error('Subscription check failed', { error: err.message });
