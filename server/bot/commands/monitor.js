@@ -706,6 +706,13 @@ export function handleMonitorCallback(deps) {
       const rule = deps.repos.rulesRepo.getById(ruleId);
       if (!rule) return ctx.reply('⚠️ Aturan nggak ketemu.');
       if (rule.userId && rule.userId !== ctx.userId) return ctx.reply('⚠️ Aturan nggak ketemu.');
+      // Toggle-ON gate: nyalakan rule ke-4+ di paket free -> tolak (anti rotasi bypass).
+      if (!rule.enabled) {
+        const quotaHitTgl = ruleQuotaCheck(deps, ctx);
+        if (quotaHitTgl) {
+          return ctx.reply(quotaHitTgl, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '💎 Upgrade Pro — Rp 99rb', callback_data: 'menu:pricing' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } });
+        }
+      }
       deps.repos.rulesRepo.update(ruleId, { enabled: !rule.enabled });
       return ctx.reply(`✅ Aturan <b>${esc(rule.name)}</b> ${rule.enabled ? 'dimatikan' : 'dinyalakan'}.`, {
         parse_mode: 'HTML',
@@ -891,6 +898,10 @@ async function createRule(ctx, deps, actionType, intervalMinutes = 15) {
 }
 
 async function applyTemplate(ctx, deps, tplKey, accountId = null) {
+  const quotaHitTpl = ruleQuotaCheck(deps, ctx);
+  if (quotaHitTpl) {
+    return ctx.reply(quotaHitTpl, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '💎 Upgrade Pro — Rp 99rb', callback_data: 'menu:pricing' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } });
+  }
   const fn = RULE_TEMPLATES[tplKey];
   if (!fn) return ctx.reply('⚠️ Template nggak ketemu.');
   const tpl = fn();
@@ -920,6 +931,11 @@ async function applyTemplate(ctx, deps, tplKey, accountId = null) {
 }
 
 async function showTemplateAccountStep(ctx, deps, tplKey) {
+  // Gate di depan (bukan saat apply): user kuota penuh langsung tahu, tidak buang langkah pilih akun.
+  const quotaHitStep = ruleQuotaCheck(deps, ctx);
+  if (quotaHitStep) {
+    return ctx.reply(quotaHitStep, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '💎 Upgrade Pro — Rp 99rb', callback_data: 'menu:pricing' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } });
+  }
   const tpl = RULE_TEMPLATES[tplKey]?.();
   if (!tpl) return ctx.reply('⚠️ Template nggak ketemu.');
   const accounts = metaAccounts(deps, ctx.userId);

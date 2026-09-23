@@ -84,6 +84,43 @@ describe('wizard quota — free max 3 aturan aktif', () => {
     expect(txt(ctx._replies[0])).toContain('Langkah 1/5');
   });
 
+  it('template free 3 aktif → ditolak', async () => {
+    const deps = {
+      repos: {
+        platformAccountsRepo: { findByUserId: () => [{ id: 'c1', platform: 'meta', is_active: 1, credentials: { access_token: 'T' } }] },
+        rulesRepo: {
+          getAll: () => [{ enabled: true }, { enabled: true }, { enabled: true }],
+          create: vi.fn(),
+        },
+      },
+    };
+    const ctx = ctxWith({ user: { plan: 'free', role: 'user' }, action: 'template:roas_guard:act_A', session: {} });
+    ctx.match = ['rule:template:roas_guard:act_A', 'template:roas_guard:act_A'];
+    await handleMonitorCallback(deps)(ctx);
+    // applyTemplate langsung (dengan accountId) -> gate kuota menolak, create tidak dipanggil
+    expect(txt(ctx._replies[0])).toContain('max 3');
+    expect(deps.repos.rulesRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('toggle-ON ke-4 di free → ditolak, toggle-OFF boleh', async () => {
+    const ruleOff = { id: 'r-off', userId: 'u1', name: 'Mati', enabled: false };
+    const deps = {
+      repos: {
+        platformAccountsRepo: { findByUserId: () => [] },
+        rulesRepo: {
+          getAll: () => [{ enabled: true }, { enabled: true }, { enabled: true }],
+          getById: () => ruleOff,
+          update: vi.fn(),
+        },
+      },
+    };
+    const ctx = ctxWith({ user: { plan: 'free', role: 'user' }, action: 'toggle:r-off', session: {} });
+    ctx.match = ['rule:toggle:r-off', 'toggle:r-off'];
+    await handleMonitorCallback(deps)(ctx);
+    expect(txt(ctx._replies[0])).toContain('max 3');
+    expect(deps.repos.rulesRepo.update).not.toHaveBeenCalled();
+  });
+
   it('pro unlimited → lolos walau 10 aktif', async () => {
     const ctx = ctxWith({ user: { plan: 'pro', role: 'user' }, action: 'add:start', session: {} });
     ctx.match = ['rule:add:start', 'add:start'];
