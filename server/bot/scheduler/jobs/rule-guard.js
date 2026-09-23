@@ -70,6 +70,13 @@ export function setupRuleGuard(bot, deps) {
         }
         if (campaigns.length === 0) continue;
 
+        // Anti-banjir: 1 rule match ratusan campaign (Sept 16: 544 draft
+        // 1 rule) = ratusan pesan Telegram + draft menumpuk. Cap 10 draft
+        // per rule per run; sisanya diringkas 1 pesan. Tanpa ini 100 user =
+        // flood spam tiap tick.
+        const MAX_DRAFTS_PER_RULE_RUN = 10;
+        let draftsCreated = 0;
+        let skippedOverflow = 0;
         for (const campaign of campaigns) {
           if (!evaluateRuleForCampaign(rule, campaign)) continue;
 
@@ -90,6 +97,11 @@ export function setupRuleGuard(bot, deps) {
             ruleId: rule.id,
           });
           if (!draft) continue;
+          draftsCreated++;
+          if (draftsCreated > MAX_DRAFTS_PER_RULE_RUN) {
+            skippedOverflow++;
+            continue;
+          }
 
           const telegramId = deps.repos?.usersRepo?.getTelegramIdByUserId?.(ownerId)
             || deps.repos?.usersRepo?.findById?.(ownerId)?.telegram_id;
@@ -112,6 +124,16 @@ export function setupRuleGuard(bot, deps) {
             log.error('Failed to send approval prompt to owner', { telegramId, error: err.message });
             await safeSend(bot, `⚠️ <b>${esc(campaign.name)}</b> matched rule <b>${esc(rule.name)}</b> — draft awaiting approval in /menu → Mini App`, { parse_mode: 'HTML' });
           }
+        }
+        if (skippedOverflow > 0) {
+          const telegramId2 = deps.repos?.usersRepo?.getTelegramIdByUserId?.(ownerId)
+            || deps.repos?.usersRepo?.findById?.(ownerId)?.telegram_id;
+          const sumText = `⚠️ Aturan "<b>${esc(rule.name)}</b>" match <b>${draftsCreated + skippedOverflow} campaign</b> — 10 draft pertama dikirim, <b>${skippedOverflow} lainnya</b> nunggu di 📋 Aturanku → 📊 Kinerja. Cek & approve dari sana ya.`;
+          try {
+            if (telegramId2 && bot.telegram) await bot.telegram.sendMessage(telegramId2, sumText, { parse_mode: 'HTML' });
+            else await safeSend(bot, sumText, { parse_mode: 'HTML' });
+          } catch { /* ringkasan best-effort */ }
+          log.info('Rule match overflow summarized', { rule: rule.name, ownerId, draftsCreated, skippedOverflow });
         }
       }
     } catch (err) {

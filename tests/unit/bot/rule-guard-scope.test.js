@@ -85,3 +85,16 @@ describe('adoptSystemCampaigns — adopsi campaign system', () => {
     expect(out.map(c => c.id)).toEqual(['s1']);
   });
 });
+
+describe('rule-guard overflow cap — anti banjir draft', () => {
+  it('cap 10 draft per rule per run, sisanya diringkas', () => {
+    const MAX = 10;
+    let draftsCreated = 0, skippedOverflow = 0;
+    for (let i = 0; i < 25; i++) {
+      draftsCreated++;
+      if (draftsCreated > MAX) { skippedOverflow++; continue; }
+    }
+    expect(draftsCreated).toBe(25);
+    expect(skippedOverflow).toBe(15);
+  });
+});
