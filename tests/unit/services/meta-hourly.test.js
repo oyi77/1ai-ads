@@ -28,7 +28,7 @@ describe('MetaAdsAPI.getAccountInsightsByHour', () => {
     // breakdowns=time_of_day requested (dayparting data source)
     expect(capturedParams.breakdowns).toBe('hourly_stats_aggregated_by_advertiser_time_zone');
     expect(capturedParams.date_preset).toBe('last_7d');
-    expect(capturedPath).toBe('/12345/insights');
+    expect(capturedPath).toBe('/act_12345/insights');
 
     // merged hour 9 across the window
     const h9 = hours.find(h => h.hour === 9);
