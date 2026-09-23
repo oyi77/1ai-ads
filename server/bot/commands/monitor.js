@@ -250,7 +250,28 @@ function scopeLabel(rb, liveNames, accounts) {
   return `📘 ${resolveAcctName(liveNames, accounts, rb.accountId)}`;
 }
 
+// Batas SaaS: paket free max 3 RULE AKTIF (pro/enterprise/admin unlimited).
+// Konstanta kode — plans tidak punya kolom max_rules; jangan tambah migrasi
+// hanya untuk satu angka ini. Naikkan di sini bila kebijakan berubah.
+const MAX_FREE_RULES = 3;
+
+function ruleQuotaCheck(deps, ctx) {
+  const plan = ctx.user?.plan || 'free';
+  if (plan === 'pro' || plan === 'enterprise') return null;
+  if (ctx.user?.role === 'admin') return null;
+  const rules = deps?.repos?.rulesRepo?.getAll?.(ctx.userId) || [];
+  const active = rules.filter(r => r.enabled).length;
+  if (active >= MAX_FREE_RULES) {
+    return `🔒 <b>Paket Free max ${MAX_FREE_RULES} aturan aktif.</b>\n\nKamu punya ${active} aktif. Upgrade ke Pro (Rp 99rb/bln) buat aturan unlimited + optimasi AI.`;
+  }
+  return null;
+}
+
 async function showAccountStep(ctx, deps) {
+  const quotaHit = ruleQuotaCheck(deps, ctx);
+  if (quotaHit) {
+    return ctx.reply(quotaHit, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '💎 Upgrade Pro — Rp 99rb', callback_data: 'menu:pricing' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } });
+  }
   // Langkah 1 bikin rule: PILIH AKUN dulu (live dari Meta, bukan nama koneksi).
   const accounts = metaAccounts(deps, ctx.userId);
   if (!accounts.length) {

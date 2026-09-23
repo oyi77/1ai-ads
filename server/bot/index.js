@@ -18,7 +18,7 @@ import { handleMonitor, handleMonitorCallback, handleMonitorText } from './comma
 import { handleAdminStats, handleAdminUsers, handleAdminBroadcast } from './commands/admin.js';
 import { handleApprovalApprove, handleApprovalReject } from './commands/approvals.js';
 import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsAsk, handleAdsAskBud, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm, handleAdsAccountReport, handleAdsAccountsPage, handleAdsCampaignsPage, handleAdsBudgetScale, handleAdsPlatform } from './commands/ads.js';
-import { handlePricing } from './commands/pricing.js';
+import { handlePricing, handlePricingCallback } from './commands/pricing.js';
 import { initScheduler } from './scheduler.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { identify } from './middleware/identify.js';
@@ -79,7 +79,7 @@ export function initBot(app, deps) {
     status: handleStatus(deps),
     quick: handleMenu(),
     settings: handleSettings(deps),
-    pricing: handlePricing(),
+    pricing: handlePricing(deps),
     admin_stats: handleAdminStats(deps),
     admin_users: handleAdminUsers(deps),
     admin_broadcast: handleAdminBroadcast(deps),
@@ -216,6 +216,7 @@ export function initBot(app, deps) {
   bot.action(/^monitor:(.+)$/, handleMonitorCallback(deps));
   bot.action(/^rule:(.+)$/, handleMonitorCallback(deps));
   bot.action(/^dash:(.+)$/, handleDashboardCallback(deps));
+  bot.action(/^pricing:(.+)$/, handlePricingCallback(deps));
   bot.action(/^quick:menu$/, handleMenu());
   // ── Navigation callbacks (nav.js NAV constant) ──────────
   bot.action(/^nav:back(?::.+)?$/, async (ctx) => {
