@@ -407,7 +407,7 @@ async function renderMyRules(deps, userId) {
     const activeN = (g.rules || []).filter(fb => describeFbRule(fb).active).length;
     const state = activeN > 0 ? '🟢' : '⚪️';
     fbSummaries.push(`${state} 📌 ${esc(g.accountName)} — ${total} aturan Facebook (${activeN} aktif)`);
-    if (fbDetailButtons.length < 6) {
+    if (fbDetailButtons.length < 10) {
       fbDetailButtons.push([{ text: `🔍 ${g.accountName.slice(0, 20)}`, callback_data: `rule:fb:${g.accountId}` }]);
     }
     if (activeN > 0) {
