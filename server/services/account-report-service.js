@@ -11,6 +11,33 @@
 import { createLogger } from '../lib/logger.js';
 import { getPlatformSync } from '../platforms/index.js';
 
+// Circuit-breaker LLM: key mati (403/quota) -> diam 1 jam, bukan bakar
+// call tiap laporan. Reset saat 1 call sukses. Modul-level (bukan per
+// instance) biar semua service berbagi status yang sama.
+let _llmBreakerTrips = 0;
+let _llmBreakerUntil = 0;
+const BREAKER_MAX_TRIPS = 3;
+const BREAKER_COOLDOWN_MS = 60 * 60 * 1000;
+
+function breakerOpen() {
+  return Date.now() < _llmBreakerUntil;
+}
+
+function breakerRecordSuccess() {
+  _llmBreakerTrips = 0;
+  _llmBreakerUntil = 0;
+}
+
+function breakerRecordFailure(err) {
+  const m = String(err?.message || '');
+  // Hanya quota/auth yang trip breaker; error lain (timeout, JSON) = coba lagi.
+  if (!/403|quota|forbidden|unauthorized|401|permission/i.test(m)) return;
+  _llmBreakerTrips++;
+  if (_llmBreakerTrips >= BREAKER_MAX_TRIPS) {
+    _llmBreakerUntil = Date.now() + BREAKER_COOLDOWN_MS;
+  }
+}
+
 const log = createLogger('account-report');
 
 const num = (v) => {
@@ -135,6 +162,9 @@ export class AccountReportService {
     const fallback = deterministicRecommendations(summary, comparison);
     if (!this.llmClient) return { source: 'rules', ...fallback };
 
+    if (breakerOpen()) {
+      return { source: 'rules', ...fallback, breaker: 'quota-cooldown' };
+    }
     try {
       const system =
         'You are a senior Meta Ads performance analyst. Respond ONLY with compact JSON: ' +
@@ -151,6 +181,7 @@ export class AccountReportService {
       if (!match) throw new Error('no JSON in LLM output');
       const parsed = JSON.parse(match[0]);
       const pick = (k) => String(parsed[k] || fallback[k]);
+      breakerRecordSuccess();
       return {
         source: 'ai',
         strengths: pick('strengths'),
@@ -159,7 +190,9 @@ export class AccountReportService {
         actions: pick('actions'),
         risk: pick('risk'),
       };
+      breakerRecordSuccess();
     } catch (err) {
+      breakerRecordFailure(err);
       log.warn('AI recommendation failed, using rules fallback', { error: err.message });
       return { source: 'rules', ...fallback };
     }

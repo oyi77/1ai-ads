@@ -103,3 +103,32 @@ describe('AccountReportService', () => {
     expect(report.summary.roas).toBeCloseTo(2.0);
   });
 });
+
+describe('LLM circuit-breaker — quota mati diam 1 jam', () => {
+  it('3x 403 beruntun -> call ke-4 tidak tembak LLM', async () => {
+    let calls = 0;
+    const dying = { call: async () => { calls++; throw new Error('LLM API Error (403): insufficient_quota'); } };
+    const svc = new (await import('../../../server/services/account-report-service.js')).AccountReportService({ llmClient: dying });
+    const args = { accountName: 'X', summary: { spend: 1 }, comparison: { yesterdayFullDay: {}, avg7d: {} } };
+    for (let i = 0; i < 3; i++) {
+      const r = await svc.generateRecommendations(args);
+      expect(r.source).toBe('rules');
+    }
+    expect(calls).toBe(3);
+    const r4 = await svc.generateRecommendations(args);
+    expect(r4.source).toBe('rules');
+    expect(r4.breaker).toBe('quota-cooldown');
+    expect(calls).toBe(3);
+  });
+
+  it('error non-quota (timeout) tidak trip breaker', async () => {
+    let calls = 0;
+    const flaky = { call: async () => { calls++; throw new Error('net timeout'); } };
+    // Reset modul biar breaker bersih: import ulang fresh
+    const mod = await import('../../../server/services/account-report-service.js?cb=' + Date.now());
+    const svc = new mod.AccountReportService({ llmClient: flaky });
+    const args = { accountName: 'X', summary: { spend: 1 }, comparison: { yesterdayFullDay: {}, avg7d: {} } };
+    for (let i = 0; i < 5; i++) await svc.generateRecommendations(args);
+    expect(calls).toBe(5);
+  });
+});
