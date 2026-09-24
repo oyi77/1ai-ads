@@ -158,8 +158,8 @@ export function createServices({ db, repos, params }) {
   const dashboardWidgetsRepo = new DashboardWidgetsRepository(db);
   const accountReportService = new AccountReportService({ llmClient });
   const nangoAuth = new NangoAuthService();
-  const campaignWizardRepo = new CampaignWizardRepository(db);
-  const automationRulesRepo = new AutomationRuleRepository(db);
+  const _campaignWizardRepo = new CampaignWizardRepository(db); // exposed via repos; kept for future service use
+  const _automationRulesRepo = new AutomationRuleRepository(db); // deprecated table — see routes/automation-rules.js sunset
   // Alerting service
   const alertingService = new AlertingService(null); // Bot will be set in app.js
 
@@ -176,6 +176,7 @@ export function createServices({ db, repos, params }) {
     imageGenerator, audienceIntelligence, creativeScorer, whiteLabelService,
     alertingService, boostApproval, targeting, mailer,
     creativeLibraryRepo, dashboardWidgetsRepo, accountReportService, nangoAuth,
-    campaignWizardRepo, automationRulesRepo, monitoringRepo: repos.monitoringRepo,
+    draftService, facebookSystemUserService, campaignMonitorService,
+    usersRepo: repos.usersRepo,
   };
 }

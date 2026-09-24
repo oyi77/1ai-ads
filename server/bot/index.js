@@ -291,7 +291,8 @@ export function initBot(app, deps) {
     // we have not seen yet.
     const chatIds = [];
     try {
-      const users = deps?.repos?.usersRepo?.findAll?.() || [];
+      const usersRepo = deps?.repos?.usersRepo || deps?.services?.usersRepo;
+      const users = usersRepo?.findAll?.() || [];
       for (const u of users) {
         if (u.telegram_id) chatIds.push(String(u.telegram_id));
       }
