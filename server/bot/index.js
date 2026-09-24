@@ -272,12 +272,13 @@ export function initBot(app, deps) {
     { command: 'help', description: '❓ Bantuan' },
   ];
 
-  // ROOT CAUSE (isolated via container stop/start, 2026-09-24): setMyCommands
-  // sets the bot's DEFAULT menu button to 'commands', clobbering any web_app
-  // button — including ours from a previous boot. The button must therefore be
-  // applied AFTER every setMyCommands, every time. Additionally, both the
-  // webhook reset and the commands sync can land after their API calls resolve
-  // (readback lag observed 10s-90s+), so set-with-readback-retry is required:
+  // ROOT CAUSE (isolated via MTProto + container stop/start, 2026-09-24): with a
+  // command list registered, Telegram IGNORES the bot-wide (no chat_id)
+  // setChatMenuButton and shows every user the default 'commands' button. The
+  // web_app button only sticks when set PER-CHAT (chat_id=<telegram user id>) —
+  // proven: bot-wide set read back 'commands' via Bot API AND showed
+  // menu_button=None via MTProto, while per-chat set persisted 60s+ and read
+  // BotMenuButton(text,url) via MTProto. We therefore set the button per user.
   const MENU_BUTTON = {
     type: 'web_app',
     text: '📱 AdForge',
@@ -285,22 +286,44 @@ export function initBot(app, deps) {
   };
 
   const ensureMiniAppButton = async (attempts = 4) => {
-    for (let attempt = 1; attempt <= attempts; attempt += 1) {
-      try {
-        await bot.telegram.setChatMenuButton({ menu_button: MENU_BUTTON });
-        const current = await bot.telegram.getChatMenuButton();
-        if (current?.type === 'web_app') {
-          log.info('Chat menu button set to Mini App', { url: webAppUrl, attempt });
-          return true;
-        }
-        log.warn('Chat menu button reverted, retrying', { got: current?.type, attempt });
-      } catch (err) {
-        log.warn('Failed to set chat menu button', { error: err.message, attempt });
+    // Per-chat for every user who has a telegram_id (the only scope Telegram
+    // honors once a command list exists), plus one bot-wide attempt for users
+    // we have not seen yet.
+    const chatIds = [];
+    try {
+      const users = deps?.repos?.usersRepo?.findAll?.() || [];
+      for (const u of users) {
+        if (u.telegram_id) chatIds.push(String(u.telegram_id));
       }
-      await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
+    } catch { /* fall back to bot-wide only */ }
+
+    const setOne = async (chatId) => {
+      for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        try {
+          await bot.telegram.setChatMenuButton({
+            ...(chatId ? { chat_id: chatId } : {}),
+            menu_button: MENU_BUTTON,
+          });
+          const current = await bot.telegram.getChatMenuButton(
+            chatId ? { chat_id: chatId } : undefined);
+          if (current?.type === 'web_app') {
+            log.info('Mini App menu button set', { chatId: chatId || 'default', attempt });
+            return true;
+          }
+          log.warn('Mini App menu button reverted, retrying', { chatId: chatId || 'default', got: current?.type, attempt });
+        } catch (err) {
+          log.warn('Failed to set Mini App menu button', { chatId: chatId || 'default', error: err.message, attempt });
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
+      }
+      return false;
+    };
+
+    let ok = await setOne(null);
+    for (const chatId of chatIds) {
+      ok = (await setOne(chatId)) || ok;
     }
-    log.warn('Chat menu button could not be confirmed as Mini App', { attempts });
-    return false;
+    return ok;
   };
 
   const syncBotSurface = () =>
