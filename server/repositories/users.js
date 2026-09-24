@@ -23,7 +23,7 @@ export class UsersRepository {
   }
 
   findAll() {
-    return this.db.prepare('SELECT id, username, email, role, is_active, created_at, last_login FROM users').all();
+    return this.db.prepare('SELECT id, username, email, role, is_active, created_at, last_login, telegram_id FROM users').all();
   }
 
   create({ username, email, password_hash, confirmed = 0, telegram_id = null }) {
