@@ -132,7 +132,7 @@ export function setupTokenHealth(bot, deps) {
                         `Akun: ${esc(safeLabel)}`,
                         '',
                         'Campaign tidak bisa dijalankan atau diubah sampai token diperbarui.',
-                        '👉 Hubungkan ulang di /settings → Connections',
+                        '👉 Hubungkan ulang via /status → ➕ Tambah Akun (token lama otomatis diganti).',
                       ].join('\n'),
                       { parse_mode: 'HTML' }
                     );
