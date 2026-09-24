@@ -272,12 +272,12 @@ export function initBot(app, deps) {
     { command: 'help', description: '❓ Bantuan' },
   ];
 
-  // Telegram resets a bot's chat menu button to its default ('commands' when a
-  // command list exists) whenever the webhook is (re)set — and that reset can
-  // land just AFTER setWebhook resolves, so merely chaining the button set onto
-  // the webhook still lost the race (proven live 2026-09-24: log said the Mini
-  // App button was set, getChatMenuButton read back 'commands'). Set, read back,
-  // and retry until the button is confirmed.
+  // ROOT CAUSE (isolated via container stop/start, 2026-09-24): setMyCommands
+  // sets the bot's DEFAULT menu button to 'commands', clobbering any web_app
+  // button — including ours from a previous boot. The button must therefore be
+  // applied AFTER every setMyCommands, every time. Additionally, both the
+  // webhook reset and the commands sync can land after their API calls resolve
+  // (readback lag observed 10s-90s+), so set-with-readback-retry is required:
   const MENU_BUTTON = {
     type: 'web_app',
     text: '📱 AdForge',
