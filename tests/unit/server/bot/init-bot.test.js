@@ -14,6 +14,7 @@ const fakeBot = new Proxy(
       setWebhook: vi.fn(() => Promise.resolve(true)),
       setMyCommands: vi.fn(() => Promise.resolve(true)),
       setChatMenuButton: vi.fn(() => Promise.resolve(true)),
+      getChatMenuButton: vi.fn(() => Promise.resolve({ type: 'web_app' })),
     },
     context: {},
   },
@@ -80,5 +81,42 @@ describe('initBot smoke', () => {
     const app = { use: vi.fn() };
     const result = initBot(app, { repos: {}, services: {} });
     expect(result).toBeNull();
+  });
+  it('re-asserts the Mini App menu button until the readback confirms it', { timeout: 30000 }, async () => {
+    // Regression (proven live 2026-09-24): setWebhook causes Telegram to reset
+    // the chat menu button to 'commands', and that reset lands *after*
+    // setWebhook resolves — so a single chained setChatMenuButton still lost the
+    // race while the boot log claimed success. The boot path must read the
+    // button back and retry until Telegram reports the Mini App button.
+    let reads = 0;
+    fakeBot.telegram.setChatMenuButton.mockImplementation(() => Promise.resolve(true));
+    fakeBot.telegram.getChatMenuButton.mockImplementation(() => {
+      reads += 1;
+      // First two reads: the webhook reset has not been observed as applied.
+      return Promise.resolve(reads <= 2 ? { type: 'commands' } : { type: 'web_app' });
+    });
+
+    const { initBot } = await import('../../../../server/bot/index.js');
+    initBot({ use: vi.fn() }, { repos: {}, services: {} });
+    // Two reverted reads must be retried through: 1.5s then 3s of backoff.
+    await new Promise((r) => setTimeout(r, 6000));
+
+    expect(fakeBot.telegram.getChatMenuButton).toHaveBeenCalled();
+    // Retried past the reverted reads instead of trusting a single set.
+    expect(fakeBot.telegram.setChatMenuButton.mock.calls.length).toBe(3);
+    const arg = fakeBot.telegram.setChatMenuButton.mock.calls[2][0];
+    expect(arg.menu_button.type).toBe('web_app');
+    expect(arg.menu_button.web_app.url).toBeTruthy();
+  });
+
+  it('stops retrying once the Mini App button is confirmed', { timeout: 30000 }, async () => {
+    fakeBot.telegram.setChatMenuButton.mockImplementation(() => Promise.resolve(true));
+    fakeBot.telegram.getChatMenuButton.mockImplementation(() => Promise.resolve({ type: 'web_app' }));
+
+    const { initBot } = await import('../../../../server/bot/index.js');
+    initBot({ use: vi.fn() }, { repos: {}, services: {} });
+    await new Promise((r) => setTimeout(r, 200));
+
+    expect(fakeBot.telegram.setChatMenuButton.mock.calls.length).toBe(1);
   });
 });

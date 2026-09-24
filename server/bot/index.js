@@ -254,22 +254,9 @@ export function initBot(app, deps) {
   const webhookPath = '/webhook/telegram';
   app.use(bot.webhookCallback(webhookPath));
 
-  // Set webhook
-  const retrySync = (label, fn, retries = 5, delayMs = 3000) => {
-    fn().catch((err) => {
-      if (retries > 0) {
-        log.warn(`${label} failed, retrying in ${delayMs}ms`, { error: err.message, retries });
-        setTimeout(() => retrySync(label, fn, retries - 1, delayMs * 1.5), delayMs);
-      } else {
-        log.warn(`${label} failed after retries`, { error: err.message });
-      }
-    });
-  };
-
   const host = process.env.WEBAPP_HOST || 'adforge.aitradepulse.com';
   const protocol = 'https';
-  retrySync('Telegram webhook set', () =>
-    bot.telegram.setWebhook(`${protocol}://${host}${webhookPath}`));
+  const webAppUrl = process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com';
 
   // Sync command picker
   const MY_COMMANDS = [
@@ -284,16 +271,62 @@ export function initBot(app, deps) {
     { command: 'cancel', description: '❌ Batalkan wizard/flow aktif' },
     { command: 'help', description: '❓ Bantuan' },
   ];
-  bot.telegram.setMyCommands(MY_COMMANDS)
-    .then(() => log.info('Bot command list synced', { count: MY_COMMANDS.length }))
-    .catch(err => log.warn('Failed to set MyCommands', { error: err.message }));
 
-  const webAppUrl = process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com';
-  bot.telegram.setChatMenuButton({
-    menu_button: { type: 'web_app', text: '📱 AdForge', web_app: { url: webAppUrl } },
-  })
-    .then(() => log.info('Chat menu button set to Mini App', { url: webAppUrl }))
-    .catch(err => log.warn('Failed to set chat menu button', { error: err.message }));
+  // Telegram resets a bot's chat menu button to its default ('commands' when a
+  // command list exists) whenever the webhook is (re)set — and that reset can
+  // land just AFTER setWebhook resolves, so merely chaining the button set onto
+  // the webhook still lost the race (proven live 2026-09-24: log said the Mini
+  // App button was set, getChatMenuButton read back 'commands'). Set, read back,
+  // and retry until the button is confirmed.
+  const MENU_BUTTON = {
+    type: 'web_app',
+    text: '📱 AdForge',
+    web_app: { url: webAppUrl },
+  };
+
+  const ensureMiniAppButton = async (attempts = 4) => {
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        await bot.telegram.setChatMenuButton({ menu_button: MENU_BUTTON });
+        const current = await bot.telegram.getChatMenuButton();
+        if (current?.type === 'web_app') {
+          log.info('Chat menu button set to Mini App', { url: webAppUrl, attempt });
+          return true;
+        }
+        log.warn('Chat menu button reverted, retrying', { got: current?.type, attempt });
+      } catch (err) {
+        log.warn('Failed to set chat menu button', { error: err.message, attempt });
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
+    }
+    log.warn('Chat menu button could not be confirmed as Mini App', { attempts });
+    return false;
+  };
+
+  const syncBotSurface = () =>
+    bot.telegram.setMyCommands(MY_COMMANDS)
+      .then(() => log.info('Bot command list synced', { count: MY_COMMANDS.length }))
+      .catch((err) => log.warn('Failed to set MyCommands', { error: err.message }))
+      .then(() => ensureMiniAppButton());
+
+  const retrySync = (label, fn, retries = 5, delayMs = 3000) => {
+    fn().catch((err) => {
+      if (retries > 0) {
+        log.warn(`${label} failed, retrying in ${delayMs}ms`, { error: err.message, retries });
+        setTimeout(() => retrySync(label, fn, retries - 1, delayMs * 1.5), delayMs);
+      } else {
+        log.warn(`${label} failed after retries`, { error: err.message });
+      }
+    });
+  };
+
+  retrySync('Telegram webhook set', () =>
+    bot.telegram.setWebhook(`${protocol}://${host}${webhookPath}`).then(syncBotSurface));
+  // Readback lag is nondeterministic server-side (observed 10s-90s+), so a
+  // confirmed set can still read back 'commands' minutes later. Re-assert
+  // every 10 minutes; cheap (2 calls) and guarantees convergence.
+  const surfaceTimer = setInterval(syncBotSurface, 10 * 60 * 1000);
+  if (typeof surfaceTimer.unref === 'function') surfaceTimer.unref();
 
   // Start scheduler
   initScheduler(bot, deps);
