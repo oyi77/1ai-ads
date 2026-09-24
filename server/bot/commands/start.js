@@ -17,6 +17,19 @@ export function handleStart() {
 
     log.info('User started bot', { userId, name });
 
+    // Telegram only honors a per-chat menu button once a command list exists,
+    // and any set made during the boot window is clobbered by setMyCommands.
+    // Re-assert it here so a first-time user always gets the Mini App button.
+    const webAppUrl = process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com';
+    try {
+      await ctx.telegram.setChatMenuButton({
+        chat_id: userId,
+        menu_button: { type: 'web_app', text: '📱 AdForge', web_app: { url: webAppUrl } },
+      });
+    } catch (err) {
+      log.warn('Failed to set per-chat menu button on start', { userId, error: err.message });
+    }
+
     // Smart onboarding: check user state to personalize message
     // Use ctx.deps (set by bot middleware) — ctx.repos is never populated.
     const deps = ctx.deps || {};

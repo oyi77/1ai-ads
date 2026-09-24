@@ -12,6 +12,7 @@ const fakeBot = new Proxy(
     webhookCallback: vi.fn(() => () => (req, res) => res.sendStatus(200)),
     telegram: {
       setWebhook: vi.fn(() => Promise.resolve(true)),
+      getMyCommands: vi.fn(() => Promise.resolve([])),
       setMyCommands: vi.fn(() => Promise.resolve(true)),
       setChatMenuButton: vi.fn(() => Promise.resolve(true)),
       getChatMenuButton: vi.fn(() => Promise.resolve({ type: 'web_app' })),
@@ -118,5 +119,30 @@ describe('initBot smoke', () => {
     await new Promise((r) => setTimeout(r, 200));
 
     expect(fakeBot.telegram.setChatMenuButton.mock.calls.length).toBe(1);
+  });
+
+  it('skips setMyCommands when the registered list is unchanged (no button clobber)', { timeout: 30000 }, async () => {
+    // Root cause (proven live 2026-09-24): setMyCommands resets the menu button
+    // to 'commands', clobbering the Mini App button set in the same boot. A boot
+    // that finds the list already registered must therefore NOT call it again.
+    const { initBot } = await import('../../../../server/bot/index.js');
+
+    fakeBot.telegram.getMyCommands.mockImplementation(() => Promise.resolve([]));
+    fakeBot.telegram.getChatMenuButton.mockImplementation(() => Promise.resolve({ type: 'web_app' }));
+    initBot({ use: vi.fn() }, { repos: {}, services: {} });
+    await new Promise((r) => setTimeout(r, 50));
+    const registered = fakeBot.telegram.setMyCommands.mock.calls[0]?.[0];
+    expect(Array.isArray(registered)).toBe(true);
+    expect(registered.length).toBeGreaterThan(0);
+
+    // Next boot: Telegram already holds that exact list.
+    vi.clearAllMocks();
+    fakeBot.telegram.getMyCommands.mockImplementation(() => Promise.resolve(registered));
+    fakeBot.telegram.getChatMenuButton.mockImplementation(() => Promise.resolve({ type: 'web_app' }));
+    initBot({ use: vi.fn() }, { repos: {}, services: {} });
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(fakeBot.telegram.setMyCommands).not.toHaveBeenCalled();
+    expect(fakeBot.telegram.setChatMenuButton).toHaveBeenCalled();
   });
 });

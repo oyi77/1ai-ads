@@ -272,13 +272,17 @@ export function initBot(app, deps) {
     { command: 'help', description: '❓ Bantuan' },
   ];
 
-  // ROOT CAUSE (isolated via MTProto + container stop/start, 2026-09-24): with a
-  // command list registered, Telegram IGNORES the bot-wide (no chat_id)
-  // setChatMenuButton and shows every user the default 'commands' button. The
-  // web_app button only sticks when set PER-CHAT (chat_id=<telegram user id>) —
-  // proven: bot-wide set read back 'commands' via Bot API AND showed
-  // menu_button=None via MTProto, while per-chat set persisted 60s+ and read
-  // BotMenuButton(text,url) via MTProto. We therefore set the button per user.
+  // ROOT CAUSE (isolated via MTProto + container stop/start, 2026-09-24):
+  //   1. setMyCommands() resets the bot's menu button to 'commands'. Anything
+  //      set in that same boot window is clobbered, which is why the bot-wide
+  //      set read back 'commands' while a manual set minutes later persisted.
+  //   2. With a command list registered, Telegram IGNORES the bot-wide
+  //      (no chat_id) setChatMenuButton; the button only sticks PER-CHAT
+  //      (chat_id=<telegram user id>). Proven: bot-wide set read 'commands'
+  //      via Bot API and menu_button=None via MTProto, while the per-chat set
+  //      read back BotMenuButton(text,url) and held 60s+.
+  // So: only call setMyCommands when the list actually changed (no clobber),
+  // set the button per user, and re-assert it after the boot window settles.
   const MENU_BUTTON = {
     type: 'web_app',
     text: '📱 AdForge',
@@ -327,11 +331,27 @@ export function initBot(app, deps) {
     return ok;
   };
 
-  const syncBotSurface = () =>
-    bot.telegram.setMyCommands(MY_COMMANDS)
-      .then(() => log.info('Bot command list synced', { count: MY_COMMANDS.length }))
-      .catch((err) => log.warn('Failed to set MyCommands', { error: err.message }))
-      .then(() => ensureMiniAppButton());
+  const commandsDiffer = (current) => {
+    if (!Array.isArray(current) || current.length !== MY_COMMANDS.length) return true;
+    return MY_COMMANDS.some((want, i) => (
+      current[i]?.command !== want.command || current[i]?.description !== want.description
+    ));
+  };
+
+  // Skipping the unchanged setMyCommands is what stops the button clobber.
+  const syncCommandsIfChanged = () =>
+    bot.telegram.getMyCommands()
+      .then((current) => {
+        if (!commandsDiffer(current)) {
+          log.info('Bot command list already current, skipping set', { count: MY_COMMANDS.length });
+          return undefined;
+        }
+        return bot.telegram.setMyCommands(MY_COMMANDS)
+          .then(() => log.info('Bot command list synced', { count: MY_COMMANDS.length }));
+      })
+      .catch((err) => log.warn('Failed to sync MyCommands', { error: err.message }));
+
+  const syncBotSurface = () => syncCommandsIfChanged().then(() => ensureMiniAppButton());
 
   const retrySync = (label, fn, retries = 5, delayMs = 3000) => {
     fn().catch((err) => {
@@ -348,7 +368,12 @@ export function initBot(app, deps) {
     bot.telegram.setWebhook(`${protocol}://${host}${webhookPath}`).then(syncBotSurface));
   // Readback lag is nondeterministic server-side (observed 10s-90s+), so a
   // confirmed set can still read back 'commands' minutes later. Re-assert
-  // every 10 minutes; cheap (2 calls) and guarantees convergence.
+  // shortly after boot (the setMyCommands clobber window) and then every
+  // 10 minutes; cheap (2 calls) and guarantees convergence.
+  for (const delay of [30000, 90000]) {
+    const bootTimer = setTimeout(() => { syncBotSurface(); }, delay);
+    if (typeof bootTimer.unref === 'function') bootTimer.unref();
+  }
   const surfaceTimer = setInterval(syncBotSurface, 10 * 60 * 1000);
   if (typeof surfaceTimer.unref === 'function') surfaceTimer.unref();
 
