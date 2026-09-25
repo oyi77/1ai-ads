@@ -251,8 +251,18 @@ export function initBot(app, deps) {
   bot.catch(errorHandler);
 
   // ── Mount webhook on Express ─────────────────────────────
+  // ROOT CAUSE (proven 2026-09-25): app.use(path, handler) makes Express strip
+  // the mount prefix from req.url, so Telegraf's webhook filter compared its
+  // own hookPath ('/webhook/telegram') against '/' and never matched — every
+  // Telegram update fell through to the SPA catch-all and the bot answered
+  // nothing (silent since the hermes proxy was removed, 357b13c).
+  // Mounting on a Router keeps req.url intact, which is what the filter needs.
   const webhookPath = '/webhook/telegram';
-  app.use(bot.webhookCallback(webhookPath));
+  // No path on app.use: Express strips a mount path from req.url, which is what
+  // broke the filter. Registering path-less keeps req.url intact for Telegraf's
+  // own comparison, and non-webhook requests fall through via next().
+  const telegramWebhook = bot.webhookCallback(webhookPath);
+  app.use((req, res, next) => telegramWebhook(req, res, next));
 
   const host = process.env.WEBAPP_HOST || 'adforge.aitradepulse.com';
   const protocol = 'https';
