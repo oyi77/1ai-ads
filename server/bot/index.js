@@ -391,14 +391,14 @@ export function initBot(app, deps) {
     bot.telegram.setWebhook(`${protocol}://${host}${webhookPath}`).then(syncBotSurface));
   // Readback lag is nondeterministic server-side (observed 10s-90s+), so a
   // confirmed set can still read back 'commands' minutes later. Re-assert
-  // shortly after boot (the setMyCommands clobber window) and then every
-  // 10 minutes; cheap (2 calls) and guarantees convergence.
+  // twice inside the boot clobber window, then stop — a forever-interval kept
+  // fighting readback lag and tripped 429 retry-after on live users. Remaining
+  // recovery paths: /start re-asserts the button for that chat, and the next
+  // boot re-runs this.
   for (const delay of [30000, 90000]) {
     const bootTimer = setTimeout(() => { syncBotSurface(); }, delay);
     if (typeof bootTimer.unref === 'function') bootTimer.unref();
   }
-  const surfaceTimer = setInterval(syncBotSurface, 10 * 60 * 1000);
-  if (typeof surfaceTimer.unref === 'function') surfaceTimer.unref();
 
   // Start scheduler
   initScheduler(bot, deps);
