@@ -173,6 +173,7 @@ export function handleStatus(deps) {
       // Satu token bisa menaungi banyak akun iklan — dedup per token.
       const seenTokens = new Set();
       const tokenOwners = [];
+      const deadOwnersPre = [];
       for (const row of stored) {
         // Token mati tetap dihitung sebagai "koneksi bermasalah" di bawah
         // (deadOwners), tapi tidak disapu live — hemat 400ms per token mati.
@@ -186,7 +187,6 @@ export function handleStatus(deps) {
       // Sapu live: tiap token → daftar ad account → campaign per akun.
       const accounts = [];
       const deadOwners = [];
-      const deadOwnersPre = [];
       for (const owner of tokenOwners) {
         const token = owner.credentials?.access_token || owner.access_token;
         let api = null;

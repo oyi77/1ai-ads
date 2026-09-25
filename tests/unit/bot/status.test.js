@@ -92,6 +92,16 @@ describe('dashboard pemula — live per-ad-account', () => {
     expect(t).toContain('Business Manager');
   });
 
+  it('koneksi expired tersimpan: dashboard tetap muat + dihitung bermasalah (TDZ regression)', async () => {
+    // Proven live 2026-09-25: deadOwnersPre was used before its declaration, so
+    // any user with a health_status='expired' row got "Dashboard gagal dimuat".
+    const ctx = makeCtx();
+    await handleStatus(makeDeps({ stored: [stored({ health_status: 'expired' })] }))(ctx);
+    const t = txt(ctx._replies[0]);
+    expect(t).toContain('Dashboard Iklan');
+    expect(t).toContain('bermasalah');
+  });
+
   it('token mati: tandai + flag health_status expired', async () => {
     const err = new Error('Session has expired');
     err.code = 190;
