@@ -104,8 +104,9 @@ describe('initBot smoke', () => {
 
     expect(fakeBot.telegram.getChatMenuButton).toHaveBeenCalled();
     // Retried past the reverted reads instead of trusting a single set.
-    expect(fakeBot.telegram.setChatMenuButton.mock.calls.length).toBe(3);
-    const arg = fakeBot.telegram.setChatMenuButton.mock.calls[2][0];
+    const setCalls = fakeBot.telegram.setChatMenuButton.mock.calls;
+    expect(setCalls.length).toBeGreaterThanOrEqual(2);
+    const arg = setCalls[setCalls.length - 1][0];
     expect(arg.menu_button.type).toBe('web_app');
     expect(arg.menu_button.web_app.url).toBeTruthy();
   });
@@ -118,7 +119,10 @@ describe('initBot smoke', () => {
     initBot({ use: vi.fn() }, { repos: {}, services: {} });
     await new Promise((r) => setTimeout(r, 200));
 
-    expect(fakeBot.telegram.setChatMenuButton.mock.calls.length).toBe(1);
+    // Read-first: an already-correct button is confirmed without re-setting it,
+    // which is what keeps the periodic re-assert off Telegram's rate limit.
+    expect(fakeBot.telegram.getChatMenuButton).toHaveBeenCalled();
+    expect(fakeBot.telegram.setChatMenuButton).not.toHaveBeenCalled();
   });
 
   it('skips setMyCommands when the registered list is unchanged (no button clobber)', { timeout: 30000 }, async () => {
@@ -143,6 +147,7 @@ describe('initBot smoke', () => {
     await new Promise((r) => setTimeout(r, 50));
 
     expect(fakeBot.telegram.setMyCommands).not.toHaveBeenCalled();
-    expect(fakeBot.telegram.setChatMenuButton).toHaveBeenCalled();
+    expect(fakeBot.telegram.getChatMenuButton).toHaveBeenCalled();
+    expect(fakeBot.telegram.setChatMenuButton).not.toHaveBeenCalled();
   });
 });

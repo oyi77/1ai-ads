@@ -302,6 +302,8 @@ export function initBot(app, deps) {
       }
     } catch { /* fall back to bot-wide only */ }
 
+    const sleepMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
     const setOne = async (chatId) => {
       for (let attempt = 1; attempt <= attempts; attempt += 1) {
         try {
@@ -317,6 +319,15 @@ export function initBot(app, deps) {
           }
           log.warn('Mini App menu button reverted, retrying', { chatId: chatId || 'default', got: current?.type, attempt });
         } catch (err) {
+          // 429 carries a server-mandated retry_after; using the shorter local
+          // backoff would just burn attempts into the same 429.
+          const m = /retry after (\d+)/i.exec(err?.message || '');
+          if (m) {
+            const waitSec = Math.min(Number(m[1]) + 1, 150);
+            log.warn('Mini App menu button rate-limited, waiting', { chatId: chatId || 'default', waitSec, attempt });
+            await sleepMs(waitSec * 1000);
+            continue;
+          }
           log.warn('Failed to set Mini App menu button', { chatId: chatId || 'default', error: err.message, attempt });
         }
         await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
@@ -324,9 +335,21 @@ export function initBot(app, deps) {
       return false;
     };
 
-    let ok = await setOne(null);
+    // Read-first: chats already showing the button are skipped, so the
+    // 10-minute re-assert never spends rate limit re-setting what Telegram
+    // already holds.
+    const ensureChat = async (target) => {
+      try {
+        const cur = await bot.telegram.getChatMenuButton(
+          target ? { chat_id: target } : undefined);
+        if (cur?.type === 'web_app') return true;
+      } catch { /* fall through to set */ }
+      return setOne(target);
+    };
+
+    let ok = await ensureChat(null);
     for (const chatId of chatIds) {
-      ok = (await setOne(chatId)) || ok;
+      ok = (await ensureChat(chatId)) || ok;
     }
     return ok;
   };
