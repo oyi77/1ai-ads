@@ -18,6 +18,7 @@ import { requireAuth, requireAdmin } from './middleware/auth.js';
 import { getMetricsText, metricsMiddleware } from './lib/metrics.js';
 import { initBot } from './bot/index.js';
 import { resolveOwnerPlatformToken } from './lib/resolve-owner-platform.js';
+import { isAccountTokenUsable } from './lib/token-health.js';
 
 // ── Sentry (optional, env-gated) ──────────────────────
 if (process.env.SENTRY_DSN) {
@@ -408,7 +409,7 @@ export function startServices(app) {
   capiMonitor.start(() => {
     const accounts = platformAccountsRepo.getAccounts('meta');
     return accounts
-      .filter(a => a.platform === 'meta' && a.user_id && a.is_active !== 0 && a.credentials?.ad_account_id)
+      .filter(a => a.platform === 'meta' && a.user_id && isAccountTokenUsable(a) && a.credentials?.ad_account_id)
       .map(a => {
         const raw = String(a.credentials.ad_account_id);
         const accountId = raw.startsWith('act_') ? raw : `act_${raw}`;
