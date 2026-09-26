@@ -56,6 +56,26 @@ export function resolveMetricValue(metric, campaign, insights) {
   if (!metric) return undefined;
   const def = METRICS[metric];
   if (def && typeof def.resolve === 'function') {
+    // A live fetch may already carry the resolved metric (insights.roas).
+    // Prefer it over recomputing from row columns that can be stale/NULL.
+    const fb0 = insights || campaign?.insights || campaign?.stats || {};
+    const pre = fb0[metric];
+    if (typeof pre === 'number' && Number.isFinite(pre)) return pre;
+    // A metric whose source columns are all NULL (never-synced row) is
+    // UNKNOWN, not zero: `spend < 100` must not match missing data.
+    // Explicit 0 still evaluates (it is a claim, not an absence).
+    const src = def.requires || [];
+    if (src.length > 0) {
+      // Same provenance the resolver itself reads: explicit insights arg,
+      // then campaign.insights / campaign.stats, then the row.
+      const fb = insights || campaign?.insights || campaign?.stats || {};
+      const merged = { ...(campaign || {}), ...fb };
+      // Either a source column is present, or insights already carry the
+      // resolved metric itself (e.g. insights.roas from a live fetch).
+      const known = merged[metric] !== undefined && merged[metric] !== null && merged[metric] !== ''
+        || src.some((col) => merged[col] !== undefined && merged[col] !== null && merged[col] !== '');
+      if (!known) return undefined;
+    }
     const v = def.resolve(campaign, insights || campaign?.insights || campaign?.stats || {});
     return Number.isFinite(v) ? v : (Number(v) || 0);
   }

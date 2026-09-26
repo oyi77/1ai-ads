@@ -213,8 +213,22 @@ describe('RealtimeService', () => {
       expect(MetaAdsAPI).toHaveBeenCalled();
       expect(acctRepo.findAllActiveByUserAndPlatform).toHaveBeenCalledWith('owner-9', 'meta');
     });
-  });
 
+    it('skips poll groups whose accounts are all flagged dead — no Meta call', async () => {
+      const metaApi = { getCampaignInsights: vi.fn() };
+      const acctRepo = { getByPlatform: vi.fn().mockReturnValue({ user_id: 'owner-9', platform: 'meta', access_token: 'owner-tok-rt9' }), findAllActiveByUserAndPlatform: vi.fn().mockReturnValue([{ user_id: 'owner-9', platform: 'meta', access_token: 'owner-tok-rt9', health_status: 'expired', is_active: 1 }]) };
+      const service = new RealtimeService(metaApi, {
+        findAll: vi.fn(() => ({ data: [{ id: 'c9', campaign_id: 'camp-9', platform: 'meta', status: 'ACTIVE', user_id: 'owner-9' }] })),
+      }, { platformAccountsRepo: acctRepo, settingsRepo: {} });
+
+      MetaAdsAPI.mockClear();
+      await service._poll();
+
+      expect(acctRepo.findAllActiveByUserAndPlatform).toHaveBeenCalledWith('owner-9', 'meta');
+      expect(MetaAdsAPI).not.toHaveBeenCalled();
+      expect(metaApi.getCampaignInsights).not.toHaveBeenCalled();
+    });
+  });
   describe('refreshCampaign (scoped)', () => {
     it('404s on another tenant campaign', async () => {
       const service = new RealtimeService({ getCampaignInsights: vi.fn() }, {

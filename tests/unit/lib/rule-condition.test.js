@@ -99,6 +99,51 @@ describe('evaluateCondition — status casing', () => {
   });
 });
 
+describe('resolveMetricValue — missing source columns', () => {
+  // Proven live 2026-09-26: 595/705 campaigns had NULL spend (never synced),
+  // so `spend < 100` / `conversions < 1` / `roas == 0` matched ABSENCE and
+  // flooded approval_drafts (~273/day).
+  const nullRow = {
+    id: 'c0', name: 'Unsynced', status: 'active',
+    spend: null, revenue: null, impressions: null, clicks: null,
+    conversions: null, roas: null,
+  };
+
+  it('treats absent sources as unknown, not zero', () => {
+    expect(resolveMetricValue('spend', nullRow)).toBeUndefined();
+    expect(resolveMetricValue('cpc', nullRow)).toBeUndefined();
+    expect(resolveMetricValue('roas', nullRow)).toBeUndefined();
+    expect(evaluateCondition({ metric: 'spend', operator: '<', value: 100 }, nullRow)).toBe(false);
+    expect(evaluateCondition({ metric: 'conversions', operator: '<', value: 1 }, nullRow)).toBe(false);
+    expect(evaluateCondition({ type: 'leaf', metric: 'roas', operator: '==', value: 0 }, nullRow)).toBe(false);
+  });
+
+  it('still evaluates explicit zeros (a claim, not an absence)', () => {
+    const zeroRow = { ...nullRow, spend: 0, revenue: 0, impressions: 0, clicks: 0, conversions: 0 };
+    expect(resolveMetricValue('spend', zeroRow)).toBe(0);
+    expect(evaluateCondition({ metric: 'spend', operator: '<', value: 100 }, zeroRow)).toBe(true);
+    expect(evaluateCondition({ metric: 'spend', operator: '>', value: 100 }, zeroRow)).toBe(false);
+  });
+
+  it('lets live insights supply missing row sources', () => {
+    expect(resolveMetricValue('spend', nullRow, { spend: 250 })).toBe(250);
+    expect(evaluateCondition({ metric: 'spend', operator: '>', value: 100 }, { ...nullRow, insights: { spend: 250 } })).toBe(true);
+  });
+
+  it('matches when insights already carry the resolved metric', () => {
+    // Live-fetch path: insights.roas is set, row columns are NULL.
+    // The guard must not mistake a resolved value for missing data.
+    const row = { ...nullRow, insights: { roas: 1.2 } };
+    expect(resolveMetricValue('roas', row)).toBe(1.2);
+    expect(evaluateCondition({ type: 'leaf', metric: 'roas', operator: '<', value: 1.5 }, row)).toBe(true);
+  });
+
+  it('time metrics always resolve (no row source needed)', () => {
+    expect(Number.isInteger(resolveMetricValue('hour_of_day', nullRow))).toBe(true);
+    expect(Number.isInteger(resolveMetricValue('day_of_week', nullRow))).toBe(true);
+  });
+});
+
 describe('normalizeOperator', () => {
   it('maps the UI spellings onto the comparison table', () => {
     expect(normalizeOperator('gt')).toBe('>');

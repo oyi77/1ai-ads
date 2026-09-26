@@ -116,6 +116,11 @@ describe('DraftService', () => {
         executionResult: { spend: 100 },
       }));
     });
+
+    it('should reject a blank external executionResult', async () => {
+      await expect(service.approveDraft('draft-1', 'user-1', '   ')).rejects.toThrow(ValidationError);
+      expect(mockDraftsRepo.approve).not.toHaveBeenCalled();
+    });
   });
 
   describe('rejectDraft', () => {

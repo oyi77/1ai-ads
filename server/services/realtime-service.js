@@ -1,6 +1,7 @@
 import config from '../config/index.js';
 import { WebSocketServer } from 'ws';
 import { createLogger } from '../lib/logger.js';
+import { filterUsableAccounts } from '../lib/token-health.js';
 import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
 import { MetaAdsAPI } from './meta/index.js';
 import { verifyToken } from '../lib/auth.js';
@@ -161,20 +162,21 @@ export class RealtimeService {
         if (campaign.account_id) {
           accountIds.push(campaign.account_id);
         } else if (this.platformAccountsRepo) {
-          const accounts = this.platformAccountsRepo.findAllActiveByUserAndPlatform?.(ownerId, 'meta') || [];
+          const accounts = filterUsableAccounts(this.platformAccountsRepo.findAllActiveByUserAndPlatform?.(ownerId, 'meta') || []);
           for (const acct of accounts) {
             const id = acct?.credentials?.ad_account_id || acct?.ad_account_id || '';
-            if (id) accountIds.push(id);
+            if (id && !accountIds.includes(id)) accountIds.push(id);
           }
+        }
+        if (!accountIds.length) continue;
+        const api = this._metaApiForOwner(campaign);
+        if (!api) {
+          log.debug('Skipping poll group - owner has no bound Meta token', { ownerId });
+          continue;
         }
         for (const acctId of accountIds) {
           const key = `${ownerId}:${acctId}`;
           if (!byOwner.has(key)) {
-            const api = this._metaApiForOwner(campaign);
-            if (!api) {
-              log.debug('Skipping poll group - owner has no bound Meta token', { ownerId, acctId });
-              continue;
-            }
             byOwner.set(key, { api, accountId: acctId, campaignIds: [] });
           }
           byOwner.get(key).campaignIds.push(campaign);

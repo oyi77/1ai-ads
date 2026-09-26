@@ -36,6 +36,11 @@ export const METRICS = {
     category: 'delivery',
     description: 'Total ad impressions',
     unit: 'count',
+    // Source columns that must be present (non-null) on the campaign row.
+    // A never-synced row has NULLs; without this guard `spend < 100` matches
+    // missing data and floods approval_drafts (proven 2026-09-26: 595/705
+    // campaigns had NULL spend).
+    requires: ['impressions'],
     resolve: (campaign, insights) => parseInt(insights?.impressions || campaign.impressions || 0),
   },
   clicks: {
@@ -44,6 +49,7 @@ export const METRICS = {
     category: 'delivery',
     description: 'Total ad clicks',
     unit: 'count',
+    requires: ['clicks'],
     resolve: (campaign, insights) => parseInt(insights?.clicks || campaign.clicks || 0),
   },
   reach: {
@@ -52,6 +58,9 @@ export const METRICS = {
     category: 'delivery',
     description: 'Unique users reached',
     unit: 'count',
+    // No `requires`: reach is insights-only, never a campaigns column.
+    // Guarding on it would brick every reach rule on DB rows; reach rules
+    // were already vacuous there, and insights plumbing is a separate job.
     resolve: (campaign, insights) => parseInt(insights?.reach || campaign.reach || 0),
   },
   frequency: {
@@ -60,6 +69,7 @@ export const METRICS = {
     category: 'delivery',
     description: 'Average impressions per user',
     unit: 'x',
+    requires: ['impressions'],
     resolve: (campaign, insights) => {
       const impr = parseInt(insights?.impressions || campaign.impressions || 0);
       const reach = parseInt(insights?.reach || campaign.reach || 1);
@@ -74,6 +84,7 @@ export const METRICS = {
     category: 'conversion',
     description: 'Total conversions (purchases, leads, etc)',
     unit: 'count',
+    requires: ['conversions'],
     resolve: (campaign, insights) => parseInt(insights?.conversions || campaign.conversions || 0),
   },
   cvr: {
@@ -82,6 +93,7 @@ export const METRICS = {
     category: 'conversion',
     description: 'Conversions / Clicks * 100',
     unit: '%',
+    requires: ['clicks', 'conversions'],
     resolve: (campaign, insights) => {
       const clicks = parseInt(insights?.clicks || campaign.clicks || 0);
       const conv = parseInt(insights?.conversions || campaign.conversions || 0);
@@ -94,20 +106,20 @@ export const METRICS = {
     category: 'conversion',
     description: 'Clicks / Impressions * 100',
     unit: '%',
+    requires: ['impressions', 'clicks'],
     resolve: (campaign, insights) => {
       const impr = parseInt(insights?.impressions || campaign.impressions || 0);
       const clicks = parseInt(insights?.clicks || campaign.clicks || 0);
       return impr > 0 ? parseFloat(((clicks / impr) * 100).toFixed(2)) : 0;
     },
   },
-
-  // Cost
   spend: {
     id: 'spend',
     name: 'Spend',
     category: 'cost',
     description: 'Total amount spent',
     unit: 'currency',
+    requires: ['spend'],
     resolve: (campaign, insights) => parseFloat(insights?.spend || campaign.spend || 0),
   },
   cpc: {
@@ -116,6 +128,7 @@ export const METRICS = {
     category: 'cost',
     description: 'Spend / Clicks',
     unit: 'currency',
+    requires: ['spend', 'clicks'],
     resolve: (campaign, insights) => {
       const spend = parseFloat(insights?.spend || campaign.spend || 0);
       const clicks = parseInt(insights?.clicks || campaign.clicks || 0);
@@ -128,6 +141,7 @@ export const METRICS = {
     category: 'cost',
     description: 'Spend / Impressions * 1000',
     unit: 'currency',
+    requires: ['spend', 'impressions'],
     resolve: (campaign, insights) => {
       const spend = parseFloat(insights?.spend || campaign.spend || 0);
       const impr = parseInt(insights?.impressions || campaign.impressions || 0);
@@ -140,6 +154,7 @@ export const METRICS = {
     category: 'cost',
     description: 'Spend / Conversions',
     unit: 'currency',
+    requires: ['spend', 'conversions'],
     resolve: (campaign, insights) => {
       const spend = parseFloat(insights?.spend || campaign.spend || 0);
       const conv = parseInt(insights?.conversions || campaign.conversions || 0);
@@ -152,6 +167,7 @@ export const METRICS = {
     category: 'cost',
     description: 'Cost per optimized conversion event',
     unit: 'currency',
+    // No `requires`: insights-only like `reach` — never a campaigns column.
     resolve: (campaign, insights) => parseFloat(insights?.ocpc || campaign.ocpc || 0),
   },
 
@@ -162,6 +178,7 @@ export const METRICS = {
     category: 'efficiency',
     description: 'Revenue / Spend',
     unit: 'x',
+    requires: ['spend', 'revenue'],
     resolve: (campaign, insights) => {
       const spend = parseFloat(insights?.spend || campaign.spend || 0);
       const revenue = parseFloat(insights?.revenue || campaign.revenue || 0);
@@ -174,6 +191,7 @@ export const METRICS = {
     category: 'efficiency',
     description: '(Revenue - Spend) / Spend * 100',
     unit: '%',
+    requires: ['spend', 'revenue'],
     resolve: (campaign, insights) => {
       const spend = parseFloat(insights?.spend || campaign.spend || 0);
       const revenue = parseFloat(insights?.revenue || campaign.revenue || 0);

@@ -55,6 +55,29 @@ describe('approveDraft — gagal eksekusi tercatat + berpesan jelas', () => {
     db.close();
   });
 
+  it('object executionResult disimpan sebagai JSON, bukan "[object Object]"', async () => {
+    const { db, drafts } = memDb();
+    const created = drafts.create({
+      type: 'rule_pause', summary: 'Aturan X', details: {},
+      userId: 'u1', campaignId: 'c1',
+    });
+    const done = drafts.approve(created.id, { reviewedBy: 'u1', executionResult: { campaign_id: 'c1', status: 'PAUSED' } });
+    expect(done.execution_result).toBe(JSON.stringify({ campaign_id: 'c1', status: 'PAUSED' }));
+    db.close();
+  });
+
+  it('blank executionResult eksternal ditolak di service', async () => {
+    const { db, drafts } = memDb();
+    const svc = new DraftService(drafts, null, async () => 'unused');
+    const created = drafts.create({
+      type: 'rule_pause', summary: 'Aturan X', details: {},
+      userId: 'u1', campaignId: 'c1',
+    });
+    await expect(svc.approveDraft(created.id, 'u1', '   ')).rejects.toThrow(/kosong/);
+    expect(drafts.findById(created.id).status).toBe('pending');
+    db.close();
+  });
+
   it('findStalePending: hanya pending tua yang belum diingatkan', () => {
     const { db, drafts } = memDb();
     const old = drafts.create({ type: 't', summary: 'lama', details: {}, userId: 'u1' });

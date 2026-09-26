@@ -177,6 +177,9 @@ describe('RuleEvaluator', () => {
 
   describe('checkCampaigns', () => {
     it('should check all campaigns against all rules', async () => {
+      // c1 matches via live insights.roas; c2 (roas 3.0) does not.
+      // Previously this expected 2 because NULL row metrics resolved to 0
+      // and 0 < 1 matched missing data (the approval-drafts flood).
       const campaigns = [
         { id: 'c1', campaign_id: 'm1', platform: 'meta', user_id: 'u1', insights: { roas: 0.5 } },
         { id: 'c2', campaign_id: 'm2', platform: 'meta', user_id: 'u1', insights: { roas: 3.0 } },
@@ -189,7 +192,7 @@ describe('RuleEvaluator', () => {
       const { MetaAdsAPI } = await import('../../../server/services/meta/index.js');
       MetaAdsAPI.mockImplementation(function () { this.updateCampaign = vi.fn(async () => ({})); });
       const matched = await evaluator.checkCampaigns('u1');
-      expect(matched).toBe(2);
+      expect(matched).toBe(1);
       MetaAdsAPI.mockReset();
     });
   });

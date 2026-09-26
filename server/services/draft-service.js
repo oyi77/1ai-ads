@@ -66,8 +66,13 @@ export class DraftService {
     if (!existing) throw new NotFoundError('Draft not found');
     if (existing.status !== 'pending') throw new ValidationError(`Draft is already ${existing.status}`);
 
-    // Externally-executed approval: just record the result.
-    if (executionResult) {
+    // Externally-executed approval: record the caller's result verbatim.
+    // A blank result proves nothing ran — reject it rather than stamping
+    // an empty receipt as "approved".
+    if (executionResult !== null && executionResult !== undefined) {
+      if (typeof executionResult === 'string' && executionResult.trim() === '') {
+        throw new ValidationError('executionResult kosong — kirim bukti eksekusi atau kosongkan untuk replay.');
+      }
       const draft = this.draftsRepo.approve(id, { reviewedBy: userId, executionResult });
       this._notify(draft, 'approved').catch(err =>
         log.error('notification failed', { draftId: id, error: err.message })

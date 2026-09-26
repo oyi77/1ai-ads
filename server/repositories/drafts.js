@@ -97,13 +97,18 @@ export class DraftsRepository {
   }
 
   approve(id, { reviewedBy, executionResult } = {}) {
+    // Receipts must stay readable: an object result would land in the TEXT
+    // column as "[object Object]". Stringify non-strings; blank stays NULL.
+    const receipt = executionResult === undefined || executionResult === null
+      ? null
+      : (typeof executionResult === 'string' ? executionResult.trim() : JSON.stringify(executionResult));
     const stmt = this.db.prepare(`
       UPDATE approval_drafts
       SET status = 'approved', reviewed_at = datetime('now'), reviewed_by = ?,
           execution_result = ?, updated_at = datetime('now')
       WHERE id = ?
     `);
-    const result = stmt.run(reviewedBy || null, executionResult || null, id);
+    const result = stmt.run(reviewedBy || null, receipt || null, id);
     if (result.changes === 0) return null;
     log.info('draft approved', { id, reviewedBy });
     return this.findById(id);
