@@ -30,21 +30,40 @@ function loadMigrationFiles() {
  return files;
 }
 
+/**
+ * Fail loud when two migrations in the PENDING set share a numeric prefix.
+ * Historical dups (041_ad_sets_drop_campaign_fk.sql + 041_add_currency.sql)
+ * are already applied and harmless; a NEW same-prefix pair is the real risk
+ * because lexical sort order is the only thing separating a safe column-add
+ * from a table-rebuild that runs before/after a sibling it must not cross.
+ */
+function assertNoDuplicatePendingPrefixes(files) {
+ const seen = new Map();
+ for (const f of files) {
+  const prefix = f.match(/^(\d+)/)?.[1];
+  if (!prefix) continue;
+  if (seen.has(prefix)) {
+   throw new Error(
+    `Duplicate migration prefix ${prefix}: ${seen.get(prefix)} and ${f}. ` +
+    'Pick the next free number; never rename an already-applied file.'
+   );
+  }
+  seen.set(prefix, f);
+ }
+}
+
 const IGNORABLE_PATTERNS = [
  /duplicate column name/i,
  /already exists/i,
  /index .* already exists/i,
 ];
 
-function isIgnorableError(err) {
- return IGNORABLE_PATTERNS.some(p => p.test(err.message));
-}
-
 export function runMigrations(db) {
  ensureMigrationsTable(db);
  const applied = getAppliedMigrations(db);
  const allFiles = loadMigrationFiles();
  const pending = allFiles.filter(f => !applied.includes(f));
+ assertNoDuplicatePendingPrefixes(pending);
 
  for (const file of pending) {
   const sql = readFileSync(join(__dirname, file), 'utf-8');

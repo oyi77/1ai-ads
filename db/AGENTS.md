@@ -40,7 +40,29 @@ SQLite database layer. Handles schema creation, migrations, connection managemen
 ### Common Patterns
 - `createDatabase(path)` factory returns `{ db, seedDemoData }`
 - Repositories receive the `db` instance via dependency injection
-- UUIDs for primary keys (TEXT type)
+
+
+
+## Migrations (`db/migrations/`)
+
+- **Filename is the identity.** The runner (`db/migrations/index.js`) keys on
+  filename in a `_migrations` table, not on content or number. Renaming an
+  already-applied file makes the tracker treat it as unapplied and **re-run**
+  it. Never rename a shipped migration.
+- **Prefixes are ordering metadata.** Files sort lexically (`041_` before
+  `042_`), so a duplicate prefix falls back to the rest of the name. `041_`
+  is already duplicated: `041_ad_sets_drop_campaign_fk.sql` and
+  `041_add_currency.sql` (both applied; ordered by `_` < `a` lexically).
+  Do not add a third.
+- **Next free number:** `052_` (highest applied is `051_payment_gateway_duitku.sql`).
+- **Duplicate prefixes fail boot — for pending files only.** The runner calls
+  `assertNoDuplicatePendingPrefixes` on the unapplied set and throws with both
+  filenames. Historical dups that are already applied are not flagged (that
+  would brick every boot for a condition that is already safe on disk).
+- **Not all statements are re-runnable.** `ALTER TABLE ... ADD COLUMN` fails
+  harmlessly on re-run (duplicate column), a table rebuild from
+  `ad_sets_drop_campaign_fk` does not — treat any rename of an applied file as
+  a data-loss risk until proven otherwise.
 
 ## Dependencies
 
