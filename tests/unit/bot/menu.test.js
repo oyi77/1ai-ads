@@ -111,6 +111,22 @@ describe('menu:optimize — AI Optimization (P3)', () => {
     );
   });
 
+  it('skips creating a duplicate pending ai_optimize draft for the same campaign', async () => {
+    const bad = metaCampaign('c2', { roas: 0.4, name: 'Bad Campaign' });
+    deps.repos.campaignsRepo.findAll.mockReturnValue({ data: [bad], total: 1 });
+    // An existing pending ai_optimize draft for c2 must suppress a new one.
+    deps.repos.draftsRepo = {
+      findPendingByTypeAndCampaign: vi.fn((type, campaignId) => (
+        type === 'ai_optimize' && campaignId === 'c2' ? { id: 'existing' } : null
+      )),
+    };
+
+    await handleMenuButton(deps)(ctx);
+
+    expect(deps.repos.draftsRepo.findPendingByTypeAndCampaign).toHaveBeenCalledWith('ai_optimize', 'c2', 'u1');
+    expect(deps.services.draftService.guardAutonomousChange).not.toHaveBeenCalled();
+    expect(ctx._replies[0].msg).toContain('saran pending');
+  });
   it('replies with a hint + Menu button when the guard returns no draft (approval disabled)', async () => {
     deps.services.draftService.guardAutonomousChange.mockResolvedValue(false);
     deps.repos.campaignsRepo.findAll.mockReturnValue({ data: [metaCampaign('c1', { roas: 0.5 })], total: 1 });

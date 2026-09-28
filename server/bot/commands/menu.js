@@ -348,6 +348,11 @@ async function proposeOptimizations(ctx, deps, suggestions) {
 }
 
 async function createOptimizeDraft(ctx, deps, suggestion) {
+  // One pending AI suggestion per campaign — every tap on "Saran AI" used to
+  // mint a fresh duplicate (7 identical "AI menyarankan pause untuk X" rows
+  // for one campaign in ~1h). Skip when a pending ai_optimize draft exists.
+  const existing = deps?.repos?.draftsRepo?.findPendingByTypeAndCampaign?.('ai_optimize', suggestion.campaign.id, ctx.userId);
+  if (existing) return null;
   return deps?.services?.draftService?.guardAutonomousChange?.({
     type: 'ai_optimize',
     summary: suggestion.type === 'pause'
@@ -367,6 +372,14 @@ async function createOptimizeDraft(ctx, deps, suggestion) {
 
 async function proposeOptimization(ctx, deps, suggestion) {
   const { campaign, type, amount, rationale } = suggestion;
+  // Same dedup as the LLM path: one pending ai_optimize draft per campaign.
+  const existing = deps?.repos?.draftsRepo?.findPendingByTypeAndCampaign?.('ai_optimize', campaign.id, ctx.userId);
+  if (existing) {
+    return ctx.reply(
+      `🤖 <b>AI Optimization</b>\n\nKamu sudah punya saran pending untuk <b>${esc(campaign.name || campaign.id)}</b>. Setujui atau tolak dulu di /menu → Kelola Iklan.`,
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+    );
+  }
   const action = type === 'pause' ? { type: 'pause' } : { type, amount: amount || resolveScaleDefault(type, deps?.repos?.settingsRepo) };
   const summary = type === 'pause'
     ? `AI menyarankan pause untuk ${campaign.name || campaign.id}${rationale ? ` — ${rationale}` : ''}`
@@ -381,7 +394,6 @@ async function proposeOptimization(ctx, deps, suggestion) {
     userId: ctx.userId,
     campaignId: campaign.id,
   });
-
   if (!draft) {
     return ctx.reply(
       '🤖 <b>AI Optimization</b>\n\n' +

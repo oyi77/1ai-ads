@@ -159,6 +159,16 @@ export class DraftsRepository {
     return { data, total: data.length };
   }
 
+  /** True when a pending draft of this type already exists for the campaign. */
+  findPendingByTypeAndCampaign(type, campaignId, userId = null) {
+    const where = ["status = 'pending'", 'type = ?'];
+    const params = [type];
+    if (campaignId) { where.push('campaign_id = ?'); params.push(campaignId); }
+    if (userId) { where.push('user_id = ?'); params.push(userId); }
+    return this.db.prepare(
+      `SELECT id FROM approval_drafts WHERE ${where.join(' AND ')} LIMIT 1`
+    ).get(...params) || null;
+  }
   findPendingForRuleCampaign(ruleName, campaignId, ruleId = null) {
     // `_` dan `%` adalah wildcard LIKE; escape agar nama seperti "ROAS_Guard"
     // tidak match summary aturan lain.
