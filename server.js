@@ -51,6 +51,20 @@ if (process.env.NODE_ENV !== 'production') {
   seedDemoData(db);
 }
 
+// Production demo quarantine: seeded demo rows (demo-cmp-*, demo-pa-*) have
+// repeatedly resurfaced ACTIVE in the live DB (polling + rules then treat
+// fake rows as real). Force them inert on every boot — idempotent, and the
+// seed's INSERT OR IGNORE cannot revert it (existing rows are skipped).
+try {
+  const q1 = db.prepare("UPDATE campaigns SET status='PAUSED' WHERE id LIKE 'demo-cmp-%' AND (status='ACTIVE' OR status='active')").run();
+  const q2 = db.prepare("UPDATE platform_accounts SET is_active=0 WHERE id LIKE 'demo-pa-%' AND is_active<>0").run();
+  if (q1.changes > 0 || q2.changes > 0) {
+    log.warn('Production demo quarantine applied', { campaignsPaused: q1.changes, accountsDeactivated: q2.changes });
+  }
+} catch (err) {
+  log.error('Demo quarantine failed (non-fatal)', { error: err.message });
+}
+
 const app = createApp({ db, llmClient });
 
 const PORT = config.port;
