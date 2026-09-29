@@ -9,6 +9,14 @@
  *   3. legacy flat:  {metric, operator:'gt'|'lt'|..., threshold}
  *   4. status:       {type:'status', operator:'=', value:'ACTIVE'}
  *
+ * A `window` key (always '1h') is written onto leaves by
+ * lib/rule-builder.js `Condition.toJSON()` but is NOT read by this evaluator
+ * or by `describeRuleCondition`. There is no hourly time-series source: the
+ * `campaigns` table stores lifetime aggregates only, so every metric resolves
+ * against lifetime values regardless of `window`. Do not rely on it, and do
+ * not present it as "past hour" semantics anywhere until an hourly
+ * snapshot/sync exists (tracked as a future feature, not a defect).
+ *
  * Both engines (RuleEvaluator and the bot scheduler's rule-guard cron) MUST
  * evaluate these identically. Previously each handled a different subset, so a
  * rule that worked in one engine silently never fired in the other - and stored
