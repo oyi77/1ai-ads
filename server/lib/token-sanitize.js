@@ -27,3 +27,26 @@ export function sanitizeCredentialAccessToken(credentials) {
   }
   return credentials;
 }
+
+
+/**
+ * Guard a user-supplied account label against being a pasted access token.
+ *
+ * `account_name` reaches storage straight from request bodies and bot wizard
+ * state, so a user who pastes the token into the name field instead of the
+ * token field gets a live credential written to a plaintext, widely-rendered
+ * column (proven live 2026-09-29: platform_accounts.account_name held a 201
+ * char EAA token, shown in every account list and log line).
+ *
+ * Returns '' when the value looks like a token, so callers fall back to a
+ * real label (Meta `me.name`, platform default).
+ */
+export function sanitizeAccountName(name) {
+  if (!name || typeof name !== 'string') return '';
+  const trimmed = name.trim();
+  // A Meta token in the label is never a real display name.
+  if (/^EAA[A-Za-z0-9_-]{40,}$/.test(trimmed)) return '';
+  // Same, buried in copied bot text ("✅ EAA... connected for Meta").
+  if (/EAA[A-Za-z0-9_-]{40,}/.test(trimmed) && trimmed.length > 80) return '';
+  return trimmed;
+}

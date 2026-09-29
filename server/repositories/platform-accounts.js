@@ -2,7 +2,7 @@ import { v4 as uuid } from 'uuid';
 import { safeParse } from '../lib/safe-parse.js';
 import { encryptToken, decryptToken } from '../lib/crypto.js';
 import { createLogger } from '../lib/logger.js';
-import { sanitizeAccessToken, sanitizeCredentialAccessToken } from '../lib/token-sanitize.js';
+import { sanitizeAccessToken, sanitizeCredentialAccessToken, sanitizeAccountName } from '../lib/token-sanitize.js';
 import { ConfigurationError } from '../lib/errors.js';
 
 const log = createLogger('platform-accounts');
@@ -158,6 +158,12 @@ export class PlatformAccountsRepository {
 
   create({ user_id, platform, account_name, credentials, is_active = 1 }) {
     const id = uuid();
+    // A pasted token in the name field must never reach the plaintext
+    // account_name column. Fall back to the platform default when it does.
+    const safeName = sanitizeAccountName(account_name) || (platform ? `${platform.charAt(0).toUpperCase()}${platform.slice(1)} Account` : 'Account');
+    if (safeName !== account_name) {
+      log.info('Sanitized account name (was a token)', { user_id, platform });
+    }
     // Sanitize access_token if present in credentials
     let sanitizedCredentials = credentials;
     if (credentials && typeof credentials === 'object' && credentials.access_token) {
@@ -171,7 +177,7 @@ export class PlatformAccountsRepository {
     this.db.prepare(`
       INSERT INTO platform_accounts (id, user_id, platform, account_name, credentials, is_active)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, user_id, platform, account_name, encrypted, is_active ? 1 : 0);
+    `).run(id, user_id, platform, safeName, encrypted, is_active ? 1 : 0);
     return this.findById(id);
   }
 

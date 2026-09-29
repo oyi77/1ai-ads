@@ -105,4 +105,21 @@ describe('PlatformAccountsRepository', () => {
       expect(found.credentials.access_token).toBe('EAAlegacyToken');
     });
   });
+
+  describe('account_name token guard', () => {
+    it('replaces a pasted access token in account_name with a safe label', () => {
+      // Proven live 2026-09-29: a 201-char EAA token sat in the plaintext
+      // account_name column and rendered in every account list + log line.
+      const leaked = 'EAAkLDo8h2UMBSROF6I219SqJRd1uI7adII2Orq8E8NdDJ7RAmsZB6Poyky6EdRmStpX1VefuSouh6IC7GVkXfnro1waMLZArQnsZBfZBH28QbfpJ591bFhxKPEILmXel6BmOpOkHgXpppijgOX9pvaek5LdW9pK8PKN0xPdKWs9e25W9ZAWLmdoaHrZABetSShOQZDZD';
+      const row = repo.create(makeAccount(userId, { account_name: leaked }));
+
+      expect(row.account_name).not.toContain('EAA');
+      expect(row.account_name).toBe('Meta Account');
+    });
+
+    it('keeps a genuine account name untouched', () => {
+      const row = repo.create(makeAccount(userId, { account_name: 'Adforge Meta QA' }));
+      expect(row.account_name).toBe('Adforge Meta QA');
+    });
+  });
 });
