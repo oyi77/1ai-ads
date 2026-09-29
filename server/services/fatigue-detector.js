@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid';
 import { MetaAdsAPI } from '../services/meta/index.js';
 import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
 import { filterUsableAccounts, isTokenExpiryError, flagAccountTokenInvalid } from '../lib/token-health.js';
+import { isMetaAppRateLimit } from '../lib/platform-client.js';
 
 const log = createLogger('fatigue-detector');
 
@@ -229,6 +230,10 @@ export class FatigueDetector {
 
       return ad.id;
     } catch (err) {
+      // An app-level throttle must abort the whole run, not be swallowed per
+      // ad — otherwise the remaining ads keep calling into a limit that Meta
+      // asks us to back off from (50 calls/cycle produced a 403 storm).
+      if (err?.code === 'META_RATE_LIMIT' || isMetaAppRateLimit(err?.data)) throw err;
       log.debug('Failed to snapshot ad', { adId: ad.id, error: err.message });
       return null;
     }
@@ -561,6 +566,12 @@ export class FatigueDetector {
             flagAccountTokenInvalid(this.platformAccountsRepo, account.id, err);
             log.warn('Account token expired — pausing its schedulers', { accountId: account.id });
             continue;
+          }
+          if (err?.code === 'META_RATE_LIMIT' || isMetaAppRateLimit(err?.data)) {
+            // Meta app call-load limit — stop the whole cycle and let the next
+            // 6-hourly run pick up, instead of logging one error per account.
+            log.warn('Meta app rate limit hit — aborting snapshot run', { accountId: account.id });
+            return;
           }
           log.error('Snapshot failed for account', { accountId: account.id, error: err.message });
         }

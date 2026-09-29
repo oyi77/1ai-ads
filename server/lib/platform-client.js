@@ -50,6 +50,17 @@ async function handleServerError(platformName, apiUrl, fetchOptions, retries, at
   return safeFetch(platformName, apiUrl, fetchOptions, retries - 1);
 }
 
+/**
+ * True when Meta reports its APP-level call-load limit — returned as HTTP 403
+ * with code 4 / subcode 1504022 and `is_transient: true`, not as 429. Without
+ * this the limit was indistinguishable from a permission failure and every
+ * caller retried straight into it.
+ */
+export function isMetaAppRateLimit(parsedError) {
+  const e = parsedError?.error || {};
+  return e.code === 4 || e.error_subcode === 1504022;
+}
+
 function throwApiError(platformName, status, parsedError) {
   const apiError = new Error(`${platformName} API returned ${status}`);
   apiError.status = status;
@@ -84,7 +95,10 @@ function throwApiError(platformName, status, parsedError) {
   } else if (code === 190) {
     apiError.userMessage = 'Token Meta tidak valid atau sudah expired — hubungkan ulang akun Meta kamu.';
     apiError.code = 'META_TOKEN_EXPIRED';
-  } else if (status === 429) {
+  } else if (status === 429 || isMetaAppRateLimit(parsedError)) {
+    // Meta signals app-level call-load limits as 403 + code 4 / subcode
+    // 1504022 (is_transient: true) rather than 429 — proven live 2026-09-29
+    // on the per-ad insights calls. Callers must see this as throttling.
     apiError.userMessage = 'Terlalu banyak request ke Meta — coba lagi dalam 30 detik.';
     apiError.code = 'META_RATE_LIMIT';
   } else {
