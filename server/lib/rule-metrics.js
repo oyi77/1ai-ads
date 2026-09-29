@@ -2,6 +2,26 @@
  * Metric Definitions — all supported rule metrics
  */
 
+// Dayparting time metrics must read the ADVERTISER's clock, not the server's.
+// The container runs UTC; a `hour_of_day > 20` rule authored for WIB would
+// otherwise fire at 03:00 WIB (20:00 UTC). DAYPARTING_TIMEZONE is the same
+// variable the operator scripts already declare (default Asia/Jakarta).
+function daypartingNow() {
+  const tz = process.env.DAYPARTING_TIMEZONE || 'Asia/Jakarta';
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hour: 'numeric', weekday: 'short', hour12: false,
+    }).formatToParts(new Date());
+    const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? NaN);
+    const weekday = parts.find((p) => p.type === 'weekday')?.value;
+    const dow = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[weekday];
+    return { hour: Number.isFinite(hour) ? hour : new Date().getHours(), dow: dow ?? new Date().getDay() };
+  } catch {
+    // Invalid TZ string → fall back to server-local (the old behaviour).
+    return { hour: new Date().getHours(), dow: new Date().getDay() };
+  }
+}
+
 export const METRIC_CATEGORIES = {
   delivery: 'Delivery Metrics',
   conversion: 'Conversion Metrics',
@@ -18,7 +38,7 @@ export const METRICS = {
     category: 'time',
     description: 'Current hour (0-23) for dayparting rules',
     unit: 'hour',
-    resolve: () => new Date().getHours(),
+    resolve: () => daypartingNow().hour,
   },
   day_of_week: {
     id: 'day_of_week',
@@ -26,7 +46,7 @@ export const METRICS = {
     category: 'time',
     description: 'Current day (0=Sun, 6=Sat) for dayparting rules',
     unit: 'day',
-    resolve: () => new Date().getDay(),
+    resolve: () => daypartingNow().dow,
   },
 
   // Delivery

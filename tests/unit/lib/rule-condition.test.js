@@ -142,6 +142,18 @@ describe('resolveMetricValue — missing source columns', () => {
     expect(Number.isInteger(resolveMetricValue('hour_of_day', nullRow))).toBe(true);
     expect(Number.isInteger(resolveMetricValue('day_of_week', nullRow))).toBe(true);
   });
+
+  it('hour_of_day reads the configured advertiser timezone, not server-local', async () => {
+    // Proven live 2026-09-29: the container runs UTC, so `hour_of_day > 20`
+    // (authored for WIB) fired at 03:00 WIB. DAYPARTING_TIMEZONE existed in
+    // .env.example but nothing read it.
+    const { METRICS } = await import('../../../server/lib/rule-metrics.js');
+    const expected = Number(new Intl.DateTimeFormat('en-US', {
+      timeZone: process.env.DAYPARTING_TIMEZONE || 'Asia/Jakarta',
+      hour: 'numeric', hour12: false,
+    }).format(new Date()));
+    expect(METRICS.hour_of_day.resolve()).toBe(expected);
+  });
 });
 
 describe('normalizeOperator', () => {
