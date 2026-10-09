@@ -55,6 +55,26 @@ export function resolveMetaAppCreds(userId, userMetaAppsRepo) {
 }
 
 /**
+ * The app id a user's Meta token is EXPECTED to belong to, or null when there
+ * is no constraint.
+ *
+ * Only a user who registered their own App Creds has a meaningful expectation:
+ * their tokens must come from that app (that app's dev/Live mode governs their
+ * creative writes). Without a registered app there is nothing to enforce —
+ * assuming the global operator app id here is what rejected every valid token
+ * whose app was not ours.
+ *
+ * @param {string} userId
+ * @param {object} userMetaAppsRepo
+ * @returns {string|null}
+ */
+export function expectedMetaAppId(userId, userMetaAppsRepo) {
+  if (!userId || !userMetaAppsRepo) return null;
+  const row = userMetaAppsRepo.getActive(userId);
+  return row?.app_id ? String(row.app_id) : null;
+}
+
+/**
  * Resolve the webhook verify token + app secret for a per-user webhook.
  * Per-user webhooks use the user's app_secret to verify the HMAC signature,
  * falling back to the global FB_APP_SECRET.

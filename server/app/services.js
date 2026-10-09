@@ -112,7 +112,8 @@ export function createServices({ db, repos, params }) {
     repos.settingsRepo, repos.platformAccountsRepo, repos.campaignsRepo,
     repos.rulesRepo, llmClient, undefined,
     { metaAdsAPI: metaApi, googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI },
-    draftService
+    draftService,
+    repos.userMetaAppsRepo
   );
   autonomousAgent.ruleEvaluator = _ruleEvaluator;
 

@@ -16,22 +16,30 @@ const log = createLogger('meta-connection');
 
 const API_VERSION = config.metaApiVersion;
 /**
- * Verify a Meta user token belongs to OUR app (fail-fast gate for every
- * token entry point). Tokens minted by other (dev-mode) apps fail ALL
- * creative writes with 1885183, so reject them at connect time with an
- * actionable message instead of a mysterious failure at create time.
+ * Verify a Meta access token is usable for ads: valid, unexpired, and carrying
+ * the ads scopes. Uses self-debug (`debug_token` with the token as its own
+ * access_token) so it works for a token minted by ANY Meta app — no app secret
+ * required, no global app-id assumption.
+ *
+ * App identity is NOT what makes a creative write succeed: 1885183 is caused by
+ * a dev-mode app, and platform-client.js already maps that to actionable
+ * guidance at write time. So the app id is only enforced when the caller knows
+ * the expected app — i.e. the user registered their own App Creds, or the token
+ * was minted by our own OAuth flow.
+ *
+ * @param {string} accessToken
+ * @param {string|null} [expectedAppId] — reject when the token's app differs
  * @returns {{ appId: string, userId: string }} — throws Validation-style Error
  */
-export async function verifyMetaTokenApp(accessToken) {
-  const appToken = `${config.fbAppId}|${config.fbAppSecret}`;
-  const res = await fetch(`https://graph.facebook.com/${API_VERSION}/debug_token?input_token=${encodeURIComponent(accessToken)}&access_token=${encodeURIComponent(appToken)}`);
+export async function verifyMetaTokenApp(accessToken, expectedAppId = null) {
+  const res = await fetch(`https://graph.facebook.com/${API_VERSION}/debug_token?input_token=${encodeURIComponent(accessToken)}&access_token=${encodeURIComponent(accessToken)}`);
   const body = await res.json().catch(() => ({}));
   const data = body?.data;
   if (!data) throw new Error(`Token verification failed: ${body?.error?.message || 'unknown'}`);
-  const appId = String(data.app_id || data.application_id || '');
   if (!data.is_valid) throw new Error('Token Meta tidak valid/kedaluwarsa. Hubungkan ulang.');
-  if (appId !== String(config.fbAppId)) {
-    throw new Error(`Token berasal dari aplikasi lain (${appId}), bukan AdForge. Cabut koneksi lalu hubungkan ulang via /settings agar creative bisa dibuat.`);
+  const appId = String(data.app_id || data.application_id || '');
+  if (expectedAppId && appId !== String(expectedAppId)) {
+    throw new Error(`Token ini dibuat oleh aplikasi ${appId || 'yang tidak dikenal'}, bukan aplikasi yang kamu daftarkan (${expectedAppId}). Generate token dari aplikasi itu, atau daftarkan aplikasi ${appId || 'tersebut'} lewat /metaapp.`);
   }
   // Ads calls need these scopes — a token without them stores fine but every
   // ad read/write 403s. Reject at connect time with the exact missing list.
@@ -145,7 +153,8 @@ export async function detectAdAccounts(accessToken) {
  */
 export async function connectMetaAccount(code, redirectUri, platformAccountsRepo, userId) {
   const { accessToken, expiresIn } = await exchangeCodeForToken(code, redirectUri);
-  await verifyMetaTokenApp(accessToken);
+  // exchangeCodeForToken mints via OUR app id, so the token must be ours.
+  await verifyMetaTokenApp(accessToken, config.fbAppId);
   const user = await verifyTokenAndGetUser(accessToken);
   const accounts = await detectAdAccounts(accessToken);
 

@@ -15,6 +15,7 @@ import crypto from 'crypto';
 import { v4 as uuid } from 'uuid';
 import { sanitizeAccessToken } from '../../lib/token-sanitize.js';
 import { verifyMetaTokenApp } from '../../services/meta-connection.js';
+import { expectedMetaAppId } from '../../lib/meta-app-creds.js';
 
 const log = createLogger('auth-handlers');
 
@@ -170,13 +171,13 @@ export function handleLogout(refreshTokensRepo) {
 /**
  * POST /connect-meta-token
  */
-export function handleConnectMetaToken(settingsRepo) {
+export function handleConnectMetaToken(settingsRepo, userMetaAppsRepo = null) {
   return async (req, res) => {
     const { account_name } = req.body;
     const access_token = sanitizeAccessToken(req.body?.access_token);
     if (!access_token) return res.status(400).json({ success: false, error: 'access_token is required' });
     try {
-      await verifyMetaTokenApp(access_token);
+      await verifyMetaTokenApp(access_token, expectedMetaAppId(req.user?.id, userMetaAppsRepo));
     } catch (gateErr) {
       return res.status(400).json({ success: false, error: gateErr.message });
     }

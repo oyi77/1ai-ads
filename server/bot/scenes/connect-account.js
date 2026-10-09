@@ -5,6 +5,7 @@
  */
 import { Scenes } from 'telegraf';
 import { verifyMetaTokenApp } from '../../services/meta-connection.js';
+import { expectedMetaAppId } from '../../lib/meta-app-creds.js';
 import { MetaAdsAPI } from '../../services/meta/index.js';
 import { createLogger } from '../../lib/logger.js';
 import config from '../../config/index.js';
@@ -107,10 +108,13 @@ export const connectScene = new Scenes.WizardScene(
     if (platform === 'meta') {
       try {
         await validateMetaAccessToken(token);
-        await verifyMetaTokenApp(token);
+        // Enforce the user's own app id only when they registered App Creds;
+        // otherwise accept any valid ads-scoped token (Meta governs the write
+        // via the token's own app, not ours).
+        await verifyMetaTokenApp(token, expectedMetaAppId(ctx.userId, ctx.deps?.repos?.userMetaAppsRepo));
       } catch (err) {
         log.warn('Meta token rejected before persistence', { userId: ctx.userId, error: err.message });
-        await ctx.reply(`Token ditolak: ${err.message}\n\nPastikan token dibuat di bawah aplikasi AdForge (Settings → Connect), bukan aplikasi lain.`);
+        await ctx.reply(`Token ditolak: ${err.message}\n\nKalau token ini dibuat di aplikasi lain, daftarkan aplikasi itu lewat /metaapp.`);
         return;
       }
     }

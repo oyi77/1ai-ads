@@ -17,7 +17,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { generateToken, verifyToken } from '../lib/auth.js';
 import { verifyMetaTokenApp } from '../services/meta-connection.js';
 
-export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = null) {
+export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = null, userMetaAppsRepo = null) {
   const router = Router();
 
   const authLimiter = rateLimit({
@@ -75,9 +75,11 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
       if (tokenData.error) return res.status(400).json({ success: false, error: tokenData.error.message });
 
       const accessToken = tokenData.access_token;
-      // Fail fast: token must belong to OUR app, else every creative write 1885183s.
+      // This code was minted by OUR app (client_id=FB_APP_ID above), so the
+      // resulting token must belong to it. Paste-in tokens take the relaxed
+      // path (see connect-account.js) — this one has a real expectation.
       try {
-        await verifyMetaTokenApp(accessToken);
+        await verifyMetaTokenApp(accessToken, config.fbAppId);
       } catch (gateErr) {
         return res.status(400).json({ success: false, error: gateErr.message });
       }
@@ -111,7 +113,7 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
   });
 
   // Meta token connection
-  router.post('/connect-meta-token', requireAuth, handleConnectMetaToken(settingsRepo));
+  router.post('/connect-meta-token', requireAuth, handleConnectMetaToken(settingsRepo, userMetaAppsRepo));
 
   // Auth endpoints
   router.post('/register', handleRegister(usersRepo, refreshTokensRepo));

@@ -165,11 +165,22 @@ describe('FacebookConnectionService', () => {
       const meta = JSON.parse(call.metadata);
       expect(meta.last_sync).toBeDefined();
     });
-    it('should reject tokens from another app', async () => {
+    // No registered App Creds -> no app expectation, so a foreign-app token is
+    // accepted (the old global-app-id gate rejected every valid tenant token).
+    it('accepts a valid ads-scoped token from another app with no app creds registered', async () => {
       global.fetch.mockResolvedValue({
-        json: () => Promise.resolve({ data: { app_id: 'other-app', is_valid: true, user_id: 'fb-1' } }),
+        json: () => Promise.resolve({ data: { app_id: 'other-app', is_valid: true, user_id: 'fb-1', scopes: ['ads_management', 'ads_read'] } }),
       });
-      await expect(service.linkFacebookAccount('user-1', 'act-123', 'Page', 'token')).rejects.toThrow();
+      await expect(service.linkFacebookAccount('user-1', 'act-123', 'Page', 'token')).resolves.toBeDefined();
+      expect(mockRepo.upsert).toHaveBeenCalled();
+    });
+
+    it('still rejects a token whose app differs from the registered app', async () => {
+      service.userMetaAppsRepo = { getActive: () => ({ app_id: 'expected-app' }) };
+      global.fetch.mockResolvedValue({
+        json: () => Promise.resolve({ data: { app_id: 'other-app', is_valid: true, user_id: 'fb-1', scopes: ['ads_management', 'ads_read'] } }),
+      });
+      await expect(service.linkFacebookAccount('user-1', 'act-123', 'Page', 'token')).rejects.toThrow(/expected-app/);
       expect(mockRepo.upsert).not.toHaveBeenCalled();
     });
   });
