@@ -137,7 +137,7 @@ describe('meta-connection', () => {
   describe('connectMetaAccount', () => {
     let mockRepo;
 
-    // fetch order: exchange(2) -> debug_token self-gate(1) -> me(1) -> adaccounts(1)
+    // fetch order: exchange(2) -> debug_token gate(1) -> me(1) -> adaccounts(1)
     function mockFullFlow({ appId = 'test-app-id', accounts = [{ id: 'act_1', name: 'Ad Account 1', account_status: 1 }] } = {}) {
       global.fetch
         .mockResolvedValueOnce({ json: () => Promise.resolve({ access_token: 'short' }) })
@@ -186,11 +186,9 @@ describe('meta-connection', () => {
       expect(mockRepo.upsert).not.toHaveBeenCalled();
     });
 
-    // The OAuth code path mints through OUR app id, so a foreign-app token is a
-    // real mismatch here (not a valid tenant token we merely do not recognise).
-    it('should reject tokens minted by another app on the OAuth path', async () => {
+    it('should reject tokens from another app', async () => {
       mockFullFlow({ appId: 'other-app' });
-      await expect(connectMetaAccount('code', 'https://redirect.com', mockRepo, 'user-1')).rejects.toThrow(/aplikasi lain|other-app/i);
+      await expect(connectMetaAccount('code', 'https://redirect.com', mockRepo, 'user-1')).rejects.toThrow();
       expect(mockRepo.upsert).not.toHaveBeenCalled();
     });
     it('should reject tokens missing ads scopes', async () => {

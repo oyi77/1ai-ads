@@ -5,7 +5,6 @@
  */
 import { Scenes } from 'telegraf';
 import { verifyMetaTokenApp } from '../../services/meta-connection.js';
-import { expectedMetaAppId } from '../../lib/meta-app-creds.js';
 import { MetaAdsAPI } from '../../services/meta/index.js';
 import { createLogger } from '../../lib/logger.js';
 import config from '../../config/index.js';
@@ -85,7 +84,7 @@ export const connectScene = new Scenes.WizardScene(
       msg +=
         '🔑 <b>Cara ambil token Meta:</b>\n' +
         '1. Buka https://developers.facebook.com/tools/explorer/\n' +
-        '2. Pilih aplikasimu (atau bikin baru)\n' +
+        '2. Pilih aplikasi yang sudah LIVE (⚠️ app masih mode dev = kreatif iklan nanti error 1885183)\n' +
         '3. Klik "Generate Access Token"\n' +
         '4. Centang: ads_management, ads_read, business_management, pages_show_list\n' +
         '5. Tempel tokennya di sini\n\n' +
@@ -108,13 +107,10 @@ export const connectScene = new Scenes.WizardScene(
     if (platform === 'meta') {
       try {
         await validateMetaAccessToken(token);
-        // Enforce the user's own app id only when they registered App Creds;
-        // otherwise accept any valid ads-scoped token (Meta governs the write
-        // via the token's own app, not ours).
-        await verifyMetaTokenApp(token, expectedMetaAppId(ctx.userId, ctx.deps?.repos?.userMetaAppsRepo));
+        await verifyMetaTokenApp(token);
       } catch (err) {
         log.warn('Meta token rejected before persistence', { userId: ctx.userId, error: err.message });
-        await ctx.reply(`Token ditolak: ${err.message}\n\nKalau token ini dibuat di aplikasi lain, daftarkan aplikasi itu lewat /metaapp.`);
+        await ctx.reply(`Token ditolak: ${err.message}\n\nPastikan token dibuat dari APLIKASI YANG SUDAH LIVE (bukan mode pengembangan) — karena kalau app-nya masih dev-mode, kreatif iklan nanti 1885183.`);
         return;
       }
     }

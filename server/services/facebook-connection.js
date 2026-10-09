@@ -8,14 +8,12 @@
 import config from '../config/index.js';
 import { MetaAdsAPI } from './meta/index.js';
 import { verifyMetaTokenApp } from './meta-connection.js';
-import { expectedMetaAppId } from '../lib/meta-app-creds.js';
 
 const API_VERSION = config.metaApiVersion;
 
 export class FacebookConnectionService {
-  constructor(platformAccountsRepo, userMetaAppsRepo = null) {
+  constructor(platformAccountsRepo) {
     this.platformAccountsRepo = platformAccountsRepo;
-    this.userMetaAppsRepo = userMetaAppsRepo;
   }
 
   /**
@@ -72,9 +70,7 @@ export class FacebookConnectionService {
    * Link a Facebook account to platform_accounts table.
    */
   async linkFacebookAccount(userId, accountId, accountName, accessToken) {
-    // Only enforce an app id when the user registered their own App Creds;
-    // otherwise any valid ads-scoped token is accepted.
-    await verifyMetaTokenApp(accessToken, expectedMetaAppId(userId, this.userMetaAppsRepo));
+    await verifyMetaTokenApp(accessToken);
     return this.platformAccountsRepo.upsert({
       user_id: userId,
       platform: 'meta',
