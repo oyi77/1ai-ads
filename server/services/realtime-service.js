@@ -145,9 +145,6 @@ export class RealtimeService {
       // don't fire Meta requests against google/tiktok campaign ids.
       const activeCampaigns = campaigns.filter(c => (c.platform === 'meta' || !c.platform) && (c.status === 'ACTIVE' || c.status === 'active'));
 
-      // Group by owner+account so we can fetch ONE batched insights call per
-      // account instead of N individual calls — avoids Meta "User request limit
-      // reached" (code 17) when many campaigns are active.
       const byOwner = new Map(); // "ownerId:accountId" -> { api, accountId, campaignIds: [] }
       for (const campaign of activeCampaigns) {
         const ownerId = campaign?.user_id || campaign?.created_by;
