@@ -517,7 +517,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     // NOTE: /{page}/posts requires a PAGE access token, not a user token.
     const token = pageToken || this._getToken();
     const url = new URL(`https://graph.facebook.com/v22.0/${pageId}/posts`);
-    url.searchParams.set('fields', 'id,message,created_time,permalink_url,full_picture,is_published');
+    url.searchParams.set('fields', 'id,message,created_time,permalink_url,full_picture,is_published,application');
     url.searchParams.set('limit', String(limit));
     url.searchParams.set('access_token', token);
     const res = await safeFetch('meta', url.toString());
@@ -529,6 +529,8 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       permalinkUrl: post.permalink_url || '',
       picture: post.full_picture || '',
       published: post.is_published !== false,
+      appId: post.application?.id || null,
+      appName: post.application?.name || null,
     }));
   }
 
@@ -621,11 +623,19 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     let pages = [];
     try { pages = await this.getPages() || []; } catch { /* token may lack pages perms */ }
     for (const page of pages) {
-      if (!page?.access_token) continue;
+      // getPages() maps access_token -> accessToken; reading the snake_case key
+      // made this loop skip EVERY page, so raw post ids never resolved and the
+      // wizard silently fell back to a wrong {pageId}_{rawPostId} object_story_id.
+      const pageToken = page?.accessToken || page?.access_token;
+      if (!pageToken) continue;
       try {
-        const url = new URL(`${BASE}/${id}`);
+        // A bare numeric post id can only be read through its canonical
+        // {pageId}_{postId} node — GET /{rawId} hits the deprecated singular
+        // statuses API (#12), and the system-user token lacks
+        // pages_read_engagement on that endpoint (#10). The page token works.
+        const url = new URL(`${BASE}/${page.id}_${id}`);
         url.searchParams.set('fields', 'id');
-        url.searchParams.set('access_token', page.access_token);
+        url.searchParams.set('access_token', pageToken);
         const res = await safeFetch('meta', url.toString());
         const data = await res.json();
         if (data?.id && String(data.id).includes('_')) return data.id;

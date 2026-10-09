@@ -509,4 +509,65 @@ describe('MetaAdsAPI', () => {
       expect(getSpy).toHaveBeenCalledWith('/act_1181078009580337/campaigns', expect.anything());
     });
   });
+
+  describe('resolvePostId', () => {
+    // Live 2026-10-09: the wizard fell back to a bogus {pageId}_{rawId}
+    // object_story_id and Meta answered 1885183 ("creative post was created by
+    // an app in development mode"), which reads as "your app is in dev mode" and
+    // sends the user chasing a Meta dashboard switch that was never the problem.
+    // Two defects made the resolver silently return null for EVERY raw id:
+    // getPages() maps access_token -> accessToken while this loop read the
+    // snake_case key, and GET /{rawId} hits the deprecated singular statuses API.
+    beforeEach(() => {
+      vi.spyOn(api, 'getPages').mockResolvedValue([
+        { id: 'page_1', accessToken: 'page-token-1' },
+        { id: 'page_2', accessToken: 'page-token-2' },
+      ]);
+    });
+
+    it('passes a compound {pageId}_{postId} through untouched', async () => {
+      const fetchSpy = mockSafeFetch.mockClear();
+      await expect(api.resolvePostId('page_1_999')).resolves.toBe('page_1_999');
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('resolves a RAW numeric id through the page token (camelCase accessToken)', async () => {
+      mockSafeFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 'page_1_999' }),
+      });
+      await expect(api.resolvePostId('999')).resolves.toBe('page_1_999');
+      const [firstCall] = mockSafeFetch.mock.calls;
+      const url = String(firstCall[1]);
+      // the page node, not the bare id (bare id = deprecated singular statuses API)
+      expect(url).toContain('/page_1_999');
+      expect(url).toContain('access_token=page-token-1');
+    });
+
+    it('returns null when no page can resolve the id', async () => {
+      mockSafeFetch.mockResolvedValue({ ok: true, json: async () => ({}) });
+      await expect(api.resolvePostId('999')).resolves.toBeNull();
+    });
+
+    it('returns null without querying when the id is empty', async () => {
+      const fetchSpy = mockSafeFetch.mockClear();
+      await expect(api.resolvePostId('')).resolves.toBeNull();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getPagePosts', () => {
+    it('surfaces the owning app of each post', async () => {
+      mockSafeFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          data: [{ id: 'page_1_1', message: 'hi', is_published: true, application: { id: 'app_9', name: 'Some App' } }],
+        }),
+      });
+      const posts = await api.getPagePosts('page_1', { pageToken: 'page-token-1' });
+      expect(posts[0]).toMatchObject({ id: 'page_1_1', appId: 'app_9', appName: 'Some App' });
+      // requests application explicitly, otherwise the owning app is invisible
+      expect(String(mockSafeFetch.mock.calls[0][1])).toContain('application');
+    });
+  });
 });

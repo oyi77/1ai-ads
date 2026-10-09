@@ -386,7 +386,13 @@ createCampaignScene.action(/^create:src:post$/, async (ctx) => {
     try {
       const posts = await api.getPagePosts(pageId, { limit: 8, pageToken: pageAccessToken });
       if (posts.length > 0) {
-        const rows = posts.map(p => [{ text: `${(p.message || '(no text)').slice(0, 40)}`, callback_data: `create:post:${p.id}` }]);
+        const rows = posts.map(p => [{
+          // Carry the owning app id in the callback: a post created by a
+          // dev-mode app cannot be used as a creative (Meta 1885183), so the
+          // confirm step can refuse it up-front instead of failing at create.
+          text: `${(p.message || '(no text)').slice(0, 34)}${p.appName ? ` · ${p.appName}` : ''}`,
+          callback_data: `create:post:${p.appId || 'x'}:${p.id}`,
+        }]);
         rows.push([{ text: 'Enter custom Post ID', callback_data: 'create:src:manual' }]);
         rows.push(CANCEL_ROW);
         await ctx.reply('Pick a post from your Page:', { reply_markup: { inline_keyboard: rows } });
@@ -399,13 +405,14 @@ createCampaignScene.action(/^create:src:post$/, async (ctx) => {
 });
 
 // Action: User selected a specific post — set state; step 7 detects and shows confirm
-createCampaignScene.action(/^create:post:(.+)$/, async (ctx) => {
+createCampaignScene.action(/^create:post:(?:([^:]+):)?(.+)$/, async (ctx) => {
   await ctx.answerCbQuery();
-  const postId = ctx.match[1];
+  const [, appId, postId] = ctx.match;
   ctx.wizard.state.data.postId = postId;
+  ctx.wizard.state.data.postAppId = appId && appId !== 'x' ? appId : null;
   ctx.wizard.state.creativeSource = 'post';
   ctx.wizard.state.confirmShown = false;
-  await ctx.reply(`Post selected: ${postId}`);
+  await ctx.reply(`Post dipilih: ${postId}${ctx.wizard.state.data.postAppId ? `\nApp pembuat post: ${ctx.wizard.state.data.postAppId}` : ''}`);
 });
 
 // Action: Manual Post ID
@@ -608,16 +615,27 @@ async function handleCreateGo(ctx) {
           try {
             // Meta requires object_story_id in format {page_id}_{post_id}.
             // Resolve raw numeric IDs against the user's pages (page tokens can
-            // fetch a raw post id and return the canonical compound form);
-            // fall back to the first page when resolution fails.
-            let storyId = await api.resolvePostId?.(d.postId);
-            if (!storyId) storyId = pageId ? `${pageId}_${d.postId}` : d.postId;
+            // fetch a raw post id and return the canonical compound form).
+            // NEVER fall back to {pageId}_{rawId}: that compound id is almost
+            // always a different, nonexistent post and Meta answers 1885183,
+            // which then reads as "your app is in dev mode" and sends the user
+            // chasing a Meta dashboard switch that was never the problem.
+            const storyId = await api.resolvePostId?.(d.postId);
+            if (!storyId) {
+              throw Object.assign(new Error('Post ID tidak bisa diverifikasi milik page ini.'), {
+                data: { error: { error_user_msg: `Post ID ${d.postId} tidak ketemu di page kamu. Pilih post lewat tombol "Post from Page", atau tempel ID lengkap (format pageId_postId).` } },
+              });
+            }
             const data = await api._post(`/${realAccountId}/adcreatives`, { name: `${d.name} - Creative`, object_story_id: storyId });
             await api.createAd(realAccountId, { adsetId: adSet.id, creativeId: data.id, name: `${d.name} - Ad`, status: 'PAUSED' });
             adCreated = true;
           } catch (postErr) {
             const metaMsg = postErr.data?.error?.error_user_msg || postErr.data?.error?.message || postErr.message;
-            creativeFailNote = `Postingan tidak bisa dipakai (${String(metaMsg).slice(0, 160)}). Ad dibuat dengan creative link standar.`;
+            const postMeta = postErr.data?.error || {};
+            const appHint = postMeta.error_subcode === 1885183
+              ? ` Post milik app ${d.postAppId || '?'} masih mode pengembangan — harus app itu yang di-Live-kan, bukan app AdForge.`
+              : '';
+            creativeFailNote = `Postingan tidak bisa dipakai (${String(metaMsg).slice(0, 160)}).${appHint} Ad dibuat dengan creative link standar.`;
             log.warn('Post creative failed, falling back to link_data', { error: postErr.message });
           }
         }
