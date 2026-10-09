@@ -156,7 +156,7 @@ export class RealtimeService {
         // is trusted only when it still matches a live usable account: the
         // account can be deactivated or its token flagged since the campaign
         // synced, and polling a dead target 422x every 30s is what we had.
-        let usableIds = [];
+        const usableIds = [];
         if (this.platformAccountsRepo) {
           const accounts = filterUsableAccounts(this.platformAccountsRepo.findAllActiveByUserAndPlatform?.(ownerId, 'meta') || []);
           for (const acct of accounts) {
