@@ -152,22 +152,22 @@ export class RealtimeService {
       for (const campaign of activeCampaigns) {
         const ownerId = campaign?.user_id || campaign?.created_by;
         if (!ownerId) continue;
-        // campaigns rows don't carry account_id — it lives in
-        // platform_accounts.credentials.ad_account_id. Resolve it per owner so
-        // the batched insights call gets a real account.
-        // Multi-tenancy: resolve ALL Meta accounts for this owner so each
-        // account gets its own batched insights call. Campaigns without
-        // account_id are polled against all of the owner's accounts.
-        const accountIds = [];
-        if (campaign.account_id) {
-          accountIds.push(campaign.account_id);
-        } else if (this.platformAccountsRepo) {
+        // Resolve the owner's USABLE accounts once. A stored campaign.account_id
+        // is trusted only when it still matches a live usable account: the
+        // account can be deactivated or its token flagged since the campaign
+        // synced, and polling a dead target 422x every 30s is what we had.
+        let usableIds = [];
+        if (this.platformAccountsRepo) {
           const accounts = filterUsableAccounts(this.platformAccountsRepo.findAllActiveByUserAndPlatform?.(ownerId, 'meta') || []);
           for (const acct of accounts) {
-            const id = acct?.credentials?.ad_account_id || acct?.ad_account_id || '';
-            if (id && !accountIds.includes(id)) accountIds.push(id);
+            const id = acct?.credentials?.ad_account_id || acct?.ad_account_id
+              || (String(acct?.account_name || '').startsWith('act_') ? acct.account_name : '');
+            if (id && !usableIds.includes(id)) usableIds.push(id);
           }
         }
+        const accountIds = campaign.account_id
+          ? (usableIds.includes(campaign.account_id) ? [campaign.account_id] : [])
+          : usableIds;
         if (!accountIds.length) continue;
         const api = this._metaApiForOwner(campaign);
         if (!api) {
