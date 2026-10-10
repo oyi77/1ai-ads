@@ -109,7 +109,7 @@ function registerAccounts(ctx, token, accounts) {
 
 /** Re-send the creative-source picker (restart/back must SHOW it — selectStep alone never runs a step handler from an action callback). */
 async function sendCreativePicker(ctx) {
-  await ctx.reply('Choose creative source:', { reply_markup: { inline_keyboard: [
+  await ctx.reply('Bos, pilih sumber kreatifnya ya:', { reply_markup: { inline_keyboard: [
     [{ text: 'Pick Post from Page', callback_data: 'create:src:post' }],
     [{ text: 'Custom Image Creative', callback_data: 'create:src:custom:image' }],
     [{ text: 'Custom Video Creative', callback_data: 'create:src:custom:video' }],
@@ -141,7 +141,7 @@ async function showConfirmScreen(ctx) {
     `👥 Target: ${(targeting.countries || ['ID']).join(', ')}, umur ${targeting.ageMin || 18}-${targeting.ageMax || 55}, ${genderLabel}` +
     `${(targeting.interests || []).length ? `, suka ${(targeting.interests || []).join(', ')}` : ''}\n` +
     `🎨 Iklan: ${mediaInfo}\n\n` +
-    `Status awal: <b>PAUSED</b> (aman, belum tayang — kamu aktifkan manual setelah dicek).`;
+    `Status awal: <b>PAUSED</b> (aman, belum tayang — bos aktifkan manual setelah saya cek).`;
   await ctx.reply(summary, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [
     [{ text: '🚀 Buat Campaign', callback_data: 'create:go' }],
     [{ text: '✏️ Ubah Budget', callback_data: 'create:edit:budget' }, { text: '👥 Ubah Target', callback_data: 'create:edit:audience' }],
@@ -165,7 +165,7 @@ export const createCampaignScene = new Scenes.WizardScene(
     const tokens = getAllMetaTokens(ctx);
     if (tokens.length === 0) {
       await ctx.reply(
-        '🔌 <b>Belum ada akun Meta terhubung.</b>\n\nHubungkan dulu biar bisa bikin campaign — atau jalan-jalan di mode demo.',
+        '🔌 <b>Bos, belum ada akun Meta terhubung.</b>\n\nBos hubungkan dulu ya biar saya bisa bikinin campaign — atau jalan-jalan di mode demo dulu bos.',
         { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '🔗 Hubungkan Akun', callback_data: 'menu:connect' }], [{ text: '🎮 Mode Demo', callback_data: 'dash:demo' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
       );
       return ctx.scene.leave();
@@ -184,12 +184,12 @@ export const createCampaignScene = new Scenes.WizardScene(
       const keyboard = businessesByToken.map(({ token, business }) => [{ text: `${multiToken ? '['+token.account.account_name+'] ' : ''}${business.name}`, callback_data: `create:bm:${business.id}` }]);
       keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
       keyboard.push(CANCEL_ROW);
-      await ctx.reply('🏢 <b>Pilih Business Manager yang mau dipakai:</b>', { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
+      await ctx.reply('🏢 <b>Bos, pilih Business Manager yang mau dipakai:</b>', { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
       return ctx.wizard.next();
     }
     if (accountsByToken.length === 0) {
       await ctx.reply(
-        '📭 <b>Token terhubung tapi nggak ada akun iklan yang kebaca.</b>\n\nCek Business Manager-mu, atau hubungkan token dari BM yang sama.',
+        '📭 <b>Bos, token terhubung tapi nggak ada akun iklan yang kebaca.</b>\n\nBos cek Business Manager bos ya, atau hubungkan token dari BM yang sama bos.',
         { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '🔗 Hubungkan Akun', callback_data: 'menu:connect' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
       );
       return ctx.scene.leave();
@@ -198,24 +198,24 @@ export const createCampaignScene = new Scenes.WizardScene(
     const kb = accountsByToken.map(({ token, account }) => [{ text: `${multiToken ? '['+token.account.account_name+'] ' : ''}${account.name}`, callback_data: `create:acct:${account.id}` }]);
     kb.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
     kb.push(CANCEL_ROW);
-    await ctx.reply('📣 <b>Pilih akun iklan yang mau dipakai:</b>', { parse_mode: 'HTML', reply_markup: { inline_keyboard: kb } });
+    await ctx.reply('📣 <b>Bos, pilih akun iklan yang mau dipakai:</b>', { parse_mode: 'HTML', reply_markup: { inline_keyboard: kb } });
     ctx.wizard.state.data.businessId = 'none';
     return ctx.wizard.selectStep(2);
   },
-  async (ctx) => { if (!ctx.wizard.state.data.businessId) await ctx.reply('Pencet dulu Business Manager-nya pakai tombol di atas ya.'); },
+  async (ctx) => { if (!ctx.wizard.state.data.businessId) await ctx.reply('Bos pencet dulu Business Manager-nya pakai tombol di atas ya bos.'); },
   // Step 2: Account guard
-  async (ctx) => { if (!ctx.wizard.state.data.accountId) await ctx.reply('Pencet dulu akun iklannya pakai tombol di atas ya.'); },
+  async (ctx) => { if (!ctx.wizard.state.data.accountId) await ctx.reply('Bos pencet dulu akun iklannya pakai tombol di atas ya bos.'); },
   // Step 3: Objective guard
-  async (ctx) => { if (!ctx.wizard.state.data.objective) await ctx.reply('Pilih dulu tujuannya pakai tombol di atas ya.'); },
+  async (ctx) => { if (!ctx.wizard.state.data.objective) await ctx.reply('Bos pilih dulu tujuannya pakai tombol di atas ya bos.'); },
   // Step 4: Name -> budget
   async (ctx) => {
     const text = (ctx.message?.text || '').trim();
-    if (!text || text.length > 80 || text === '/skip') { await ctx.reply('Kasih nama campaign dulu ya (1-80 karakter), contoh: "Promo Lebaran 2025".'); return; }
+    if (!text || text.length > 80 || text === '/skip') { await ctx.reply('Bos kasih nama campaign dulu ya (1-80 karakter), contoh: "Promo Lebaran 2025" bos.'); return; }
     ctx.wizard.state.data.name = text;
     await ctx.reply(
-      '💰 <b>Berapa budget harian campaign ini?</b>\n\n' +
+      '💰 <b>Bos, budget hariannya berapa bos?</b>\n\n' +
       'Ketik angka Rupiah aja, contoh: <b>50000</b> (artinya Rp 50.000/hari).\n' +
-      `Minimal dari Facebook: <b>${fmtRp(MIN_DAILY_BUDGET_IDR)}/hari</b> — kalau di bawah itu iklanmu nggak jalan.`,
+      `Minimal dari Facebook: <b>${fmtRp(MIN_DAILY_BUDGET_IDR)}/hari</b> — kalau di bawah itu iklan bos nggak jalan.`,
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
@@ -225,7 +225,7 @@ export const createCampaignScene = new Scenes.WizardScene(
     const budget = parseInt((ctx.message?.text || '').replace(/[^\d]/g, ''), 10);
     if (!Number.isFinite(budget) || budget < MIN_DAILY_BUDGET_IDR) {
       await ctx.reply(
-        `⚠️ Budget minimal ${fmtRp(MIN_DAILY_BUDGET_IDR)}/hari (aturan Facebook). ` +
+        `⚠️ Maaf bos, budget minimal ${fmtRp(MIN_DAILY_BUDGET_IDR)}/hari (aturan Facebook) 🙏 ` +
         `Ketik ulang angkanya, contoh: <b>50000</b>.`,
         { parse_mode: 'HTML' }
       );
@@ -233,7 +233,7 @@ export const createCampaignScene = new Scenes.WizardScene(
     }
     ctx.wizard.state.data.dailyBudget = budget;
     await ctx.reply(
-      '👥 <b>Siapa yang mau kamu jangkau dengan iklan ini?</b>\n\n' +
+      '👥 <b>Bos, siapa yang mau bos jangkau dengan iklan ini?</b>\n\n' +
       'Cukup balas dengan <b>bahasa santai</b>, contoh:\n' +
       '<i>"Indonesia, umur 20-35, cewek, suka fashion dan skincare"</i>\n\n' +
       'Yang bot butuhkan: <b>negara</b>, <b>umur</b> (misal 20-35), <b>gender</b> (cowok/cewek/semua), ' +
@@ -270,11 +270,11 @@ export const createCampaignScene = new Scenes.WizardScene(
       st.data.dailyBudget = budget;
       st.editingBudget = false;
       st.confirmShown = false;
-      await ctx.reply(`✅ Budget diubah jadi <b>${fmtRp(budget)}/hari</b>.`, { parse_mode: 'HTML' });
+      await ctx.reply(`✅ Siap bos, budget sudah saya ubah jadi <b>${fmtRp(budget)}/hari</b> 🙏`, { parse_mode: 'HTML' });
       return showConfirmScreen(ctx);
     }
     if (st.editingName) {
-      if (!text || text.length > 80) { await ctx.reply('Nama campaign 1-80 karakter. Ketik ulang ya.'); return; }
+      if (!text || text.length > 80) { await ctx.reply('Maaf bos, nama campaign 1-80 karakter 🙏 Ketik ulang ya bos.'); return; }
       st.data.name = text;
       st.editingName = false;
       st.confirmShown = false;
@@ -290,7 +290,7 @@ export const createCampaignScene = new Scenes.WizardScene(
     if (source === 'manual' && !ctx.wizard.state.data.postId) {
       if (text !== '/skip') {
         const postId = text.replace(/[^0-9]/g, '');
-        if (!postId || postId.length < 5) { await ctx.reply('ID postingan-nya kurang bener. Cek lagi ya (minimal 5 angka).'); return; }
+        if (!postId || postId.length < 5) { await ctx.reply('Maaf bos, ID postingannya kurang bener 🙏 Cek lagi ya bos (minimal 5 angka).'); return; }
         ctx.wizard.state.data.postId = postId;
         return showConfirmScreen(ctx);
       }
@@ -307,36 +307,36 @@ export const createCampaignScene = new Scenes.WizardScene(
           if (photo) { try { const file = await ctx.telegram.getFile(photo[photo.length - 1].file_id); const link = await ctx.telegram.getFileLink(file.file_id || file); cr.mediaUrl = link.href || link.toString(); } catch { cr.mediaUrl = ''; } }
           else if (msgText && /^https?:\/\//i.test(msgText)) { cr.mediaUrl = msgText; }
           else if (msgText === '/skip') { /* no media */ }
-          else { await ctx.reply('Send image or image URL (http/https).'); return; }
+          else { await ctx.reply('Bos kirim gambar atau URL gambar ya (http/https) bos.'); return; }
         } else {
           if (video) { try { const file = await ctx.telegram.getFile(video.file_id); const link = await ctx.telegram.getFileLink(file.file_id || file); cr.mediaUrl = link.href || link.toString(); } catch { cr.mediaUrl = ''; } }
           else if (msgText && /^https?:\/\//i.test(msgText)) { cr.mediaUrl = msgText; }
           else if (msgText === '/skip') { /* no media */ }
-          else { await ctx.reply('Send video or video URL (http/https).'); return; }
+          else { await ctx.reply('Bos kirim video atau URL video ya (http/https) bos.'); return; }
         }
         ctx.wizard.state.creativeStep = 'headline';
-        await ctx.reply('Headline (max 40 chars):');
+        await ctx.reply('Bos, headline-nya apa (max 40 karakter)?');
         return;
       }
       if (step === 'headline') {
         const msgText = (ctx.message?.text || '').trim();
-        if (!msgText || msgText.length > 40) { await ctx.reply('Headline 1-40 chars. Try again:'); return; }
+        if (!msgText || msgText.length > 40) { await ctx.reply('Maaf bos, headline 1-40 karakter 🙏 Coba lagi ya bos:'); return; }
         cr.headline = msgText;
         ctx.wizard.state.creativeStep = 'description';
-        await ctx.reply('Description (max 125 chars):');
+        await ctx.reply('Bos, deskripsinya apa (max 125 karakter)?');
         return;
       }
       if (step === 'description') {
         const msgText = (ctx.message?.text || '').trim();
-        if (!msgText || msgText.length > 125) { await ctx.reply('Description 1-125 chars. Try again:'); return; }
+        if (!msgText || msgText.length > 125) { await ctx.reply('Maaf bos, deskripsi 1-125 karakter 🙏 Coba lagi ya bos:'); return; }
         cr.description = msgText;
         ctx.wizard.state.creativeStep = 'link';
-        await ctx.reply('Destination URL:');
+        await ctx.reply('Bos, URL tujuannya apa?');
         return;
       }
       if (step === 'link') {
         const msgText = (ctx.message?.text || '').trim();
-        if (!msgText || !/^https?:\/\//i.test(msgText)) { await ctx.reply('Send a valid URL (http/https).'); return; }
+        if (!msgText || !/^https?:\/\//i.test(msgText)) { await ctx.reply('Maaf bos, kirim URL yang valid ya (http/https) bos.'); return; }
         cr.linkUrl = msgText;
         ctx.wizard.state.creative = cr;
         ctx.wizard.state.creativeStep = 'preview';
@@ -348,7 +348,7 @@ export const createCampaignScene = new Scenes.WizardScene(
         ] } });
         return;
       }
-      if (step === 'preview' || step === 'done') { await ctx.reply('Tap Confirm to proceed.', { reply_markup: { inline_keyboard: [[{ text: 'Confirm', callback_data: 'create:creative:confirm' }], CANCEL_ROW] } }); return; }
+      if (step === 'preview' || step === 'done') { await ctx.reply('Bos tap Confirm buat lanjut ya.', { reply_markup: { inline_keyboard: [[{ text: 'Confirm', callback_data: 'create:creative:confirm' }], CANCEL_ROW] } }); return; }
     }
     // If postId already set (from post picker callback or manual entry), show confirm
     if (ctx.wizard.state.data.postId && !ctx.wizard.state.confirmShown) {
@@ -366,7 +366,7 @@ export const createCampaignScene = new Scenes.WizardScene(
     }
 
     if (!ctx.wizard.state.data.postId && !ctx.wizard.state.creative?.headline && source !== 'skip') {
-      await ctx.reply('Select an option using the buttons above.', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
+      await ctx.reply('Bos pilih opsinya pakai tombol di atas ya.', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
     }
   },
   // Step 8: Confirm (fallback — step 7 shows confirm directly via showConfirmScreen)
@@ -395,13 +395,13 @@ createCampaignScene.action(/^create:src:post$/, async (ctx) => {
         }]);
         rows.push([{ text: 'Enter custom Post ID', callback_data: 'create:src:manual' }]);
         rows.push(CANCEL_ROW);
-        await ctx.reply('Pick a post from your Page:', { reply_markup: { inline_keyboard: rows } });
+        await ctx.reply('Bos pilih post dari Page bos ya:', { reply_markup: { inline_keyboard: rows } });
         ctx.wizard.state.postPickerShown = true;
         return;
       }
     } catch {}
   }
-  await ctx.reply('No posts found. Enter Post ID manually:', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
+  await ctx.reply('Maaf bos, nggak ada post ketemu 🙏 Bos masukin Post ID manual ya:', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
 });
 
 // Action: User selected a specific post — set state; step 7 detects and shows confirm
@@ -412,7 +412,7 @@ createCampaignScene.action(/^create:post:(?:([^:]+):)?(.+)$/, async (ctx) => {
   ctx.wizard.state.data.postAppId = appId && appId !== 'x' ? appId : null;
   ctx.wizard.state.creativeSource = 'post';
   ctx.wizard.state.confirmShown = false;
-  await ctx.reply(`Post dipilih: ${postId}${ctx.wizard.state.data.postAppId ? `\nApp pembuat post: ${ctx.wizard.state.data.postAppId}` : ''}`);
+  await ctx.reply(`Siap bos, post dipilih: ${postId} 🙏${ctx.wizard.state.data.postAppId ? `\nApp pembuat post: ${ctx.wizard.state.data.postAppId}` : ''}`);
 });
 
 // Action: Manual Post ID
@@ -420,7 +420,7 @@ createCampaignScene.action(/^create:src:manual$/, async (ctx) => {
   await ctx.answerCbQuery();
   ctx.wizard.state.creativeSource = 'manual';
   ctx.wizard.state.confirmShown = false;
-  await ctx.reply('Enter Post ID (e.g. 1234567890123456):', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
+  await ctx.reply('Bos masukin Post ID ya (misal 1234567890123456):', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
 });
 
 // Action: Custom creative type
@@ -434,8 +434,8 @@ createCampaignScene.action(/^create:src:custom:(.+)$/, async (ctx) => {
   ctx.wizard.state.creativeStep = ctype === 'text' ? 'headline' : 'media';
   if (ctype === 'text') {
     ctx.wizard.state.creativeStep = 'headline';
-    await ctx.reply('Text-only creative. Starting with headline.');
-    await ctx.reply('Headline (max 40 chars):');
+    await ctx.reply('Siap bos, kreatif teks aja. Saya mulai dari headline ya bos.');
+    await ctx.reply('Bos, headline-nya apa (max 40 karakter)?');
     return;
   }
   ctx.wizard.state.creativeStep = 'media';
@@ -491,7 +491,7 @@ createCampaignScene.action(/^create:edit:budget$/, async (ctx) => {
   ctx.wizard.state.confirmShown = false;
   await ctx.reply(
     `💰 <b>Ubah budget harian</b> (sekarang: <b>${fmtRp(ctx.wizard.state.data.dailyBudget)}</b>)\n\n` +
-    `Ketik angka baru, contoh: <b>50000</b>. Minimal Facebook: <b>${fmtRp(MIN_DAILY_BUDGET_IDR)}/hari</b>.`,
+    `Bos ketik angka baru ya, contoh: <b>50000</b>. Minimal Facebook: <b>${fmtRp(MIN_DAILY_BUDGET_IDR)}/hari</b> bos.`,
     { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
   );
 });
@@ -501,7 +501,7 @@ createCampaignScene.action(/^create:edit:name$/, async (ctx) => {
   await ctx.answerCbQuery();
   ctx.wizard.state.editingName = true;
   ctx.wizard.state.confirmShown = false;
-  await ctx.reply('📝 <b>Ketik nama campaign yang baru</b> (1-80 karakter):', { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
+  await ctx.reply('📝 <b>Bos ketik nama campaign yang baru ya</b> (1-80 karakter):', { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
 });
 
 // Action: Edit target audience dari layar konfirmasi.
@@ -510,7 +510,7 @@ createCampaignScene.action(/^create:edit:audience$/, async (ctx) => {
   ctx.wizard.state.editingAudience = true;
   ctx.wizard.state.confirmShown = false;
   await ctx.reply(
-    '👥 <b>Ubah target iklanmu</b> — balas dengan bahasa santai, contoh:\n' +
+    '👥 <b>Bos, ubah target iklannya</b> — balas dengan bahasa santai ya, contoh:\n' +
     '<i>"Indonesia, umur 20-35, cewek, suka fashion"</i>\n' +
     'atau ketik /skip buat default (Indonesia, 18-55, semua gender).',
     { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
@@ -525,16 +525,16 @@ createCampaignScene.action(/^create:bm:(.+)$/, async (ctx) => {
   const entry = (ctx.wizard.state.businessesByToken || []).find(b => b.business.id === businessId);
   if (entry) ctx.wizard.state.data.selectedToken = entry.token;
   const bmName = entry?.business?.name || businessId;
-  await ctx.reply(`Business Manager: ${bmName}`);
+  await ctx.reply(`Bos, Business Manager: ${bmName} 🙏`);
   const token = entry?.token || ctx.wizard.state.tokens?.[0];
   const accounts = await fetchBmAccountsForToken(token?.api, businessId);
-  if (accounts.length === 0) { await ctx.reply('No ad accounts for this BM. Connect via /settings.'); return ctx.scene.leave(); }
+  if (accounts.length === 0) { await ctx.reply('Maaf bos, nggak ada akun iklan buat BM ini 🙏 Hubungkan via /settings ya bos.'); return ctx.scene.leave(); }
   registerAccounts(ctx, token, accounts);
   ctx.wizard.state.accounts = accounts;
   const multiToken = (ctx.wizard.state.tokens?.length || 0) > 1;
   const kb = accounts.map(a => [{ text: `${multiToken && token ? '['+token.account.account_name+'] ' : ''}${a.name}`, callback_data: `create:acct:${a.id}` }]);
   kb.push(CANCEL_ROW);
-  await ctx.reply('Select an ad account:', { reply_markup: { inline_keyboard: kb } });
+  await ctx.reply('Bos pilih akun iklannya ya:', { reply_markup: { inline_keyboard: kb } });
   ctx.wizard.selectStep(2);
 });
 
@@ -549,8 +549,8 @@ createCampaignScene.action(/^create:acct:(.+)$/, async (ctx) => {
     ctx.wizard.state.data.accountCurrency = entry.account.currency || 'IDR';
   }
   const name = (ctx.wizard.state.accounts || []).find(a => a.id === accountId)?.name || accountId;
-  await ctx.reply(`Account: ${name}`);
-  await ctx.reply('Campaign Objective:', { reply_markup: { inline_keyboard: [...OBJECTIVES.map(o => [{ text: o.label, callback_data: `create:obj:${o.id}` }]), CANCEL_ROW] } });
+  await ctx.reply(`Siap bos, akun: ${name} 🙏`);
+  await ctx.reply('Bos, tujuan campaignnya apa?', { reply_markup: { inline_keyboard: [...OBJECTIVES.map(o => [{ text: o.label, callback_data: `create:obj:${o.id}` }]), CANCEL_ROW] } });
   ctx.wizard.selectStep(3);
 });
 
@@ -560,8 +560,8 @@ createCampaignScene.action(/^create:obj:(.+)$/, async (ctx) => {
   const obj = ctx.match[1];
   ctx.wizard.state.data.objective = obj;
   const label = OBJECTIVES.find(o => o.id === obj)?.label || obj;
-  await ctx.reply(`Objective: ${label}`);
-  await ctx.reply('Campaign Name (e.g. "Promo Lebaran 2025"):', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
+  await ctx.reply(`Siap bos, tujuan: ${label} 🙏`);
+  await ctx.reply('Bos, nama campaignnya apa (misal "Promo Lebaran 2025")?', { reply_markup: { inline_keyboard: [CANCEL_ROW] } });
   ctx.wizard.selectStep(4);
 });
 
@@ -572,7 +572,7 @@ createCampaignScene.action(/^create:go$/, async (ctx) => handleCreateGo(ctx));
 createCampaignScene.action(/^create:cancel$/, async (ctx) => {
   await ctx.answerCbQuery();
   ctx.wizard.state.data = {};
-  await ctx.reply('❌ Bikin campaign dibatalkan. Santai, nggak ada yang berubah di akun iklanmu.', {
+  await ctx.reply('❌ Siap bos, bikin campaign saya batalkan 🙏 Santai bos, nggak ada yang berubah di akun iklan bos.', {
     reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
   });
   try { await ctx.scene.leave(); } catch { /* ok */ }
@@ -581,7 +581,7 @@ createCampaignScene.action(/^create:cancel$/, async (ctx) => {
 async function handleCreateGo(ctx) {
   await ctx.answerCbQuery();
   const d = ctx.wizard.state.data;
-  if (!d.accountId || !d.objective || !d.name || !d.dailyBudget) { return ctx.reply('Incomplete data. Start again with /create.'); }
+  if (!d.accountId || !d.objective || !d.name || !d.dailyBudget) { return ctx.reply('Maaf bos, datanya belum lengkap 🙏 Mulai lagi dengan /create ya bos.'); }
   const selectedToken = d.selectedToken || ctx.wizard.state.tokens?.[0];
   const api = selectedToken?.api;
   try {
@@ -668,10 +668,10 @@ async function handleCreateGo(ctx) {
     } catch (creativeErr) {
       log.warn('Creative creation failed - campaign/adset still created', { error: creativeErr.message });
       const metaMsg = creativeErr.data?.error?.error_user_msg || creativeErr.data?.error?.message || creativeErr.message;
-      await ctx.reply(`Campaign & Ad Set created, but creative failed: ${esc(String(metaMsg)).slice(0, 200)}\n\nAdd a creative later from the Creative Library.`);
+      await ctx.reply(`Bos, campaign & Ad Set sudah saya bikinin, tapi kreatifnya gagal: ${esc(String(metaMsg)).slice(0, 200)}\n\nNanti bos tambahin kreatif dari Creative Library ya 🙏`);
     }
     await ctx.reply(
-      (adCreated ? '🎉 <b>Campaign jadi!</b>\n\n' : '✅ <b>Campaign & Ad Set jadi — iklannya belum.</b>\n\n') +
+      (adCreated ? '🎉 <b>Siap bos, campaign jadi!</b>\n\n' : '✅ <b>Bos, campaign & Ad Set jadi — iklannya belum.</b>\n\n') +
       `${esc(d.name)}\nOptimasi: ${esc(optimizationGoal)}${promotedObject ? ' (pixel)' : ''}\n${fmtRp(d.dailyBudget)}/hari — Status: PAUSED (aman, belum tayang)\n` +
       (pixelFallbackNote ? `${pixelFallbackNote}\n` : '') +
       (creativeFailNote ? `${esc(creativeFailNote)}\n` : '') +
@@ -704,26 +704,26 @@ async function handleCreateGo(ctx) {
       ctx.wizard.state.editingBudget = true;
       ctx.wizard.state.confirmShown = false;
       await ctx.reply(
-        `⚠️ <b>Anggaranmu di bawah minimal Facebook</b> (sekarang ${fmtRp(d.dailyBudget)}/hari, minimal ${fmtRp(MIN_DAILY_BUDGET_IDR)}/hari).\n\n` +
-        `Tenang, campaign-mu <b>belum dibuat</b> dan datanya aman. Ketik angka baru aja, contoh: <b>50000</b> — ` +
-        `nanti bot langsung lanjut ke layar konfirmasi, nggak perlu ulang dari awal.`,
+        `⚠️ <b>Maaf bos, anggarannya di bawah minimal Facebook</b> (sekarang ${fmtRp(d.dailyBudget)}/hari, minimal ${fmtRp(MIN_DAILY_BUDGET_IDR)}/hari) 🙏.\n\n` +
+        `Tenang bos, campaign-nya <b>belum saya buat</b> dan datanya aman. Bos ketik angka baru aja, contoh: <b>50000</b> — ` +
+        `nanti saya langsung lanjut ke layar konfirmasi, bos nggak perlu ulang dari awal 🙏`,
         { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
       );
       return;
     }
     if (isDevMode && /postingan|created by an app/.test(raw)) {
       await ctx.reply(
-        '⚠️ <b>Postingan itu nggak bisa dipakai buat iklan.</b>\n\nAplikasi yang nerbitin postingan itu masih mode development, jadi Meta nolak. Repost pakai aplikasi Live (atau pilih postingan lain).',
+        '⚠️ <b>Maaf bos, postingan itu nggak bisa saya pakai buat iklan 🙏.</b>\n\nAplikasi yang nerbitin postingan itu masih mode development, jadi Meta nolak bos. Repost pakai aplikasi Live ya bos (atau bos pilih postingan lain).',
         { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
       );
     } else if (isDevMode) {
       await ctx.reply(
-        '⚠️ <b>Meta App masih mode development.</b>\n\nUbah ke Live dulu di Meta App Dashboard, baru bikin campaign lagi.',
+        '⚠️ <b>Maaf bos, Meta App masih mode development 🙏.</b>\n\nBos ubah ke Live dulu di Meta App Dashboard ya, baru saya bikinin campaign lagi bos.',
         { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
       );
     } else {
       const detail = err.userMessage || err.data?.error?.error_user_msg || err.data?.error?.message || err.message;
-      await ctx.reply(`⚠️ <b>Gagal bikin campaign:</b> ${esc(detail).slice(0, 250)}\n\nCoba lagi atau hubungi admin kalau terus gagal.`, {
+      await ctx.reply(`⚠️ <b>Maaf bos, gagal saya bikinin campaign 🙏:</b> ${esc(detail).slice(0, 250)}\n\nBos coba lagi ya, atau hubungi admin kalau terus gagal.`, {
         parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
       });
     }

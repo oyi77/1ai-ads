@@ -24,9 +24,9 @@ export function handleSettings(deps) {
     const body = platformRows.map(r => `• ${r.label}: ${r.status}`).join('\n');
 
     return ctx.reply(
-      '🔧 <b>Pengaturan</b>\n\n' +
+      '🔧 <b>Bos, ini pengaturannya</b>\n\n' +
       `${body}\n\n` +
-      'Pencet platform di bawah buat hubungkan akun baru, atau kelola yang sudah ada:',
+      'Bos pencet platform di bawah buat hubungkan akun baru, atau kelola yang sudah ada ya bos:',
       {
         parse_mode: 'HTML',
         reply_markup: {
@@ -56,9 +56,9 @@ export function handleSettingsCallback(deps) {
         const rows = (deps.repos?.platformAccountsRepo?.findByUserId?.(ctx.userId) || [])
           .filter(a => a.platform === 'meta' && (a.credentials?.access_token || a.access_token));
         if (!rows.length) {
-          return ctx.reply('🔌 Belum ada koneksi Meta. Hubungkan dulu via /status → ➕ Tambah Akun.');
+          return ctx.reply('🔌 Bos, belum ada koneksi Meta. Hubungkan dulu ya bos via /status → ➕ Tambah Akun, biar saya bisa kerja.');
         }
-        await ctx.reply('🔄 Lagi narik data campaign dari Meta…');
+        await ctx.reply('🔄 Bos, saya narik data campaign dari Meta ya…');
         let synced = 0;
         let failed = 0;
         for (const acct of rows) {
@@ -100,14 +100,14 @@ export function handleSettingsCallback(deps) {
         }
         return ctx.reply(
           failed
-            ? `🔄 Sync selesai: ${synced} campaign ketarik, ${failed} koneksi gagal. Cek /status buat hasilnya.`
-            : `✅ Sync selesai: ${synced} campaign ketarik. Cek /status buat hasilnya.`
+            ? `🔄 Bos, sync selesai: ${synced} campaign ketarik, ${failed} koneksi gagal. Cek /status ya bos.`
+            : `✅ Bos, sync selesai: ${synced} campaign ketarik. Cek /status ya bos 🙏`
         );
       }
       case 'accounts': {
         const accounts = deps.repos?.platformAccountsRepo?.findByUserId?.(ctx.userId) || [];
         if (accounts.length === 0) {
-          return ctx.reply('📭 Belum ada akun terhubung. Pencet platform di atas buat hubungkan.', {
+          return ctx.reply('📭 Bos, belum ada akun terhubung. Pencet platform di atas buat saya hubungkan ya bos.', {
             reply_markup: {
               inline_keyboard: [
                 [{ text: '🔧 Pengaturan', callback_data: 'menu:settings' }],
@@ -117,7 +117,7 @@ export function handleSettingsCallback(deps) {
           });
         }
         const list = accounts.map(a => `• ${esc(a.account_name)} (${esc(a.platform)}) ${a.is_active ? '✅' : '⏸'}`).join('\n');
-        return ctx.reply(`📊 <b>Akun terhubung:</b>\n\n${list}`, {
+        return ctx.reply(`📊 <b>Bos, ini akun yang terhubung:</b>\n\n${list}`, {
           parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [
@@ -128,7 +128,7 @@ export function handleSettingsCallback(deps) {
         });
       }
       default:
-        return ctx.reply('⚠️ Pilihan nggak dikenal. Balik ke /menu ya.');
+        return ctx.reply('⚠️ Maaf bos, pilihan nggak saya kenal 🙏 Balik ke /menu ya bos.');
     }
   };
 }

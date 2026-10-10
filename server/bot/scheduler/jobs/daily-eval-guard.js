@@ -57,11 +57,11 @@ export function setupDailyEvalGuard(bot, deps) {
           `• <b>${esc(c.name)}</b>: ROAS ${c.roas.toFixed(2)}x, loss Rp ${Math.abs(c.profit).toLocaleString('id-ID')}`,
         );
         if (list.length > shown.length) {
-          lines.push(`…and ${list.length - shown.length} more`);
+          lines.push(`…dan ${list.length - shown.length} lagi bos`);
         }
-        const text = `🔴 <b>Daily Eval — ${list.length} underperformer(s)</b>\n${lines.join('\n')}`;
+        const text = `🔴 <b>Bos, Daily Eval — ${list.length} iklan jelek bos 🙏</b>\n${lines.join('\n')}\n\nSaran saya pause yang boncos biar budget aman bos. Bos ACC?`;
         // The admin fallback carries no campaign names.
-        const fallback = `🔴 <b>Daily Eval — ${list.length} underperformer(s)</b> (owner has no Telegram link)`;
+        const fallback = `🔴 <b>Bos, Daily Eval — ${list.length} iklan jelek</b> (owner belum link Telegram) bos`;
         const delivered = await ownerSend(bot, deps, ownerId, text, { parse_mode: 'HTML' }, fallback);
         notified += delivered ? list.length : 0;
         for (const c of list) {

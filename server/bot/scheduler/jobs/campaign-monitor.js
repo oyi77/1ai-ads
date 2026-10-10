@@ -77,7 +77,7 @@ export function setupCampaignMonitor(bot, deps) {
           const dedupKey = `campaign_monitor_alerted_${campaign.id}_${today}`;
           if (deps.repos?.settingsRepo?.get(dedupKey)) continue;
 
-          await ownerSend(bot, deps, campaign.user_id, `⚠️ <b>${campaign.name}</b>: ${stoploss.reason}`, { parse_mode: 'HTML' });
+          await ownerSend(bot, deps, campaign.user_id, `⚠️ <b>Bos, izin lapor bos 🙏 ${campaign.name}</b> lagi jelek bos: ${stoploss.reason}\n\nSaran saya pause dulu biar budget nggak kebakar bos. Gimana, saya bantu pause sekarang bos?`, { parse_mode: 'HTML' });
           deps.repos?.settingsRepo?.set(dedupKey, new Date().toISOString());
         }
 
@@ -92,7 +92,7 @@ export function setupCampaignMonitor(bot, deps) {
             // Dedup: max 1 scale alert per campaign per day
             const dedupKey = `campaign_monitor_scale_${campaign.id}_${today}`;
             if (!deps.repos?.settingsRepo?.get(dedupKey)) {
-              await ownerSend(bot, deps, campaign.user_id, `🚀 <b>${campaign.name}</b> eligible to scale!\n${scaleResult.reason}`, { parse_mode: 'HTML' });
+              await ownerSend(bot, deps, campaign.user_id, `🚀 <b>Bos, kabar bagus nih 🔥 ${campaign.name}</b> lagi bagus bos!\n${scaleResult.reason}\n\nWaktunya scale bos — saya gas sekarang bos?`, { parse_mode: 'HTML' });
               deps.repos?.settingsRepo?.set(dedupKey, new Date().toISOString());
             }
           }

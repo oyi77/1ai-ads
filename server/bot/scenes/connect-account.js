@@ -42,7 +42,7 @@ export async function validateMetaAccessToken(accessToken, fetchImpl = fetch) {
 }
 
 /** Shared scene-cancel callback — usable from any wizard via its own prefix. */
-export function handleSceneCancel(msg = '❌ Dibatalkan.') {
+export function handleSceneCancel(msg = '❌ Siap bos, saya batalkan 🙏') {
   return async (ctx) => {
     await ctx.answerCbQuery();
     await ctx.reply(msg);
@@ -56,13 +56,13 @@ export const connectScene = new Scenes.WizardScene(
   async (ctx) => {
     const platform = ctx.scene.state?.platform || ctx.wizard.state.platform;
     if (!platform) {
-      await ctx.reply('⚠️ Platform belum dipilih. Pencet tombol platform dari /start dulu ya.');
+      await ctx.reply('⚠️ Maaf bos, platformnya belum dipilih 🙏 Bos pencet tombol platform dari /start dulu ya bos.');
       return ctx.scene.leave();
     }
     ctx.wizard.state.platform = platform;
     await ctx.reply(
       `🔌 <b>Hubungkan ${escapeHtml(PLATFORM_NAMES[platform] || platform)}</b>\n\n` +
-      'Kasih nama buat koneksi ini ya (misal "Akun Toko Utama"). Cuma buat pengingat kamu aja:',
+      'Bos kasih nama buat koneksi ini ya (misal "Akun Toko Utama") bos. Cuma buat pengingat bos aja:',
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     return ctx.wizard.next();
@@ -71,14 +71,14 @@ export const connectScene = new Scenes.WizardScene(
   async (ctx) => {
     const text = ctx.message?.text?.trim();
     if (!text) {
-      await ctx.reply('Kirim nama buat koneksi ini ya (tulisan aja).');
+      await ctx.reply('Bos kirim nama buat koneksi ini ya (tulisan aja) bos.');
       return;
     }
     ctx.wizard.state.accountName = text;
     const platform = ctx.wizard.state.platform;
     const isMeta = platform === 'meta';
 
-    let msg = `Oke — <b>${escapeHtml(text)}</b>.\n\n`;
+    let msg = `Siap bos — <b>${escapeHtml(text)}</b> 🙏.\n\n`;
 
     if (isMeta) {
       msg +=
@@ -88,9 +88,9 @@ export const connectScene = new Scenes.WizardScene(
         '3. Klik "Generate Access Token"\n' +
         '4. Centang: ads_management, ads_read, business_management, pages_show_list\n' +
         '5. Tempel tokennya di sini\n\n' +
-        'Token dienkripsi dan cuma berlaku buat akun Telegram-mu.';
+        'Tenang bos, tokennya saya enkripsi dan cuma berlaku buat akun Telegram bos aja.';
     } else {
-      msg += 'Sekarang tempel access token / API key akun ini. Dienkripsi dan cuma buat kamu.';
+      msg += 'Sekarang bos tempel access token / API key akun ini ya. Saya enkripsi, cuma buat bos aja.';
     }
 
     await ctx.reply(msg, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } });
@@ -100,7 +100,7 @@ export const connectScene = new Scenes.WizardScene(
   async (ctx) => {
     const token = sanitizeAccessToken(ctx.message?.text);
     if (!token) {
-      await ctx.reply('Tempel access token-nya ya (tulisan aja).');
+      await ctx.reply('Bos, tempel access token-nya ya (tulisan aja) bos.');
       return;
     }
     const { platform, accountName } = ctx.wizard.state;
@@ -110,13 +110,13 @@ export const connectScene = new Scenes.WizardScene(
         await verifyMetaTokenApp(token);
       } catch (err) {
         log.warn('Meta token rejected before persistence', { userId: ctx.userId, error: err.message });
-        await ctx.reply(`Token ditolak: ${err.message}\n\nPastikan token dibuat dari APLIKASI YANG SUDAH LIVE (bukan mode pengembangan) — karena kalau app-nya masih dev-mode, kreatif iklan nanti 1885183.`);
+        await ctx.reply(`Maaf bos, tokennya ditolak Meta 🙏 (${err.message})\n\nBos pastikan tokennya dibuat dari aplikasi yang sudah LIVE ya bos (bukan mode pengembangan) — soalnya kalau app-nya masih dev-mode, kreatif iklan bos nanti error 1885183. Saya tunggu token fresh-nya ya bos.`);
         return;
       }
     }
     const repo = ctx.deps?.repos?.platformAccountsRepo;
     if (!repo) {
-      await ctx.reply('⚠️ Storage unavailable. Please try again later.');
+      await ctx.reply('⚠️ Maaf bos, penyimpanannya lagi bermasalah 🙏 Coba lagi nanti ya bos.');
       return ctx.scene.leave();
     }
     try {
@@ -144,28 +144,28 @@ export const connectScene = new Scenes.WizardScene(
         try {
           const live = await MetaAdsAPI.withToken(token).getAdAccounts();
           foundNote = live.length > 0
-            ? `\n\n🎉 Token kamu kebaca <b>${live.length} akun iklan</b>: ${live.slice(0, 3).map(a => escapeHtml(a.name || a.id)).join(', ')}${live.length > 3 ? `, dan ${live.length - 3} lainnya` : ''}.`
-            : `\n\n📭 Token valid, tapi <b>belum ada akun iklan yang kebaca</b> dari token ini.`;
+            ? `\n\n🎉 Mantap bos, tokennya kebaca <b>${live.length} akun iklan</b>: ${live.slice(0, 3).map(a => escapeHtml(a.name || a.id)).join(', ')}${live.length > 3 ? `, dan ${live.length - 3} lainnya` : ''}.`
+            : `\n\n📭 Bos, tokennya valid, tapi <b>belum ada akun iklan yang kebaca</b> dari token ini.`;
         } catch { /* live check best-effort — pesan sukses tetap terkirim */ }
       }
       await ctx.reply(
-        `✅ <b>${escapeHtml(accountName)}</b> berhasil dihubungkan untuk ${escapeHtml(PLATFORM_NAMES[platform] || platform)}!` +
+        `✅ <b>Siap bos, ${escapeHtml(accountName)}</b> sudah saya hubungkan untuk ${escapeHtml(PLATFORM_NAMES[platform] || platform)}! 🙏` +
         foundNote +
-        `\n\n💡 <b>Kok akun saya yang lain belum muncul?</b>\n` +
-        `Bot hanya membaca akun iklan yang <b>token-nya terhubung</b> — biasanya semua akun dalam <b>1 Business Manager yang sama</b>.\n` +
-        `Caranya: buka <b>Business Manager → Business Settings → Ad Accounts</b>, pastikan akunnya ada di BM itu, ` +
+        `\n\n💡 <b>Bos, kok akun bos yang lain belum muncul?</b>\n` +
+        `Saya cuma bisa baca akun iklan yang <b>token-nya terhubung</b> bos — biasanya semua akun dalam <b>1 Business Manager yang sama</b>.\n` +
+        `Caranya bos: buka <b>Business Manager → Business Settings → Ad Accounts</b>, pastikan akunnya ada di BM itu, ` +
         `lalu hubungkan token dari BM yang sama via /status → ➕ Tambah Akun.` +
-        `\n\nLihat ringkasannya di /status.`,
+        `\n\nBos lihat ringkasannya di /status ya 🙏`,
         { parse_mode: 'HTML' }
       );
     } catch (err) {
       log.error('Failed to store platform account', { userId: ctx.userId, platform, error: err.message });
-      await ctx.reply('⚠️ Could not save the connection. Please try again or use the web dashboard.');
+      await ctx.reply('⚠️ Maaf bos, gagal saya simpan koneksinya 🙏 Coba lagi ya bos, atau pakai dashboard web.');
     }
     return ctx.scene.leave();
   }
 );
 
-connectScene.action(/^connect:cancel$/, handleSceneCancel('❌ Koneksi dibatalkan.'));
+connectScene.action(/^connect:cancel$/, handleSceneCancel('❌ Siap bos, koneksinya saya batalkan 🙏'));
 
 export default connectScene;

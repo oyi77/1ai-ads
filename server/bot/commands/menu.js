@@ -64,7 +64,7 @@ export function manageMenuKeyboard() {
 export function handleMenu() {
   return async (ctx) => {
     await ctx.reply(
-      '📋 <b>Menu AdForge</b>\n\nMau ngapain hari ini? Pilih di bawah ya:',
+      '📋 <b>Siap bos, ini menunya!</b>\n\nBos mau saya kerjain apa hari ini bos? Tinggal pencet di bawah ya bos:',
       {
         parse_mode: 'HTML',
         reply_markup: mainMenuKeyboard(),
@@ -92,7 +92,7 @@ export function handleMenuButton(deps) {
       case 'create':
         return ctx.scene.enter('create-campaign');
       case 'manage':
-        return ctx.reply('🛠️ <b>Kelola Iklan</b>\n\nFitur lanjutan — pilih yang mau dibuka:', {
+        return ctx.reply('🛠️ <b>Kelola Iklan</b>\n\nBos, ini perkakas lanjutannya — tinggal pilih yang mau saya bukain bos:', {
           parse_mode: 'HTML', reply_markup: manageMenuKeyboard(),
         });
       case 'connect':
@@ -114,7 +114,7 @@ export function handleMenuButton(deps) {
       case 'help':
         return handleHelp()(ctx);
       default:
-        return ctx.reply('⚠️ Nggak kenal pilihan itu. Buka /menu buat lihat pilihan yang ada.');
+        return ctx.reply('⚠️ Maaf bos, pilihan itu saya nggak kenal 🙏 Buka /menu biar saya tunjukin pilihannya ya bos.');
     }
   };
 }
@@ -131,7 +131,7 @@ async function sendPlatformChoice(ctx) {
   }
   inline_keyboard.push([{ text: '⬅️ Menu', callback_data: 'quick:menu' }]);
   await ctx.reply(
-    '🔗 <b>Hubungkan Akun Iklan</b>\n\nPilih platform yang mau dihubungkan:',
+    '🔗 <b>Hubungkan Akun Iklan</b>\n\nBos, pilih platform yang mau saya hubungkan buat bos:',
     {
       parse_mode: 'HTML',
       reply_markup: { inline_keyboard },
@@ -141,7 +141,7 @@ async function sendPlatformChoice(ctx) {
 
 async function handleReportsAction(ctx, deps) {
   if (deps) return handleAdsReport(deps)(ctx);
-  return ctx.reply('📈 Laporan lengkap ada di /menu → Mini App atau buka di browser buat analitik detail.');
+  return ctx.reply('📈 Bos, laporan lengkapnya sudah saya siapin di /menu → Mini App ya bos, atau bos buka di browser buat analitik detailnya.');
 }
 
 async function handleOptimizeAction(ctx, deps, scope) {

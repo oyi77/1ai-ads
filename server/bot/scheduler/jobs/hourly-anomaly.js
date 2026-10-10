@@ -75,11 +75,11 @@ export function setupHourlyAnomaly(bot, deps) {
               if (!report.supported || !report.anomalies?.length) continue;
 
               const lines = [
-                `🚨 <b>Anomali Terdeteksi — ${esc(report.accountName)} (${platform})</b>`,
-                `💰 Spend hari ini: ${fmtRp(report.summary.spend)} · ROAS ${fmtRoas2(report.summary.roas)}`,
+                `🚨 <b>Bos, izin lapor 🙏 Anomali Terdeteksi — ${esc(report.accountName)} (${platform})</b>`,
+                `💰 Bos, spend hari ini: ${fmtRp(report.summary.spend)} · ROAS ${fmtRoas2(report.summary.roas)}`,
                 ...report.anomalies.map(a => `⚠️ ${esc(a)}`),
                 '',
-                `<i>Cek /reports di Mini App untuk detail.</i>`,
+                `<i>Bos cek /reports di Mini App ya buat detailnya, saya siapin di sana bos.</i>`,
               ];
               await bot.telegram.sendMessage(user.telegram_id, lines.join('\n'), { parse_mode: 'HTML' });
               settingsRepo.set(dedupKey, new Date().toISOString());

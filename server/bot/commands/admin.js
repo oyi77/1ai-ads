@@ -12,7 +12,7 @@ export function handleAdminStats(deps) {
     const userId = ctx.from?.id;
     const adminIds = (process.env.ADMIN_USER_IDS || '').split(',').map(Number).filter(Boolean);
     if (!adminIds.includes(userId)) {
-      return ctx.reply('⛔ Admin only.');
+      return ctx.reply('⛔ Maaf bos, ini cuma buat admin.');
     }
 
     try {
@@ -29,7 +29,7 @@ export function handleAdminStats(deps) {
         { parse_mode: 'HTML' }
       );
     } catch {
-      return ctx.reply('⚠️ Gagal muat statistik admin.');
+      return ctx.reply('⚠️ Maaf bos, statistik admin gagal saya muat 🙏');
     }
   };
 }
@@ -39,15 +39,15 @@ export function handleAdminUsers(deps) {
     const userId = ctx.from?.id;
     const adminIds = (process.env.ADMIN_USER_IDS || '').split(',').map(Number).filter(Boolean);
     if (!adminIds.includes(userId)) {
-      return ctx.reply('⛔ Admin only.');
+      return ctx.reply('⛔ Maaf bos, ini cuma buat admin.');
     }
 
     try {
       const users = deps.repos?.usersRepo?.findAll?.() || [];
       const list = users.slice(0, 20).map(u => `• ${esc(u.username)} (${esc(u.role || 'user')})`).join('\n');
-      return ctx.reply(`👥 <b>Users (${users.length}):</b>\n\n${list || 'Belum ada user.'}`, { parse_mode: 'HTML' });
+      return ctx.reply(`👥 <b>Bos, ini daftar user (${users.length}):</b>\n\n${list || 'Belum ada user.'}`, { parse_mode: 'HTML' });
     } catch {
-      return ctx.reply('⚠️ Gagal muat daftar user.');
+      return ctx.reply('⚠️ Maaf bos, daftar user gagal saya muat 🙏');
     }
   };
 }
@@ -57,12 +57,12 @@ export function handleAdminBroadcast(deps) {
     const userId = ctx.from?.id;
     const adminIds = (process.env.ADMIN_USER_IDS || '').split(',').map(Number).filter(Boolean);
     if (!adminIds.includes(userId)) {
-      return ctx.reply('⛔ Admin only.');
+      return ctx.reply('⛔ Maaf bos, ini cuma buat admin.');
     }
 
     const text = (ctx.message?.text || '').replace(/^\/admin_broadcast\s*/, '').trim();
     if (!text) {
-      return ctx.reply('📢 Fitur broadcast — kirim pesan ke semua user. Cara: /admin_broadcast <pesan>');
+      return ctx.reply('📢 Bos, ini fitur broadcast — saya kirimin pesan ke semua user. Cara: /admin_broadcast <pesan>');
     }
 
     try {
@@ -82,9 +82,9 @@ export function handleAdminBroadcast(deps) {
           failed++;
         }
       }
-      return ctx.reply(`📢 Broadcast kekirim ke ${sent} user${failed ? `, ${failed} gagal` : ''}.`);
+      return ctx.reply(`📢 Bos, broadcast sudah saya kirim ke ${sent} user${failed ? `, ${failed} gagal` : ''} 🙏`);
     } catch (err) {
-      return ctx.reply(`⚠️ Broadcast gagal: ${err?.message || 'error tidak dikenal'}`);
+      return ctx.reply(`⚠️ Maaf bos, broadcast gagal: ${err?.message || 'error tidak dikenal'} 🙏`);
     }
   };
 }

@@ -27,7 +27,7 @@ export function setupSubscriptionCheck(bot, deps) {
           if (u.telegram_id && bot.telegram) {
             await bot.telegram.sendMessage(
               u.telegram_id,
-              `⏰ Paket <b>${u.plan}</b> kamu sudah berakhir.\n\nPerpanjang untuk mempertahankan fitur Pro:\n👉 ${process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com'}/billing`,
+              `⏰ Maaf bos, paket <b>${u.plan}</b> bos sudah berakhir 🙏\n\nBos perpanjang ya buat pertahankan fitur Pro:\n👉 ${process.env.WEB_APP_URL || 'https://adforge.aitradepulse.com'}/billing`,
               { parse_mode: 'HTML' }
             ).catch(() => {});
           }
@@ -49,7 +49,7 @@ export function setupSubscriptionCheck(bot, deps) {
         return (expiresAt - now) < EXPIRY_WINDOW_MS;
       });
       if (expiring.length > 0) {
-        await safeSend(bot, `💳 ${expiring.length} subscription(s) expiring within 7 days`);
+        await safeSend(bot, `💳 Bos, ${expiring.length} langganan mau habis dalam 7 hari bos.`, { parse_mode: 'HTML' });
       }
 
       // Rekonsiliasi pending: poll provider untuk order pending/processing

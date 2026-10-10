@@ -55,11 +55,11 @@ export function calculateCampaignStats(campaigns) {
  */
 export function formatDailyReport(stats, date = new Date().toISOString().split('T')[0]) {
   const lines = [
-    `📊 <b>Daily Report — ${date}</b>`,
+    `📊 <b>Bos, ini Laporan Harian saya — ${date} 🙏</b>`,
     '',
-    `Campaigns: ${stats.activeCampaigns} active / ${stats.totalCampaigns} total`,
-    `Spend: Rp ${stats.totalSpend.toLocaleString('id-ID')}`,
-    `Revenue: Rp ${stats.totalRevenue.toLocaleString('id-ID')}`,
+    `Campaign bos: ${stats.activeCampaigns} nyala / ${stats.totalCampaigns} total`,
+    `Belanja: Rp ${stats.totalSpend.toLocaleString('id-ID')}`,
+    `Pemasukan: Rp ${stats.totalRevenue.toLocaleString('id-ID')}`,
     `ROAS: ${stats.avgROAS.toFixed(2)}x`,
     '',
   ];
@@ -67,7 +67,7 @@ export function formatDailyReport(stats, date = new Date().toISOString().split('
   // Top 5 by ROAS
   const top = [...stats.campaigns].sort((a, b) => b.roas - a.roas).slice(0, 5);
   if (top.length > 0) {
-    lines.push('<b>Top Campaigns:</b>');
+    lines.push('<b>Bos, ini campaign paling cuan:</b>');
     top.forEach((c, i) => {
       lines.push(`${i + 1}. ${c.name} — ROAS ${c.roas.toFixed(2)}x (Rp ${c.spend.toLocaleString('id-ID')})`);
     });

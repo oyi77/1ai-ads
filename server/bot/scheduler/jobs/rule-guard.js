@@ -106,10 +106,10 @@ export function setupRuleGuard(bot, deps) {
           const telegramId = deps.repos?.usersRepo?.getTelegramIdByUserId?.(ownerId)
             || deps.repos?.usersRepo?.findById?.(ownerId)?.telegram_id;
           if (!telegramId) {
-            await safeSend(bot, `⚠️ <b>${esc(campaign.name)}</b> kena aturan <b>${esc(rule.name)}</b> — nunggu persetujuan di /menu → Mini App`, { parse_mode: 'HTML' });
+            await safeSend(bot, `⚠️ <b>Bos, ${esc(campaign.name)}</b> kena aturan <b>${esc(rule.name)}</b> bos — saya tunggu ACC bos di /menu → Mini App ya 🙏`, { parse_mode: 'HTML' });
             continue;
           }
-          const text = `⚠️ <b>${esc(campaign.name)}</b> kena aturan "${esc(rule.name)}"\n${esc(condText)} → <b>${esc(actText)}</b>\n\n<i>Aturan bot (bukan aturan Facebook). Pencet ✅ buat jalanin, ❌ buat batalin:</i>`;
+          const text = `⚠️ <b>Bos, izin lapor bos 🙏 ${esc(campaign.name)}</b> kena aturan "${esc(rule.name)}"\n${esc(condText)} → <b>${esc(actText)}</b>\n\n<i>Bos, ini aturan bot saya (bukan aturan Facebook). Bos pencet ✅ biar saya jalanin, ❌ biar saya batalin ya bos:</i>`;
           try {
             await bot.telegram.sendMessage(telegramId, text, {
               parse_mode: 'HTML',
@@ -122,13 +122,13 @@ export function setupRuleGuard(bot, deps) {
             });
           } catch (err) {
             log.error('Failed to send approval prompt to owner', { telegramId, error: err.message });
-            await safeSend(bot, `⚠️ <b>${esc(campaign.name)}</b> matched rule <b>${esc(rule.name)}</b> — draft awaiting approval in /menu → Mini App`, { parse_mode: 'HTML' });
+            await safeSend(bot, `⚠️ <b>Bos, ${esc(campaign.name)}</b> kena aturan <b>${esc(rule.name)}</b> — drafnya saya tunggu ACC bos di /menu → Mini App ya 🙏`, { parse_mode: 'HTML' });
           }
         }
         if (skippedOverflow > 0) {
           const telegramId2 = deps.repos?.usersRepo?.getTelegramIdByUserId?.(ownerId)
             || deps.repos?.usersRepo?.findById?.(ownerId)?.telegram_id;
-          const sumText = `⚠️ Aturan "<b>${esc(rule.name)}</b>" match <b>${draftsCreated + skippedOverflow} campaign</b> — 10 draft pertama dikirim, <b>${skippedOverflow} lainnya</b> nunggu di 📋 Aturanku → 📊 Kinerja. Cek & approve dari sana ya.`;
+          const sumText = `⚠️ <b>Bos, aturan "${esc(rule.name)}"</b> kena di <b>${draftsCreated + skippedOverflow} campaign</b> — 10 draf pertama saya kirim, <b>${skippedOverflow} lainnya</b> nunggu di 📋 Aturanku → 📊 Kinerja. Bos cek & ACC dari sana ya 🙏`;
           try {
             if (telegramId2 && bot.telegram) await bot.telegram.sendMessage(telegramId2, sumText, { parse_mode: 'HTML' });
             else await safeSend(bot, sumText, { parse_mode: 'HTML' });

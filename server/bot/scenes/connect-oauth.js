@@ -19,7 +19,7 @@ export const connectOAuthScene = new Scenes.WizardScene(
   async (ctx) => {
     const platform = ctx.scene.state?.platform || ctx.wizard.state.platform;
     if (!platform || !PLATFORM_LABELS[platform]) {
-      await ctx.reply('⚠️ Platform nggak dikenal. Mulai lagi dari /start ya.');
+      await ctx.reply('⚠️ Maaf bos, platformnya nggak saya kenal 🙏 Mulai lagi dari /start ya bos.');
       return ctx.scene.leave();
     }
     ctx.wizard.state.platform = platform;
@@ -35,10 +35,10 @@ export const connectOAuthScene = new Scenes.WizardScene(
     };
 
     await ctx.reply(
-      `🔌 <b>Hubungkan ${PLATFORM_LABELS[platform]} via OAuth</b>\n\n` +
-      `Pencet tombol di bawah biar AdForge bisa akses akun ${PLATFORM_LABELS[platform]}-mu.\n` +
-      `Kamu bakal dibuka ke ${PLATFORM_LABELS[platform]} buat login dan kasih izin.\n\n` +
-      `Abis itu kamu balik lagi dan bot konfirmasi koneksinya.`,
+      `🔌 <b>Bos, saya hubungkan ${PLATFORM_LABELS[platform]} via OAuth ya</b>\n\n` +
+      `Bos pencet tombol di bawah ya biar saya bisa akses akun ${PLATFORM_LABELS[platform]} bos.\n` +
+      `Bos bakal dibuka ke ${PLATFORM_LABELS[platform]} buat login dan kasih izin ya bos.\n\n` +
+      `Abis itu bos balik lagi ya, saya konfirmasi koneksinya bos.`,
       { parse_mode: 'HTML', reply_markup: keyboard }
     );
 
@@ -50,9 +50,9 @@ export const connectOAuthScene = new Scenes.WizardScene(
     // If user sends anything here, remind them to use the button.
     const platform = ctx.wizard.state.platform;
     await ctx.reply(
-      `Pencet tombol di atas buat hubungkan ${PLATFORM_LABELS[platform]}. ` +
-      `Kalau udah selesai di browser, koneksinya muncul di /status bentar lagi. ` +
-      `Ketik /done kalau udah selesai biar keluar dari sini.`,
+      `Bos pencet tombol di atas ya buat hubungkan ${PLATFORM_LABELS[platform]}. ` +
+      `Kalau bos udah selesai di browser, koneksinya muncul di /status bentar lagi bos. ` +
+      `Bos ketik /done ya kalau udah selesai biar saya keluar dari sini bos.`,
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [CANCEL_ROW] } }
     );
     // Stay in this step, but never trap the user: any /command (handled by
@@ -62,13 +62,13 @@ export const connectOAuthScene = new Scenes.WizardScene(
 );
 
 connectOAuthScene.command('done', async (ctx) => {
-  await ctx.reply('✅ Selesai. Cek /status untuk akun yang baru terhubung.');
+  await ctx.reply('✅ Siap bos, selesai! Bos cek /status ya buat akun yang baru terhubung 🙏');
   return ctx.scene.leave();
 });
 
 connectOAuthScene.action(/^connect:cancel$/, async (ctx) => {
   await ctx.answerCbQuery();
-  await ctx.reply('❌ Koneksi dibatalkan.');
+  await ctx.reply('❌ Siap bos, koneksinya saya batalkan 🙏');
   return ctx.scene.leave();
 });
 

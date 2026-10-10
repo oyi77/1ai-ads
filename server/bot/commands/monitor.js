@@ -79,13 +79,13 @@ function relTime(iso) {
   return `${d} hari lalu`;
 }
 const MONITOR_HEADER =
-  '⚡ <b>Aturan Otomatis</b>\n\n' +
-  'Bikin aturan biar bot jagain campaign-mu 24/7:\n\n' +
+  '⚡ <b>Bos, ini Aturan Otomatis</b>\n\n' +
+  'Saya jagain campaign bos 24/7 bos, tinggal bos bikin aturannya:\n\n' +
   '• <b>Delivery</b> — Impresi, klik, reach, frekuensi\n' +
   '• <b>Konversi</b> — CTR, CVR\n' +
   '• <b>Biaya</b> — CPC, CPM, CPA\n' +
   '• <b>Efisiensi</b> — ROAS, ROI\n\n' +
-  'Pilih aksi di bawah ya:';
+  'Bos pilih aksi di bawah ya bos:';
 
 const INTERVAL_LABELS = {
   0: 'Ngikutin pacing FB',
@@ -270,7 +270,7 @@ async function showAccountStep(ctx, deps) {
   // Langkah 1 bikin rule: PILIH AKUN dulu (live dari Meta, bukan nama koneksi).
   const accounts = metaAccounts(deps, ctx.userId);
   if (!accounts.length) {
-    return ctx.reply('🔌 Hubungkan akun Meta dulu via /status → ➕ Tambah Akun, baru bisa bikin aturan.', {
+    return ctx.reply('🔌 Bos, hubungkan akun Meta dulu ya bos via /status → ➕ Tambah Akun, baru saya bisa bikin aturan.', {
       reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
     });
   }
@@ -301,7 +301,7 @@ async function showAccountStep(ctx, deps) {
   ctx.session = ctx.session || {};
   ctx.session.ruleBuilder = {};
   return ctx.reply(
-    '🎯 <b>Bikin Aturan Baru — Langkah 1/5: buat akun iklan mana?</b>\n\nPilih akun yang mau dijaga aturannya:',
+    '🎯 <b>Bos, Bikin Aturan Baru — Langkah 1/5: akun iklan mana bos?</b>\n\nBos pilih akun yang mau saya jagain:',
     { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
   );
 }
@@ -341,7 +341,7 @@ async function showMetricsInCategory(ctx, deps, categoryId) {
 async function showOperators(ctx, deps, metric) {
   const scope = await scopedLabel(ctx, deps);
   const m = METRICS[metric];
-  if (!m) return ctx.reply('⚠️ Metrik nggak dikenal. Ulangi dari /monitor.');
+  if (!m) return ctx.reply('⚠️ Maaf bos, metriknya nggak saya kenal 🙏 Ulangi dari /monitor ya bos.');
   const keyboard = [
     [{ text: '> (lebih dari)', callback_data: `rule:add:op:${metric}:gt` }],
     [{ text: '< (kurang dari)', callback_data: `rule:add:op:${metric}:lt` }],
@@ -362,7 +362,7 @@ function showTemplates(ctx) {
   keyboard.push([{ text: '⬅️ Kembali', callback_data: 'menu:monitor' }]);
   keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
   return ctx.reply(
-    '📦 <b>Template Aturan</b>\n\nAturan siap pakai — pencet satu, lalu pilih buat akun mana:\n\n' +
+    '📦 <b>Bos, ini Template Aturan</b>\n\nAturan siap pakai bos — pencet satu, lalu pilih buat akun mana:\n\n' +
     '• ROAS Guard — Pause kalau ROAS &lt; 1x\n' +
     '• Frequency Cap — Pause kalau frekuensi &gt; 5\n' +
     '• High CTR Alert — CTR &gt; 5%\n' +
@@ -495,7 +495,7 @@ export async function showFbRulesForAccount(ctx, deps, accountId) {
   const g = (groups || []).find(x => String(x.accountId) === String(accountId)
     || String(x.accountId).replace(/^act_/, '') === String(accountId).replace(/^act_/, ''));
   if (!g) {
-    return ctx.reply('📌 Aturan Facebook buat akun ini nggak ketemu (mungkin token mati / izin kurang).', {
+    return ctx.reply('📌 Maaf bos, aturan Facebook buat akun ini nggak ketemu 🙏 Mungkin token mati atau izin kurang bos.', {
       parse_mode: 'HTML',
       reply_markup: { inline_keyboard: [[{ text: '📋 Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
     });
@@ -505,7 +505,7 @@ export async function showFbRulesForAccount(ctx, deps, accountId) {
     return `${s.active ? '🟢' : '⚪️'} <b>${esc(fb.name || 'Aturan Facebook')}</b>\n   ${esc(s.text)}`;
   });
   return ctx.reply(
-    `📌 <b>Aturan Facebook — ${esc(g.accountName)}</b>\n<i>Read-only, jalan di Facebook. Bot nggak ganggu.</i>\n\n${rows.join('\n\n') || '📭 Nggak ada.'}`,
+    `📌 <b>Bos, Aturan Facebook — ${esc(g.accountName)}</b>\n<i>Read-only, jalan di Facebook. Saya nggak ganggu bos.</i>\n\n${rows.join('\n\n') || '📭 Nggak ada bos.'}`,
     {
       parse_mode: 'HTML',
       reply_markup: { inline_keyboard: [[{ text: '⬅️ Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
@@ -517,7 +517,7 @@ async function showAccountPicker(ctx, deps) {
   // Lihat aturan per akun: daftar LIVE ad accounts (nama asli Meta).
   const accounts = metaAccounts(deps, ctx.userId);
   if (!accounts.length) {
-    return ctx.reply('🔌 Hubungkan akun Meta dulu via /status → ➕ Tambah Akun.', {
+    return ctx.reply('🔌 Bos, hubungkan akun Meta dulu ya bos via /status → ➕ Tambah Akun.', {
       reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
     });
   }
@@ -550,7 +550,7 @@ async function showAccountPicker(ctx, deps) {
   void liveNames;
   keyboard.push([{ text: '⬅️ Kembali', callback_data: 'menu:monitor' }]);
   keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
-  return ctx.reply('⚙️ <b>Lihat Aturan per Akun</b>\n\nPilih akun iklannya:', { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
+  return ctx.reply('⚙️ <b>Bos, Lihat Aturan per Akun</b>\n\nBos pilih akun iklannya ya:', { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } });
 }
 
 async function showRulesForAccount(deps, userId, accountId) {
@@ -593,7 +593,7 @@ export async function showRuleHistory(ctx, deps) {
   const accounts = metaAccounts(deps, ctx.userId);
   const liveNames = await liveAdAccountNames(deps, ctx.userId);
   if (!rules.length) {
-    return ctx.reply('📭 Belum ada aturan. Bikin dulu via ➕ Bikin Aturan.', {
+    return ctx.reply('📭 Bos, belum ada aturan. Bikin dulu ya bos via ➕ Bikin Aturan.', {
       reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
     });
   }
@@ -625,7 +625,7 @@ export async function showRuleHistory(ctx, deps) {
     }
     lines.push('');
   }
-  return ctx.reply(`📊 <b>Kinerja Aturan (30 hari terakhir data)</b>\n\n${lines.join('\n')}`, {
+  return ctx.reply(`📊 <b>Bos, ini Kinerja Aturan (30 hari terakhir data)</b>\n\n${lines.join('\n')}`, {
     parse_mode: 'HTML',
     reply_markup: {
       inline_keyboard: [
@@ -665,7 +665,7 @@ export function handleMonitorCallback(deps) {
       const parts = action.split(':');
       const metric = parts[2];
       const op = parts[3];
-      if (!metric || !METRICS[metric] || !op) return ctx.reply('⚠️ Pilihan nggak valid. Ulangi dari /monitor → ➕ Bikin Aturan.');
+      if (!metric || !METRICS[metric] || !op) return ctx.reply('⚠️ Maaf bos, pilihan nggak valid 🙏 Ulangi dari /monitor → ➕ Bikin Aturan ya bos.');
       ctx.session = ctx.session || {};
       // JANGAN reset accountId — itu dipilih di langkah 1.
       ctx.session.ruleBuilder = { ...(ctx.session.ruleBuilder || {}), metric, operator: op };
@@ -699,8 +699,8 @@ export function handleMonitorCallback(deps) {
     if (action.startsWith('toggle:')) {
       const ruleId = action.split(':')[1];
       const rule = deps.repos.rulesRepo.getById(ruleId);
-      if (!rule) return ctx.reply('⚠️ Aturan nggak ketemu.');
-      if (rule.userId && rule.userId !== ctx.userId) return ctx.reply('⚠️ Aturan nggak ketemu.');
+      if (!rule) return ctx.reply('⚠️ Maaf bos, aturannya nggak ketemu 🙏');
+      if (rule.userId && rule.userId !== ctx.userId) return ctx.reply('⚠️ Maaf bos, aturannya nggak ketemu 🙏');
       // Toggle-ON gate: nyalakan rule ke-4+ di paket free -> tolak (anti rotasi bypass).
       if (!rule.enabled) {
         const quotaHitTgl = ruleQuotaCheck(deps, ctx);
@@ -709,7 +709,7 @@ export function handleMonitorCallback(deps) {
         }
       }
       deps.repos.rulesRepo.update(ruleId, { enabled: !rule.enabled });
-      return ctx.reply(`✅ Aturan <b>${esc(rule.name)}</b> ${rule.enabled ? 'dimatikan' : 'dinyalakan'}.`, {
+      return ctx.reply(`✅ Siap bos, aturan <b>${esc(rule.name)}</b> sudah saya ${rule.enabled ? 'matiin' : 'nyalain'} 🙏`, {
         parse_mode: 'HTML',
         reply_markup: { inline_keyboard: [[{ text: '📋 Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
       });
@@ -803,14 +803,14 @@ export function handleMonitorCallback(deps) {
           log.warn('Sync failed for account', { adAccountId: t.adAccountId, error: e.message });
         }
       }
-      return ctx.reply(`🔄 Sync selesai: ${synced} campaign ketarik dari Meta${failed ? `, ${failed} gagal` : ''}. Cek /status buat hasilnya.`);
+      return ctx.reply(`🔄 Bos, sync selesai: ${synced} campaign ketarik dari Meta${failed ? `, ${failed} gagal` : ''}. Cek /status ya bos 🙏`);
     }
-    return ctx.reply('⚠️ Pilihan nggak dikenal. Balik ke /monitor ya.');
+    return ctx.reply('⚠️ Maaf bos, pilihan nggak saya kenal 🙏 Balik ke /monitor ya bos.');
   };
 }
 async function showActionPicker(ctx, deps) {
   const rb = ctx.session?.ruleBuilder;
-  if (!rb) return ctx.reply('⚠️ Sesi habis. Ulangi dari /monitor.');
+  if (!rb) return ctx.reply('⚠️ Maaf bos, sesi bos habis 🙏 Ulangi dari /monitor ya bos.');
   const scope = await scopedLabel(ctx, deps);
   const keyboard = [
     [{ text: '🔴 Pause', callback_data: 'rule:add:action:pause' }],
@@ -832,7 +832,7 @@ async function showActionPicker(ctx, deps) {
 
 async function showIntervalPicker(ctx, deps) {
   const rb = ctx.session?.ruleBuilder;
-  if (!rb) return ctx.reply('⚠️ Sesi habis. Ulangi dari /monitor.');
+  if (!rb) return ctx.reply('⚠️ Maaf bos, sesi bos habis 🙏 Ulangi dari /monitor ya bos.');
   const scope = await scopedLabel(ctx, deps);
   const keyboard = [
     [{ text: '⏱ Tiap 15 menit', callback_data: 'rule:add:interval:15' }],
@@ -857,10 +857,10 @@ async function showIntervalPicker(ctx, deps) {
 
 async function createRule(ctx, deps, actionType, intervalMinutes = 15) {
   const rb = ctx.session?.ruleBuilder;
-  if (!rb) return ctx.reply('⚠️ Sesi habis. Ulangi dari /monitor.');
+  if (!rb) return ctx.reply('⚠️ Maaf bos, sesi bos habis 🙏 Ulangi dari /monitor ya bos.');
   if (!rb.value) {
     return ctx.reply(
-      `📝 <b>Langkah 5/5: batas angkanya berapa?</b>\n\nAturan untuk: <b>${esc(scopeLabel(rb, null, null))}</b>\n${esc(metricLabel(rb.metric))} ${esc(operatorWord(rb.operator))} [angka]\n\nContoh: kalau CTR ${esc(operatorWord(rb.operator))} 5, kirim "5"`,
+      `📝 <b>Bos, Langkah 5/5: batas angkanya berapa bos?</b>\n\nAturan untuk: <b>${esc(scopeLabel(rb, null, null))}</b>\n${esc(metricLabel(rb.metric))} ${esc(operatorWord(rb.operator))} [angka]\n\nContoh: kalau CTR ${esc(operatorWord(rb.operator))} 5, bos kirim "5"`,
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '⬅️ Batal', callback_data: 'menu:monitor' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
     );
   }
@@ -888,7 +888,7 @@ async function createRule(ctx, deps, actionType, intervalMinutes = 15) {
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Lihat Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
     );
   } catch (err) {
-    return ctx.reply(`❌ Gagal: ${esc(err.message)}`);
+    return ctx.reply(`❌ Maaf bos, gagal: ${esc(err.message)} 🙏`);
   }
 }
 
@@ -898,7 +898,7 @@ async function applyTemplate(ctx, deps, tplKey, accountId = null) {
     return ctx.reply(quotaHitTpl, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '💎 Upgrade Pro — Rp 99rb', callback_data: 'menu:pricing' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } });
   }
   const fn = RULE_TEMPLATES[tplKey];
-  if (!fn) return ctx.reply('⚠️ Template nggak ketemu.');
+  if (!fn) return ctx.reply('⚠️ Maaf bos, templatenya nggak ketemu 🙏');
   const tpl = fn();
   try {
     const liveNames = await liveAdAccountNames(deps, ctx.userId);
@@ -917,11 +917,11 @@ async function applyTemplate(ctx, deps, tplKey, accountId = null) {
       intervalMinutes: tpl.intervalMinutes || 15,
     });
     return ctx.reply(
-      `✅ <b>Template ${esc(tpl.name)} dipasang buat ${esc(scope)}!</b>\n\n${esc(tpl.description)}`,
+      `✅ <b>Siap bos, template ${esc(tpl.name)} saya pasang buat ${esc(scope)}!</b>\n\n${esc(tpl.description)}`,
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Lihat Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
     );
   } catch (err) {
-    return ctx.reply(`❌ Gagal: ${esc(err.message)}`);
+    return ctx.reply(`❌ Maaf bos, gagal: ${esc(err.message)} 🙏`);
   }
 }
 
@@ -932,10 +932,10 @@ async function showTemplateAccountStep(ctx, deps, tplKey) {
     return ctx.reply(quotaHitStep, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '💎 Upgrade Pro — Rp 99rb', callback_data: 'menu:pricing' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } });
   }
   const tpl = RULE_TEMPLATES[tplKey]?.();
-  if (!tpl) return ctx.reply('⚠️ Template nggak ketemu.');
+  if (!tpl) return ctx.reply('⚠️ Maaf bos, templatenya nggak ketemu 🙏');
   const accounts = metaAccounts(deps, ctx.userId);
   if (!accounts.length) {
-    return ctx.reply('🔌 Hubungkan akun Meta dulu via /status → ➕ Tambah Akun, baru bisa pasang template.', {
+    return ctx.reply('🔌 Bos, hubungkan akun Meta dulu ya bos via /status → ➕ Tambah Akun, baru saya bisa pasang template.', {
       reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
     });
   }
@@ -964,7 +964,7 @@ async function showTemplateAccountStep(ctx, deps, tplKey) {
   keyboard.push([{ text: '⬅️ Kembali', callback_data: 'menu:monitor' }]);
   keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
   return ctx.reply(
-    `📦 <b>Pasang template "${esc(tpl.name)}" buat akun mana?</b>\n\n${esc(tpl.description)}`,
+    `📦 <b>Bos, pasang template "${esc(tpl.name)}" buat akun mana?</b>\n\n${esc(tpl.description)}`,
     { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
   );
 }
@@ -975,7 +975,7 @@ export function handleMonitorText(deps) {
     if (!rb || !rb.awaitingValue) return false;
     const text = (ctx.message?.text || '').trim();
     if (!text || !/^\d+(\.\d+)?$/.test(text)) {
-      await ctx.reply(`⚠️ Kirim angka yang valid ya buat batasnya (misal 5 atau 1.5).`);
+      await ctx.reply(`⚠️ Maaf bos, kirim angka yang valid ya buat batasnya 🙏 (misal 5 atau 1.5) bos.`);
       return true;
     }
     rb.value = text;

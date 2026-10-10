@@ -110,7 +110,7 @@ function demoDashboard() {
 async function showDemoDashboard(ctx) {
   const t = demoDashboard();
   return ctx.reply(
-    `🎮 <b>Mode Demo — data contoh, bukan iklan beneran</b>\n\n` +
+    `🎮 <b>Mode Demo bos — datanya contoh ya bos, bukan iklan beneran</b>\n\n` +
     `🔗 Akun iklan (contoh): <b>2</b>\n` +
     `🎯 Campaign (contoh): <b>${t.total}</b> (🟢 ${t.active} aktif • ⏸️ ${t.inactive} nonaktif)\n\n` +
     `<b>Rincian per akun (contoh):</b>\n` +
@@ -118,7 +118,7 @@ async function showDemoDashboard(ctx) {
       const c = countByStatus(a.campaigns);
       return `${i + 1}. ${escHtml(a.name)} — 🟢 ${c.active} aktif • ⏸️ ${c.inactive} nonaktif (total ${c.total})`;
     }).join('\n') +
-    `\n\nPilih akun buat lihat contoh laporannya — semua aman diklik:`,
+    `\n\nBos pilih akunnya ya, saya siapin contoh laporannya — semua aman diklik bos:`,
     {
       parse_mode: 'HTML',
       reply_markup: {
@@ -149,7 +149,7 @@ async function showDemoReport(ctx, idx, periodKey = '30d') {
     `📈 ROAS: ${roas}x\n` +
     `👆 Klik: ${ins.clicks.toLocaleString('id-ID')}\n` +
     `👁 Impresi: ${ins.impressions.toLocaleString('id-ID')}\n\n` +
-    `<i>Ini data contoh. Hubungkan akun aslimu buat lihat data beneran.</i>`,
+    `<i>Bos, ini data contoh ya. Hubungkan akun asli bos biar saya laporin data beneran.</i>`,
     {
       parse_mode: 'HTML',
       reply_markup: {
@@ -236,17 +236,17 @@ export function handleStatus(deps) {
         totals.total += a.counts.total;
       }
 
-      let message = `📊 <b>Dashboard Iklan Kamu</b>\n\n`;
-      message += `🔗 Akun iklan terhubung: <b>${accounts.length}</b> (dari ${tokenOwners.length} koneksi token)\n`;
-      message += `🎯 Campaign total: <b>${totals.total}</b> (🟢 ${totals.active} aktif • ⏸️ ${totals.inactive} nonaktif • 🗑️ ${totals.deleted} dihapus)\n`;
-      message += `📝 Draft menunggu persetujuan: <b>${draftPending}</b>`;
+      let message = `📊 <b>Bos, ini laporan iklan bos 🙏</b>\n\n`;
+      message += `🔗 Akun iklan bos yang terhubung: <b>${accounts.length}</b> (dari ${tokenOwners.length} koneksi token)\n`;
+      message += `🎯 Campaign bos total: <b>${totals.total}</b> (🟢 ${totals.active} aktif • ⏸️ ${totals.inactive} nonaktif • 🗑️ ${totals.deleted} dihapus)\n`;
+      message += `📝 Bos, ada <b>${draftPending}</b> draf nunggu ACC bos`;
       deadOwners.push(...deadOwnersPre);
       if (deadOwners.length > 0) {
-        message += `\n\n🔑 <b>${deadOwners.length} koneksi token bermasalah</b> (kedaluwarsa/dicabut) — hubungkan ulang biar datanya kebaca lagi.`;
+        message += `\n\n🔑 <b>Bos, ${deadOwners.length} koneksi token bermasalah</b> (kedaluwarsa/dicabut) — izin bos hubungkan ulang ya, biar saya bisa baca datanya lagi bos.`;
       }
 
       if (accounts.length > 0) {
-        message += `\n\n<b>Rincian per akun iklan:</b>\n`;
+        message += `\n\n<b>Bos, ini rincian per akun iklannya:</b>\n`;
         accounts.slice(0, 10).forEach((a, i) => {
           message += `${i + 1}. ${escHtml(a.name || a.id)} — 🟢 ${a.counts.active} aktif • ⏸️ ${a.counts.inactive} nonaktif • 🗑️ ${a.counts.deleted} hapus (total ${a.counts.total})\n`;
         });
@@ -270,11 +270,11 @@ export function handleStatus(deps) {
           { text: '➖ Hapus Akun', callback_data: 'dash:remove' },
         ]);
       } else if (stored.length > 0) {
-        message += `\n\n📭 Token kamu terhubung, tapi <b>belum ada akun iklan yang kebaca</b> dari token itu.`;
+        message += `\n\n📭 Bos, tokennya sudah terhubung, tapi <b>belum ada akun iklan yang kebaca</b> dari token itu.`;
         message += `\n\n${BM_NOTE}`;
         keyboard.push([{ text: '➕ Tambah Akun', callback_data: 'dash:add' }]);
       } else {
-        message += '\n\n📭 <b>Belum ada akun iklan yang terhubung.</b>\nHubungkan akun iklanmu dulu biar dashboard-nya keisi — atau jalan-jalan dulu di <b>mode demo</b> (data contoh, aman diklik, nggak ngerusak apa-apa).';
+        message += '\n\n📭 <b>Bos, belum ada akun iklan yang terhubung.</b>\nBos hubungkan akun iklannya dulu ya biar saya isi dashboardnya — atau jalan-jalan dulu di <b>mode demo</b> bos (data contoh, aman diklik, nggak ngerusak apa-apa).';
         message += `\n\n${BM_NOTE}`;
         keyboard.push([{ text: '🔗 Hubungkan Akun', callback_data: 'menu:connect' }]);
         keyboard.push([{ text: '🎮 Coba Mode Demo', callback_data: 'dash:demo' }]);
@@ -288,7 +288,7 @@ export function handleStatus(deps) {
       });
     } catch (err) {
       log.error('dashboard failed', { userId: ctx.userId, error: err?.message });
-      await ctx.reply('⚠️ Dashboard gagal dimuat. Coba lagi sebentar ya.');
+      await ctx.reply('⚠️ Maaf bos, laporannya gagal saya tarik 🙏 Saya coba lagi ya bos, atau bos ketik /status sekali lagi.');
     }
   };
 }

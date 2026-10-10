@@ -18,9 +18,9 @@ const log = createLogger('bot:approvals');
 /** Resolve the draft + verify owner before any mutation. */
 async function resolveOwnedDraft(deps, ctx, draftId) {
   const draft = await deps.services.draftService.draftsRepo.findById(draftId);
-  if (!draft) return { error: 'Draft tidak ditemukan' };
+  if (!draft) return { error: 'Maaf bos, drafnya nggak ketemu 🙏 Mungkin sudah saya proses atau keburu kadaluarsa bos.' };
   if (draft.user_id !== ctx.userId) {
-    return { error: 'Ini bukan draft kamu' };
+    return { error: 'Maaf bos, ini draf bos lain 🙏 Saya nggak berani utak-atik punya orang bos.' };
   }
   return { draft };
 }
@@ -51,7 +51,8 @@ export function handleApprovalApprove(deps) {
       if (!draft) return ctx.reply(error);
       const done = await deps.services.draftService.approveDraft(draftId, ctx.userId);
       return ctx.reply(
-        `✅ <b>Jalan!</b> ${esc(resultLine(done || draft))}`,
+        `✅ <b>Siap bos, sudah saya jalanin!</b> ${esc(resultLine(done || draft))}
+Bos tinggal pantau hasilnya ya bos 🙏`,
         {
           parse_mode: 'HTML',
           reply_markup: {
@@ -65,7 +66,7 @@ export function handleApprovalApprove(deps) {
     } catch (err) {
       if (err instanceof ValidationError) return ctx.reply(err.message);
       log.error('approval approve failed', { userId: ctx.userId, draftId, error: err?.message });
-      return ctx.reply('⚠️ Gagal menyetujui. Coba lagi nanti.');
+      return ctx.reply('⚠️ Maaf bos, saya gagal jalanin 🙏 Saya coba lagi ya bos, atau bos ACC ulang sekali lagi.');
     }
   };
 }
@@ -77,7 +78,7 @@ export function handleApprovalReject(deps) {
       if (!draft) return ctx.reply(error);
       await deps.services.draftService.rejectDraft(draftId, ctx.userId);
       return ctx.reply(
-        `❌ <b>Dibatalkan.</b> ${esc(resultLine(draft))}\n<i>Nggak ada yang berubah di akun iklanmu.</i>`,
+        `❌ <b>Siap bos, saya batalin.</b> ${esc(resultLine(draft))}\n<i>Nggak ada yang berubah di akun iklan bos, aman bos.</i>`,
         {
           parse_mode: 'HTML',
           reply_markup: {
@@ -91,7 +92,7 @@ export function handleApprovalReject(deps) {
     } catch (err) {
       if (err instanceof ValidationError) return ctx.reply(err.message);
       log.error('approval reject failed', { userId: ctx.userId, draftId, error: err?.message });
-      return ctx.reply('⚠️ Gagal menolak. Coba lagi nanti.');
+      return ctx.reply('⚠️ Maaf bos, gagal saya batalin 🙏 Saya coba lagi ya bos.');
     }
   };
 }

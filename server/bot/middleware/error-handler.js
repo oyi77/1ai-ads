@@ -26,7 +26,7 @@ export function errorHandler(err, ctx) {
   } catch (fatal) {
     log.error('FATAL in error handler', { error: fatal.message });
     try {
-      ctx.reply('😅 Something went wrong. Try /start to restart.').catch(err => log.warn('fatal error handler reply failed', { error: err.message }));
+      ctx.reply('😅 Maaf bos, saya error berat 🙏 Bos ketik /start buat mulai ulang ya bos.').catch(err => log.warn('fatal error handler reply failed', { error: err.message }));
     } catch {
       // Last resort — nothing we can do
     }
@@ -71,10 +71,10 @@ function detectDomain(ctx) {
 
 function getRecoveryMessage(domain) {
   const messages = {
-    Settings: '⚠️ Pengaturan gagal. Coba lagi via /menu → Pengaturan.',
-    Monitor: '⚠️ Aturan gagal diproses. Campaign-mu tetap jalan. Cek via /status ya.',
-    Menu: '⚠️ Menu error. Coba /start buat mulai ulang.',
-    General: '😅 Ada yang salah. Coba /menu buat ulangi ya.',
+    Settings: '⚠️ Maaf bos, pengaturannya gagal saya simpan 🙏 Bos coba lagi via /menu → Pengaturan ya bos, saya standby.',
+    Monitor: '⚠️ Maaf bos, aturannya gagal saya proses 🙏 Tapi tenang bos, campaign bos tetap jalan. Saya cekkan via /status ya bos.',
+    Menu: '⚠️ Maaf bos, menunya error 🙏 Bos ketik /start biar saya mulai ulang ya bos.',
+    General: '😅 Maaf bos, saya kesandung error 🙏 Bos ketik /menu buat ulangi ya, saya standby bos.',
   };
   return messages[domain] || messages.General;
 }

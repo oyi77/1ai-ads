@@ -82,8 +82,8 @@ export function setupAccountDigest(bot, deps) {
                 if (sinceDate && s.spend === 0 && (!sl || sl.spend === 0)) continue;
 
                 const lines = [
-                  `📊 <b>Digest Harian — ${esc(acc.name)} (${platform})</b>`,
-                  `💰 Belanja: ${fmtRp(s.spend)} · ROAS ${fmtRoas2(s.roas)} · Purchase ${s.purchases}`,
+                  `📊 <b>Bos, ini Laporan Harian — ${esc(acc.name)} (${platform}) 🙏</b>`,
+                  `💰 Bos, belanja: ${fmtRp(s.spend)} · ROAS ${fmtRoas2(s.roas)} · Purchase ${s.purchases}`,
                 ];
                 if (sl && sinceDate) {
                   lines.push(`↩️ Sejak digest lalu (${sinceDate}): ${fmtRp(sl.spend)} · ROAS ${fmtRoas2(sl.roas)} · Purchase ${sl.purchases}`);

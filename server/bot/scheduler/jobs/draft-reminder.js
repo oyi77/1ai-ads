@@ -14,9 +14,9 @@ function shortSummary(s, max = 60) {
 
 export function pendingReminderText(count, samples) {
   const lines = samples.map((d, i) => `${i + 1}. ${esc(shortSummary(d.summary))}`);
-  return `⏳ <b>${count} draft menunggu persetujuanmu</b>\n\n${lines.join('\n')}`
+  return `⏳ <b>Bos, ${count} draf saya nunggu ACC bos 🙏</b>\n\n${lines.join('\n')}`
     + (count > samples.length ? `\n…dan ${count - samples.length} lainnya.` : '')
-    + `\n\n<i>Pencet ✅ buat jalanin ke Facebook, ❌ buat batalin. Cek di bawah ya.</i>`;
+    + `\n\n<i>Bos pencet ✅ biar saya jalanin ke Facebook, ❌ biar saya batalin ya bos. Saya tunggu bos 🙏</i>`;
 }
 
 export function setupDraftReminder(bot, deps) {

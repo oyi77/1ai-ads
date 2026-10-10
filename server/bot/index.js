@@ -109,7 +109,7 @@ export function initBot(app, deps) {
       return handler(ctx);
     }
     return ctx.reply(
-      `⚠️ Nggak kenal perintah <code>${cmd}</code>. Buka /menu buat lihat pilihan yang ada.`,
+      `⚠️ Maaf bos, perintah saya nggak kenal 🙏 Bos buka /menu ya, saya tunjukin pilihannya bos.`,
       {
         reply_markup: {
           inline_keyboard: [
@@ -440,8 +440,8 @@ function handleTextMessage(deps) {
       const cmd = text.split(' ')[0].toLowerCase().replace('/', '');
       if (!KNOWN_COMMANDS.includes(cmd)) {
         return ctx.reply(
-          `❓ Unknown command: <b>${cmd}</b>\n\n` +
-          `Use /menu to see available options, or /help for guidance.`,
+          `❓ Maaf bos, perintah <b>${cmd}</b> saya nggak kenal 🙏\n\n` +
+          `Bos buka /menu biar saya tunjukin pilihannya ya bos, atau /help buat panduan saya bos.`,
           {
             parse_mode: 'HTML',
             reply_markup: {
@@ -457,7 +457,7 @@ function handleTextMessage(deps) {
     }
 
     // Default: show menu
-    ctx.reply('Use /menu to see available options, or /help for guidance.', {
+    ctx.reply('Bos, buka /menu ya biar saya tunjukin pilihannya bos, atau /help buat panduan saya bos.', {
       reply_markup: {
         inline_keyboard: [
           [{ text: '📋 Menu', callback_data: 'quick:menu' }],
@@ -470,7 +470,7 @@ function handleTextMessage(deps) {
 
 function handlePhotoMessage(_deps) {
   return async (ctx) => {
-    await ctx.reply('📸 Photo received! Use /menu to see what you can do with it.', {
+    await ctx.reply('📸 Siap bos, fotonya saya terima! Bos buka /menu ya biar saya tunjukin bisa saya apain bos.', {
       reply_markup: {
         inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]],
       },

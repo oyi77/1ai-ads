@@ -40,25 +40,25 @@ export function handleStart() {
     let message;
     const keyboard = mainMenuKeyboard();
     if (!hasMetaAccount && campaignCount === 0) {
-      message = `👋 <b>Halo ${esc(name)}, selamat datang di AdForge!</b>\n\n` +
-        '🚀 <b>Mulai dalam 3 langkah gampang:</b>\n' +
-        '1️⃣ Hubungkan akun iklanmu (pencet tombol 🔗 di bawah)\n' +
-        '2️⃣ Lihat ringkasannya di 📊 Dashboard\n' +
-        '3️⃣ Bikin iklan pertama via 🎯 Buat Campaign\n\n' +
-        'Pencet tombol <b>🔗 Connect Account</b> di bawah buat mulai — atau 🎮 Mode Demo di Dashboard kalau mau jalan-jalan dulu!';
+      message = `👋 <b>Siap bos, selamat datang di AdForge 🙏 ${esc(name)}!</b>\n\n` +
+        'Bos, izin lapor bos, buat mulai saya siapin 3 langkah gampang bos:\n' +
+        '1️⃣ Bos hubungkan akun iklan dulu ya bos (pencet tombol 🔗 di bawah)\n' +
+        '2️⃣ Nanti saya laporin ringkasannya di 📊 Dashboard bos\n' +
+        '3️⃣ Terus saya bantu bikinin iklan pertama via 🎯 Buat Campaign bos\n\n' +
+        'Pencet tombol <b>🔗 Connect Account</b> di bawah buat mulai ya bos — atau 🎮 Mode Demo di Dashboard kalau bos mau jalan-jalan dulu!';
       keyboard.inline_keyboard.unshift([
         { text: '🔗 Connect Account', callback_data: 'menu:connect' },
       ]);
     } else if (hasMetaAccount && campaignCount === 0) {
-      message = `👋 <b>Halo lagi, ${esc(name)}!</b>\n\n` +
-        '✅ Akun iklan sudah terhubung\n' +
-        '📭 Belum ada campaign yang kesimpen\n\n' +
-        'Pencet <b>🎯 Buat Campaign</b> buat bikin iklan pertamamu, atau buka <b>🛠️ Kelola Iklan → 📣 Ads Manager</b> buat tarik data dari Meta.';
+      message = `👋 <b>Siap bos, selamat datang kembali bos 🙏 ${esc(name)}!</b>\n\n` +
+        'Bos, izin lapor bos ✅ akun iklan bos sudah terhubung, mantap bos\n' +
+        '📭 Tapi campaign-nya belum ada yang kesimpen bos\n\n' +
+        'Pencet <b>🎯 Buat Campaign</b> biar saya bantu bikinin iklan pertama bos, atau buka <b>🛠️ Kelola Iklan → 📣 Ads Manager</b> biar saya tarikin datanya dari Meta ya bos.';
     } else {
-      message = `👋 <b>Halo lagi, ${esc(name)}!</b>\n\n` +
-        `📊 ${campaignCount} campaign kesimpen\n` +
-        `⚡ ${ruleCount} aturan otomatis aktif\n\n` +
-        'Mau ngapain hari ini? Pilih di bawah ya.';
+      message = `👋 <b>Siap bos, selamat datang kembali bos 🙏 ${esc(name)}!</b>\n\n` +
+        `Bos, izin lapor bos 📊 ${campaignCount} campaign kesimpen\n` +
+        `⚡ ${ruleCount} aturan otomatis lagi aktif jagain bos\n\n` +
+        'Siap bos, bos mau saya bantu apa hari ini bos? Tinggal pilih di bawah ya bos.';
     }
     await ctx.reply(message, {
       parse_mode: 'HTML',

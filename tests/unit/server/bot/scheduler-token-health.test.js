@@ -101,7 +101,7 @@ describe('token health check', () => {
 
     // The owner must hear about it — routing this to the admin chat left the
     // customer with a silent failure.
-    expect(sendMessage).toHaveBeenCalledWith('555', expect.stringContaining('Token meta kamu sudah tidak valid'), expect.anything());
+    expect(sendMessage).toHaveBeenCalledWith('555', expect.stringContaining('nggak valid'), expect.anything());
 
     // The status has to land on the real row id. The previous implementation
     // passed `id = undefined` (the fan-out projection has no id), so the
@@ -163,7 +163,7 @@ describe('token health check', () => {
       id: 'acct-dead',
       fields: { health_status: 'expired', last_error: expect.stringContaining('no ad-account access') },
     });
-    expect(sendMessage).toHaveBeenCalledWith('555', expect.stringContaining('tidak valid'), expect.anything());
+    expect(sendMessage).toHaveBeenCalledWith('555', expect.stringContaining('nggak valid'), expect.anything());
   });
 
   it('keeps ok when ads list is empty but reachable', async () => {

@@ -61,7 +61,7 @@ export function setupBidSatpam(bot, deps) {
         }
       }
       if (adjusted > 0) {
-        await safeSend(bot, `🛡️ Bid Satpam: ${adjusted} adset(s) need bid adjustment`);
+        await safeSend(bot, `🛡️ Bos, izin lapor 🙏 ${adjusted} adset perlu saya sesuaikan bid-nya bos.`, { parse_mode: 'HTML' });
       }
       log.info('Bid satpam check complete', { adjusted });
     } catch (err) {
