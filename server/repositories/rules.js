@@ -58,6 +58,28 @@ export class RulesRepository {
     log.debug('autonomous_rules table ready');
   }
 
+  /**
+   * True when an identical rule already exists for this user: same account,
+   * same condition JSON, same action JSON. Stop the template/wizard from
+   * minting N clones — user's pain ("6 ROAS Guard identical") came from here.
+   */
+  findDuplicate(rule) {
+    const cond = JSON.stringify(rule.condition);
+    const act = JSON.stringify(rule.action);
+    return this.db.prepare(`
+      SELECT id FROM ${this.table}
+      WHERE user_id = ? AND name = ?
+      AND COALESCE(account_id, '') = ?
+      AND condition_json = ? AND action_json = ?
+      LIMIT 1
+    `).get(
+      rule.userId || rule.user_id,
+      rule.name,
+      rule.accountId || rule.account_id || '',
+      cond, act
+    ) || null;
+  }
+
   create(rule) {
     const id = rule.id || crypto.randomUUID();
     // Legacy tables use INTEGER PRIMARY KEY (rowid alias) — inserting a TEXT uuid

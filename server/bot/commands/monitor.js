@@ -481,11 +481,61 @@ async function renderMyRules(deps, userId) {
       { text: `${toggle}: ${r.name.slice(0, 20)}`, callback_data: `rule:toggle:${r.id}` },
     ]);
   }
+  // Data legacy: duplikat identik (template/wizard tanpa dedup) bikin list
+  // memanjang. Tawarkan bersihkan sekali klik — keep paling lama, hapus sisanya.
+  const dupes = countDuplicateGroups(rules);
+  if (dupes > 0) {
+    keyboard.push([{ text: `🧹 Bersihkan ${dupes} aturan duplikat`, callback_data: 'rule:dedupe' }]);
+  }
   for (const row of fbDetailButtons) keyboard.push(row);
   keyboard.push([{ text: '➕ Bikin Aturan', callback_data: 'rule:add:start' }]);
   keyboard.push([{ text: '⬅️ Kembali', callback_data: 'menu:monitor' }]);
   keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
   return { text, keyboard };
+}
+
+function ruleSig(r) {
+  return [r.name, r.accountId || '', JSON.stringify(r.condition), JSON.stringify(r.action)].join('|');
+}
+function countDuplicateGroups(rules) {
+  const seen = new Map();
+  let extra = 0;
+  for (const r of rules) {
+    const sig = ruleSig(r);
+    if (seen.has(sig)) extra += 1; else seen.set(sig, 1);
+  }
+  return extra;
+}
+
+/**
+ * Bersihkan duplikat rule legacy (keep paling lama per signature).
+ * Dipanggil dari tombol 🧹 di Aturanku.
+ */
+export async function dedupeRules(ctx, deps) {
+  try {
+    const rules = deps?.repos?.rulesRepo?.getAll?.(ctx.userId) || [];
+    const best = new Map();
+    for (const r of rules) {
+      const sig = ruleSig(r);
+      const prev = best.get(sig);
+      if (!prev || String(r.createdAt || r.created_at || '') < String(prev.createdAt || prev.created_at || '')) best.set(sig, r);
+    }
+    const keep = new Set([...best.values()].map(r => String(r.id)));
+    const toDelete = rules.filter(r => !keep.has(String(r.id)));
+    if (!toDelete.length) {
+      return ctx.reply('✅ <b>Bos, nggak ada aturan dobel yang bisa saya bersihin 🙏</b>', { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '⬅️ Kembali', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } });
+    }
+    for (const r of toDelete) {
+      try { deps.repos.rulesRepo.delete(r.id); } catch { /* best-effort */ }
+    }
+    return ctx.reply(
+      `✅ <b>Siap bos, ${toDelete.length} aturan dobel saya hapus 🙏</b>\n\nAturan pertamanya (yang paling lama) saya sisain ya bos.`,
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Lihat Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+    );
+  } catch (err) {
+    log.error('dedupeRules failed', { error: err.message });
+    return ctx.reply('⚠️ Maaf bos, gagal saya bersihin duplikatnya 🙏 Coba lagi ya bos.', { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] } });
+  }
 }
 
 // Layar detail aturan Facebook SATU akun (dari tombol 🔍). Read-only:
@@ -696,6 +746,9 @@ export function handleMonitorCallback(deps) {
       }
       return createRule(ctx, deps, ctx.session.ruleBuilder.actionType, interval);
     }
+    if (action === 'dedupe') {
+      return dedupeRules(ctx, deps);
+    }
     if (action.startsWith('toggle:')) {
       const ruleId = action.split(':')[1];
       const rule = deps.repos.rulesRepo.getById(ruleId);
@@ -871,20 +924,32 @@ async function createRule(ctx, deps, actionType, intervalMinutes = 15) {
   try {
     const liveNames = await liveAdAccountNames(deps, ctx.userId);
     const scope = scopeLabel(rb, liveNames, metaAccounts(deps, ctx.userId));
-    deps.repos.rulesRepo.create({
+    const ruleName = ruleAutoName(rb.metric, rb.operator, rb.value);
+    const newRule = {
       userId: ctx.userId,
       accountId: rb.accountId || null,
-      name: ruleAutoName(rb.metric, rb.operator, rb.value),
+      name: ruleName,
       description: `Aturan untuk ${scope}`,
       condition: condition.toJSON(),
       action: action.toJSON(),
       priority: 1,
       enabled: true,
       intervalMinutes,
-    });
+    };
+    // Bos complained about 6 identical "ROAS Guard" rows: tapping the wizard
+    // twice used to mint a clone with no warning. Refuse and point at the
+    // existing rule instead of stacking a duplicate the user must clean up.
+    if (deps.repos.rulesRepo.findDuplicate?.(newRule)) {
+      delete ctx.session.ruleBuilder;
+      return ctx.reply(
+        `ℹ️ <b>Bos, aturan itu sudah ada 🙏</b>\n\n<b>${esc(ruleName)}</b> untuk ${esc(scope)} sudah aktif — nggak saya bikin dobel bos.\n\nBos bisa lihat atau ubah di 📋 Aturanku ya bos.`,
+        { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Lihat Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+      );
+    }
+    deps.repos.rulesRepo.create(newRule);
     delete ctx.session.ruleBuilder;
     return ctx.reply(
-      `✅ <b>Aturan dibuat buat ${esc(scope)}!</b>\n\nKalau <b>${esc(ruleAutoName(rb.metric, rb.operator, rb.value))}</b> → <b>${esc(actionWord(actionType))}</b>\n⏱ ${intervalMinutes === 0 ? 'Ngikutin pacing FB' : 'Dicek tiap ' + (INTERVAL_LABELS[intervalMinutes] || intervalMinutes + ' mnt')}\n\n<i>Cara kerja: aturan ini hidup di bot (bukan di dashboard Facebook). Bot cek tiap jadwal — kalau kejadian, kamu dapat tombol ✅/❌ dulu, baru eksekusi jalan setelah kamu setuju.</i>\n\n<i>Kalau 30 menit tidak ada kabar: (1) sync dulu via /monitor → 🔄 Sync Sekarang, (2) cek draft menunggu di 📋 Aturanku → 📊 Kinerja.</i>`,
+      `✅ <b>Aturan dibuat buat ${esc(scope)}!</b>\n\nKalau <b>${esc(ruleName)}</b> → <b>${esc(actionWord(actionType))}</b>\n⏱ ${intervalMinutes === 0 ? 'Ngikutin pacing FB' : 'Dicek tiap ' + (INTERVAL_LABELS[intervalMinutes] || intervalMinutes + ' mnt')}\n\n<i>Cara kerja: aturan ini hidup di bot (bukan di dashboard Facebook). Bot cek tiap jadwal — kalau kejadian, kamu dapat tombol ✅/❌ dulu, baru eksekusi jalan setelah kamu setuju.</i>\n\n<i>Kalau 30 menit tidak ada kabar: (1) sync dulu via /monitor → 🔄 Sync Sekarang, (2) cek draft menunggu di 📋 Aturanku → 📊 Kinerja.</i>`,
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Lihat Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
     );
   } catch (err) {
@@ -905,7 +970,7 @@ async function applyTemplate(ctx, deps, tplKey, accountId = null) {
     const scope = accountId && accountId !== '__all__'
       ? resolveAcctName(liveNames, metaAccounts(deps, ctx.userId), accountId)
       : '🌐 Semua Akun';
-    deps.repos.rulesRepo.create({
+    const newRule = {
       userId: ctx.userId,
       accountId: accountId && accountId !== '__all__' ? accountId : null,
       name: tpl.name,
@@ -915,7 +980,15 @@ async function applyTemplate(ctx, deps, tplKey, accountId = null) {
       priority: tpl.priority,
       enabled: true,
       intervalMinutes: tpl.intervalMinutes || 15,
-    });
+    };
+    // Same guard as the wizard: tapping a template twice must not stack clones.
+    if (deps.repos.rulesRepo.findDuplicate?.(newRule)) {
+      return ctx.reply(
+        `ℹ️ <b>Bos, template ${esc(tpl.name)} sudah terpasang buat ${esc(scope)} 🙏</b>\n\nNggak saya bikin dobel bos. Cek di 📋 Aturanku ya.`,
+        { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Lihat Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+      );
+    }
+    deps.repos.rulesRepo.create(newRule);
     return ctx.reply(
       `✅ <b>Siap bos, template ${esc(tpl.name)} saya pasang buat ${esc(scope)}!</b>\n\n${esc(tpl.description)}`,
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Lihat Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
