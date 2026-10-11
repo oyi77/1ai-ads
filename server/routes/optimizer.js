@@ -50,14 +50,14 @@ export function createOptimizerRouter(rulesRepo, optimizer) {
   // Update a rule
   router.put('/rules/:id', (req, res, next) => {
     try {
-      const rule = rulesRepo.getById ? rulesRepo.getById(req.params.id) : null;
+      const rule = rulesRepo.getById ? rulesRepo.getById(req.params.id, req.user?.id) : null;
       if (!rule) return res.status(404).json({ success: false, error: 'Rule not found' });
       // `getById` hydrates camelCase (`userId`); reading `user_id` compared
       // undefined to the caller and 403'd every owner. Same defect class that
       // made the rule-guard cron evaluate against system-owned campaigns.
       const ownerId = rule.userId ?? rule.user_id;
       if (ownerId !== req.user?.id) return res.status(403).json({ success: false, error: 'Forbidden' });
-      const updated = rulesRepo.update(req.params.id, req.body);
+      const updated = rulesRepo.update(req.params.id, req.body, req.user?.id);
       if (!updated) return res.status(404).json({ success: false, error: 'Rule not found' });
       res.json({ success: true });
     } catch (err) { next(err); }
@@ -66,11 +66,11 @@ export function createOptimizerRouter(rulesRepo, optimizer) {
   // Delete a rule
   router.delete('/rules/:id', (req, res, next) => {
     try {
-      const rule = rulesRepo.getById ? rulesRepo.getById(req.params.id) : null;
+      const rule = rulesRepo.getById ? rulesRepo.getById(req.params.id, req.user?.id) : null;
       if (!rule) return res.status(404).json({ success: false, error: 'Rule not found' });
       const ownerId = rule.userId ?? rule.user_id;
       if (ownerId !== req.user?.id) return res.status(403).json({ success: false, error: 'Forbidden' });
-      const removed = rulesRepo.delete(req.params.id);
+      const removed = rulesRepo.delete(req.params.id, req.user?.id);
       if (!removed) return res.status(404).json({ success: false, error: 'Rule not found' });
       res.json({ success: true });
     } catch (err) { next(err); }

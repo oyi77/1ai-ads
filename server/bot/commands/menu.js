@@ -14,6 +14,7 @@ import { resolveScaleDefault } from '../../lib/scale-defaults.js';
 import { handleMonitor } from './monitor.js';
 import { handleHelp } from './help.js';
 import { handlePricing } from './pricing.js';
+import { handleStrategy } from './strategy.js';
 import { handleSettings } from './settings.js';
 import { handleStatus } from './status.js';
 const WEB_APP_URL = config.webAppUrl;
@@ -44,6 +45,7 @@ export function mainMenuKeyboard() {
   return {
     inline_keyboard: [
       [{ text: '📊 Dashboard', callback_data: 'menu:status' }, { text: '🎯 Buat Campaign', callback_data: 'menu:create' }],
+      [{ text: '🎓 Cara Pakai (Panduan)', callback_data: 'menu:strategy' }],
       [{ text: '🛠️ Kelola Iklan', callback_data: 'menu:manage' }, { text: '❓ Bantuan', callback_data: 'menu:help' }],
       [{ text: '📱 AdForge Mini App', web_app: { url: WEB_APP_URL } }],
     ],
@@ -115,7 +117,8 @@ export function handleMenuButton(deps) {
         return handlePricing()(ctx);
       case 'help':
         return handleHelp()(ctx);
-      default:
+      case 'strategy':
+        return handleStrategy()(ctx);
         return ctx.reply('⚠️ Maaf bos, pilihan itu saya nggak kenal 🙏 Buka /menu biar saya tunjukin pilihannya ya bos.');
     }
   };

@@ -526,7 +526,7 @@ export async function dedupeRules(ctx, deps) {
       return ctx.reply('✅ <b>Bos, nggak ada aturan dobel yang bisa saya bersihin 🙏</b>', { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '⬅️ Kembali', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } });
     }
     for (const r of toDelete) {
-      try { deps.repos.rulesRepo.delete(r.id); } catch { /* best-effort */ }
+      try { deps.repos.rulesRepo.delete(r.id, ctx.userId); } catch { /* best-effort */ }
     }
     return ctx.reply(
       `✅ <b>Siap bos, ${toDelete.length} aturan dobel saya hapus 🙏</b>\n\nAturan pertamanya (yang paling lama) saya sisain ya bos.`,
@@ -751,9 +751,8 @@ export function handleMonitorCallback(deps) {
     }
     if (action.startsWith('toggle:')) {
       const ruleId = action.split(':')[1];
-      const rule = deps.repos.rulesRepo.getById(ruleId);
+      const rule = deps.repos.rulesRepo.getById(ruleId, ctx.userId);
       if (!rule) return ctx.reply('⚠️ Maaf bos, aturannya nggak ketemu 🙏');
-      if (rule.userId && rule.userId !== ctx.userId) return ctx.reply('⚠️ Maaf bos, aturannya nggak ketemu 🙏');
       // Toggle-ON gate: nyalakan rule ke-4+ di paket free -> tolak (anti rotasi bypass).
       if (!rule.enabled) {
         const quotaHitTgl = ruleQuotaCheck(deps, ctx);
@@ -761,7 +760,7 @@ export function handleMonitorCallback(deps) {
           return ctx.reply(quotaHitTgl, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '💎 Upgrade Pro — Rp 99rb', callback_data: 'menu:pricing' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } });
         }
       }
-      deps.repos.rulesRepo.update(ruleId, { enabled: !rule.enabled });
+      deps.repos.rulesRepo.update(ruleId, { enabled: !rule.enabled }, ctx.userId);
       return ctx.reply(`✅ Siap bos, aturan <b>${esc(rule.name)}</b> sudah saya ${rule.enabled ? 'matiin' : 'nyalain'} 🙏`, {
         parse_mode: 'HTML',
         reply_markup: { inline_keyboard: [[{ text: '📋 Aturanku', callback_data: 'rule:view:all' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },

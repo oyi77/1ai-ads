@@ -18,6 +18,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <!-- Telegram Mini App SDK. REQUIRED before the bundle: App.tsx reads
+         window.Telegram.WebApp.initData on first render to exchange for a
+         session. Without this tag window.Telegram is undefined, so a user
+         opening the app from the bot's menu button lands on the login page
+         with no way in (Telegram accounts have no password). -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- GA4 G-V9C14XZ9SG loaded dynamically by CookieConsent on user accept. -->
   </head>
   <body>

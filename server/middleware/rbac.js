@@ -3,6 +3,9 @@
  *
  * `requireRole(...roles)`  — rejects if req.user.role not in the list.
  * `requirePlan(...plans)` — rejects if req.user.plan not in the list.
+ * Plans are hierarchical: enterprise implies pro, pro implies free.
+ * requirePlan('pro') therefore passes for enterprise users — a paid tier
+ * must never be locked out of a lower tier's feature.
  *                          Admin users always bypass plan restrictions.
  * `requireAddon(key)`    — rejects if user has no active row in user_addons
  *                          for the key. Admin always bypasses. 403 carries the
@@ -30,10 +33,14 @@ export function requirePlan(...plans) {
     if (req.user.role === 'admin') {
       return next();
     }
-    if (!plans.includes(req.user.plan)) {
-      return res.status(403).json({ success: false, error: 'Upgrade required' });
-    }
-    next();
+    // Hierarchical: enterprise passes a 'pro' gate. Without this, enterprise
+    // (highest paid tier) is rejected from pro-gated routes — live-proven:
+    // enterprise user got 403 "Upgrade required" on /api/automation.
+    const rank = { free: 0, pro: 1, enterprise: 2 };
+    const need = Math.max(...plans.map(p => rank[p] ?? 0));
+    const have = rank[req.user.plan] ?? 0;
+    if (have >= need) return next();
+    return res.status(403).json({ success: false, error: 'Upgrade required' });
   };
 }
 

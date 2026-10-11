@@ -113,7 +113,9 @@ export class RulesRepository {
     return idCol?.type ? String(idCol.type).toUpperCase() : 'TEXT';
   }
 
-  update(id, updates) {
+  /** Update only when the row belongs to userId (multi-tenant safety). */
+  update(id, updates, userId) {
+    if (userId && !this._ownedBy(id, userId)) return null;
     const fields = [];
     const params = [];
     if (updates.name) { fields.push('name = ?'); params.push(updates.name); }
@@ -133,9 +135,17 @@ export class RulesRepository {
     return this.getById(id);
   }
 
-  getById(id) {
+  /** True when the row exists and belongs to userId (null userId = no check). */
+  _ownedBy(id, userId) {
+    const row = this.db.prepare(`SELECT user_id FROM ${this.table} WHERE id = ?`).get(id);
+    return Boolean(row) && String(row.user_id) === String(userId);
+  }
+
+  /** Fetch by id; when userId is given, another tenant's row reads as missing. */
+  getById(id, userId) {
     const row = this.db.prepare(`SELECT * FROM ${this.table} WHERE id = ?`).get(id);
     if (!row) return null;
+    if (userId && String(row.user_id) !== String(userId)) return null;
     return this._hydrate(row);
   }
 
@@ -170,7 +180,8 @@ export class RulesRepository {
     return rows.map(r => this._hydrate(r));
   }
 
-  delete(id) {
+  delete(id, userId) {
+    if (userId && !this._ownedBy(id, userId)) return false;
     return this.db.prepare(`DELETE FROM ${this.table} WHERE id = ?`).run(id).changes > 0;
   }
 

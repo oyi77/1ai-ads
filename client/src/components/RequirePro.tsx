@@ -21,6 +21,16 @@ const badgeStyle: React.CSSProperties = {
   letterSpacing: '0.05em',
 };
 
+/**
+ * Paid = pro OR enterprise. Lifetime buyers are granted `enterprise`, so a
+ * bare `plan === 'pro'` check locked them out of every Pro surface they paid
+ * for. Mirrors the server rule in middleware/rbac.js requirePlan (hierarchical
+ * rank: enterprise 2 > pro 1 > free 0).
+ */
+export function isPaidPlan(user: { plan?: string } | null | undefined) {
+  return user?.plan === 'pro' || user?.plan === 'enterprise';
+}
+
 export function ProBadge({ compact }: { compact?: boolean }) {
   return (
     <span style={{ ...badgeStyle, background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>
@@ -41,6 +51,13 @@ export function PlanBadge() {
   const user = api.getUser();
   if (!user) return null;
   if (user.role === 'admin') return <AdminBadge />;
+  if (user.plan === 'enterprise') {
+    return (
+      <span style={{ ...badgeStyle, background: 'rgba(16,185,129,0.15)', color: '#34d399' }}>
+        Lifetime
+      </span>
+    );
+  }
   if (user.plan === 'pro') return <ProBadge />;
   return (
     <span style={{ ...badgeStyle, background: 'rgba(148,163,184,0.1)', color: '#94a3b8' }}>
@@ -51,10 +68,9 @@ export function PlanBadge() {
 
 export function RequirePro({ children }: { children: ReactNode }) {
   const user = api.getUser();
-  if (user?.role === 'admin' || user?.plan === 'pro') {
+  if (user?.role === 'admin' || isPaidPlan(user)) {
     return <>{children}</>;
   }
-
   return (
     <div style={upgradeBox}>
       <div style={{ fontSize: '2.5rem' }}>🔒</div>

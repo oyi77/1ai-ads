@@ -60,9 +60,9 @@ export function setupDailyEvalGuard(bot, deps) {
           lines.push(`…dan ${list.length - shown.length} lagi bos`);
         }
         const text = `🔴 <b>Bos, Daily Eval — ${list.length} iklan jelek bos 🙏</b>\n${lines.join('\n')}\n\nSaran saya pause yang boncos biar budget aman bos. Bos ACC?`;
-        // The admin fallback carries no campaign names.
-        const fallback = `🔴 <b>Bos, Daily Eval — ${list.length} iklan jelek</b> (owner belum link Telegram) bos`;
-        const delivered = await ownerSend(bot, deps, ownerId, text, { parse_mode: 'HTML' }, fallback);
+        // Owner unreachable → stays in-app; NEVER forwarded to the admin chat
+        // (the digest lists campaign names = other customers' data).
+        const delivered = await ownerSend(bot, deps, ownerId, text, { parse_mode: 'HTML' });
         notified += delivered ? list.length : 0;
         for (const c of list) {
           deps.repos?.settingsRepo?.set(c.dedupKey, new Date().toISOString());

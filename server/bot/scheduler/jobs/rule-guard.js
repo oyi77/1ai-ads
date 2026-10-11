@@ -3,7 +3,7 @@
  *
  * Extracted verbatim from ../scheduler.js. Registered via setupRuleGuard(bot, deps).
  */
-import { safeSend, evaluateRuleForCampaign, isRuleDue, filterCampaignsForRule, adoptSystemCampaigns, scheduleJob, log, esc } from '../helpers.js';
+import { evaluateRuleForCampaign, isRuleDue, filterCampaignsForRule, adoptSystemCampaigns, scheduleJob, log, esc } from '../helpers.js';
 import { describeRuleCondition as describeID, actionWord as actionWordID } from '../../../lib/rule-words.js';
 
 /**
@@ -106,7 +106,9 @@ export function setupRuleGuard(bot, deps) {
           const telegramId = deps.repos?.usersRepo?.getTelegramIdByUserId?.(ownerId)
             || deps.repos?.usersRepo?.findById?.(ownerId)?.telegram_id;
           if (!telegramId) {
-            await safeSend(bot, `⚠️ <b>Bos, ${esc(campaign.name)}</b> kena aturan <b>${esc(rule.name)}</b> bos — saya tunggu ACC bos di /menu → Mini App ya 🙏`, { parse_mode: 'HTML' });
+            // Owner belum link Telegram: draf tetap nunggu di Mini App /drafts.
+            // JANGAN kirim ke chat admin — nama campaign pelanggan lain = bocor.
+            log.info('Rule match owner unreachable — draft kept in-app', { ownerId, rule: rule.name });
             continue;
           }
           const text = `⚠️ <b>Bos, izin lapor bos 🙏 ${esc(campaign.name)}</b> kena aturan "${esc(rule.name)}"\n${esc(condText)} → <b>${esc(actText)}</b>\n\n<i>Bos, ini aturan bot saya (bukan aturan Facebook). Bos pencet ✅ biar saya jalanin, ❌ biar saya batalin ya bos:</i>`;
@@ -121,18 +123,16 @@ export function setupRuleGuard(bot, deps) {
               },
             });
           } catch (err) {
-            log.error('Failed to send approval prompt to owner', { telegramId, error: err.message });
-            await safeSend(bot, `⚠️ <b>Bos, ${esc(campaign.name)}</b> kena aturan <b>${esc(rule.name)}</b> — drafnya saya tunggu ACC bos di /menu → Mini App ya 🙏`, { parse_mode: 'HTML' });
+            log.error('Failed to send approval prompt to owner — draft kept in-app', { telegramId, error: err.message });
           }
         }
         if (skippedOverflow > 0) {
           const telegramId2 = deps.repos?.usersRepo?.getTelegramIdByUserId?.(ownerId)
             || deps.repos?.usersRepo?.findById?.(ownerId)?.telegram_id;
           const sumText = `⚠️ <b>Bos, aturan "${esc(rule.name)}"</b> kena di <b>${draftsCreated + skippedOverflow} campaign</b> — 10 draf pertama saya kirim, <b>${skippedOverflow} lainnya</b> nunggu di 📋 Aturanku → 📊 Kinerja. Bos cek & ACC dari sana ya 🙏`;
-          try {
-            if (telegramId2 && bot.telegram) await bot.telegram.sendMessage(telegramId2, sumText, { parse_mode: 'HTML' });
-            else await safeSend(bot, sumText, { parse_mode: 'HTML' });
-          } catch { /* ringkasan best-effort */ }
+          if (telegramId2 && bot.telegram) {
+            try { await bot.telegram.sendMessage(telegramId2, sumText, { parse_mode: 'HTML' }); } catch { /* best-effort */ }
+          }
           log.info('Rule match overflow summarized', { rule: rule.name, ownerId, draftsCreated, skippedOverflow });
         }
       }

@@ -52,12 +52,11 @@ export function createAutomationRouter({ rulesRepo }) {
   /** POST /toggle/:id — toggle rule active state (ownership-enforced) */
   router.post('/toggle/:id', async (req, res) => {
     try {
-      const rule = rulesRepo.getById ? await rulesRepo.getById(req.params.id) : null;
-      if (!rule) return res.status(404).json({ success: false, error: 'Rule not found' });
       const uid = (req.user && req.user.id) ? req.user.id : 'system';
-      if ((rule.userId ?? rule.user_id) !== uid) return res.status(404).json({ success: false, error: 'Rule not found' });
+      const rule = rulesRepo.getById ? await rulesRepo.getById(req.params.id, uid) : null;
+      if (!rule) return res.status(404).json({ success: false, error: 'Rule not found' });
       const newEnabled = rule.enabled === 1 ? 0 : 1;
-      if (rulesRepo.update) await rulesRepo.update(req.params.id, { enabled: newEnabled });
+      if (rulesRepo.update) await rulesRepo.update(req.params.id, { enabled: newEnabled }, uid);
       res.json({ success: true, is_active: newEnabled });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -67,11 +66,10 @@ export function createAutomationRouter({ rulesRepo }) {
   /** POST /delete/:id — delete a rule (ownership-enforced) */
   router.post('/delete/:id', async (req, res) => {
     try {
-      const rule = rulesRepo.getById ? await rulesRepo.getById(req.params.id) : null;
-      if (!rule) return res.status(404).json({ success: false, error: 'Rule not found' });
       const uid = (req.user && req.user.id) ? req.user.id : 'system';
-      if ((rule.userId ?? rule.user_id) !== uid) return res.status(404).json({ success: false, error: 'Rule not found' });
-      if (rulesRepo.delete) await rulesRepo.delete(req.params.id);
+      const rule = rulesRepo.getById ? await rulesRepo.getById(req.params.id, uid) : null;
+      if (!rule) return res.status(404).json({ success: false, error: 'Rule not found' });
+      if (rulesRepo.delete) await rulesRepo.delete(req.params.id, uid);
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });

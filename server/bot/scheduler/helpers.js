@@ -47,33 +47,34 @@ async function safeSend(bot, text, extra) {
   }
 }
 
+
 /**
- * Send an alert about a customer's campaign to that OWNER's Telegram, falling
- * back to the admin chat only when the owner cannot be reached.
+ * Send an alert about a customer's campaign to that OWNER's Telegram.
  *
- * `campaigns` is per-user, so routing a name-bearing alert straight to the
- * admin chat tells one customer's story to whoever sits in the operations
- * chat. The token-health, rule-guard, digest and anomaly jobs all resolve the
- * owner's Telegram first; the campaign monitor and the daily eval guard did
- * not, so every stop-loss/scale/underperformer alert went to the wrong place.
+ * NEVER falls back to the admin chat. campaigns/rules are per-user, so a
+ * fallback told one customer's story to whoever sits in the operations chat
+ * (bos: "semua rule dan account masuk ke bot admin"). When the owner has no
+ * linked Telegram the alert stays in-app (Mini App /drafts) and this returns
+ * false — callers must not route it anywhere else.
  *
  * @returns {Promise<boolean>} true when the owner received the message
  */
-async function ownerSend(bot, deps, ownerId, text, extra, fallbackText = text) {
+async function ownerSend(bot, deps, ownerId, text, extra) {
   const usersRepo = deps.repos?.usersRepo;
   const telegramId = ownerId
     ? (usersRepo?.getTelegramIdByUserId?.(ownerId) || usersRepo?.findById?.(ownerId)?.telegram_id)
     : null;
-  if (telegramId) {
-    try {
-      await bot.telegram.sendMessage(telegramId, text, extra);
-      return true;
-    } catch (err) {
-      log.warn('Owner alert failed', { ownerId, error: err.message });
-    }
+  if (!telegramId || !bot?.telegram) {
+    log.info('Owner unreachable — alert kept in-app, not forwarded to admin chat', { ownerId });
+    return false;
   }
-  await safeSend(bot, fallbackText, extra);
-  return false;
+  try {
+    await bot.telegram.sendMessage(telegramId, text, extra);
+    return true;
+  } catch (err) {
+    log.warn('Owner alert failed — kept in-app', { ownerId, error: err.message });
+    return false;
+  }
 }
 
 /**

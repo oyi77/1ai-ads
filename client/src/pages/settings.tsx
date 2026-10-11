@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Key, User, Bot, Save, Link2, Crown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
-import { PlanBadge } from '../components/RequirePro';
+import { PlanBadge, isPaidPlan } from '../components/RequirePro';
 interface AiConfigData {
   url: string;
   model: string;
@@ -84,7 +84,7 @@ export function SettingsPage() {
       {/* Current Plan */}
       {(() => {
         const user = api.getUser();
-        const isPro = user?.role === 'admin' || user?.plan === 'pro';
+        const isPro = user?.role === 'admin' || isPaidPlan(user);
         return (
           <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 24, marginBottom: 16 }}>
             <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>

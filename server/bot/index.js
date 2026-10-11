@@ -15,12 +15,14 @@ import { handleStatus, handleDashboardCallback } from './commands/status.js';
 import { handleHelp } from './commands/help.js';
 import { handleSettings, handleSettingsCallback } from './commands/settings.js';
 import { handleMonitor, handleMonitorCallback, handleMonitorText } from './commands/monitor.js';
-import { handleAdminStats, handleAdminUsers, handleAdminBroadcast } from './commands/admin.js';
+import { handleAdminStats, handleAdminUsers, handleAdminBroadcast, handleAdminGrant } from './commands/admin.js';
 import { handleApprovalApprove, handleApprovalReject } from './commands/approvals.js';
 import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsAsk, handleAdsAskBud, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm, handleAdsAccountReport, handleAdsAccountsPage, handleAdsCampaignsPage, handleAdsBudgetScale, handleAdsPlatform } from './commands/ads.js';
 import { handlePricing, handlePricingCallback } from './commands/pricing.js';
+import { handleStrategy, handleStrategyCallback } from './commands/strategy.js';
 import { initScheduler } from './scheduler.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { escapeHtml as esc } from '../lib/escape.js';
 import { identify } from './middleware/identify.js';
 import { connectScene, handleSceneCancel } from './scenes/connect-account.js';
 import { connectOAuthScene } from './scenes/connect-oauth.js';
@@ -32,7 +34,8 @@ let botInstance = null;
 const KNOWN_COMMANDS = [
   'start', 'menu', 'quick', 'status', 'help', 'pricing',
   'monitor', 'settings', 'ads', 'cancel', 'metaapp', 'create',
-  'admin_stats', 'admin_users', 'admin_broadcast',
+  'strategy',
+  'admin_stats', 'admin_users', 'admin_broadcast', 'admin_grant',
   'optimize', 'platforms'
 ];
 
@@ -79,10 +82,12 @@ export function initBot(app, deps) {
     status: handleStatus(deps),
     quick: handleMenu(),
     settings: handleSettings(deps),
-    pricing: handlePricing(deps),
+    pricing: handlePricing(),
+    strategy: handleStrategy(),
     admin_stats: handleAdminStats(deps),
     admin_users: handleAdminUsers(deps),
     admin_broadcast: handleAdminBroadcast(deps),
+    admin_grant: handleAdminGrant(deps),
     ads: handleAds(deps),
     monitor: handleMonitor(deps),
     optimize: (ctx) => { ctx.match = ['menu:optimize', 'optimize']; return handleMenuButton(deps)(ctx); },
@@ -216,7 +221,8 @@ export function initBot(app, deps) {
   bot.action(/^monitor:(.+)$/, handleMonitorCallback(deps));
   bot.action(/^rule:(.+)$/, handleMonitorCallback(deps));
   bot.action(/^dash:(.+)$/, handleDashboardCallback(deps));
-  bot.action(/^pricing:(.+)$/, handlePricingCallback(deps));
+  bot.action(/^pricing:(.+)$/, handlePricingCallback());
+  bot.action(/^strategy:(.+)$/, handleStrategyCallback());
   bot.action(/^quick:menu$/, handleMenu());
   // ── Navigation callbacks (nav.js NAV constant) ──────────
   bot.action(/^nav:back(?::.+)?$/, async (ctx) => {
@@ -277,9 +283,9 @@ export function initBot(app, deps) {
     { command: 'create', description: '🎯 Buat kampanye (wizard)' },
     { command: 'monitor', description: '⚡ Aturan otomatis & alert' },
     { command: 'optimize', description: '🤖 Saran AI optimasi' },
-    { command: 'settings', description: '⚙️ Token & koneksi akun' },
+    { command: 'strategy', description: '🎓 Cara pakai (panduan pemula)' },
     { command: 'cancel', description: '❌ Batalkan wizard/flow aktif' },
-    { command: 'help', description: '❓ Bantuan' },
+    { command: 'pricing', description: '💰 Harga — Rp 99rb lifetime' },
   ];
 
   // ROOT CAUSE (isolated via MTProto + container stop/start, 2026-09-24):
@@ -468,12 +474,33 @@ function handleTextMessage(deps) {
   };
 }
 
+/**
+ * Foto masuk = hampir selalu bukti transfer (alur /pricing → Beli Lifetime).
+ * Teruskan ke chat admin (ops channel) supaya bos bisa konfirmasi & grant
+ * plan. Ini bukan alert lintas-tenant: isinya cuma foto dari user ini sendiri.
+ * Kalau bukan alur pembelian, user tetap dapat balasan yang sama seperti biasa.
+ */
 function handlePhotoMessage(_deps) {
   return async (ctx) => {
-    await ctx.reply('📸 Siap bos, fotonya saya terima! Bos buka /menu ya biar saya tunjukin bisa saya apain bos.', {
-      reply_markup: {
-        inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]],
-      },
-    });
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    const uname = ctx.from?.username ? `@${ctx.from.username}` : (ctx.from?.first_name || 'tanpa nama');
+    const caption = `🧾 <b>Bukti transfer masuk</b>\n\nDari: ${esc(uname)}\nUser ID: <code>${esc(String(ctx.userId || '-'))}</code>\nTelegram ID: <code>${esc(String(ctx.from?.id || '-'))}</code>`;
+    let forwarded = false;
+    try {
+      if (chatId && ctx.telegram) {
+        await ctx.telegram.sendPhoto(chatId, ctx.message.photo.at(-1).file_id, {
+          caption,
+          parse_mode: 'HTML',
+        });
+        forwarded = true;
+      }
+    } catch { /* ops channel optional */ }
+    await ctx.reply(
+      forwarded
+        ? '📸 <b>Siap bos, bukti transfernya sudah saya teruskan ke admin 🙏</b>\n\nAdmin biasanya proses dalam beberapa menit. Begitu paketnya aktif, saya kabarin bos di chat ini ya.'
+        : '📸 Siap bos, fotonya saya terima 🙏 Chat admin langsung ya buat konfirmasi transfernya, atau buka /menu ya.',
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+    );
   };
 }
+
