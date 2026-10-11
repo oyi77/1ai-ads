@@ -83,6 +83,17 @@ export function setupRuleGuard(bot, deps) {
           // Dedup: skip if a pending draft already exists for this rule+campaign.
           // Only effective while campaigns.id is stable - see CampaignsRepository.upsert.
           const existingDraft = deps.repos?.draftsRepo?.findPendingForRuleCampaign?.(rule.name, campaign.id, rule.id);
+          // Audit trail: a dedup MISS on a rule+campaign that already has a
+          // pending draft is the only way a duplicate can be born. Log both
+          // outcomes with the raw id so a recurrence names its own cause
+          // instead of needing another forensic dig.
+          log.info('rule-guard dedup', {
+            rule: rule.name,
+            ruleId: rule.id,
+            ruleIdType: typeof rule.id,
+            campaignId: campaign.id,
+            hit: Boolean(existingDraft),
+          });
           if (existingDraft) continue;
 
           const condText = describeID(rule.condition);

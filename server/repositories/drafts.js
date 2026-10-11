@@ -55,6 +55,44 @@ export class DraftsRepository {
       CREATE INDEX IF NOT EXISTS idx_drafts_rule ON approval_drafts(rule_id);
       CREATE INDEX IF NOT EXISTS idx_drafts_rule_status ON approval_drafts(rule_id, status);
     `);
+    // Anti-race: satu rule+campaign hanya boleh punya SATU draft pending.
+    // Dedup read-then-check di rule-guard bisa lolos oleh dua write yang
+    // berbarengan (TOCTOU) — terbukti 2026-10-10/11: 2 draft rule_pause
+    // identik rule 32 + 1 campaign lahir 24 jam berselang. Constraint level DB
+    // menolak insert kedua (UNIQUE constraint failed) walau check-nya lolos.
+    // Partial: hanya baris pending yang unik; histori approved/rejected bebas.
+    // NOTE: rule_id disimpan sebagai TEXT hasil affinity ("32.0" untuk id 32) —
+    // perbandingan di dalam pemanggil harus konsisten (kirim rule.id mentah).
+    // Baris duplikat lama (pra-constraint) harus dibersihkan DULU: CREATE UNIQUE
+    // INDEX gagal selama masih ada pasangan pending kembar, dan kegagalan itu
+    // akan ditelan catch → constraint tak pernah aktif. Simpan yang PALING AWAL
+    // (draft pertama = yang pertama dilihat owner), buang kembarannya.
+    try {
+      const deduped = this.db.prepare(`
+        DELETE FROM approval_drafts
+        WHERE status = 'pending' AND campaign_id IS NOT NULL
+          AND id NOT IN (
+            SELECT MIN(id) FROM approval_drafts
+            WHERE status = 'pending' AND campaign_id IS NOT NULL
+            GROUP BY type, campaign_id, COALESCE(rule_id, '')
+          )
+      `).run();
+      if (deduped.changes > 0) {
+        log.warn('removed duplicate pending drafts (pre-constraint residue)', { removed: deduped.changes });
+      }
+    } catch (err) {
+      log.warn('duplicate draft cleanup failed', { error: err.message });
+    }
+    try {
+      this.db.exec(`
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_drafts_pending_pair
+        ON approval_drafts (type, campaign_id, COALESCE(rule_id, ''))
+        WHERE status = 'pending' AND campaign_id IS NOT NULL;
+      `);
+    } catch (err) {
+      log.warn('pending-draft unique index unavailable', { error: err.message });
+    }
+    log.debug('approval_drafts table ready');
     log.debug('approval_drafts table ready');
   }
 
@@ -89,10 +127,21 @@ export class DraftsRepository {
 
   create({ type, summary, details, proposedBy = 'ai', userId = null, campaignId, approvalRequestId = null, ruleId = null }) {
     const id = uuidv4();
-    this.db.prepare(`
-      INSERT INTO approval_drafts (id, type, summary, details_json, user_id, proposed_by, campaign_id, approval_request_id, rule_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, type, summary, details ? JSON.stringify(details) : null, userId || null, proposedBy, campaignId || null, approvalRequestId || null, ruleId || null);
+    try {
+      this.db.prepare(`
+        INSERT INTO approval_drafts (id, type, summary, details_json, user_id, proposed_by, campaign_id, approval_request_id, rule_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(id, type, summary, details ? JSON.stringify(details) : null, userId || null, proposedBy, campaignId || null, approvalRequestId || null, ruleId || null);
+    } catch (err) {
+      // Race dimenangkan writer lain: pasangan rule+campaign pending sudah ada
+      // (uq_drafts_pending_rule_campaign). Null = "tidak ada yang dibuat",
+      // pemanggil (rule-guard) skip seperti dedup hit biasa.
+      if (String(err?.message || '').includes('UNIQUE constraint failed')) {
+        log.info('draft dedup race lost — pending pair already exists', { type, ruleId, campaignId });
+        return null;
+      }
+      throw err;
+    }
     return this.findById(id);
   }
 
