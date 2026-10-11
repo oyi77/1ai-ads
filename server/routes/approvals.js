@@ -52,7 +52,7 @@ export function createApprovalsRouter(deps) {
 
   router.post('/api/approvals/:id/approve', requireAuth, requireAdmin, async (req, res) => {
     try {
-      const draft = await draftService.approveDraft(req.params.id, req.user.id, req.body?.executionResult || null);
+      const draft = await draftService.approveDraft(req.params.id, req.user.id, req.body?.executionResult || null, { isAdmin: req.user?.role === 'admin' });
       res.json({ success: true, data: draft });
     } catch (err) {
       const code = err.name === 'NotFoundError' || err.name === 'ValidationError' ? 400 : 500;
@@ -62,7 +62,7 @@ export function createApprovalsRouter(deps) {
 
   router.post('/api/approvals/:id/reject', requireAuth, requireAdmin, async (req, res) => {
     try {
-      const draft = await draftService.rejectDraft(req.params.id, req.user.id, req.body?.rejectionReason || null);
+      const draft = await draftService.rejectDraft(req.params.id, req.user.id, req.body?.rejectionReason || null, { isAdmin: req.user?.role === 'admin' });
       res.json({ success: true, data: draft });
     } catch (err) {
       const code = err.name === 'NotFoundError' || err.name === 'ValidationError' ? 400 : 500;

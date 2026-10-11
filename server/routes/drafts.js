@@ -47,7 +47,7 @@ export function createDraftRouter(draftService) {
   router.post('/:id/approve', requireAuth, requireAdmin, async (req, res) => {
     try {
       const { executionResult } = req.body || {};
-      const draft = await draftService.approveDraft(req.params.id, req.user.id, executionResult);
+      const draft = await draftService.approveDraft(req.params.id, req.user.id, executionResult, { isAdmin: req.user?.role === 'admin' });
       res.json({ success: true, data: draft });
     } catch (err) {
       res.status(err.status || 500).json({ success: false, error: err.message });
@@ -59,7 +59,7 @@ export function createDraftRouter(draftService) {
   router.post('/:id/reject', requireAuth, requireAdmin, async (req, res) => {
     try {
       const { rejectionReason } = req.body;
-      const draft = await draftService.rejectDraft(req.params.id, req.user.id, rejectionReason);
+      const draft = await draftService.rejectDraft(req.params.id, req.user.id, rejectionReason, { isAdmin: req.user?.role === 'admin' });
       res.json({ success: true, data: draft });
     } catch (err) {
       res.status(err.status || 500).json({ success: false, error: err.message });

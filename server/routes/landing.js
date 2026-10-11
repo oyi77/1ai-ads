@@ -16,7 +16,7 @@ export function createLandingRouter(landingRepo, landingGenerator) {
 
   // GET /api/landing - List all landing pages
   router.get('/', (req, res) => {
-    const userId = req.user?.id || 'system';
+    const userId = req.user?.id;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const result = landingRepo.findAll({ page, limit, userId });

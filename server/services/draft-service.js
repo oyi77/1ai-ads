@@ -24,6 +24,19 @@ export function hintForExecutionError(msg) {
   return 'Coba ✅ lagi nanti. Kalau masih gagal, hubungi admin.';
 }
 
+/**
+ * Owner-or-admin gate for draft review. A draft belongs to the user whose
+ * campaign produced it; anyone else gets NotFound (never 403 — a 403 would
+ * confirm the id exists). Admin may review any draft: the HTTP review routes
+ * are requireAdmin-gated admin ops, while the bot reviews same-owner drafts.
+ */
+function assertOwnerOrAdmin(draft, userId, isAdmin) {
+  if (isAdmin) return;
+  if (draft.user_id && userId && String(draft.user_id) !== String(userId)) {
+    throw new NotFoundError('Draft not found');
+  }
+}
+
 export class DraftService {
   constructor(draftsRepo, telegramService = null, executor = null) {
     this.draftsRepo = draftsRepo;
@@ -61,9 +74,10 @@ export class DraftService {
     return draft;
   }
 
-  async approveDraft(id, userId, executionResult = null) {
+  async approveDraft(id, userId, executionResult = null, { isAdmin = false } = {}) {
     const existing = await this.draftsRepo.findById(id);
     if (!existing) throw new NotFoundError('Draft not found');
+    assertOwnerOrAdmin(existing, userId, isAdmin);
     if (existing.status !== 'pending') throw new ValidationError(`Draft is already ${existing.status}`);
 
     // Externally-executed approval: record the caller's result verbatim.
@@ -114,9 +128,10 @@ export class DraftService {
     return draft;
   }
 
-  async rejectDraft(id, userId, rejectionReason = null) {
+  async rejectDraft(id, userId, rejectionReason = null, { isAdmin = false } = {}) {
     const existing = await this.draftsRepo.findById(id);
     if (!existing) throw new NotFoundError('Draft not found');
+    assertOwnerOrAdmin(existing, userId, isAdmin);
     if (existing.status !== 'pending') throw new ValidationError(`Draft is already ${existing.status}`);
 
     const draft = this.draftsRepo.reject(id, { reviewedBy: userId, rejectionReason });

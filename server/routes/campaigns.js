@@ -137,7 +137,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
   router.post('/:id/submit-for-approval', async (req, res) => {
     try {
       const campaignId = req.params.id;
-      const userId = req.user?.id || 'system';
+      const userId = req.user?.id;
       const campaign = campaignsRepo.findById(campaignId, userId);
       if (!campaign) return res.status(404).json({ success: false, error: 'Campaign not found' });
 
