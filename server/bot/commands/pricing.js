@@ -1,13 +1,11 @@
 /**
  * /pricing — Paket AdForge: Rp 99.000 LIFETIME (sekali bayar).
  *
- * Bos jual MANUAL (belum ada gateway). Jadi tombol bayar TIDAK bikin order
- * duitku — dia kirim lead ke chat admin + nawarin transfer manual.
- * Upgrade pun di-grant manual sama admin (plan=enterprise, expires NULL).
- *
- * Kenapa lifetime: plan_expires_at NULL TIDAK PERNAH di-downgrade — cek
- * findExpiredPaidPlans() di repositories/users.js: query-nya minta
- * `plan_expires_at IS NOT NULL`. Jadi enterprise + NULL = aktif selamanya.
+ * Tombol Beli bikin order duitku ASLI via paymentService.createPayment,
+ * user bayar lewat tombol Bayar, callback /api/payments/notify naikkan
+ * plan otomatis. findExpiredPaidPlans() hanya downgrade plan_expires_at
+ * NOT NULL — enterprise + NULL = aktif selamanya (lihat _handleOrderPaid;
+ * plan jualan manual digrant via /admin_grant dengan expires NULL).
  */
 import { escapeHtml as esc } from '../../lib/escape.js';
 
@@ -82,44 +80,41 @@ export function handlePricingCallback() {
     if (!ctx.userId) {
       return ctx.reply('⚠️ Maaf bos, sesi bos habis 🙏 Kirim /start dulu ya bos.');
     }
-
-    // Lead ke admin: bos proses manual (transfer + grant enterprise).
-    const uname = ctx.from?.username ? `@${ctx.from.username}` : (ctx.from?.first_name || 'tanpa nama');
-    let adminNotified = false;
-    try {
-      const chatId = process.env.TELEGRAM_CHAT_ID;
-      if (chatId && ctx.telegram) {
-        await ctx.telegram.sendMessage(
-          chatId,
-          `🔔 <b>LEAD BARU — Paket Lifetime Rp 99rb</b>\n\n` +
-          `User: ${esc(uname)}\n` +
-          `User ID: <code>${esc(String(ctx.userId))}</code>\n` +
-          `Telegram ID: <code>${esc(String(ctx.from?.id || '-'))}</code>\n` +
-          `Plan sekarang: ${esc(ctx.user?.plan || 'free')}\n\n` +
-          `Langkah: konfirmasi transfer → jalankan\n` +
-          `<code>docker exec 1ai-ads node -e "const D=require('better-sqlite3');const db=new D('/app/data/1ai-ads.db');db.prepare(\\\"UPDATE users SET plan='enterprise', plan_expires_at=NULL WHERE id=?\\\").run('${esc(String(ctx.userId))}')"</code>\n` +
-          `lalu restart container (WAL).`,
-          { parse_mode: 'HTML' }
-        );
-        adminNotified = true;
-      }
-    } catch {
-      // jangan bocorin error ke user; tetap lanjut
+    if (ctx.user?.plan === 'enterprise') {
+      return ctx.reply(
+        '✅ <b>Mantap bos, paket Lifetime sudah aktif 🙏</b>\n\nNggak ada yang perlu dibayar lagi.',
+        { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '⬅️ Kembali ke Menu', callback_data: 'quick:menu' }]] } }
+      );
     }
-
+    const svc = ctx.deps?.services?.paymentService;
+    if (!svc?.createPayment) {
+      return ctx.reply('⚠️ Maaf bos, layanan pembayarannya lagi istirahat 🙏 Coba lagi nanti ya bos.');
+    }
+    let order;
+    try {
+      await ctx.reply('🔄 Bos, saya siapin link bayarnya ya…');
+      // plan_pro = Rp 99rb (lihat settings payment_plan_pro). Beli sekali,
+      // callback naikkan plan, aktivasi lifetime digrant via /admin_grant.
+      order = await svc.createPayment(ctx.userId, 'plan_pro');
+    } catch (err) {
+      const msg = String(err?.message || '');
+      if (/already on/i.test(msg)) {
+        return ctx.reply('✅ Bos, bos sudah di paket itu. Nikmati fiturnya ya bos!');
+      }
+      return ctx.reply(`⚠️ Maaf bos, gagal saya buat link bayar 🙏 Coba lagi nanti ya bos.`);
+    }
+    if (!order?.checkoutUrl) {
+      return ctx.reply('⚠️ Maaf bos, link bayarnya nggak balik 🙏 Coba lagi nanti ya bos.');
+    }
     return ctx.reply(
-      '💳 <b>Siap bos, ini cara beli Lifetime-nya 🙏</b>\n\n' +
-      `💰 <b>Rp ${PRICE.toLocaleString('id-ID')}</b> — <b>sekali bayar, selamanya</b>\n\n` +
-      '<b>Langkahnya gampang bos:</b>\n' +
-      '1️⃣ Transfer Rp 99.000 ke rekening/e-wallet admin\n' +
-      '2️⃣ Kirim <b>bukti transfer</b> ke chat ini (foto/SS aja)\n' +
-      '3️⃣ Admin aktifin paketnya, bos saya kabarin di sini\n\n' +
-      `<i>${adminNotified ? 'Lead bos sudah saya kabarin ke admin, tunggu balasan ya 🙏' : 'Chat admin buat minta nomor transfer ya bos 🙏'}</i>`,
+      `💳 <b>Bos, bayar Rp ${Number(order.amount || PRICE).toLocaleString('id-ID')} — sekali bayar 🙏</b>\n\n` +
+      `Bos pencet tombol di bawah ya (QRIS/VA/e-wallet via duitku). Setelah bayar, paket aktif otomatis max 5 menit bos 🙏\n\n` +
+      `<i>Order: <code>${esc(order.orderId || '')}</code></i>`,
       {
         parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
-            [{ text: '📷 Kirim Bukti Transfer', callback_data: 'pricing:proof' }],
+            [{ text: '💳 Bayar Sekarang', url: order.checkoutUrl }],
             [{ text: '⬅️ Kembali ke Menu', callback_data: 'quick:menu' }],
           ],
         },
