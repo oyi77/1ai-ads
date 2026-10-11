@@ -208,36 +208,22 @@ export function createApp(params) {
   repos.auditRepo = auditRepo;
   app.use(auditLog(auditRepo));
 
-  // Scalev payment callback — handled locally (no upstream proxy).
-  // Signature: x-scalev-signature = HMAC-SHA256(hex) of the raw body.
+  // 1ai-payment callback — forwarded by the gateway as X-Payment-Signature
+  // (HMAC-SHA256 of the raw body, keyed with our merchant webhook secret).
+  // Verified + applied by paymentService.processPaymentCallback; the legacy
+  // direct-Scalev path (x-scalev-signature) is kept as fallback.
+  //
+  // PROVEN BUG (2026-10-11): this handler demanded x-scalev-signature FIRST
+  // and 401'd when it was absent — while the gateway only ever sends
+  // X-Payment-Signature. Every successful Duitku payment bounced off the
+  // 401, so no buyer was ever auto-upgraded. Gate on the header the sender
+  // actually sends.
   app.post('/api/payments/notify', async (req, res) => {
-    const signature = req.headers['x-scalev-signature'];
-    if (!signature) {
-      return res.status(401).json({ error: 'Missing signature' });
-    }
-    const secret = config.scalevWebhookSecret;
-    if (!secret) {
-      // Fail closed, but answer 401 — never leak "secret unconfigured"
-      // vs "bad signature" to the caller (proven live 2026-09-14: garbage
-      // signature got 500 "Webhook secret not configured"). The 500 stays
-      // in the server log.
-      log.error('SCALEV_WEBHOOK_SECRET not configured — rejecting Scalev payment webhook (fail-closed)');
-      return res.status(401).json({ error: 'Invalid signature' });
-    }
     const raw = req.rawBody || Buffer.from(JSON.stringify(req.body || {}));
-    const expected = crypto.createHmac('sha256', secret).update(raw).digest('hex');
-    const provided = String(signature).replace(/^sha256=/, '');
-    const valid = expected.length === provided.length &&
-      crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(provided));
-    if (!valid) {
-      return res.status(401).json({ error: 'Invalid signature' });
-    }
+    const body = req.body || {};
     try {
-      const body = req.body || {};
-      // Primary path: normalized event forwarded by the 1ai-payment service
-      // (X-Payment-Signature = HMAC-SHA256 of raw body with our merchant webhook secret).
       const forwarded = await services.paymentService.processPaymentCallback(
-        req.rawBody || Buffer.from(JSON.stringify(body)),
+        raw,
         req.headers['x-payment-signature'],
       );
       if (forwarded) {
@@ -253,6 +239,22 @@ export function createApp(params) {
       }
 
       // Legacy direct-Scalev callback (x-scalev-signature).
+      const signature = req.headers['x-scalev-signature'];
+      if (!signature) {
+        return res.status(401).json({ error: 'Missing signature' });
+      }
+      const secret = config.scalevWebhookSecret;
+      if (!secret) {
+        log.error('SCALEV_WEBHOOK_SECRET not configured — rejecting legacy payment webhook (fail-closed)');
+        return res.status(401).json({ error: 'Invalid signature' });
+      }
+      const expected = crypto.createHmac('sha256', secret).update(raw).digest('hex');
+      const provided = String(signature).replace(/^sha256=/, '');
+      const valid = expected.length === provided.length &&
+        crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(provided));
+      if (!valid) {
+        return res.status(401).json({ error: 'Invalid signature' });
+      }
       const orderId = body.orderId || body.order_id;
       if (orderId) {
         const payment = repos.paymentsRepo.findByOrderId(orderId);
@@ -269,7 +271,7 @@ export function createApp(params) {
       return res.status(200).json({ ok: true });
     } catch (err) {
       log.error('Payment notify error', { error: err.message });
-      return res.status(500).json({ error: 'Processing failed' });
+      return res.status(500).json({ error: 'Internal Server Error' });
     }
   });
 
