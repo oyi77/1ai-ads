@@ -35,7 +35,22 @@ describe('GET /api/auth/me', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       success: true,
-      data: { id: 'u1', username: 'alice', role: 'user', plan: 'free' },
+      data: { id: 'u1', username: 'alice', role: 'user', plan: 'free', addons: [] },
+    });
+  });
+
+  it('exposes active add-ons for navigation (server-side snapshot)', async () => {
+    const app = express();
+    app.use(express.json());
+    app.use('/api/auth', createAuthRouter({}, {}, null, { listActive: () => ['lp'] }));
+    const token = generateToken({ id: 'u9', username: 'boss', role: 'user', plan: 'enterprise' });
+    const res = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      success: true,
+      data: { id: 'u9', username: 'boss', role: 'user', plan: 'enterprise', addons: ['lp'] },
     });
   });
 });

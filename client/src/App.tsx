@@ -4,6 +4,7 @@ import { Shell } from './components/layout/shell';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequireAuth } from './components/RequireAuth';
 import { RequirePro } from './components/RequirePro';
+import { RequireAddon } from './components/RequireAddon';
 import { CookieConsent } from './components/CookieConsent';
 import { initTelegramWebApp } from './lib/telegram';
 
@@ -86,7 +87,7 @@ export function App() {
             <Route path="/trending" element={<TrendingPage />} />
             <Route path="/meta-ai" element={<MetaAiPage />} />
             <Route path="/templates" element={<TemplatesPage />} />
-            <Route path="/landing-pages" element={<LandingPagesPage />} />
+            <Route path="/landing-pages" element={<RequireAddon addon="lp"><LandingPagesPage /></RequireAddon>} />
             <Route path="/audiences" element={<RequirePro><AudienceIntelligencePage /></RequirePro>} />
             <Route path="/adsets" element={<AdsetsPage />} />
             <Route path="/invoices" element={<InvoicesPage />} />

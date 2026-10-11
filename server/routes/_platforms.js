@@ -11,6 +11,7 @@
 
 import { Router } from 'express';
 import { PLATFORM_REGISTRY } from '../platforms/index.js';
+import { requireAddon, requireAddonExcept } from '../middleware/rbac.js';
 import { createGenericPlatformRouter } from './platform-generic.js';
 import { requireAuth } from '../middleware/auth.js';
 
@@ -85,14 +86,16 @@ export function createPlatformsGroupRouter({ repos, services, publicRateLimit })
   }
 
   // ── Meta extensions (content, AI, system user) ─────────────────
-  router.use('/meta/content', requireAuth, createMetaContentRouter(services.videoService, services.contentScheduler, repos.platformAccountsRepo));
+  router.use('/meta/content', requireAuth, requireAddon('bridge'), createMetaContentRouter(services.videoService, services.contentScheduler, repos.platformAccountsRepo));
   router.use('/meta-ai', requireAuth, createMetaAiRouter(repos.settingsRepo));
   router.use('/meta-system', requireAuth, createFacebookSystemUserRouter(services.facebookSystemUserService, { userMetaAppsRepo: repos.userMetaAppsRepo }));
 
   // ── Non-platform integrations ──────────────────────────────────
-  router.use('/selow', requireAuth, createSelowRouter(repos.platformAccountsRepo));
-  router.use('/shopee', requireAuth, createShopeeDashboardRouter(services.shopeeAdapter, repos.settingsRepo, repos.shopeeCommissionsRepo));
-  router.use('/adspirer', requireAuth, createAdspirerRouter(services.adspirerClient, repos.platformAccountsRepo, repos.settingsRepo));
+  router.use('/selow', requireAuth, requireAddon('bridge'), createSelowRouter(repos.platformAccountsRepo));
+  router.use('/shopee', requireAuth, requireAddon('bridge'), createShopeeDashboardRouter(services.shopeeAdapter, repos.settingsRepo, repos.shopeeCommissionsRepo));
+  // /status + /disconnect stay reachable while locked: a user must be able to
+  // read the state and release a bound account without buying the add-on.
+  router.use('/adspirer', requireAuth, requireAddonExcept('bridge', ['/status', '/disconnect']), createAdspirerRouter(services.adspirerClient, repos.platformAccountsRepo, repos.settingsRepo));
   router.use('/ads-library', publicRateLimit, createAdsLibraryRouter());
   router.use('/ads-library-ai', publicRateLimit, createAdsLibraryAiRouter(repos.settingsRepo));
 

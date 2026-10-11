@@ -97,6 +97,7 @@ interface User {
   email: string;
   role: string;
   plan: string;
+  addons?: string[];
 }
 // NOTE: no api.admin helpers — no admin UI surface exists (verified
 // 2026-09-14: zero consumers across client/src and tests). Admin ops run

@@ -105,6 +105,7 @@ export function createApp(params) {
   app.locals.rulesRepo = repos.rulesRepo;
   app.locals.platformAccountsRepo = repos.platformAccountsRepo;
   app.locals.paymentsRepo = repos.paymentsRepo;
+  app.locals.userAddonsRepo = repos.userAddonsRepo;
   app.locals.db = db;
 
   // Trust proxy for correct req.protocol behind Cloudflare/nginx

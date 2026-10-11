@@ -54,9 +54,9 @@ export function manageMenuKeyboard() {
   return {
     inline_keyboard: [
       [{ text: '⚡ Aturan Otomatis', callback_data: 'menu:monitor' }, { text: '🤖 Saran AI', callback_data: 'menu:optimize' }],
-      [{ text: '📣 Ads Manager', callback_data: 'menu:ads' }, { text: '🌐 Platform', callback_data: 'menu:platforms' }],
-      [{ text: '⚙️ Pengaturan', callback_data: 'menu:settings' }, { text: '💰 Harga', callback_data: 'menu:pricing' }],
-      [{ text: '⬅️ Kembali', callback_data: 'quick:menu' }],
+      [{ text: '📋 Draf Pending', callback_data: 'menu:drafts' }, { text: '📣 Ads Manager', callback_data: 'menu:ads' }],
+      [{ text: '🌐 Platform', callback_data: 'menu:platforms' }, { text: '⚙️ Pengaturan', callback_data: 'menu:settings' }],
+      [{ text: '💰 Harga', callback_data: 'menu:pricing' }, { text: '⬅️ Kembali', callback_data: 'quick:menu' }],
     ],
   };
 }
@@ -99,6 +99,8 @@ export function handleMenuButton(deps) {
         return sendPlatformChoice(ctx);
       case 'optimize':
         return handleOptimizeAction(ctx, deps, scope);
+      case 'drafts':
+        return handlePendingDrafts(deps)(ctx);
       case 'monitor':   return handleMonitor(deps)(ctx);
       case 'settings':  return handleSettings(deps)(ctx);
       case 'ads':
@@ -376,8 +378,15 @@ async function proposeOptimization(ctx, deps, suggestion) {
   const existing = deps?.repos?.draftsRepo?.findPendingByTypeAndCampaign?.('ai_optimize', campaign.id, ctx.userId);
   if (existing) {
     return ctx.reply(
-      `🤖 <b>AI Optimization</b>\n\nKamu sudah punya saran pending untuk <b>${esc(campaign.name || campaign.id)}</b>. Setujui atau tolak dulu di /menu → Kelola Iklan.`,
-      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+      `🤖 <b>Bos, saran buat ${esc(campaign.name || campaign.id)} masih nunggu ACC bos 🙏</b>\n\nBos mau saya jalanin sekarang?`,
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: [
+        [
+          { text: '✅ ACC, jalanin bos', callback_data: `approval:approve:${existing.id}` },
+          { text: '❌ Batalin bos', callback_data: `approval:reject:${existing.id}` },
+        ],
+        [{ text: '📋 Semua Draf Pending', callback_data: 'menu:drafts' }],
+        [{ text: '📋 Menu', callback_data: 'quick:menu' }],
+      ] } }
     );
   }
   const action = type === 'pause' ? { type: 'pause' } : { type, amount: amount || resolveScaleDefault(type, deps?.repos?.settingsRepo) };
@@ -419,6 +428,43 @@ async function proposeOptimization(ctx, deps, suggestion) {
       },
     }
   );
+}
+
+// ── Draf Pending: semua draft (AI + rule) yang nunggu ACC bos ───────────
+// Sumber masalah sebelumnya: pesan "sudah punya saran pending" menyuruh ke
+// Kelola Iklan, tapi tidak ada tombol draf di sana — jalan buntu.
+export function handlePendingDrafts(deps) {
+  return async (ctx) => {
+    try {
+      const repo = deps?.repos?.draftsRepo;
+      const rows = repo?.findByUser
+        ? repo.findByUser(ctx.userId, { status: 'pending', limit: 20 })?.data || []
+        : [];
+      if (!rows.length) {
+        return ctx.reply(
+          '📭 <b>Bos, nggak ada draf yang nunggu ACC bos.</b>\n\nSaran AI / aturan otomatis bakal muncul di sini kalau ada.',
+          { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '⬅️ Kelola Iklan', callback_data: 'menu:manage' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } }
+        );
+      }
+      const lines = rows.map((d, i) => `${i + 1}. ${esc(String(d.summary || d.type || 'Draf').slice(0, 110))}`);
+      const keyboard = rows.slice(0, 10).map((d) => ([
+        { text: '✅ ACC', callback_data: `approval:approve:${d.id}` },
+        { text: '❌ Batal', callback_data: `approval:reject:${d.id}` },
+      ]));
+      keyboard.push([{ text: '⬅️ Kelola Iklan', callback_data: 'menu:manage' }]);
+      keyboard.push([{ text: '📋 Menu', callback_data: 'quick:menu' }]);
+      return ctx.reply(
+        `⏳ <b>Bos, ${rows.length} draf nunggu ACC bos 🙏</b>\n\n${lines.join('\n')}\n\n<i>Bos pencet ✅ biar saya jalanin, ❌ biar saya batalin ya bos.</i>`,
+        { parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } }
+      );
+    } catch (err) {
+      log.error('handlePendingDrafts failed', { error: err.message });
+      return ctx.reply('⚠️ Maaf bos, daftar draf gagal saya muat 🙏 Coba lagi ya bos.', {
+        parse_mode: 'HTML',
+        reply_markup: { inline_keyboard: [[{ text: '⬅️ Kelola Iklan', callback_data: 'menu:manage' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] },
+      });
+    }
+  };
 }
 
 // ── Platforms Management ──────────────────────────────────────────────

@@ -17,7 +17,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { generateToken, verifyToken } from '../lib/auth.js';
 import { verifyMetaTokenApp } from '../services/meta-connection.js';
 
-export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = null) {
+export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = null, userAddonsRepo = null) {
   const router = Router();
 
   const authLimiter = rateLimit({
@@ -143,14 +143,12 @@ export function createAuthRouter(usersRepo, refreshTokensRepo, settingsRepo = nu
     res.json({ success: true, message: 'AdForge is ready to process Google data deletion requests via POST.' });
   });
 
-  // GET /me — current user profile for the SPA shell (username/plan display).
-  // requireAuth runs inline here (the /auth group itself is public for
-  // login/register). The JWT payload already carries id/username/role/plan,
-  // so no DB hit needed. The shell calls this on every load — it 404d
-  // before this route existed (found 2026-09-14: setUser never fired).
+  // The SPA uses this server-side entitlement snapshot for navigation only;
+  // requireAddon remains authoritative for every API request.
   router.get('/me', requireAuth, (req, res) => {
     const u = req.user || {};
-    res.json({ success: true, data: { id: u.id, username: u.username, role: u.role, plan: u.plan } });
+    const addons = userAddonsRepo?.listActive(u.id) || [];
+    res.json({ success: true, data: { id: u.id, username: u.username, role: u.role, plan: u.plan, addons } });
   });
   router.post('/google/deauthorize', async (req, res) => {
     const hostname = req.get('host');

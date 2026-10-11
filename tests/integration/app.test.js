@@ -59,7 +59,9 @@ describe('App Integration', () => {
       password: 'testpass123',
     });
     authToken = loginRes.body.data.accessToken;
-
+    // LP is a paid add-on (plan base does not include it): entitle the
+    // harness user so the legacy list/create/update/delete contract holds.
+    app.locals.userAddonsRepo.grant(loginRes.body.data.user.id, 'lp', 'test-harness');
     // Login as admin (seed data is assigned to admin user)
     const adminRes = await request(app).post('/api/auth/login').send({
       username: 'admin',
@@ -230,6 +232,25 @@ describe('App Integration', () => {
   // --- Landing Pages ---
   describe('Landing API', () => {
     let createdLpId;
+    // Locked path: a user WITHOUT the lp add-on must be refused, and the
+    // refusal must name the add-on so the SPA/bot can upsell it.
+    it('GET /api/landing → 403 addon_required for a user without the lp add-on', async () => {
+      const res = await auth(request(app).get('/api/landing'));
+      expect(res.status).toBe(200); // entitled above
+      const fresh = await request(app).post('/api/auth/register').send({
+        username: 'noAddonUser',
+        password: 'testpass123',
+        email: 'noaddon@test.com',
+      });
+      db.prepare('UPDATE users SET confirmed = 1 WHERE username = ?').run('noAddonUser');
+      const noAddonToken = fresh.body.data.accessToken;
+      const locked = await request(app)
+        .get('/api/landing')
+        .set('Authorization', `Bearer ${noAddonToken}`);
+      expect(locked.status).toBe(403);
+      expect(locked.body).toEqual({ success: false, error: 'addon_required', addon: 'lp' });
+    });
+
 
     it('GET /api/landing returns list', async () => {
       const res = await auth(request(app).get('/api/landing'));

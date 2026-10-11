@@ -8,7 +8,7 @@ import { calculateProfit, evaluateROAS, getCampaignStatus } from './profitabilit
 
 const log = createLogger('mcp-server');
 
-export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, services = {}) {
+export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, services = {}, identity = {}) {
   const { adGenerator, creativeStudio, aiAgent, competitorSpyService: competitorSpy, autoOptimizer, llmClient: _llmClient, facebookSystemUserService } = services;
 
   const server = new Server(
@@ -475,6 +475,12 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
     const { name, arguments: args } = request.params;
 
     try {
+      const addon = name === '1ai-ads_list_landing_pages' ? 'lp'
+        : /^(1ai-content_|1ai-social_|1ai-ads_selow_)/.test(name) ? 'bridge' : null;
+      if (addon && identity.role !== 'admin' && !identity.userAddonsRepo?.hasActive(identity.userId, addon)) {
+        log.info('addon_locked_hit', { addon, userId: identity.userId });
+        return { content: [{ type: 'text', text: `addon_required:${addon}` }], isError: true };
+      }
       const handler = TOOL_HANDLERS[name];
       if (!handler) throw new Error(`Unknown tool: ${name}`);
       return await handler(args);

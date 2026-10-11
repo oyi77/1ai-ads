@@ -9,8 +9,8 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
   const mcpClient = services?.mcpClient;
   const router = Router();
 
-  const mcpServer = create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, services);
-  // Per-user transport map prevents concurrent connections from overwriting each other
+  // One MCP server per authenticated SSE session. A shared server would send
+  // responses to whichever user's transport connected last.
   const sseTransports = new Map();
 
   // mcpClient is injected via createApp({ mcpClient }) and is absent from the
@@ -27,20 +27,26 @@ export function createMcpRouter(settingsRepo, campaignsRepo, adsRepo, landingRep
   router.get('/sse', async (req, res) => {
     const userId = req.user.id;
     log.info('New SSE connection request', { userId });
-    const transport = new SSEServerTransport("/api/mcp/messages", res);
-    sseTransports.set(userId, transport);
-    res.on('close', () => sseTransports.delete(userId));
-    await mcpServer.connect(transport);
+    const transport = new SSEServerTransport('/api/mcp/messages', res);
+    const server = create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, services, {
+      userId,
+      role: req.user.role,
+      userAddonsRepo: req.app.locals.userAddonsRepo,
+    });
+    sseTransports.set(transport.sessionId, { transport, server, userId });
+    res.on('close', () => {
+      sseTransports.delete(transport.sessionId);
+      Promise.resolve(server.close()).catch(err => log.warn('MCP session close failed', { error: err.message }));
+    });
+    await server.connect(transport);
   });
 
   router.post('/messages', async (req, res) => {
-    const userId = req.user.id;
-    const transport = sseTransports.get(userId);
-    if (transport) {
-      await transport.handlePostMessage(req, res);
-    } else {
-      res.status(400).json({ error: "No active SSE transport" });
+    const session = sseTransports.get(String(req.query.sessionId || ''));
+    if (!session || session.userId !== req.user.id) {
+      return res.status(403).json({ success: false, error: 'Invalid MCP session' });
     }
+    await session.transport.handlePostMessage(req, res);
   });
 
   router.get('/status', requireMcpClient, (req, res) => {

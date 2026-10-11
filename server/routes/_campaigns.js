@@ -1,4 +1,5 @@
 import { requireAuth } from '../middleware/auth.js';
+import { requireAddon } from '../middleware/rbac.js';
 import { Router } from 'express';
 import { createCampaignsRouter } from './campaigns.js';
 import { createAdsRouter } from './ads.js';
@@ -15,7 +16,7 @@ export function createCampaignsGroupRouter({ repos, services }) {
   const router = Router();
   router.use('/campaigns', requireAuth, createCampaignsRouter(services.orchestrator, services.metaApi, services.creativeStudio, repos.campaignsRepo, repos.adsRepo, repos.adsetsRepo, repos.draftsRepo, repos.platformAccountsRepo));
   router.use('/ads', requireAuth, createAdsRouter(repos.adsRepo, services.creativeStudio));
-  router.use('/landing', requireAuth, createLandingRouter(repos.landingRepo, services.llmClient));
+  router.use('/landing', requireAuth, requireAddon('lp'), createLandingRouter(repos.landingRepo, services.llmClient));
   router.use('/drafts', requireAuth, createDraftRouter(services.draftService));
   router.use('/adsets', requireAuth, createAdsetsRouter(repos.adsetsRepo));
   router.use('/invoices', requireAuth, createInvoicesRouter(repos.invoicesRepo));

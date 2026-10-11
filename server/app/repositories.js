@@ -27,6 +27,7 @@ import { CreativeLibraryRepository } from '../repositories/creative-library.js';
 import { CampaignWizardRepository } from '../repositories/campaign-wizard.js';
 import { AutomationRuleRepository } from '../repositories/automation-rules.js';
 import { MonitoringRepository } from '../repositories/monitoring.js';
+import { UserAddonsRepository } from '../repositories/user-addons.js';
 
 export function createRepositories(db) {
   const contentSchedulerQueueRepo = new ContentSchedulerQueueRepository(db);
@@ -73,5 +74,6 @@ export function createRepositories(db) {
     invoicesRepo: new InvoicesRepository(db),
     savedAudiencesRepo: new SavedAudiencesRepository(db),
     monitoringRepo: new MonitoringRepository(db),
+    userAddonsRepo: new UserAddonsRepository(db),
   };
 }

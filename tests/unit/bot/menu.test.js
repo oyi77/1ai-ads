@@ -125,7 +125,7 @@ describe('menu:optimize — AI Optimization (P3)', () => {
 
     expect(deps.repos.draftsRepo.findPendingByTypeAndCampaign).toHaveBeenCalledWith('ai_optimize', 'c2', 'u1');
     expect(deps.services.draftService.guardAutonomousChange).not.toHaveBeenCalled();
-    expect(ctx._replies[0].msg).toContain('saran pending');
+    expect(ctx._replies[0].msg).toContain('nunggu ACC');
   });
   it('replies with a hint + Menu button when the guard returns no draft (approval disabled)', async () => {
     deps.services.draftService.guardAutonomousChange.mockResolvedValue(false);

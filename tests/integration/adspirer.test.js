@@ -39,6 +39,9 @@ describe('Adspirer API Integration', () => {
     authToken = generateToken({ id: userId, username: 'adspireruser' });
 
     app = createApp({ db });
+    // Adspirer sits behind the 'bridge' add-on; entitle the harness user so
+    // these cases exercise the integration itself, not the gate.
+    app.locals.userAddonsRepo.grant(userId, 'bridge', 'test-harness');
   });
 
   afterAll(() => {
@@ -125,6 +128,9 @@ describe('Settings Integrations API', () => {
 
     authToken = generateToken({ id: userId, username: 'intuser' });
     app = createApp({ db });
+    // Same bridge entitlement as the suite above — this block asserts the
+    // adspirer enabled-flag behaviour, not the add-on gate.
+    app.locals.userAddonsRepo.grant(userId, 'bridge', 'test-harness');
   });
 
   afterAll(() => {
