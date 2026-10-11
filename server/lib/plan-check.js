@@ -132,4 +132,41 @@ export class PlanCheck {
       isAdmin: user.role === 'admin'
     };
   }
+
+  /**
+   * Get user-friendly limit message for a specific limit type
+   */
+  getLimitMessage(userId, limitType) {
+    const user = this.getUserPlan(userId);
+    if (user.role === 'admin') return null;
+    const plan = this.db.prepare('SELECT * FROM plans WHERE id = ?').get(`plan_${user.plan}`);
+    if (!plan) return { allowed: false, message: 'Plan tidak dikenal' };
+    let current, limit, label;
+    switch (limitType) {
+      case 'campaign':
+        current = this.db.prepare('SELECT COUNT(*) as count FROM campaigns WHERE user_id = ?').get(userId).count;
+        limit = plan.max_campaigns;
+        label = 'campaign';
+        break;
+      case 'ad':
+        current = this.db.prepare('SELECT COUNT(*) as count FROM ads WHERE user_id = ?').get(userId).count;
+        limit = plan.max_ads;
+        label = 'iklan';
+        break;
+      case 'account':
+        current = this.db.prepare('SELECT COUNT(*) as count FROM platform_accounts WHERE user_id = ?').get(userId).count;
+        limit = plan.max_platform_accounts;
+        label = 'akun iklan';
+        break;
+      default:
+        return { allowed: true, message: '' };
+    }
+    if (limit === -1) return { allowed: true, message: '', current, limit: -1 };
+    const remaining = limit - current;
+    if (remaining > 0) {
+      return { allowed: true, message: `Sisa ${remaining} ${label} bos`, current, limit };
+    }
+    return { allowed: false, message: `⛔ Bos, limit ${label} paket ${user.plan} (${limit} ${label}) sudah penuh. Upgrade ke Pro buat unlimited ya bos.`, current, limit };
+  }
+
 }

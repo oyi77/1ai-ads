@@ -7,6 +7,7 @@
 import { v4 as uuid } from 'uuid';
 import config from '../../config/index.js';
 import { PlanCheck } from '../../lib/plan-check.js';
+import { planQuotaGate } from '../../lib/plan-quota.js';
 import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('settings-handlers');
@@ -334,6 +335,11 @@ export function handleConnectToken(settingsRepo, metaApi, nangoAuth) {
     if (!platform || !access_token) {
       return res.status(400).json({ success: false, error: 'platform and access_token are required' });
     }
+
+    // Plan gate: free = 1 akun iklan. Meta connect auto-simpan tiap ad
+    // account yang ketemu — tanpa gate ini free dapat unlimited akun.
+    const quota = planQuotaGate(req.app?.locals?.db, req.user?.id, 'account');
+    if (quota) return res.status(quota.status).json(quota.body);
 
     try {
       if (platform === 'meta') {

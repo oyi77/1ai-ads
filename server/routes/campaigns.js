@@ -3,6 +3,7 @@ import { createLogger } from '../lib/logger.js';
 import { MetaAdsAPI } from '../services/meta/index.js';
 import { ValidationError } from '../lib/errors.js';
 import { fromMinorUnits } from '../lib/money.js';
+import { planQuotaGate } from '../lib/plan-quota.js';
 
 const log = createLogger('campaigns-route');
 
@@ -70,6 +71,11 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     if (!Number.isFinite(budget) || budget <= 0) {
       return res.status(400).json({ success: false, error: 'dailyBudget must be a positive number' });
     }
+
+    // Plan gate: free = 2 campaign. Sebelum panggil Meta API — menolak
+    // SETELAH bikin campaign live = campaign yatim yang nggak di-gate.
+    const quota = planQuotaGate(req.app?.locals?.db, req.user?.id, 'campaign');
+    if (quota) return res.status(quota.status).json(quota.body);
 
     try {
       // Get account currency for proper budget conversion

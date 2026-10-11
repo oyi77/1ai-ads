@@ -6,6 +6,7 @@
 import { Scenes } from 'telegraf';
 import { createLogger } from '../../lib/logger.js';
 import { MetaAdsAPI } from '../../services/meta/index.js';
+import { planQuotaCheck } from '../../lib/plan-quota.js';
 
 const log = createLogger('bot:create');
 
@@ -155,6 +156,18 @@ export const createCampaignScene = new Scenes.WizardScene(
   'create-campaign',
   // Step 0: BM picker
   async (ctx) => {
+    // Plan gate di depan (bukan saat create): free penuh langsung tahu,
+    // tidak buang 7 langkah wizard. ctx.deps.repos.db = better-sqlite3.
+    try {
+      const db = ctx.deps?.repos?.db;
+      if (db && ctx.userId) {
+        const hit = planQuotaCheck(db, ctx.userId, 'campaign');
+        if (hit) {
+          await ctx.reply(hit, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '💎 Upgrade Lifetime — Rp 99rb', callback_data: 'pricing:order' }], [{ text: '📋 Menu', callback_data: 'quick:menu' }]] } });
+          return ctx.scene.leave();
+        }
+      }
+    } catch { /* best-effort: lolos, route API yang vonis */ }
     ctx.wizard.state.data = {};
     ctx.wizard.state.confirmShown = false;
     ctx.wizard.state.postPickerShown = false;
