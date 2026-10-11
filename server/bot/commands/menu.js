@@ -119,6 +119,7 @@ export function handleMenuButton(deps) {
         return handleHelp()(ctx);
       case 'strategy':
         return handleStrategy()(ctx);
+      default:
         return ctx.reply('⚠️ Maaf bos, pilihan itu saya nggak kenal 🙏 Buka /menu biar saya tunjukin pilihannya ya bos.');
     }
   };
