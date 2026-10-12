@@ -22,6 +22,7 @@ import { handlePricing, handlePricingCallback } from './commands/pricing.js';
 import { handleStrategy, handleStrategyCallback } from './commands/strategy.js';
 import { initScheduler } from './scheduler.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { loadingIndicator } from '../lib/bot-loading.js';
 import { escapeHtml as esc } from '../lib/escape.js';
 import { identify } from './middleware/identify.js';
 import { connectScene, handleSceneCancel } from './scenes/connect-account.js';
@@ -57,6 +58,10 @@ export function initBot(app, deps) {
     ctx.deps = deps;
     return next();
   });
+  // Loading UX: toast saat tap tombol + typing heartbeat kalau handler
+  // lambat. Sekali di sini = berlaku ke semua 47 call-site answerCbQuery.
+  bot.use(loadingIndicator());
+
   bot.use(session());
   const stage = new Scenes.Stage([connectScene, connectOAuthScene, manageMetaAppScene, createCampaignScene]);
 

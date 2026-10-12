@@ -6,6 +6,7 @@ import { RequireAuth } from './components/RequireAuth';
 import { RequirePro } from './components/RequirePro';
 import { RequireAddon } from './components/RequireAddon';
 import { CookieConsent } from './components/CookieConsent';
+import { BusyBar } from './components/BusyBar';
 import { initTelegramWebApp } from './lib/telegram';
 
 // Lazy-loaded pages
@@ -64,6 +65,7 @@ export function App() {
 
   return (
     <ErrorBoundary>
+      <BusyBar />
       <Suspense fallback={<Loading />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />

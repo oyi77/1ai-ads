@@ -1,3 +1,5 @@
+import { busyStart } from '../components/BusyBar';
+
 /**
  * API Client — Typed fetch wrapper with full auth lifecycle.
  *
@@ -61,13 +63,21 @@ async function request<T>(method: string, path: string, body?: unknown, retried 
     'Content-Type': 'application/json',
   };
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-    credentials: 'include',  // send httpOnly auth cookies automatically
-  });
-
+  // Satu counter global (BusyBar) untuk semua request: bar animasi selama
+  // ada NET penerbangan, hilang saat nol. try/finally agar error = turun.
+  const release = busyStart();
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: 'include',  // send httpOnly auth cookies automatically
+    });
+  } finally {
+    // Retry path di bawah bikin request sendiri (punya counter sendiri).
+    release();
+  }
   // A 401 on the login endpoint means bad credentials, NOT an expired token —
   // don't run the refresh-redirect flow there (it would wipe the error message
   // and bounce the user back to /login with no feedback).
