@@ -38,7 +38,11 @@ function monitorDeps({ stored = [ROW()], rules = [], create = null } = {}) {
       platformAccountsRepo: { findByUserId: vi.fn(() => stored) },
       rulesRepo: {
         getAll: vi.fn(() => rules),
-        getById: vi.fn((id) => rules.find((r) => r.id === id) || null),
+        getById: vi.fn((id, userId) => {
+          const row = rules.find((r) => r.id === id) || null;
+          // Mirror repositories/rules.js: another tenant's row reads as missing.
+          return row && (!userId || String(row.userId) === String(userId)) ? row : null;
+        }),
         create: create || vi.fn((r) => ({ id: 'new-1', ...r })),
         update: vi.fn(),
       },
@@ -142,7 +146,7 @@ describe('DETAIL rules — rantai 5 langkah', () => {
     const deps = monitorDeps({ rules });
     const ctx = makeCtx('u1', 'toggle:r1');
     await handleMonitorCallback(deps)(ctx);
-    expect(deps.repos.rulesRepo.update).toHaveBeenCalledWith('r1', { enabled: false });
+    expect(deps.repos.rulesRepo.update).toHaveBeenCalledWith('r1', { enabled: false }, 'u1');
     expect(flatCb(ctx._replies[0])).toContain('quick:menu');
   });
 
@@ -151,7 +155,7 @@ describe('DETAIL rules — rantai 5 langkah', () => {
     const deps = monitorDeps({ rules });
     const ctx = makeCtx('u1', 'toggle:r9');
     await handleMonitorCallback(deps)(ctx);
-    expect(txt(ctx._replies[0])).toContain('Aturan nggak ketemu');
+    expect(txt(ctx._replies[0])).toContain('aturannya nggak ketemu');
     expect(deps.repos.rulesRepo.update).not.toHaveBeenCalled();
   });
 

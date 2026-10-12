@@ -145,14 +145,14 @@ describe('DETAIL toggle — pause resume', () => {
     const ctx = makeCtx();
     await handleAdsToggle(makeDeps())(ctx, 'meta', 'c1', 'pause');
     expect(mockUpdateCampaign).toHaveBeenCalledWith('c1', { status: 'PAUSED' });
-    expect(txt(ctx._replies[1])).toContain('dimatiin');
+    expect(txt(ctx._replies[1])).toContain('sudah saya matiin');
   });
 
   it('resume kirim ACTIVE + pesan dinyalain', async () => {
     const ctx = makeCtx();
     await handleAdsToggle(makeDeps())(ctx, 'meta', 'c1', 'resume');
     expect(mockUpdateCampaign).toHaveBeenCalledWith('c1', { status: 'ACTIVE' });
-    expect(txt(ctx._replies[1])).toContain('dinyalain');
+    expect(txt(ctx._replies[1])).toContain('sudah saya nyalain');
   });
 
   it('token mati (190): pesan hubungkan ulang, bukan error mentah', async () => {

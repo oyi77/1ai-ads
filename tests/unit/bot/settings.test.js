@@ -42,7 +42,7 @@ describe('settings — per-platform Connect rows (P4)', () => {
     for (const [, label] of Object.entries(PLATFORM_NAMES)) {
       expect(msg).toContain(`• ${label}: — Belum terhubung`);
     }
-    expect(msg).toContain('Pencet platform di bawah buat hubungkan akun baru');
+    expect(msg).toContain('pencet platform di bawah buat hubungkan akun baru');
   });
 
   it('renders 8 platform rows + sync + accounts + menu rows (11 total) with bot callbacks for all', async () => {
@@ -105,7 +105,7 @@ describe('settings — per-platform Connect rows (P4)', () => {
   it('callback accounts lists connected rows; empty case hints connect', async () => {
     const cbCtx = makeCtx('u1', ['settings:accounts', 'accounts']);
     await handleSettingsCallback(deps)(cbCtx);
-    expect(cbCtx._replies[0].msg).toContain('Belum ada akun terhubung');
+    expect(cbCtx._replies[0].msg).toContain('belum ada akun terhubung');
 
     deps.repos.platformAccountsRepo.findByUserId.mockReturnValue([
       { platform: 'meta', account_name: 'My Page', is_active: 1, id: 'm1' },
@@ -120,6 +120,6 @@ describe('settings — per-platform Connect rows (P4)', () => {
   it('callback unknown action replies Indonesian fallback', async () => {
     const cbCtx = makeCtx('u1', ['settings:bogus', 'bogus']);
     await handleSettingsCallback(deps)(cbCtx);
-    expect(cbCtx._replies[0].msg).toContain('nggak dikenal');
+    expect(cbCtx._replies[0].msg).toContain('nggak saya kenal');
   });
 });

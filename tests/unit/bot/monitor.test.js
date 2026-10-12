@@ -71,7 +71,7 @@ describe('monitor — enhanced rule system', () => {
     const ctx = makeCtx('u1', 'account_picker');
     await handleMonitorCallback(deps)(ctx);
     const msg = ctx._replies[0].msg;
-    expect(msg).toContain('Pilih akun iklan');
+    expect(msg).toContain('pilih akun iklannya ya');
   });
 
   it('callback acknowledges sync', async () => {
@@ -125,7 +125,7 @@ describe('monitor — enhanced rule system', () => {
     const ctx = makeCtx('u1', 'add:start');
     await handleMonitorCallback(deps)(ctx);
     const msg = ctx._replies[0].msg;
-    expect(msg).toContain('buat akun iklan mana');
+    expect(msg).toContain('akun iklan mana bos?');
     const flat = ctx._replies[0].opts.reply_markup.inline_keyboard.flat().map((b) => b.callback_data);
     expect(flat).toContain('rule:add:account:__all__');
     expect(flat).toContain('quick:menu');
@@ -134,7 +134,7 @@ describe('monitor — enhanced rule system', () => {
   it('add:start without accounts tells user to connect first', async () => {
     const ctx = makeCtx('u1', 'add:start');
     await handleMonitorCallback(makeDeps())(ctx);
-    expect(ctx._replies[0].msg).toContain('Hubungkan akun Meta dulu');
+    expect(ctx._replies[0].msg).toContain('hubungkan akun Meta dulu');
   });
 
   it('view:all renders kalimat jelas (bukan kode mentah)', async () => {

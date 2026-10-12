@@ -9,10 +9,10 @@ const { handlePricing, handlePricingCallback } =
 const { handleMonitorCallback } =
   await import('../../../server/bot/commands/monitor.js');
 
-function ctxWith({ user = {}, userId = 'u1', action = 'x', session = {} } = {}) {
+function ctxWith({ user = {}, userId = 'u1', action = 'x', session = {}, deps = {} } = {}) {
   const replies = [];
   return {
-    user, userId,
+    user, userId, deps,
     match: ['pricing:' + action, action],
     answerCbQuery: vi.fn(async () => {}),
     reply: async (msg, opts) => { replies.push({ msg, opts }); return {}; },
@@ -22,38 +22,41 @@ function ctxWith({ user = {}, userId = 'u1', action = 'x', session = {} } = {}) 
 }
 const txt = (r) => (typeof r === 'string' ? r : r?.msg || '');
 
+// Kontrak nyata (server/bot/commands/pricing.js): satu paket Base Rp 99rb
+// lifetime, tombol callback_data 'pricing:order' (bukan plan_pro), checkout
+// via ctx.deps.services.paymentService.createPayment (handler no-arg).
 describe('pricing funnel — tombol bayar 1ai-payment', () => {
-  it('/pricing tampilkan harga + tombol Bayar', async () => {
+  it('/pricing tampilkan harga Base + tombol Beli', async () => {
     const ctx = ctxWith({ user: { plan: 'free' } });
-    await handlePricing({})(ctx);
+    await handlePricing()(ctx);
     const t = txt(ctx._replies[0]);
     expect(t).toContain('Rp 99.000');
-    expect(t).toContain('Rp 499.000');
+    expect(t).toContain('Base — Rp 99rb LIFETIME');
     const flat = ctx._replies[0].opts.reply_markup.inline_keyboard.flat();
-    expect(flat.map((b) => b.callback_data)).toContain('pricing:pay:plan_pro');
+    expect(flat.map((b) => b.callback_data)).toContain('pricing:order');
   });
 
-  it('klik Bayar Pro → checkoutUrl duitku', async () => {
+  it('klik Beli Lifetime → checkoutUrl duitku', async () => {
     const createPayment = vi.fn(async () => ({
-      checkoutUrl: 'https://pay.example/checkout', providerOrderId: 'p1',
-      planName: 'Pro', amount: 99000,
+      checkoutUrl: 'https://pay.example/checkout', orderId: 'p1', amount: 99000,
     }));
     const deps = { services: { paymentService: { createPayment } } };
-    const ctx = ctxWith({ user: { plan: 'free' }, action: 'pay:plan_pro' });
-    await handlePricingCallback(deps)(ctx);
+    const ctx = ctxWith({ user: { plan: 'free' }, action: 'order', deps });
+    await handlePricingCallback()(ctx);
     expect(createPayment).toHaveBeenCalledWith('u1', 'plan_pro');
     const last = txt(ctx._replies[ctx._replies.length - 1]);
-    expect(last).toContain('Bayar');
+    expect(last).toContain('bayar Rp 99.000');
     const btns = ctx._replies[ctx._replies.length - 1].opts.reply_markup.inline_keyboard.flat();
     expect(btns[0].url).toBe('https://pay.example/checkout');
   });
 
-  it('sudah Pro → tidak buat order ganda', async () => {
-    const createPayment = vi.fn(async () => { throw new Error('User is already on the Pro plan'); });
+  it('sudah Lifetime → tidak buat order ganda', async () => {
+    const createPayment = vi.fn();
     const deps = { services: { paymentService: { createPayment } } };
-    const ctx = ctxWith({ user: { plan: 'free' }, action: 'pay:plan_pro' });
-    await handlePricingCallback(deps)(ctx);
-    expect(txt(ctx._replies[ctx._replies.length - 1])).toContain('sudah di paket');
+    const ctx = ctxWith({ user: { plan: 'enterprise' }, action: 'order', deps });
+    await handlePricingCallback()(ctx);
+    expect(createPayment).not.toHaveBeenCalled();
+    expect(txt(ctx._replies[ctx._replies.length - 1])).toContain('paket Lifetime sudah aktif');
   });
 });
 

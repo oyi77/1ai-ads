@@ -64,7 +64,7 @@ describe('dashboard pemula — live per-ad-account', () => {
     const ctx = makeCtx();
     await handleStatus(makeDeps())(ctx);
     const t = txt(ctx._replies[0]);
-    expect(t).toContain('Belum ada akun iklan yang terhubung');
+    expect(t).toContain('belum ada akun iklan yang terhubung');
     expect(t).toContain('Business Manager');
     expect(BM_NOTE).toContain('Business Manager');
   });
@@ -82,11 +82,11 @@ describe('dashboard pemula — live per-ad-account', () => {
     const ctx = makeCtx();
     await handleStatus(makeDeps({ stored: [stored()], draftsTotal: 2 }))(ctx);
     const t = txt(ctx._replies[0]);
-    expect(t).toContain('Akun iklan terhubung: <b>2</b>');
+    expect(t).toContain('Akun iklan bos yang terhubung: <b>2</b>');
     expect(t).toContain('🟢 2 aktif');
     expect(t).toContain('⏸️ 1 nonaktif');
     expect(t).toContain('🗑️ 1 dihapus');
-    expect(t).toContain('Draft menunggu persetujuan: <b>2</b>');
+    expect(t).toContain('ada <b>2</b> draf nunggu ACC bos');
     expect(t).toContain('Toko A');
     expect(t).toContain('Toko B');
     expect(t).toContain('Business Manager');
@@ -98,7 +98,7 @@ describe('dashboard pemula — live per-ad-account', () => {
     const ctx = makeCtx();
     await handleStatus(makeDeps({ stored: [stored({ health_status: 'expired' })] }))(ctx);
     const t = txt(ctx._replies[0]);
-    expect(t).toContain('Dashboard Iklan');
+    expect(t).toContain('Bos, ini laporan iklan bos');
     expect(t).toContain('bermasalah');
   });
 

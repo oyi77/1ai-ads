@@ -95,7 +95,7 @@ describe('per-user ads handlers (multi-platform)', () => {
     const ctx = makeCtx();
     await handleAdsSelect(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', '1181078009580337');
     const text = txt(ctx._replies[1]);
-    expect(text).toContain('Campaign (2)');
+    expect(text).toContain('ini campaign (2)');
     expect(text).toContain('Camp A');
     expect(mockGetCampaigns).toHaveBeenCalledWith('1181078009580337');
   });
@@ -104,14 +104,14 @@ describe('per-user ads handlers (multi-platform)', () => {
     const ctx = makeCtx();
     await handleAdsToggle(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', 'c1', 'pause');
     expect(mockUpdateCampaign).toHaveBeenCalledWith('c1', { status: 'PAUSED' });
-    expect(txt(ctx._replies[1])).toContain('dimatiin');
+    expect(txt(ctx._replies[1])).toContain('sudah saya matiin');
   });
 
   it('handleAdsToggle resumes a paused campaign', async () => {
     const ctx = makeCtx();
     await handleAdsToggle(makeDeps({ accessToken: 'USER_TOKEN' }))(ctx, 'meta', 'c2', 'resume');
     expect(mockUpdateCampaign).toHaveBeenCalledWith('c2', { status: 'ACTIVE' });
-    expect(txt(ctx._replies[1])).toContain('dinyalain');
+    expect(txt(ctx._replies[1])).toContain('sudah saya nyalain');
   });
 
   it('campaign list buttons ask first (no direct toggle/budget)', async () => {

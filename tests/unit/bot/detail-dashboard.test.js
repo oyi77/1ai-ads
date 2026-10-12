@@ -83,12 +83,12 @@ describe('DETAIL dashboard — angka per akun', () => {
     await handleStatus(statusDeps({ draftsTotal: 3 }))(ctx);
     const t = txt(ctx._replies[0]);
     // Total: 5 campaign, 3 aktif, 1 nonaktif, 1 hapus
-    expect(t).toContain('Akun iklan terhubung: <b>2</b>');
-    expect(t).toContain('Campaign total: <b>5</b>');
+    expect(t).toContain('Akun iklan bos yang terhubung: <b>2</b>');
+    expect(t).toContain('Campaign bos total: <b>5</b>');
     expect(t).toContain('🟢 3 aktif');
     expect(t).toContain('⏸️ 1 nonaktif');
     expect(t).toContain('🗑️ 1 dihapus');
-    expect(t).toContain('Draft menunggu persetujuan: <b>3</b>');
+    expect(t).toContain('ada <b>3</b> draf nunggu ACC bos');
     // Per akun: A = 2/1/1, B = 1/0/0
     expect(t).toContain('Toko A — 🟢 2 aktif • ⏸️ 1 nonaktif • 🗑️ 1 hapus (total 4)');
     expect(t).toContain('Toko B — 🟢 1 aktif • ⏸️ 0 nonaktif • 🗑️ 0 hapus (total 1)');
@@ -130,7 +130,7 @@ describe('DETAIL dashboard — angka per akun', () => {
     await handleStatus(deps)(ctx);
     const t = txt(ctx._replies[0]);
     expect(t).toContain('1 koneksi token bermasalah');
-    expect(t).toContain('Akun iklan terhubung: <b>0</b>');
+    expect(t).toContain('Akun iklan bos yang terhubung: <b>0</b>');
     expect(update).toHaveBeenCalledWith('owner-1', expect.objectContaining({ health_status: 'expired' }));
   });
 });

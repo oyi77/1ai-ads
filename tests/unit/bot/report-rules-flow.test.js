@@ -143,7 +143,7 @@ describe('rules — akun dulu, bukan diam-diam', () => {
   it('rule:add:start → pilih akun live + Semua Akun + Menu', async () => {
     const ctx = makeCtx('u1', ['rule:add:start', 'add:start']);
     await handleMonitorCallback(monitorDeps())(ctx);
-    expect(txt(ctx._replies[0])).toContain('buat akun iklan mana');
+    expect(txt(ctx._replies[0])).toContain('akun iklan mana bos?');
     expect(flatText(ctx._replies[0])).toContain('Toko A');
     const cb = flatCb(ctx._replies[0]).join(' ');
     expect(cb).toContain('rule:add:account:act_A');

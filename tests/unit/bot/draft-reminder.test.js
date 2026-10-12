@@ -17,7 +17,7 @@ function staleDrafts(rows) {
 describe('draft-reminder — teks', () => {
   it('tampilkan jumlah + contoh + petunjuk ✅/❌', () => {
     const t = pendingReminderText(3, [{ summary: 'Aturan X di Promo' }, { summary: 'Aturan Y di Katalog' }]);
-    expect(t).toContain('3 draft menunggu');
+    expect(t).toContain('3 draf saya nunggu ACC bos');
     expect(t).toContain('Aturan X di Promo');
     expect(t).toContain('✅');
   });
