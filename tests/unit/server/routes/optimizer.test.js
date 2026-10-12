@@ -159,7 +159,7 @@ describe('Optimizer Router', () => {
       const res = await request(app).put('/api/optimizer/rules/r1').send({ name: 'Updated Rule' });
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(rulesRepo.update).toHaveBeenCalledWith('r1', expect.objectContaining({ name: 'Updated Rule' }));
+      expect(rulesRepo.update).toHaveBeenCalledWith('r1', expect.objectContaining({ name: 'Updated Rule' }), 'user-1');
     });
 
     it('returns 404 when rule not found', async () => {
@@ -190,7 +190,7 @@ describe('Optimizer Router', () => {
       const res = await request(app).delete('/api/optimizer/rules/r1');
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(rulesRepo.delete).toHaveBeenCalledWith('r1');
+      expect(rulesRepo.delete).toHaveBeenCalledWith('r1', 'user-1');
     });
 
     it('returns 404 when rule not found', async () => {

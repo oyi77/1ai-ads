@@ -24,7 +24,7 @@ describe('Domain: Reporting', () => {
   it('formatDailyReport produces readable output', () => {
     const stats = calculateCampaignStats([{ id: '1', name: 'Test', status: 'ACTIVE', spend: 100000, revenue: 200000 }]);
     const report = formatDailyReport(stats, '2026-01-01');
-    expect(report).toContain('Daily Report');
+    expect(report).toContain('Laporan Harian');
     expect(report).toContain('Test');
   });
 

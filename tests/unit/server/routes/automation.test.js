@@ -18,7 +18,15 @@ function createMockRulesRepo() {
   const all = { ...owned, ...other };
   return {
     getAll: vi.fn((uid) => Object.values(all).filter((r) => r.user_id === uid)),
-    getById: vi.fn(async (id) => all[id] || null),
+    // Mirror repositories/rules.js: getById(id, uid) is owner-scoped, so a
+    // row owned by someone else reads as missing (route then 404s).
+    getById: vi.fn(async (id, uid) => {
+      const row = all[id] || null;
+      if (!row) return null;
+      if (!uid) return row;
+      const owner = row.userId ?? row.user_id;
+      return String(owner) === String(uid) ? row : null;
+    }),
     create: vi.fn(() => 'new-rule-id'),
     update: vi.fn(async () => {}),
     delete: vi.fn(async () => {}),
@@ -131,14 +139,14 @@ describe('Automation Router', () => {
       const res = await request(app).post('/api/automation/toggle/r1');
       expect(res.status).toBe(200);
       expect(res.body.is_active).toBe(0);
-      expect(rulesRepo.update).toHaveBeenCalledWith('r1', { enabled: 0 });
+      expect(rulesRepo.update).toHaveBeenCalledWith('r1', { enabled: 0 }, 'test-user-1');
     });
 
     it('toggles inactive rule to active', async () => {
       const res = await request(app).post('/api/automation/toggle/r2');
       expect(res.status).toBe(200);
       expect(res.body.is_active).toBe(1);
-      expect(rulesRepo.update).toHaveBeenCalledWith('r2', { enabled: 1 });
+      expect(rulesRepo.update).toHaveBeenCalledWith('r2', { enabled: 1 }, 'test-user-1');
     });
 
     it('returns 404 when rule not found', async () => {
@@ -162,7 +170,7 @@ describe('Automation Router', () => {
       const res = await request(app).post('/api/automation/toggle/rc');
       expect(res.status).toBe(200);
       expect(res.body.is_active).toBe(0);
-      expect(rulesRepo.update).toHaveBeenCalledWith('rc', { enabled: 0 });
+      expect(rulesRepo.update).toHaveBeenCalledWith('rc', { enabled: 0 }, 'test-user-1');
     });
 
     it('returns 500 when getById throws', async () => {
@@ -180,7 +188,7 @@ describe('Automation Router', () => {
       const res = await request(app).post('/api/automation/delete/r1');
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(rulesRepo.delete).toHaveBeenCalledWith('r1');
+      expect(rulesRepo.delete).toHaveBeenCalledWith('r1', 'test-user-1');
     });
 
     it('returns 404 when rule belongs to another user', async () => {

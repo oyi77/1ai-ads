@@ -83,7 +83,7 @@ describe('campaign alerts reach the owner, not the admin chat', () => {
     expect(sent.some((m) => m.chatId === '999')).toBe(false);
   });
 
-  it('groups the daily eval digest per owner and keeps names out of the admin fallback', async () => {
+  it('groups the daily eval digest per owner and never leaks to the admin chat', async () => {
     const campaigns = [
       // Losing: ROAS 0 with real spend.
       { id: 'c-a', user_id: 'u-budi', status: 'active', name: 'Kampanye Budi', spend: 1000, revenue: 0 },
@@ -103,8 +103,10 @@ describe('campaign alerts reach the owner, not the admin chat', () => {
     expect(toBudi[0].text).toContain('Kampanye Budi 2');
     expect(toBudi[0].text).not.toContain('Kampanye Citra');
 
+    // Security contract (2026-09-14): the admin chat no longer receives ANY
+    // fallback. The digest lists campaign names = other customers' data, so an
+    // owner with no linked Telegram keeps the alert in-app only.
     const toAdmin = sent.filter((m) => m.chatId === '999');
-    expect(toAdmin).toHaveLength(1);
-    expect(toAdmin[0].text).not.toContain('Kampanye Citra');
+    expect(toAdmin).toHaveLength(0);
   });
 });
