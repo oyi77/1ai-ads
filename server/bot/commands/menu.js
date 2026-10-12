@@ -330,10 +330,10 @@ async function proposeOptimizations(ctx, deps, suggestions) {
     if (draft) created.push({ draft, suggestion });
   }
   if (created.length === 0) {
-    return ctx.reply(
-      '🤖 <b>AI Optimization</b>\n\nTidak ada saran yang bisa dibuat. Coba lagi nanti.',
-      { parse_mode: 'HTML' }
-    );
+    // Semua kandidat sudah punya draf pending (dedup per rule+campaign).
+    // Jangan buntu: tampilkan draf yang sudah nunggu ACC supaya user bisa
+    // langsung setujui/tolak, bukan sekadar "coba lagi nanti".
+    return handlePendingDrafts(deps)(ctx);
   }
   // One summary message with per-draft Apply/Dismiss buttons.
   const lines = created.map(({ suggestion }) => {
