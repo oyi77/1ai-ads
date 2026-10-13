@@ -38,7 +38,7 @@ npm start          # node server.js  (port from PORT, default 5000)
 | `PUBLIC_BASE_URL` | `https://adforge.aitradepulse.com` | used in links/callbacks |
 | `WEB_APP_URL` | same | Mini App URL |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_HOST`, `TELEGRAM_CHAT_ID` | — | Telegram bot + alerts |
-| `OMNIROUTE_URL` / `OMNIROUTE_MODEL` / `OMNIROUTE_API_KEY` | `http://localhost:20128/v1` | LLM router |
+| `OMNIROUTE_URL` / `OMNIROUTE_MODEL` / `OMNIROUTE_API_KEY` | `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions` / `gemini-2.5-flash` | LLM router (OpenAI-compatible). OmniRoute gateway decommissioned 2026-10. |
 | `RESEND_API_KEY`, `SMTP_*` | — | Email alerts (verify berkahkarya.org domain) |
 | `WEBHOOK_VERIFY_TOKEN`, `SOCIAL_SCORING_URL`, `LOG_LEVEL`, `ADMIN_PASSWORD` | — | misc |
 
