@@ -6,6 +6,7 @@
 import { filterActiveCampaigns } from '../../lib/campaign-status.js';
 
 import { escapeHtml as esc } from '../../lib/escape.js';
+import { ADDONS, addonLabel } from '../../lib/addons.js';
 
 export function handleAdminStats(deps) {
   return async (ctx) => {
@@ -109,17 +110,18 @@ export function handleAdminGrant(deps) {
     if (args.length < 2) {
       return ctx.reply(
         '🛠️ <b>Cara pakai:</b>\n' +
-        '<code>/admin_grant <telegram_id|user_id|username> <plan></code>\n\n' +
-        'Plan: <b>enterprise</b> (Lifetime, expires NULL) atau <b>pro</b> (30 hari).\n\n' +
+        '<code>/admin_grant <telegram_id|user_id|username> <plan|addon></code>\n\n' +
+        'Plan: <b>enterprise</b> (Lifetime, expires NULL) atau <b>pro</b> (30 hari).\n' +
+        'Add-on: <b>lp</b> (Landing Page 49rb), <b>bridge</b> (Content + Social Bridge 49rb).\n\n' +
         'Contoh:\n' +
         '<code>/admin_grant 5220170786 enterprise</code>\n' +
-        '<code>/admin_grant e78f2a01-2132-40b9-8bfa-33b17ae729e1 pro</code>\n' +
-        '<code>/admin_grant @username enterprise</code>',
+        '<code>/admin_grant 5220170786 lp</code>\n' +
+        '<code>/admin_grant @username bridge</code>',
         { parse_mode: 'HTML' }
       );
     }
 
-    const [target, plan] = args;
+    const [target, what] = args;
     const usersRepo = deps.repos?.usersRepo;
     if (!usersRepo) return ctx.reply('⚠️ Repo users tidak tersedia.');
 
@@ -138,6 +140,31 @@ export function handleAdminGrant(deps) {
       return ctx.reply('⚠️ User tidak ketemu. Cek ID/username bos.');
     }
 
+    // ── Add-on branch ──────────────────────────────────────────
+    if (ADDONS[what]) {
+      const userAddonsRepo = deps.repos?.userAddonsRepo;
+      if (!userAddonsRepo) return ctx.reply('⚠️ Repo add-on tidak tersedia.');
+      userAddonsRepo.grant(user.id, what, String(ctx.from?.id));
+      await ctx.reply(
+        `✅ <b>Add-on ${esc(addonLabel(what))} diaktifkan untuk:</b>\n` +
+        `User: ${esc(user.username)} (<code>${esc(user.id)}</code>)`,
+        { parse_mode: 'HTML' }
+      );
+      if (user.telegram_id) {
+        try {
+          await ctx.telegram.sendMessage(
+            user.telegram_id,
+            `🎉 <b>Bos, add-on ${esc(addonLabel(what))} sudah aktif 🙏</b>\n\n` +
+            `Sekarang bos bisa pakai fiturnya ya bos. Buka /menu atau 📱 Mini App.`,
+            { parse_mode: 'HTML' }
+          );
+        } catch { /* ignore */ }
+      }
+      return;
+    }
+
+    // ── Plan branch ────────────────────────────────────────────
+    const plan = what;
     const expiresAt = plan === 'pro' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null;
     usersRepo.update(user.id, { plan, plan_expires_at: expiresAt });
 
@@ -155,12 +182,101 @@ export function handleAdminGrant(deps) {
         await ctx.telegram.sendMessage(
           user.telegram_id,
           `🎉 <b>Bos, paketmu sudah aktif 🙏</b>\n\n` +
-          `Paket: <b>${plan}</b>\n` +
+          `Paket: <b>${esc(plan)}</b>\n` +
           `${expiresAt ? `Berlaku sampai: ${new Date(expiresAt).toLocaleString('id-ID')}` : 'LIFETIME — selamanya aktif!'}\n\n` +
           `Sekarang bos bisa pakai semua fiturnya ya bos. Buka /menu atau 📱 Mini App.`,
           { parse_mode: 'HTML' }
         );
       } catch { /* ignore */ }
     }
+  };
+}
+
+/**
+ * /admin_revoke <target> <plan|addon> — cabut paket atau add-on.
+ */
+export function handleAdminRevoke(deps) {
+  return async (ctx) => {
+    const userId = ctx.from?.id;
+    const adminIds = (process.env.ADMIN_USER_IDS || '').split(',').map(Number).filter(Boolean);
+    if (!adminIds.includes(userId)) {
+      return ctx.reply('⛔ Maaf bos, ini cuma buat admin.');
+    }
+
+    const args = (ctx.message?.text || '').trim().split(/\s+/).slice(1);
+    if (args.length < 2) {
+      return ctx.reply(
+        '🛠️ <b>Cara pakai:</b>\n' +
+        '<code>/admin_revoke <telegram_id|user_id|username> <addon></code>\n\n' +
+        'Add-on: <b>lp</b>, <b>bridge</b>. Cabut paket base tidak didukung.',
+        { parse_mode: 'HTML' }
+      );
+    }
+
+    const [target, addonKey] = args;
+    const usersRepo = deps.repos?.usersRepo;
+    if (!usersRepo) return ctx.reply('⚠️ Repo users tidak tersedia.');
+
+    let user = null;
+    if (target.startsWith('@')) {
+      user = usersRepo.findByUsername?.(target.slice(1));
+    } else if (target.includes('-') && target.length > 20) {
+      user = usersRepo.findById?.(target);
+    } else {
+      user = usersRepo.findByTelegramId?.(target);
+    }
+    if (!user) return ctx.reply('⚠️ User tidak ketemu. Cek ID/username bos.');
+
+    if (!ADDONS[addonKey]) {
+      return ctx.reply(`⚠️ Add-on tidak dikenal. Pilihan: ${Object.keys(ADDONS).join(', ')}`);
+    }
+
+    const userAddonsRepo = deps.repos?.userAddonsRepo;
+    if (!userAddonsRepo) return ctx.reply('⚠️ Repo add-on tidak tersedia.');
+    userAddonsRepo.revoke(user.id, addonKey);
+    await ctx.reply(
+      `✅ <b>Add-on ${esc(addonLabel(addonKey))} dicabut untuk:</b>\n` +
+      `User: ${esc(user.username)} (<code>${esc(user.id)}</code>)`,
+      { parse_mode: 'HTML' }
+    );
+  };
+}
+
+/**
+ * /admin_addons <target> — lihat add-on aktif seorang user.
+ */
+export function handleAdminAddons(deps) {
+  return async (ctx) => {
+    const userId = ctx.from?.id;
+    const adminIds = (process.env.ADMIN_USER_IDS || '').split(',').map(Number).filter(Boolean);
+    if (!adminIds.includes(userId)) {
+      return ctx.reply('⛔ Maaf bos, ini cuma buat admin.');
+    }
+
+    const args = (ctx.message?.text || '').trim().split(/\s+/).slice(1);
+    const target = args[0];
+    if (!target) {
+      return ctx.reply('🛠️ <b>Cara pakai:</b>\n<code>/admin_addons <telegram_id|user_id|username></code>', { parse_mode: 'HTML' });
+    }
+    const usersRepo = deps.repos?.usersRepo;
+    if (!usersRepo) return ctx.reply('⚠️ Repo users tidak tersedia.');
+
+    let user = null;
+    if (target.startsWith('@')) {
+      user = usersRepo.findByUsername?.(target.slice(1));
+    } else if (target.includes('-') && target.length > 20) {
+      user = usersRepo.findById?.(target);
+    } else {
+      user = usersRepo.findByTelegramId?.(target);
+    }
+    if (!user) return ctx.reply('⚠️ User tidak ketemu. Cek ID/username bos.');
+
+    const userAddonsRepo = deps.repos?.userAddonsRepo;
+    const active = userAddonsRepo?.listActive?.(user.id) || [];
+    const lines = Object.values(ADDONS).map(a => `${active.includes(a.key) ? '✅' : '🔒'} ${esc(a.name)} (<code>${esc(a.key)}</code>) — Rp ${a.price.toLocaleString('id-ID')}`);
+    await ctx.reply(
+      `📋 <b>Add-on untuk ${esc(user.username)}</b> (<code>${esc(user.id)}</code>)\n\n${lines.join('\n')}`,
+      { parse_mode: 'HTML' }
+    );
   };
 }

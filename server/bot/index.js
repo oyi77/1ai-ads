@@ -15,7 +15,7 @@ import { handleStatus, handleDashboardCallback } from './commands/status.js';
 import { handleHelp } from './commands/help.js';
 import { handleSettings, handleSettingsCallback } from './commands/settings.js';
 import { handleMonitor, handleMonitorCallback, handleMonitorText } from './commands/monitor.js';
-import { handleAdminStats, handleAdminUsers, handleAdminBroadcast, handleAdminGrant } from './commands/admin.js';
+import { handleAdminStats, handleAdminUsers, handleAdminBroadcast, handleAdminGrant, handleAdminRevoke, handleAdminAddons } from './commands/admin.js';
 import { handleApprovalApprove, handleApprovalReject } from './commands/approvals.js';
 import { handleAds, handleAdsSelect, handleAdsToggle, handleAdsAsk, handleAdsAskBud, handleAdsReport, handleAdsDisconnect, handleAdsManage, handleAdsDisconnectConfirm, handleAdsAccountReport, handleAdsAccountsPage, handleAdsCampaignsPage, handleAdsBudgetScale, handleAdsPlatform } from './commands/ads.js';
 import { handlePricing, handlePricingCallback } from './commands/pricing.js';
@@ -36,7 +36,7 @@ const KNOWN_COMMANDS = [
   'start', 'menu', 'quick', 'status', 'help', 'pricing',
   'monitor', 'settings', 'ads', 'cancel', 'metaapp', 'create',
   'strategy',
-  'admin_stats', 'admin_users', 'admin_broadcast', 'admin_grant',
+  'admin_stats', 'admin_users', 'admin_broadcast', 'admin_grant', 'admin_revoke', 'admin_addons',
   'optimize', 'platforms'
 ];
 
@@ -101,6 +101,8 @@ export function initBot(app, deps) {
     admin_users: handleAdminUsers(deps),
     admin_broadcast: handleAdminBroadcast(deps),
     admin_grant: handleAdminGrant(deps),
+    admin_revoke: handleAdminRevoke(deps),
+    admin_addons: handleAdminAddons(deps),
     ads: handleAds(deps),
     monitor: handleMonitor(deps),
     optimize: (ctx) => { ctx.match = ['menu:optimize', 'optimize']; return handleMenuButton(deps)(ctx); },
