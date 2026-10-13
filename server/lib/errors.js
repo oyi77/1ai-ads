@@ -26,6 +26,12 @@ export class NotFoundError extends ApiError {
     this.name = 'NotFoundError';
   }
 }
+export class ConflictError extends ApiError {
+  constructor(message = 'Resource conflict') {
+    super(message, 409);
+    this.name = 'ConflictError';
+  }
+}
 
 export class PlatformError extends Error {
   constructor(message, platform, code = null) {

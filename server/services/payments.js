@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import { createLogger } from '../lib/logger.js';
-import { ConfigurationError } from '../lib/errors.js';
+import { ConfigurationError, ConflictError, NotFoundError, ValidationError } from '../lib/errors.js';
 import config from '../config/index.js';
 const log = createLogger('payments');
 
@@ -79,15 +79,14 @@ export class PaymentService {
 
   async _validatePaymentContext(userId, planId) {
     const plan = this.paymentsRepo.findPlanById(planId);
-    if (!plan) throw new Error(`Invalid plan ID: ${planId}`);
+    if (!plan) throw new NotFoundError(`Invalid plan ID: ${planId}`);
 
     const user = this.usersRepo.findById(userId);
-    if (!user) throw new Error('User not found');
-    if (user.plan === plan.name.toLowerCase()) throw new Error(`User is already on the ${plan.name} plan`);
+    if (!user) throw new NotFoundError('User not found');
+    if (user.plan === plan.name.toLowerCase()) throw new ConflictError(`User is already on the ${plan.name} plan`);
 
     const paymentConfig = this.paymentsRepo.getPaymentConfig(plan.name.toLowerCase());
-    if (!paymentConfig) throw new Error(`Payment configuration not found for plan: ${plan.name}`);
-
+    if (!paymentConfig) throw new ValidationError(`Payment configuration not found for plan: ${plan.name}`);
     return { plan, user, paymentConfig };
   }
 

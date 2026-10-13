@@ -92,11 +92,12 @@ describe('PaymentService', () => {
       await expect(service.createPayment('unknown', 'plan_pro')).rejects.toThrow('User not found');
     });
 
-    it('throws when user already on the requested plan', async () => {
+    it('throws a 409 conflict when user already on the requested plan', async () => {
       mockPaymentsRepo.findPlanById.mockReturnValue(defaultPlan);
       mockUsersRepo.findById.mockReturnValue({ ...defaultUser, plan: 'pro' });
 
-      await expect(service.createPayment('user1', 'plan_pro')).rejects.toThrow('already on the Pro plan');
+      await expect(service.createPayment('user1', 'plan_pro'))
+        .rejects.toMatchObject({ status: 409, message: 'User is already on the Pro plan' });
     });
 
     it('throws when payment config missing', async () => {
@@ -104,7 +105,8 @@ describe('PaymentService', () => {
       mockUsersRepo.findById.mockReturnValue(defaultUser);
       mockPaymentsRepo.getPaymentConfig.mockReturnValue(null);
 
-      await expect(service.createPayment('user1', 'plan_pro')).rejects.toThrow('Payment configuration not found');
+      await expect(service.createPayment('user1', 'plan_pro'))
+        .rejects.toMatchObject({ status: 400, message: 'Payment configuration not found for plan: Pro' });
     });
 
     it('throws when payment API returns error', async () => {
