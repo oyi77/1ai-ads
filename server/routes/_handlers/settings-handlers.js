@@ -50,38 +50,47 @@ export function handleGetAi(settingsRepo) {
     const llmConfig = settingsRepo.get('llm_config') || {
       url: config.llm.url,
       model: config.llm.model,
+      format: config.llm.format,
       apiKey: config.llm.apiKey ? '••••••••' : ''
     };
-    res.json({ success: true, data: llmConfig });
+    const data = {
+      url: llmConfig.url || config.llm.url,
+      model: llmConfig.model || config.llm.model,
+      format: llmConfig.format || config.llm.format || 'openai',
+      apiKey: llmConfig.apiKey || (config.llm.apiKey ? '••••••••' : ''),
+    };
+    res.json({ success: true, data });
   };
 }
 
 // PUT /ai
 export function handlePutAi(settingsRepo, llmClient) {
   return (req, res) => {
-    const { url, model, apiKey } = req.body;
+    const { url, model, apiKey, format } = req.body;
     const current = settingsRepo.get('llm_config') || {};
 
     const newConfig = {
       url: url || llmClient.url,
       model: model || llmClient.model,
+      format: format || current.format || llmClient.format || 'openai',
       apiKey: (apiKey && apiKey !== '••••••••') ? apiKey : current.apiKey || llmClient.apiKey
     };
 
     settingsRepo.set('llm_config', newConfig);
     llmClient.updateConfig(newConfig);
-    res.json({ success: true });
+    res.json({ success: true, data: { url: newConfig.url, model: newConfig.model, format: newConfig.format } });
   };
 }
 
 // POST /ai/test-connection
 export function handleTestAiConnection(llmClient) {
   return async (req, res) => {
-    const { url, apiKey } = req.body;
+    const { url, apiKey, format } = req.body;
 
     try {
       const testClient = new llmClient.constructor({
         url: url || llmClient.url,
+        format: format || llmClient.format,
         apiKey: (apiKey && apiKey !== '••••••••') ? apiKey : llmClient.apiKey
       });
 
@@ -96,11 +105,12 @@ export function handleTestAiConnection(llmClient) {
 // POST /ai/models
 export function handleListAiModels(llmClient) {
   return async (req, res) => {
-    const { url, apiKey } = req.body;
+    const { url, apiKey, format } = req.body;
 
     try {
       const testClient = new llmClient.constructor({
         url: url || llmClient.url,
+        format: format || llmClient.format,
         apiKey: (apiKey && apiKey !== '••••••••') ? apiKey : llmClient.apiKey
       });
 
@@ -115,11 +125,19 @@ export function handleListAiModels(llmClient) {
 // POST /ai/test-prompt
 export function handleTestAiPrompt(llmClient) {
   return async (req, res) => {
-    const { prompt, systemPrompt } = req.body;
+    const { prompt, systemPrompt, url, apiKey, format } = req.body;
     if (!prompt) return res.status(400).json({ success: false, error: 'prompt is required' });
 
     try {
-      const response = await llmClient.call(systemPrompt || 'You are a helpful assistant.', prompt);
+      const testClient = (url || format)
+        ? new llmClient.constructor({
+            url: url || llmClient.url,
+            format: format || llmClient.format,
+            model: llmClient.model,
+            apiKey: (apiKey && apiKey !== '••••••••') ? apiKey : llmClient.apiKey,
+          })
+        : llmClient;
+      const response = await testClient.call(systemPrompt || 'You are a helpful assistant.', prompt);
       res.json({ success: true, data: response });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });

@@ -148,7 +148,14 @@ describe('Settings Router', () => {
       settingsRepo.get.mockReturnValue({ url: 'http://llm.test', model: 'm1', apiKey: 'sk-1234' });
       const res = await request(app).get('/api/settings/ai');
       expect(res.status).toBe(200);
-      expect(res.body.data).toEqual({ url: 'http://llm.test', model: 'm1', apiKey: 'sk-1234' });
+      expect(res.body.data).toEqual({ url: 'http://llm.test', model: 'm1', apiKey: 'sk-1234', format: 'openai' });
+    });
+
+    it('returns the stored api format when set', async () => {
+      settingsRepo.get.mockReturnValue({ url: 'http://llm.test/v1/messages', model: 'm1', apiKey: 'sk-1234', format: 'anthropic' });
+      const res = await request(app).get('/api/settings/ai');
+      expect(res.status).toBe(200);
+      expect(res.body.data.format).toBe('anthropic');
     });
 
     it('returns defaults when no config is stored', async () => {
@@ -176,6 +183,14 @@ describe('Settings Router', () => {
       const res = await request(app).put('/api/settings/ai').send({ url: 'http://new.llm', model: 'm2', apiKey: '••••••••' });
       expect(res.status).toBe(200);
       expect(settingsRepo.set).toHaveBeenCalledWith('llm_config', expect.objectContaining({ apiKey: 'real-key' }));
+    });
+
+    it('persists the anthropic format and passes it to updateConfig', async () => {
+      const res = await request(app).put('/api/settings/ai').send({ url: 'http://new.llm', model: 'm2', apiKey: 'sk-new', format: 'anthropic' });
+      expect(res.status).toBe(200);
+      expect(res.body.data.format).toBe('anthropic');
+      expect(settingsRepo.set).toHaveBeenCalledWith('llm_config', expect.objectContaining({ format: 'anthropic' }));
+      expect(llmClient.updateConfig).toHaveBeenCalledWith(expect.objectContaining({ format: 'anthropic' }));
     });
   });
 

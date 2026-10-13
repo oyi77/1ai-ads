@@ -8,6 +8,7 @@ interface AiConfigData {
   url: string;
   model: string;
   apiKey: string;
+  format: 'openai' | 'anthropic';
 }
 
 const inputStyle = {
@@ -23,7 +24,7 @@ const inputStyle = {
 
 export function SettingsPage() {
   const queryClient = useQueryClient();
-  const [aiForm, setAiForm] = useState<AiConfigData>({ url: '', model: '', apiKey: '' });
+  const [aiForm, setAiForm] = useState<AiConfigData>({ url: '', model: '', apiKey: '', format: 'openai' });
   const [aiInitialized, setAiInitialized] = useState(false);
 
   const { data: aiConfig } = useQuery<{ success: boolean; data: AiConfigData }>({
@@ -33,7 +34,7 @@ export function SettingsPage() {
 
   // Initialize form from fetched config (once)
   if (aiConfig?.data && !aiInitialized) {
-    setAiForm({ url: aiConfig.data.url || '', model: aiConfig.data.model || '', apiKey: '' });
+    setAiForm({ url: aiConfig.data.url || '', model: aiConfig.data.model || '', apiKey: '', format: aiConfig.data.format || 'openai' });
     setAiInitialized(true);
   }
 
@@ -46,6 +47,28 @@ export function SettingsPage() {
 
   const testConnectionMutation = useMutation({
     mutationFn: () => api.post('/settings/ai/test-connection', aiForm),
+  });
+
+  const [models, setModels] = useState<string[]>([]);
+  const [testPrompt, setTestPrompt] = useState('');
+  const [testOutput, setTestOutput] = useState('');
+
+  const loadModelsMutation = useMutation({
+    mutationFn: () => api.post<{ success: boolean; data: Array<{ id?: string } | string> }>('/settings/ai/models', aiForm),
+    onSuccess: (res) => {
+      const ids = (res?.data || []).map((m) => (typeof m === 'string' ? m : m?.id)).filter(Boolean) as string[];
+      setModels(ids);
+      if (ids.length && !aiForm.model) setAiForm((prev) => ({ ...prev, model: ids[0] }));
+    },
+  });
+
+  const testPromptMutation = useMutation({
+    mutationFn: () => api.post<{ success: boolean; data: string }>('/settings/ai/test-prompt', {
+      ...aiForm,
+      prompt: testPrompt || 'Balas dengan satu kata saja: halo',
+    }),
+    onSuccess: (res) => setTestOutput(typeof res?.data === 'string' ? res.data : JSON.stringify(res?.data)),
+    onError: (err: Error) => setTestOutput('✗ ' + err.message),
   });
 
   const ai = aiConfig?.data;
@@ -127,28 +150,69 @@ export function SettingsPage() {
         </h3>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* API Format */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>API Format</label>
+            <select
+              value={aiForm.format}
+              onChange={e => setAiForm(prev => ({ ...prev, format: e.target.value as 'openai' | 'anthropic' }))}
+              style={{ ...inputStyle, fontFamily: 'inherit' }}
+            >
+              <option value="openai">OpenAI compatible (/v1/chat/completions)</option>
+              <option value="anthropic">Anthropic compatible (/v1/messages)</option>
+            </select>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
+              OpenAI → <code>Authorization: Bearer</code>. Anthropic → <code>x-api-key</code> + <code>anthropic-version</code>.
+            </span>
+          </div>
+
           {/* Endpoint URL */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <label style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Endpoint URL</label>
             <input
               type="text"
+              list="ai-url-presets"
               placeholder={ai?.url || 'https://api.example.com/v1'}
               value={aiForm.url}
               onChange={e => setAiForm(prev => ({ ...prev, url: e.target.value }))}
               style={inputStyle}
             />
+            <datalist id="ai-url-presets">
+              <option value="https://ai.aitradepulse.com/v1/chat/completions">9router — OpenAI compatible</option>
+              <option value="https://ai.aitradepulse.com/v1/messages">9router — Anthropic compatible</option>
+              <option value="https://generativelanguage.googleapis.com/v1beta/openai/chat/completions">Google Gemini — OpenAI compatible</option>
+              <option value="https://api.anthropic.com/v1/messages">Anthropic direct</option>
+            </datalist>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
+              Base or full endpoint. Missing <code>/v1/chat/completions</code> or <code>/v1/messages</code> is appended from the format above.
+            </span>
           </div>
 
           {/* Model */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Model</label>
+            <label style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              Model
+              <button
+                type="button"
+                onClick={() => loadModelsMutation.mutate()}
+                disabled={loadModelsMutation.isPending}
+                style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: 4, fontSize: '0.68rem', padding: '2px 8px', cursor: 'pointer' }}
+              >
+                {loadModelsMutation.isPending ? 'Loading…' : 'Load models'}
+              </button>
+              {loadModelsMutation.isError && <span style={{ color: '#f85149' }}>✗ failed</span>}
+            </label>
             <input
               type="text"
+              list="ai-model-list"
               placeholder={ai?.model || 'gpt-4o-mini'}
               value={aiForm.model}
               onChange={e => setAiForm(prev => ({ ...prev, model: e.target.value }))}
               style={inputStyle}
             />
+            <datalist id="ai-model-list">
+              {models.map(m => <option key={m} value={m} />)}
+            </datalist>
           </div>
 
           {/* API Key */}
@@ -219,11 +283,48 @@ export function SettingsPage() {
             )}
           </div>
 
+          {/* Test Prompt */}
+          <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Test Prompt</label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                placeholder="Balas dengan satu kata saja: halo"
+                value={testPrompt}
+                onChange={e => setTestPrompt(e.target.value)}
+                style={inputStyle}
+              />
+              <button
+                onClick={() => testPromptMutation.mutate()}
+                disabled={testPromptMutation.isPending}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '8px 14px',
+                  background: 'transparent',
+                  color: 'var(--text-secondary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 6,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                }}
+              >
+                {testPromptMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Bot size={14} />}
+                Run Test
+              </button>
+            </div>
+            {testOutput && (
+              <pre style={{ margin: 0, padding: '8px 12px', background: 'var(--bg-deep)', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.78rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {testOutput}
+              </pre>
+            )}
+          </div>
+
           {/* Current Config Summary */}
           <div style={{ marginTop: 8, padding: '10px 14px', background: 'var(--bg-surface, #1a1a2e)', borderRadius: 8, border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: 4 }}>Currently active:</div>
             <div style={{ fontSize: '0.8rem', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
-              {ai?.url || '(default)'} · {ai?.model || '(default)'} · Key: {ai?.apiKey && ai.apiKey !== '••••••••' ? '••••••••' : 'not set'}
+              {(ai?.format || 'openai')} · {ai?.url || '(default)'} · {ai?.model || '(default)'} · Key: {ai?.apiKey && ai.apiKey !== '••••••••' ? '••••••••' : 'not set'}
             </div>
           </div>
         </div>

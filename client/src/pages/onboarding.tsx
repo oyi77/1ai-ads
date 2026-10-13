@@ -26,6 +26,7 @@ export function OnboardingPage() {
   const [aiUrl, setAiUrl] = useState('');
   const [aiModel, setAiModel] = useState('');
   const [aiKey, setAiKey] = useState('');
+  const [aiFormat, setAiFormat] = useState('openai');
   const [syncResult, setSyncResult] = useState('');
 
   const { data: accounts } = useQuery<unknown[]>({
@@ -55,7 +56,7 @@ export function OnboardingPage() {
   });
 
   const saveAiMutation = useMutation({
-    mutationFn: () => api.put('/settings/ai', { url: aiUrl, model: aiModel, apiKey: aiKey }),
+    mutationFn: () => api.put('/settings/ai', { url: aiUrl, model: aiModel, apiKey: aiKey, format: aiFormat }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings', 'ai'] });
       setStep(4);
@@ -209,6 +210,13 @@ export function OnboardingPage() {
             <p style={descStyle}>Connect your AI provider for ad generation, optimization, and insights.</p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+              <div>
+                <label style={labelStyle}>API Format</label>
+                <select value={aiFormat} onChange={e => setAiFormat(e.target.value)} style={{ ...inputStyle, fontFamily: 'inherit' }}>
+                  <option value="openai">OpenAI compatible (/v1/chat/completions)</option>
+                  <option value="anthropic">Anthropic compatible (/v1/messages)</option>
+                </select>
+              </div>
               <div>
                 <label style={labelStyle}>Endpoint URL</label>
                 <input value={aiUrl} onChange={e => setAiUrl(e.target.value)} placeholder="https://api.openai.com/v1/chat/completions" style={inputStyle} />

@@ -52,6 +52,10 @@ const config = {
       url: process.env.OMNIROUTE_URL || 'http://localhost:20128/v1/chat/completions',
       model: process.env.OMNIROUTE_MODEL || 'auto/pro-fast',
       apiKey: process.env.OMNIROUTE_API_KEY || '',
+      // 'openai' (default) or 'anthropic' — selects the wire protocol
+      // (Authorization: Bearer vs x-api-key + /v1/messages). Set per deployment
+      // via OMNIROUTE_FORMAT, or per-config via the admin Settings UI.
+      format: (process.env.OMNIROUTE_FORMAT || 'openai').toLowerCase() === 'anthropic' ? 'anthropic' : 'openai',
       timeout: parseInt(process.env.LLM_TIMEOUT || '30000', 10),
     };
   },

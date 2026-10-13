@@ -29,16 +29,64 @@ async function getAIPipeline() {
   return _pipelineInstance;
 }
 
+/**
+ * Normalize a base endpoint + api format into concrete OpenAI / Anthropic URLs.
+ *
+ * `format` is one of:
+ *   'openai'    → /v1/chat/completions (or /v1/messages if the host only speaks Anthropic)
+ *   'anthropic' → /v1/messages (Anthropic Messages API)
+ * When undefined the format is inferred from the configured URL.
+ *
+ * `url` may be a full endpoint (kept as-is), a base with a version segment
+ * (`.../v1`), or a bare host — the missing pieces are appended.
+ */
+export function deriveEndpoints(rawUrl, format) {
+  const url = String(rawUrl || '').trim().replace(/\/+$/, '');
+  const isOpenAi = url.includes('/chat/completions');
+  const isAnth = /\/messages$/.test(url);
+
+  let base = url;
+  if (isOpenAi) base = url.replace('/chat/completions', '');
+  else if (isAnth) base = url.replace('/messages', '');
+
+  let fmt = format;
+  if (!fmt) {
+    if (isAnth) fmt = 'anthropic';
+    else if (isOpenAi) fmt = 'openai';
+    else fmt = 'openai';
+  }
+
+  if (isOpenAi || isAnth) {
+    // Caller supplied a full endpoint already — honor it verbatim.
+    return { chatUrl: url, modelsUrl: base + '/models', format: fmt };
+  }
+
+  const root = base.endsWith('/v1') ? base : base + '/v1';
+  const chatPath = fmt === 'anthropic' ? '/messages' : '/chat/completions';
+  return { chatUrl: root + chatPath, modelsUrl: root + '/models', format: fmt };
+}
+
+/** Infer API format from a URL (explicit full endpoint wins). */
+function inferFormat(url) {
+  return /\/messages$/.test(String(url || '')) ? 'anthropic' : 'openai';
+}
+
 export class LLMClient {
-  constructor({ url, model, apiKey, timeout } = {}) {
-    this.url = url || config.llm.url;
+  constructor({ url, baseUrl, model, apiKey, timeout, format } = {}) {
+    // this.url is stored verbatim (base or full endpoint); concrete chat/models
+    // URLs are derived lazily at call time via deriveEndpoints.
+    this.url = url || baseUrl || config.llm.url;
+    this.format = format || inferFormat(url || baseUrl) || config.llm.format || 'openai';
     this.model = model || config.llm.model;
     this.apiKey = apiKey || config.llm.apiKey;
     this.timeout = timeout || config.llm.timeout;
   }
 
-  updateConfig({ url, model, apiKey, timeout }) {
-    if (url) this.url = url;
+  updateConfig({ url, baseUrl, model, apiKey, timeout, format }) {
+    const nextUrl = url || baseUrl;
+    if (nextUrl) this.url = nextUrl;
+    if (format) this.format = format;
+    else if (nextUrl) this.format = inferFormat(nextUrl);
     if (model) this.model = model;
     if (apiKey !== undefined) this.apiKey = apiKey;
     if (timeout) this.timeout = timeout;
@@ -46,26 +94,62 @@ export class LLMClient {
   }
 
   buildPayload(systemContent, userContent, options = {}) {
+    const maxTokens = options.max_tokens || options.maxTokens || 4000;
+    const temperature = options.temperature || 0.8;
+    if (this.format === 'anthropic') {
+      return {
+        model: options.model || this.model,
+        system: systemContent,
+        messages: [{ role: 'user', content: userContent }],
+        temperature,
+        max_tokens: maxTokens,
+        stream: false,
+      };
+    }
     return {
       model: options.model || this.model,
       messages: [
         { role: 'system', content: systemContent },
         { role: 'user', content: userContent },
       ],
-      temperature: options.temperature || 0.8,
-      max_tokens: options.max_tokens || 4000,
+      temperature,
+      max_tokens: maxTokens,
       stream: false,
     };
   }
 
   extractContent(data) {
     if (!data) return null;
-    return data?.choices?.[0]?.message?.content || null;
+    if (data.choices?.[0]?.message?.content !== undefined && data.choices?.[0]?.message?.content !== null) {
+      return data.choices[0].message.content;
+    }
+    const blocks = data.content;
+    if (Array.isArray(blocks)) {
+      const text = blocks
+        .filter(b => b && (b.type === 'text' || typeof b.text === 'string'))
+        .map(b => b.text || '')
+        .join('');
+      return text || null;
+    }
+    return null;
+  }
+
+  _headers() {
+    const headers = { 'Content-Type': 'application/json' };
+    if (this.apiKey) {
+      if (this.format === 'anthropic') {
+        headers['x-api-key'] = this.apiKey;
+        headers['anthropic-version'] = '2023-06-01';
+      } else {
+        headers['Authorization'] = `Bearer ${this.apiKey}`;
+      }
+    }
+    return headers;
   }
 
   async call(systemContent, userContent, options = {}) {
     const pipeline = await getAIPipeline();
-    if (pipeline) {
+    if (pipeline && this.format !== 'anthropic') {
       try {
         const prompt = userContent;
         const pipelineOpts = {
@@ -88,20 +172,12 @@ export class LLMClient {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeout);
 
-    let apiUrl = this.url;
-    if (!apiUrl.includes('/chat/completions')) {
-      apiUrl = apiUrl.replace(/\/$/, '') + '/chat/completions';
-    }
-
-    const headers = { 'Content-Type': 'application/json' };
-    if (this.apiKey) {
-      headers['Authorization'] = `Bearer ${this.apiKey}`;
-    }
+    const apiUrl = deriveEndpoints(this.url, this.format).chatUrl;
 
     try {
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers,
+        headers: this._headers(),
         signal: controller.signal,
         body: JSON.stringify(this.buildPayload(systemContent, userContent, options)),
       });
@@ -125,21 +201,7 @@ export class LLMClient {
   }
 
   async fetchModels() {
-    let modelsUrl = this.url;
-    if (modelsUrl.includes('/chat/completions')) {
-      modelsUrl = modelsUrl.replace('/chat/completions', '/models');
-    } else {
-      try {
-        const u = new URL(modelsUrl);
-        if (!u.pathname.endsWith('/models')) {
-          u.pathname = u.pathname.replace(/\/$/, '') + '/models';
-        }
-        modelsUrl = u.toString();
-      } catch (err) {
-        log.debug('URL parse failed for models endpoint', { error: err.message });
-        modelsUrl = modelsUrl.replace(/\/$/, '') + '/models';
-      }
-    }
+    const { modelsUrl } = deriveEndpoints(this.url, this.format);
 
     log.info(`Fetching models from: ${modelsUrl}`);
 
@@ -147,9 +209,14 @@ export class LLMClient {
       'Accept': 'application/json',
       'Content-Type': 'application/json'
     };
-    
+
     if (this.apiKey) {
-      headers['Authorization'] = `Bearer ${this.apiKey}`;
+      if (this.format === 'anthropic') {
+        headers['x-api-key'] = this.apiKey;
+        headers['anthropic-version'] = '2023-06-01';
+      } else {
+        headers['Authorization'] = `Bearer ${this.apiKey}`;
+      }
     }
 
     const response = await fetch(modelsUrl, { headers });
@@ -168,7 +235,7 @@ export class LLMClient {
     }
 
     const data = await response.json();
-    return data.data || [];
+    return data.data || data.models || [];
   }
 
   async generateImage(prompt, { size = '1024x1024', quality = 'standard' } = {}) {
@@ -191,10 +258,12 @@ export class LLMClient {
       headers,
       body: JSON.stringify({ model: 'dall-e-3', prompt, size, quality, n: 1 }),
     });
+
     if (!response.ok) {
       const errText = await response.text().catch(() => '');
       throw new Error(`Image generation failed (${response.status}): ${errText.substring(0, 200)}`);
     }
+
     const data = await response.json();
     return data.data?.[0] || { url: null };
   }
