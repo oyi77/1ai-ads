@@ -332,13 +332,12 @@ export function initBot(app, deps) {
             ...(chatId ? { chat_id: chatId } : {}),
             menu_button: MENU_BUTTON,
           });
-          const current = await bot.telegram.getChatMenuButton(
-            chatId ? { chat_id: chatId } : undefined);
-          if (current?.type === 'web_app') {
-            log.info('Mini App menu button set', { chatId: chatId || 'default', attempt });
-            return true;
-          }
-          log.warn('Mini App menu button reverted, retrying', { chatId: chatId || 'default', got: current?.type, attempt });
+          // Telegram's getChatMenuButton readback lags server-side (observed
+          // 10s-90s+), so a successful set can still read back 'commands'.
+          // Trust the ok:true from setChatMenuButton; retrying on readback
+          // mismatch burned the rate limit and flooded logs (51 warns / 3min).
+          log.info('Mini App menu button set', { chatId: chatId || 'default', attempt });
+          return true;
         } catch (err) {
           // 429 carries a server-mandated retry_after; using the shorter local
           // backoff would just burn attempts into the same 429.

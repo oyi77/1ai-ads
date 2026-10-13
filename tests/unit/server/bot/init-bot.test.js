@@ -83,30 +83,23 @@ describe('initBot smoke', () => {
     const result = initBot(app, { repos: {}, services: {} });
     expect(result).toBeNull();
   });
-  it('re-asserts the Mini App menu button until the readback confirms it', { timeout: 30000 }, async () => {
-    // Regression (proven live 2026-09-24): setWebhook causes Telegram to reset
-    // the chat menu button to 'commands', and that reset lands *after*
-    // setWebhook resolves — so a single chained setChatMenuButton still lost the
-    // race while the boot log claimed success. The boot path must read the
-    // button back and retry until Telegram reports the Mini App button.
-    let reads = 0;
+  it('trusts a successful set instead of retrying on a lagging readback', { timeout: 30000 }, async () => {
+    // Live-proven 2026-10-13: setChatMenuButton returns {ok:true} while
+    // getChatMenuButton keeps reading back 'commands' for 10s-90s+ (server-side
+    // readback lag). Retrying on that mismatch burned the rate limit and flooded
+    // logs (51 warns / 3 min across 6 chats). The boot path must set once and
+    // trust the ok:true; scheduled re-asserts cover a genuine late reset.
     fakeBot.telegram.setChatMenuButton.mockImplementation(() => Promise.resolve(true));
-    fakeBot.telegram.getChatMenuButton.mockImplementation(() => {
-      reads += 1;
-      // First two reads: the webhook reset has not been observed as applied.
-      return Promise.resolve(reads <= 2 ? { type: 'commands' } : { type: 'web_app' });
-    });
+    fakeBot.telegram.getChatMenuButton.mockImplementation(() => Promise.resolve({ type: 'commands' }));
 
     const { initBot } = await import('../../../../server/bot/index.js');
     initBot({ use: vi.fn() }, { repos: {}, services: {} });
-    // Two reverted reads must be retried through: 1.5s then 3s of backoff.
     await new Promise((r) => setTimeout(r, 6000));
 
-    expect(fakeBot.telegram.getChatMenuButton).toHaveBeenCalled();
-    // Retried past the reverted reads instead of trusting a single set.
+    // One set for the bot-wide target; no retry storm from the stale readback.
     const setCalls = fakeBot.telegram.setChatMenuButton.mock.calls;
-    expect(setCalls.length).toBeGreaterThanOrEqual(2);
-    const arg = setCalls[setCalls.length - 1][0];
+    expect(setCalls.length).toBe(1);
+    const arg = setCalls[0][0];
     expect(arg.menu_button.type).toBe('web_app');
     expect(arg.menu_button.web_app.url).toBeTruthy();
   });
