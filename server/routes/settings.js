@@ -12,6 +12,7 @@ import {
   handleTestAiConnection,
   handleListAiModels,
   handleTestAiPrompt,
+  handleGetAiHealth,
   handleListAccounts,
   handleCreateAccount,
   handleUpdateAccount,
@@ -39,6 +40,7 @@ export function createSettingsRouter(settingsRepo, llmClient, db, metaApi, nango
   router.post('/ai/test-connection', handleTestAiConnection(llmClient));
   router.post('/ai/models', handleListAiModels(llmClient));
   router.post('/ai/test-prompt', handleTestAiPrompt(llmClient));
+  router.get('/ai/health', handleGetAiHealth(llmClient));
 
   // Multi-account API
   router.get('/accounts', handleListAccounts(settingsRepo));

@@ -22,6 +22,14 @@ const inputStyle = {
   fontFamily: 'var(--font-mono)',
 };
 
+const RECOMMENDED_MODELS = [
+  { value: 'clv/gemini-2.5-flash', label: 'Gemini 2.5 Flash — fast, cheap, reliable' },
+  { value: 'clv/auto', label: 'Auto (router picks best)' },
+  { value: 'knr/deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
+  { value: 'clv/claude-sonnet-4.6', label: 'Claude Sonnet 4.6 (Anthropic format)' },
+  { value: 'ngoeng', label: 'Combo — auto multi-provider' },
+];
+
 export function SettingsPage() {
   const queryClient = useQueryClient();
   const [aiForm, setAiForm] = useState<AiConfigData>({ url: '', model: '', apiKey: '', format: 'openai' });
@@ -52,6 +60,13 @@ export function SettingsPage() {
   const [models, setModels] = useState<string[]>([]);
   const [testPrompt, setTestPrompt] = useState('');
   const [testOutput, setTestOutput] = useState('');
+  const [aiHealth, setAiHealth] = useState<{ ok: boolean; error?: string; latencyMs?: number; modelsCount?: number; model?: string } | null>(null);
+
+  const aiHealthMutation = useMutation({
+    mutationFn: () => api.get<{ success: boolean; data: { ok: boolean; error?: string; latencyMs?: number; modelsCount?: number; model?: string } }>('/settings/ai/health'),
+    onSuccess: (res) => setAiHealth(res?.data || null),
+    onError: (err: Error) => setAiHealth({ ok: false, error: err.message }),
+  });
 
   const loadModelsMutation = useMutation({
     mutationFn: () => api.post<{ success: boolean; data: Array<{ id?: string } | string> }>('/settings/ai/models', aiForm),
@@ -72,6 +87,7 @@ export function SettingsPage() {
   });
 
   const ai = aiConfig?.data;
+  const isAdmin = api.getUser()?.role === 'admin';
 
   return (
     <div>
@@ -142,7 +158,9 @@ export function SettingsPage() {
         );
       })()}
 
-      {/* AI Configuration — Editable */}
+      {/* AI Configuration — admin only: the LLM endpoint + key are shared by
+          every tenant, so only admins may view or change them. */}
+      {isAdmin && (
       <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 24, marginBottom: 16 }}>
         <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Bot size={14} style={{ color: 'var(--accent)' }} />
@@ -150,6 +168,25 @@ export function SettingsPage() {
         </h3>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* AI Health */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => aiHealthMutation.mutate()}
+              disabled={aiHealthMutation.isPending}
+              style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: 6, fontSize: '0.72rem', padding: '4px 10px', cursor: 'pointer' }}
+            >
+              {aiHealthMutation.isPending ? 'Probing…' : 'Check AI Health'}
+            </button>
+            {aiHealth && (
+              <span style={{ fontSize: '0.75rem', color: aiHealth.ok ? 'var(--green)' : '#f85149' }}>
+                {aiHealth.ok
+                  ? `✓ Online · ${aiHealth.latencyMs ?? '?'}ms${aiHealth.modelsCount ? ` · ${aiHealth.modelsCount} models` : ''}`
+                  : `✗ ${aiHealth.error || 'down'}`}
+              </span>
+            )}
+          </div>
+
           {/* API Format */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <label style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>API Format</label>
@@ -213,6 +250,27 @@ export function SettingsPage() {
             <datalist id="ai-model-list">
               {models.map(m => <option key={m} value={m} />)}
             </datalist>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
+              {RECOMMENDED_MODELS.map(r => (
+                <button
+                  key={r.value}
+                  type="button"
+                  title={r.label}
+                  onClick={() => setAiForm(prev => ({ ...prev, model: r.value }))}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid var(--border)',
+                    color: aiForm.model === r.value ? 'var(--accent)' : 'var(--text-secondary)',
+                    borderRadius: 999,
+                    fontSize: '0.68rem',
+                    padding: '2px 10px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {r.value}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* API Key */}
@@ -329,6 +387,7 @@ export function SettingsPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Account Info */}
       <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 24 }}>

@@ -52,6 +52,7 @@ export class CapiMonitor {
     const matchRate = null;
     const deduplicationRate = null;
     let eventCount = 0;
+    let datasetChecked = false;
     const errors = [];
 
     // CAPI events live under Dataset/Pixel IDs — NOT ad accounts. An ad
@@ -61,6 +62,7 @@ export class CapiMonitor {
     // dataset-level endpoints when a dataset/pixel id is actually provided.
     const datasetId = opts.datasetId || opts.pixelId;
     if (datasetId) {
+      datasetChecked = true;
       try {
         const diagnostics = await api.apiGet(`/${datasetId}/events`, {
           fields: 'event_stats,event_value',
@@ -93,9 +95,17 @@ export class CapiMonitor {
       // Not critical
     }
 
-    // Determine overall status
+    // Determine overall status.
+    // Without a dataset/pixel id CAPI health is UNVERIFIABLE — we must not
+    // report `no_data`, which reads as "your events stopped" and fires a
+    // false-positive alert (live: act_1181078009580337). Use a distinct
+    // status so the UI/alert layer can prompt "configure a pixel" instead.
     if (status === 'unknown') {
-      status = eventCount > 0 ? 'likely_active' : 'no_data';
+      if (!datasetChecked && eventCount === 0) {
+        status = 'not_configured';
+      } else {
+        status = eventCount > 0 ? 'likely_active' : 'no_data';
+      }
     }
 
     const record = {
@@ -209,6 +219,10 @@ export class CapiMonitor {
         const health = await this.checkHealth(accountId, { api: ownerApi, datasetId });
         if (health.status === 'no_data' && health.eventCount === 0) {
           log.warn('CAPI health alert: no events detected', { accountId });
+        } else if (health.status === 'not_configured') {
+          // Distinct, lower-severity signal: CAPI cannot be verified until a
+          // pixel/dataset id is set. Not an outage — don't cry wolf.
+          log.info('CAPI health: no dataset/pixel configured — cannot verify events', { accountId });
         }
       } catch (err) {
         log.error('_checkAll: account check failed', { accountId, error: err.message });

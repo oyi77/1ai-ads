@@ -36,16 +36,37 @@ export function redactSecretsForLogs(value) {
     .replace(/\bEAA[A-Za-z0-9_-]{10,}\b/g, 'EAA[REDACTED]');
 }
 
+/** Full-jitter backoff so parallel callers don't retry in lockstep. */
+function withJitter(baseMs) {
+  return Math.floor(Math.random() * baseMs);
+}
+
 async function handleRateLimit(platformName, apiUrl, response, fetchOptions, retries) {
-  const retryAfter = parseInt(response.headers.get('retry-after') || '5', 10);
+  // Meta often returns a far-future X-App-Usage reset hint; clamp to a sane
+  // ceiling so a single 403 can't stall a request for minutes.
+  const retryAfter = Math.min(parseInt(response.headers.get('retry-after') || '5', 10) || 5, 30);
   log.warn(`[${platformName.toUpperCase()}] Rate limited, retrying after ${retryAfter}s`, { url: redactSecretsForLogs(apiUrl) });
-  await new Promise(r => setTimeout(r, retryAfter * 1000));
+  await new Promise(r => setTimeout(r, retryAfter * 1000 + withJitter(1000)));
   return safeFetch(platformName, apiUrl, fetchOptions, retries - 1);
 }
 
 async function handleServerError(platformName, apiUrl, fetchOptions, retries, attempt) {
   const delay = Math.pow(2, 3 - attempt) * 1000;
   log.warn(`[${platformName.toUpperCase()}] Server error, retrying in ${delay}ms`, { url: redactSecretsForLogs(apiUrl) });
+  await new Promise(r => setTimeout(r, delay + withJitter(500)));
+  return safeFetch(platformName, apiUrl, fetchOptions, retries - 1);
+}
+
+/**
+ * Retry a Meta app-level call-load limit (403 + code 4 / subcode 1504022,
+ * is_transient:true) with backoff. Without this the limit fell straight into
+ * the error path — detected but never waited out — so every caller kept
+ * hitting the wall (7 platform-client errors / 3h live).
+ */
+async function handleMetaAppRateLimit(platformName, apiUrl, fetchOptions, retries, response) {
+  const retryAfter = Math.min(parseInt(response.headers.get('retry-after') || '0', 10) || 0, 30);
+  const delay = Math.max(retryAfter * 1000, 1000 * Math.pow(2, 4 - retries)) + withJitter(1000);
+  log.warn(`[${platformName.toUpperCase()}] App-level call load limit (code 4/1504022), backing off ${delay}ms`, { url: redactSecretsForLogs(apiUrl) });
   await new Promise(r => setTimeout(r, delay));
   return safeFetch(platformName, apiUrl, fetchOptions, retries - 1);
 }
@@ -128,6 +149,11 @@ export async function safeFetch(platformName, apiUrl, fetchOptions = {}, retries
 
       if (response.status >= 500 && retries > 0) {
         return handleServerError(platformName, apiUrl, fetchOptions, retries, 3 - retries + 1);
+      }
+      // Meta app-level call-load limit (403 + code 4 / subcode 1504022) is
+      // throttling, not a permission error — back off and retry before throwing.
+      if (isMetaAppRateLimit(parsedError) && retries > 0) {
+        return handleMetaAppRateLimit(platformName, apiUrl, fetchOptions, retries, response);
       }
       throwApiError(platformName, response.status, parsedError);
     }

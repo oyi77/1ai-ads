@@ -71,8 +71,29 @@ function inferFormat(url) {
   return /\/messages$/.test(String(url || '')) ? 'anthropic' : 'openai';
 }
 
+/**
+ * Turn the model config into an ordered failover list.
+ * Accepts a comma-separated string ("a,b,c") or an array. Dedupes, drops blanks.
+ */
+export function normalizeModels(value) {
+  const list = Array.isArray(value) ? value : String(value || '').split(',');
+  const out = [];
+  for (const raw of list) {
+    const id = String(raw || '').trim();
+    if (id && !out.includes(id)) out.push(id);
+  }
+  return out.length ? out : ['auto'];
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Transient = worth retrying another model / another attempt: 408/429/5xx and network errors. */
+export function isTransientLlmStatus(status) {
+  return status === 408 || status === 429 || (typeof status === 'number' && status >= 500);
+}
+
 export class LLMClient {
-  constructor({ url, baseUrl, model, apiKey, timeout, format } = {}) {
+  constructor({ url, baseUrl, model, apiKey, timeout, format, models, retries, retryBaseMs } = {}) {
     // this.url is stored verbatim (base or full endpoint); concrete chat/models
     // URLs are derived lazily at call time via deriveEndpoints.
     this.url = url || baseUrl || config.llm.url;
@@ -80,16 +101,27 @@ export class LLMClient {
     this.model = model || config.llm.model;
     this.apiKey = apiKey || config.llm.apiKey;
     this.timeout = timeout || config.llm.timeout;
+    // Failover chain: comma-separated in the model string or an explicit list.
+    // models[0] is the primary; each subsequent id is tried after a transient
+    // failure. Keeps AI alive when one upstream model 429s/503s/times out.
+    this.models = normalizeModels(models || this.model);
+    this.retries = retries ?? config.llm.retries;
+    this.retryBaseMs = retryBaseMs ?? config.llm.retryBaseMs;
+    this.modelsCache = { at: 0, data: null };
+    this.modelsCacheTtlMs = 10 * 60 * 1000;
   }
 
-  updateConfig({ url, baseUrl, model, apiKey, timeout, format }) {
+  updateConfig({ url, baseUrl, model, apiKey, timeout, format, models, retries, retryBaseMs }) {
     const nextUrl = url || baseUrl;
     if (nextUrl) this.url = nextUrl;
     if (format) this.format = format;
     else if (nextUrl) this.format = inferFormat(nextUrl);
     if (model) this.model = model;
+    if (models || model) this.models = normalizeModels(models || this.model);
     if (apiKey !== undefined) this.apiKey = apiKey;
     if (timeout) this.timeout = timeout;
+    if (retries !== undefined) this.retries = retries;
+    if (retryBaseMs !== undefined) this.retryBaseMs = retryBaseMs;
     _pipelineInstance = null;
   }
 
@@ -165,7 +197,51 @@ export class LLMClient {
       }
     }
 
-    return this._directFetch(systemContent, userContent, options);
+    return this._callWithFailover(systemContent, userContent, options);
+  }
+
+  /**
+   * Try each model in the failover chain. Per model: up to `retries` attempts
+   * with exponential backoff on transient failures (429/5xx/timeout).
+   *
+   * Two independent flags on the error decide routing:
+   *   transient → worth retrying the SAME model (429/5xx/network/timeout)
+   *   failover  → worth trying the NEXT model (everything except a
+   *               payload/auth error that would fail on any model: 400/401/403)
+   * So a 404 (model retired) moves straight to the next model, while a 400
+   * (bad request body) aborts immediately instead of burning the chain.
+   */
+  async _callWithFailover(systemContent, userContent, options = {}) {
+    const chain = options.model ? [String(options.model)] : this.models;
+    let lastErr;
+
+    for (let m = 0; m < chain.length; m++) {
+      const model = chain[m];
+      for (let attempt = 1; attempt <= this.retries; attempt++) {
+        try {
+          return await this._directFetch(systemContent, userContent, { ...options, model });
+        } catch (err) {
+          lastErr = err;
+          const transient = err.transient === true;
+          const failover = err.failover !== false;
+
+          if (!transient && !failover) throw err; // 400/401/403 — model-independent
+          if (!transient) break;                  // model-specific (404) → next model
+
+          const hasNextAttempt = attempt < this.retries;
+          if (!hasNextAttempt) break;             // attempts spent → next model
+
+          const delay = this.retryBaseMs * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
+          log.warn('LLM transient failure, retrying same model', { model, attempt, delay, error: err.message });
+          await sleep(delay);
+        }
+      }
+      if (m < chain.length - 1) {
+        log.warn('LLM model exhausted, failing over', { from: model, to: chain[m + 1] });
+      }
+    }
+
+    throw lastErr || new Error('LLM call failed');
   }
 
   async _directFetch(systemContent, userContent, options = {}) {
@@ -184,23 +260,43 @@ export class LLMClient {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`LLM API Error (${response.status}): ${errorText}`);
+        const err = new Error(`LLM API Error (${response.status}): ${errorText}`);
+        err.status = response.status;
+        err.transient = isTransientLlmStatus(response.status);
+        // 400 (bad request), 401 (bad key) and 403 (forbidden) would fail on
+        // EVERY model — abort the chain instead of burning the fallbacks.
+        err.failover = !(response.status === 400 || response.status === 401 || response.status === 403);
+        throw err;
       }
 
       const data = await response.json();
       const content = this.extractContent(data);
 
       if (!content) {
-        throw new Error('LLM returned empty or unexpected response');
+        const err = new Error('LLM returned empty or unexpected response');
+        err.transient = true; // e.g. thinking-only output at low max_tokens — worth another go
+        throw err;
       }
 
       return content;
+    } catch (err) {
+      // Abort/network failures are transient too.
+      if (err.name === 'AbortError' || err.transient === undefined || /fetch failed|ECONN|ETIMEDOUT|socket/i.test(err.message || '')) {
+        if (err.status === undefined) err.transient = true;
+      }
+      throw err;
     } finally {
       clearTimeout(timer);
     }
   }
 
-  async fetchModels() {
+  async fetchModels({ force = false } = {}) {
+    // Cache the (large, slow) model catalogue. 337 ids × every admin click
+    // would otherwise re-hit the shared gateway each time.
+    if (!force && this.modelsCache.data && Date.now() - this.modelsCache.at < this.modelsCacheTtlMs) {
+      return this.modelsCache.data;
+    }
+
     const { modelsUrl } = deriveEndpoints(this.url, this.format);
 
     log.info(`Fetching models from: ${modelsUrl}`);
@@ -235,7 +331,9 @@ export class LLMClient {
     }
 
     const data = await response.json();
-    return data.data || data.models || [];
+    const list = data.data || data.models || [];
+    this.modelsCache = { at: Date.now(), data: list };
+    return list;
   }
 
   async generateImage(prompt, { size = '1024x1024', quality = 'standard' } = {}) {
@@ -266,5 +364,68 @@ export class LLMClient {
 
     const data = await response.json();
     return data.data?.[0] || { url: null };
+  }
+
+  /**
+   * Lightweight health/readiness for the AI plane: probes the configured
+   * endpoint + key with a minimal completion, and reports the model catalogue
+   * size. Never throws — returns a structured status for the admin widget.
+   */
+  async aiHealth(timeoutMs = 15000) {
+    const { chatUrl } = deriveEndpoints(this.url, this.format);
+    const started = Date.now();
+    const result = {
+      ok: false,
+      format: this.format,
+      url: chatUrl,
+      model: this.models[0] || this.model,
+      failover: this.models.slice(1),
+      latencyMs: null,
+      error: null,
+      modelsCount: null,
+    };
+
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(chatUrl, {
+          method: 'POST',
+          headers: this._headers(),
+          signal: controller.signal,
+          body: JSON.stringify(this.buildPayload('You are a health probe.', 'Reply with the single word: ok', { max_tokens: 8 })),
+        });
+        result.latencyMs = Date.now() - started;
+        if (!res.ok) {
+          const body = await res.text().catch(() => '');
+          // Map the common quota/limit shapes so the widget can say something useful.
+          if (res.status === 401 || res.status === 403) result.error = 'auth_failed';
+          else if (res.status === 402) result.error = 'insufficient_credits';
+          else if (res.status === 429) result.error = 'rate_limited';
+          else if (res.status >= 500) result.error = 'upstream_error';
+          else result.error = `http_${res.status}`;
+          result.errorDetail = body.substring(0, 200);
+          return result;
+        }
+        const data = await res.json();
+        result.ok = !!this.extractContent(data);
+        if (!result.ok) result.error = 'empty_response';
+      } finally {
+        clearTimeout(timer);
+      }
+    } catch (err) {
+      result.latencyMs = result.latencyMs ?? Date.now() - started;
+      result.error = err.name === 'AbortError' ? 'timeout' : 'network_error';
+      result.errorDetail = err.message;
+    }
+
+    // Catalogue size is best-effort (cached); never let it fail the probe.
+    try {
+      const models = await this.fetchModels();
+      result.modelsCount = models.length;
+    } catch {
+      /* ignore */
+    }
+    return result;
   }
 }

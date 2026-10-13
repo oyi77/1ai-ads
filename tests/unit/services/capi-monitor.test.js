@@ -75,6 +75,24 @@ describe('CapiMonitor', () => {
       expect(result.status).toBe('no_data');
     });
 
+    it('should return not_configured (not no_data) when no dataset/pixel id is set', async () => {
+      // act_1181078009580337 case: CAPI is unverifiable without a pixel, so
+      // reporting no_data would fire a false "events stopped" alert.
+      mockMetaApi.getAccountInsights.mockResolvedValueOnce({ conversions: 0 });
+
+      const result = await monitor.checkHealth('act_1181078009580337');
+      expect(result.status).toBe('not_configured');
+      expect(mockMetaApi.apiGet).not.toHaveBeenCalled();
+    });
+
+    it('should still report no_data for a configured dataset with zero events', async () => {
+      mockMetaApi.apiGet.mockRejectedValue(new Error('fail'));
+      mockMetaApi.getAccountInsights.mockResolvedValueOnce({ conversions: 0 });
+
+      const result = await monitor.checkHealth('act_123', { datasetId: 'ds_1' });
+      expect(result.status).toBe('no_data');
+    });
+
     it('should persist snapshot to DB', async () => {
       mockMetaApi.apiGet.mockRejectedValue(new Error('fail'));
       mockMetaApi.getAccountInsights.mockRejectedValue(new Error('fail'));

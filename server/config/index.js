@@ -56,6 +56,10 @@ const config = {
       // (Authorization: Bearer vs x-api-key + /v1/messages). Set per deployment
       // via OMNIROUTE_FORMAT, or per-config via the admin Settings UI.
       format: (process.env.OMNIROUTE_FORMAT || 'openai').toLowerCase() === 'anthropic' ? 'anthropic' : 'openai',
+      // Resilience: retry transient failures (429/5xx/timeout) with backoff, and
+      // fail over across comma-separated models in OMNIROUTE_MODEL.
+      retries: parseInt(process.env.LLM_RETRIES || '2', 10),
+      retryBaseMs: parseInt(process.env.LLM_RETRY_BASE_MS || '400', 10),
       timeout: parseInt(process.env.LLM_TIMEOUT || '30000', 10),
     };
   },

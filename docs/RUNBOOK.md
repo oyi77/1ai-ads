@@ -38,7 +38,8 @@ npm start          # node server.js  (port from PORT, default 5000)
 | `PUBLIC_BASE_URL` | `https://adforge.aitradepulse.com` | used in links/callbacks |
 | `WEB_APP_URL` | same | Mini App URL |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_HOST`, `TELEGRAM_CHAT_ID` | — | Telegram bot + alerts |
-| `OMNIROUTE_URL` / `OMNIROUTE_MODEL` / `OMNIROUTE_FORMAT` / `OMNIROUTE_API_KEY` | `https://ai.aitradepulse.com/v1/chat/completions` / `clv/gemini-2.5-flash` / `openai` | LLM endpoint. `FORMAT` = `openai` (`/v1/chat/completions`, Bearer) or `anthropic` (`/v1/messages`, x-api-key). Also editable in the admin Settings UI (Settings → AI Configuration). |
+| `OMNIROUTE_URL` / `OMNIROUTE_MODEL` / `OMNIROUTE_FORMAT` / `OMNIROUTE_API_KEY` | `https://ai.aitradepulse.com/v1/chat/completions` / `clv/gemini-2.5-flash` / `openai` | LLM endpoint. `FORMAT` = `openai` (`/v1/chat/completions`, Bearer) or `anthropic` (`/v1/messages`, x-api-key). `MODEL` accepts a comma-separated **failover chain**. Admin-only Settings UI (`/api/settings/ai`, admin + 15/min throttle). |
+| `LLM_TIMEOUT` / `LLM_RETRIES` / `LLM_RETRY_BASE_MS` | `30000` / `2` / `400` | Per-call timeout; attempts per model on 429/5xx/timeout; exponential backoff base. |
 | `RESEND_API_KEY`, `SMTP_*` | — | Email alerts (verify berkahkarya.org domain) |
 | `WEBHOOK_VERIFY_TOKEN`, `SOCIAL_SCORING_URL`, `LOG_LEVEL`, `ADMIN_PASSWORD` | — | misc |
 

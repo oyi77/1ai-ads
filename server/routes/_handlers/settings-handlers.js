@@ -145,6 +145,22 @@ export function handleTestAiPrompt(llmClient) {
   };
 }
 
+// GET /ai/health — lightweight AI-plane readiness (admin widget). Never 500s.
+export function handleGetAiHealth(llmClient) {
+  return async (req, res) => {
+    try {
+      if (typeof llmClient.aiHealth !== 'function') {
+        return res.json({ success: true, data: { ok: false, error: 'unsupported' } });
+      }
+      const health = await llmClient.aiHealth();
+      res.json({ success: true, data: health });
+    } catch (err) {
+      // Health must never throw at the client — degrade to a reported failure.
+      res.json({ success: true, data: { ok: false, error: 'probe_failed', errorDetail: err.message } });
+    }
+  };
+}
+
 // GET /accounts — multi-account list (creds masked)
 export function handleListAccounts(settingsRepo) {
   return (req, res) => {

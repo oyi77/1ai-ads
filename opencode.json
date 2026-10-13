@@ -28,8 +28,8 @@
       "npm": "@ai-sdk/openai-compatible",
       "name": "BK AI",
       "options": {
-        "baseURL": "http://100.123.92.72:20128/v1",
-        "apiKey": "sk-f0c1ddf471008e76-f92ijk-07d16379"
+        "baseURL": "https://ai.aitradepulse.com/v1",
+        "apiKey": "{env:OMNIROUTE_API_KEY}"
       },
       "models": {
         "auto": { "name": "Auto (OmniRoute)" },
