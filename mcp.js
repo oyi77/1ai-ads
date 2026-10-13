@@ -54,7 +54,12 @@ const server = create1aiAdsMCPServer(
     llmClient,
     contentBridge,
     socialBridge
-  }
+  },
+  // stdio transport has no HTTP request → no per-request identity. Treat the
+  // local stdio process as trusted-admin so bridge/content tools are usable
+  // from the CLI. The SSE route (server/routes/mcp.js) applies the real
+  // per-user identity + requireAddon gate.
+  { role: 'admin', userId: null, userAddonsRepo: repos.userAddonsRepo }
 );
 
 async function main() {

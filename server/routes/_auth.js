@@ -96,7 +96,7 @@ export function createAuthGroupRouter({ repos, services: _services, publicRateLi
   });
 
   router.use('/auth', publicRateLimit, createAuthRouter(repos.usersRepo, repos.refreshTokensRepo, repos.settingsRepo, repos.userAddonsRepo));
-  router.use('/admin', requireAuth, requireAdmin, createAdminRouter(repos.usersRepo, repos.refreshTokensRepo, repos.settingsRepo));
+  router.use('/admin', requireAuth, requireAdmin, createAdminRouter(repos.usersRepo, repos.refreshTokensRepo, repos.settingsRepo, repos.userAddonsRepo));
   router.use('/tokens', requireAuth, requireAdmin, createTokenRouter());
   router.use('/events', requireAuth, createEventsRouter());
   router.use('/audit', requireAuth, requireAdmin, createAuditRouter(repos.auditRepo));

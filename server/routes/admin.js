@@ -2,10 +2,11 @@ import { Router } from 'express';
 import { requireRole } from '../middleware/rbac.js';
 import { createLogger } from '../lib/logger.js';
 import { generateToken, generateRefreshToken } from '../lib/auth.js';
+import { ADDONS } from '../lib/addons.js';
 
 const log = createLogger('admin');
 
-export function createAdminRouter(usersRepo, _refreshTokensRepo, _settingsRepo) {
+export function createAdminRouter(usersRepo, _refreshTokensRepo, _settingsRepo, userAddonsRepo) {
   const router = Router();
   router.use(requireRole('admin'));
 
@@ -147,6 +148,55 @@ export function createAdminRouter(usersRepo, _refreshTokensRepo, _settingsRepo) 
     } catch (err) {
       log.error('Billing override failed', { error: err.message });
       res.status(500).json({ success: false, error: 'Billing override failed' });
+    }
+  });
+
+  // GET /api/admin/users/:id/addons — list active addons for a user
+  router.get('/users/:id/addons', (req, res) => {
+    try {
+      const user = usersRepo.findById(req.params.id);
+      if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+      const addons = userAddonsRepo?.listActive(user.id) || [];
+      res.json({ success: true, data: { userId: user.id, addons, catalog: ADDONS } });
+    } catch (err) {
+      log.error('List addons failed', { error: err.message });
+      res.status(500).json({ success: false, error: 'Failed to list addons' });
+    }
+  });
+
+  // POST /api/admin/users/:id/addons — grant an addon (manual sale before the
+  // pay:addon gateway exists). Body: { addonKey }.
+  router.post('/users/:id/addons', (req, res) => {
+    try {
+      const { addonKey } = req.body || {};
+      if (!addonKey || !ADDONS[addonKey]) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid addon key. Available: ${Object.keys(ADDONS).join(', ')}`,
+        });
+      }
+      const user = usersRepo.findById(req.params.id);
+      if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+      userAddonsRepo?.grant(user.id, addonKey, req.user?.id);
+      log.info('Admin granted addon', { adminId: req.user?.id, targetId: user.id, addonKey });
+      res.json({ success: true, data: { userId: user.id, addons: userAddonsRepo?.listActive(user.id) || [] } });
+    } catch (err) {
+      log.error('Grant addon failed', { error: err.message });
+      res.status(500).json({ success: false, error: 'Failed to grant addon' });
+    }
+  });
+
+  // DELETE /api/admin/users/:id/addons/:addonKey — revoke an addon
+  router.delete('/users/:id/addons/:addonKey', (req, res) => {
+    try {
+      const user = usersRepo.findById(req.params.id);
+      if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+      userAddonsRepo?.revoke(user.id, req.params.addonKey);
+      log.info('Admin revoked addon', { adminId: req.user?.id, targetId: user.id, addonKey: req.params.addonKey });
+      res.json({ success: true, data: { userId: user.id, addons: userAddonsRepo?.listActive(user.id) || [] } });
+    } catch (err) {
+      log.error('Revoke addon failed', { error: err.message });
+      res.status(500).json({ success: false, error: 'Failed to revoke addon' });
     }
   });
 
