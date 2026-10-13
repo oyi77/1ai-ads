@@ -82,7 +82,15 @@ export function initBot(app, deps) {
   const commandHandlers = {
     start: handleStart(),
     menu: handleMenu(),
-    cancel: handleMenu(),
+    cancel: async (ctx) => {
+      // /cancel must actually cancel the active wizard, not just repaint the
+      // menu: the scene stayed live so the next typed value was swallowed by
+      // the abandoned wizard step. Leave first, then show the main menu.
+      try { await ctx.scene?.leave(); } catch { /* no active scene */ }
+      if (ctx.session?.ruleBuilder) delete ctx.session.ruleBuilder;
+      if (ctx.session) ctx.session.__scenes = {};
+      return handleMenu()(ctx);
+    },
     help: handleHelp(),
     status: handleStatus(deps),
     quick: handleMenu(),
@@ -282,6 +290,7 @@ export function initBot(app, deps) {
   // Sync command picker
   const MY_COMMANDS = [
     { command: 'start', description: '🚀 Mulai / menu utama' },
+    { command: 'menu', description: '📋 Menu utama' },
     { command: 'quick', description: '📋 Menu cepat' },
     { command: 'status', description: '📊 Ringkasan kampanye & ROAS' },
     { command: 'ads', description: '📣 Kelola akun iklan multi-platform' },

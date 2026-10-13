@@ -143,4 +143,16 @@ describe('initBot smoke', () => {
     expect(fakeBot.telegram.getChatMenuButton).toHaveBeenCalled();
     expect(fakeBot.telegram.setChatMenuButton).not.toHaveBeenCalled();
   });
+
+  it('registers /menu in the command picker so new users can reach the main menu', { timeout: 30000 }, async () => {
+    // The free-text fallback and every error reply tells users to type /menu,
+    // but /menu was absent from setMyCommands — new users had no way to
+    // discover it without typing blindly. It must be in the picker.
+    const { initBot } = await import('../../../../server/bot/index.js');
+    fakeBot.telegram.getMyCommands.mockImplementation(() => Promise.resolve([]));
+    initBot({ use: vi.fn() }, { repos: {}, services: {} });
+    await new Promise((r) => setTimeout(r, 50));
+    const registered = fakeBot.telegram.setMyCommands.mock.calls[0]?.[0];
+    expect(registered.map((c) => c.command)).toContain('menu');
+  });
 });
