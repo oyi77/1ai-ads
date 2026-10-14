@@ -3,6 +3,17 @@ import { ValidationError, NotFoundError } from '../lib/errors.js';
 
 const log = createLogger('draft-service');
 
+// Drafts encode a decision made against campaign state at creation time. The
+// longer they sit, the more that decision can drift from reality — approving a
+// "pause" draft after ROAS recovered pauses a healthy campaign (live-proven:
+// 3 pending ai_optimize pause drafts 4–43 days old pointing at currently
+// ACTIVE campaigns). Cap the age at which a pending draft may still execute.
+export const DRAFT_MAX_AGE_DAYS = 14;
+// Non-replayable drafts (ai/optimizer suggestions) carry even less value: the
+// metrics that produced them are long gone, so they expire sooner.
+export const NON_REPLAYABLE_MAX_AGE_DAYS = 7;
+const REPLAYABLE_TYPES = new Set(['rule_pause', 'rule_increase_budget', 'rule_decrease_budget']);
+
 const TELEGRAM_API = 'https://api.telegram.org';
 
 // Saran aksi Bahasa Indonesia berdasar pola pesan error Meta/executor.
@@ -79,6 +90,31 @@ export class DraftService {
     if (!existing) throw new NotFoundError('Draft not found');
     assertOwnerOrAdmin(existing, userId, isAdmin);
     if (existing.status !== 'pending') throw new ValidationError(`Draft is already ${existing.status}`);
+    // ── Staleness guard ────────────────────────────────────────────
+    // A pending draft is a snapshot of a decision. Approving it weeks later
+    // executes that decision against TODAY'S campaign state, which can invert
+    // the intent — pausing a campaign that has since recovered (live-proven:
+    // 3 pending ai_optimize pause drafts 4–43 days old pointing at currently
+    // ACTIVE campaigns). Expire instead of executing, and tell the owner why.
+    const ageDays = (Date.now() - new Date(String(existing.created_at).replace(' ', 'T') + 'Z').getTime()) / 86400000;
+    const maxAge = REPLAYABLE_TYPES.has(existing.type) ? DRAFT_MAX_AGE_DAYS : NON_REPLAYABLE_MAX_AGE_DAYS;
+    if (Number.isFinite(ageDays) && ageDays > maxAge) {
+      try {
+        this.draftsRepo.reject(id, {
+          reviewedBy: 'system:expiry',
+          rejectionReason: `Kedaluwarsa — draft ${Math.floor(ageDays)} hari (batas ${maxAge}). Keadaan campaign kemungkinan sudah berubah; minta saran/aturan baru.`,
+        });
+      } catch (err) {
+        log.error('Failed to persist draft expiry', { draftId: id, error: err.message });
+      }
+      log.warn('Draft expired on approval (stale decision)', {
+        draftId: id, type: existing.type, ageDays: Math.floor(ageDays), maxAge,
+      });
+      throw new ValidationError(
+        `Draft sudah ${Math.floor(ageDays)} hari (batas ${maxAge} hari) jadi saya batalkan otomatis. ` +
+        `Keadaan campaign kemungkinan sudah berubah — minta saran baru biar keputusannya pakai data terkini.`
+      );
+    }
 
     // Externally-executed approval: record the caller's result verbatim.
     // A blank result proves nothing ran — reject it rather than stamping

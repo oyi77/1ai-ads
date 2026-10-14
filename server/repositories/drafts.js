@@ -235,4 +235,35 @@ export class DraftsRepository {
       "SELECT id FROM approval_drafts WHERE campaign_id = ? AND status = 'pending' AND (summary LIKE ? ESCAPE '\\' OR summary LIKE ? ESCAPE '\\') LIMIT 1"
     ).get(campaignId, `%Rule ${escaped}%`, `%Aturan \"${escaped}\"%`) || null;
   }
+
+  /**
+   * Expire pending drafts older than `maxAgeDays`. Expiry = status 'rejected'
+   * with a system reviewer, so nothing is silently dropped and the audit trail
+   * stays intact (reviewed_by 'system:expiry' + reason).
+   * @returns {{expired:number, ids:string[]}}
+   */
+  expireStalePending(maxAgeDays = 14) {
+    const rows = this.db.prepare(`
+      SELECT id FROM approval_drafts
+      WHERE status = 'pending'
+        AND created_at < datetime('now', ?)
+    `).all(`-${maxAgeDays} days`);
+    if (!rows.length) return { expired: 0, ids: [] };
+    const ids = rows.map((r) => r.id);
+    const upd = this.db.prepare(`
+      UPDATE approval_drafts
+      SET status = 'rejected',
+          reviewed_at = datetime('now'),
+          reviewed_by = 'system:expiry',
+          rejection_reason = ?
+      WHERE id = ? AND status = 'pending'
+    `);
+    const reason = `Kedaluwarsa otomatis — draft melewati batas ${maxAgeDays} hari tanpa ACC.`;
+    const tx = this.db.transaction(() => {
+      for (const id of ids) upd.run(reason, id);
+    });
+    tx();
+    log.info('Expired stale pending drafts', { count: ids.length, maxAgeDays });
+    return { expired: ids.length, ids };
+  }
 }

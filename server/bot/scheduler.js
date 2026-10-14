@@ -20,6 +20,7 @@ import { setupHourlyAnomaly } from './scheduler/jobs/hourly-anomaly.js';
 import { setupSubscriptionCheck } from './scheduler/jobs/subscription-check.js';
 import { setupMetaSync } from './scheduler/jobs/meta-sync.js';
 import { setupDraftReminder } from './scheduler/jobs/draft-reminder.js';
+import { setupDraftExpiry } from './scheduler/jobs/draft-expiry.js';
 import { setupDailyEvalGuard } from './scheduler/jobs/daily-eval-guard.js';
 import { setupDbBackup } from './scheduler/jobs/db-backup.js';
 
@@ -42,7 +43,7 @@ export function initScheduler(bot, deps) {
   setupMetaSync(bot, deps);
   setupDailyEvalGuard(bot, deps);
   setupDraftReminder(bot, deps);
-  // 10. Auto-scale — triggered by campaign monitor (not cron)
+  setupDraftExpiry(bot, deps);
   //     Runs when campaign monitor (job 1) reports decision SCALE_UP and
   //     evaluateScaleEligibility returns canScale. The status column is NOT
   //     involved: 'WINNING'/'LOSING' are performance grades from
