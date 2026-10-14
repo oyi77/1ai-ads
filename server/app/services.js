@@ -1,5 +1,6 @@
 import config from '../config/index.js';
 import { LLMClient } from '../services/llm-client.js';
+import { createLogger } from '../lib/logger.js';
 import { AdspirerMcpClient } from '../services/adspirer-mcp-client.js';
 import { TrendingService } from '../services/trending.js';
 import { PaymentService } from '../services/payments.js';
@@ -58,13 +59,32 @@ import { NangoAuthService } from '../services/nango-auth.js';
 // (`services.mailer.sendInvite`), not as a constructed instance.
 import * as mailer from '../lib/mailer.js';
 import { McpClientManager } from '../services/mcp-client.js';
+
+const log = createLogger('services');
+
 export function createServices({ db, repos, params }) {
   const llmClient = (params && params.llmClient) || new LLMClient({
     url: config.llm.url,
     model: config.llm.model,
+    format: config.llm.format,
     apiKey: config.llm.apiKey,
     timeout: config.llm.timeout,
+    retries: config.llm.retries,
+    retryBaseMs: config.llm.retryBaseMs,
   });
+
+  // The admin Settings UI persists LLM config to the `llm_config` setting, which
+  // otherwise would only take effect after a restart. Apply it on boot so the
+  // client always starts from the last saved config (env stays the fallback).
+  try {
+    const stored = repos.settingsRepo?.get?.('llm_config');
+    if (stored && typeof stored === 'object') {
+      llmClient.updateConfig(stored);
+    }
+  } catch (err) {
+    // Never let a bad settings row block boot.
+    log.warn('llm_config hydrate skipped', { error: err.message });
+  }
 
   const adspirerClient = new AdspirerMcpClient(repos.platformAccountsRepo);
   const trendingService = new TrendingService(repos.campaignsRepo);

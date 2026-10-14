@@ -36,6 +36,18 @@ describe('DataCleanup', () => {
       );
     });
 
+    it('should prune stale daily_eval_alerted_* markers', () => {
+      cleanup.run();
+      expect(mockDb.prepare).toHaveBeenCalledWith(
+        expect.stringContaining('daily_eval_alerted_%')
+      );
+    });
+
+    it('exposes the marker count in the results', () => {
+      const results = cleanup.run();
+      expect(results.alertMarkers).toBe(5);
+    });
+
     it('should return cleanup results', () => {
       const results = cleanup.run();
       expect(results).toBeDefined();

@@ -55,17 +55,47 @@ Verify build: `ls dist/` (index.html + assets/).
 
 ## Health
 ```bash
-curl http://localhost:5000/health          # {"status":"ok",...}
+curl http://localhost:5000/health          # {"status":"ok","aiPlane":{...}}
 curl http://localhost:5000/api/cf-health   # Cloudflare check
 ```
+`/health.aiPlane` is a **non-networked** readiness hint (`configured`, `format`,
+model `count`) — it never calls the upstream. For a real AI probe (with latency
+and quota mapping) use the admin-only `GET /api/settings/ai/health`.
+
+## Backups
+Local WAL-safe snapshots are written by the in-app scheduler to `./backups`
+(keeps the newest 7 triplets). **Mirror them offsite** — same-disk backups do
+not survive a disk loss:
+```bash
+cp backup.env.example backup.env   # pick restic / rclone / dir target
+./scripts/backup-offsite.sh --install   # nightly systemd user timer @ 03:30
+```
+Restore is a **triple** — copy `adforge.db.<ts>.backup` **+** `-wal` **+** `-shm`
+together (the main file alone can be near-empty).
+
+## Secrets
+See `docs/SECRETS.md` for what is encrypted where, LLM-key rotation, and how to
+purge a leaked key from git history.
+
+## Deployment
+```bash
+npm install && npm run build
+# PM2
+pm2 start ecosystem.config.cjs
+# systemd
+sudo systemctl start 1ai-ads
+```
+Verify build: `ls dist/` (index.html + assets/).
 
 ## Rollback
 ```bash
 pm2 stop 1ai-ads
 git stash || git checkout <last-good-tag>
 npm install && npm run build
-# DB backup/restore
-cp backups/1ai-ads.db.<timestamp>.backup "$DB_PATH"
+# DB backup/restore (copy the triple together)
+cp backups/adforge.db.<timestamp>.backup "$DB_PATH"
+cp backups/adforge.db.<timestamp>.backup-wal "$DB_PATH-wal" 2>/dev/null || true
+cp backups/adforge.db.<timestamp>.backup-shm "$DB_PATH-shm" 2>/dev/null || true
 pm2 start 1ai-ads
 ```
 > Tip: tag releases (`git tag -a vX.Y -m ...`) so rollback targets a known-good commit, not blind `HEAD~1`.

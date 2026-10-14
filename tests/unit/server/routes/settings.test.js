@@ -148,7 +148,8 @@ describe('Settings Router', () => {
       settingsRepo.get.mockReturnValue({ url: 'http://llm.test', model: 'm1', apiKey: 'sk-1234' });
       const res = await request(app).get('/api/settings/ai');
       expect(res.status).toBe(200);
-      expect(res.body.data).toEqual({ url: 'http://llm.test', model: 'm1', apiKey: 'sk-1234', format: 'openai' });
+      // The raw provider key is never returned; the handler masks it.
+      expect(res.body.data).toEqual({ url: 'http://llm.test', model: 'm1', apiKey: '••••••••', format: 'openai' });
     });
 
     it('returns the stored api format when set', async () => {

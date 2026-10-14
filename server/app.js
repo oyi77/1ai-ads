@@ -310,8 +310,19 @@ export function createApp(params) {
     res.send(getMetricsText());
   });
 
+  // Liveness + a cheap AI-plane readiness hint. `aiPlane` is derived from the
+  // last known client config (no network call) so /health stays instant and
+  // cannot be used to hammer the upstream — the admin probe lives at
+  // GET /api/settings/ai/health.
   app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    const ai = app.locals.services?.llmClient;
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      aiPlane: ai
+        ? { configured: !!ai.apiKey, format: ai.format, models: ai.models?.length ?? 0 }
+        : { configured: false },
+    });
   });
 
   // Server-rendered legal pages — Meta/Google review crawlers must see real
@@ -361,6 +372,8 @@ export function createApp(params) {
   });
 
   app.locals.realtimeService = services.realtimeService;
+  // llmClient is read by the /health AI-readiness hint (no network call).
+  app.locals.services = { llmClient: services.llmClient };
   app.locals._services = {
     autonomousAgent: services.autonomousAgent,
     autoOptimizer: services.autoOptimizer,

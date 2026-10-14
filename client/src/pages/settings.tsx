@@ -276,7 +276,7 @@ export function SettingsPage() {
           {/* API Key */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <label style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
-              API Key {ai?.apiKey && ai.apiKey !== '••••••••' ? '(configured)' : '(not set)'}
+              API Key {ai?.apiKey ? '(configured)' : '(not set)'}
             </label>
             <input
               type="password"
@@ -382,7 +382,7 @@ export function SettingsPage() {
           <div style={{ marginTop: 8, padding: '10px 14px', background: 'var(--bg-surface, #1a1a2e)', borderRadius: 8, border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: 4 }}>Currently active:</div>
             <div style={{ fontSize: '0.8rem', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
-              {(ai?.format || 'openai')} · {ai?.url || '(default)'} · {ai?.model || '(default)'} · Key: {ai?.apiKey && ai.apiKey !== '••••••••' ? '••••••••' : 'not set'}
+              {(ai?.format || 'openai')} · {ai?.url || '(default)'} · {ai?.model || '(default)'} · Key: {ai?.apiKey ? '••••••••' : 'not set'}
             </div>
           </div>
         </div>

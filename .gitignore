@@ -83,3 +83,6 @@ ADMIN-CREDENTIALS.txt
 # Agent/scratch state
 .vilona-brain.jsonl
 boot-result.txt
+
+# Offsite backup target + credentials — never commit (see backup.env.example)
+backup.env

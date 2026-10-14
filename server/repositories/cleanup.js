@@ -33,4 +33,17 @@ export class CleanupRepository {
       "DELETE FROM performance_history WHERE snapshot_date < date('now', ?)"
     ).run(cutoff).changes;
   }
+
+  /**
+   * Prune per-run bookkeeping rows that accumulate forever — chiefly the
+   * eval-alert markers (`daily_eval_alerted_<uuid>_<YYYY-MM-DD>`), one per
+   * user per day. They exist only to suppress duplicate same-day alerts, so
+   * anything older than `olderThanDays` is dead weight.
+   */
+  deleteStaleAlertMarkers(olderThanDays = 30) {
+    const cutoff = `-${olderThanDays} days`;
+    return this.db.prepare(
+      "DELETE FROM settings WHERE key LIKE 'daily_eval_alerted_%' AND updated_at < datetime('now', ?)"
+    ).run(cutoff).changes;
+  }
 }

@@ -1,5 +1,35 @@
 import config from '../config/index.js';
 import { ConfigurationError } from '../lib/errors.js';
+import { encryptToken, decryptToken } from '../lib/crypto.js';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('settings-repo');
+
+/** Settings keys whose value contains a secret that must be encrypted at rest. */
+const SECRET_KEYS = new Set(['llm_config']);
+/** Base64 AES-GCM payloads are long; use it to tell encrypted rows from legacy/plain ones. */
+const ENC_PREFIX = 'enc:v1:';
+const looksEncrypted = (s) => typeof s === 'string' && s.startsWith(ENC_PREFIX);
+
+function encryptSecrets(key, value) {
+  if (!SECRET_KEYS.has(key) || !value || typeof value !== 'object') return value;
+  if (!value.apiKey) return value;
+  const out = { ...value, apiKey: ENC_PREFIX + encryptToken(String(value.apiKey)) };
+  return out;
+}
+
+function decryptSecrets(key, value) {
+  if (!SECRET_KEYS.has(key) || !value || typeof value !== 'object') return value;
+  const k = value.apiKey;
+  if (typeof k !== 'string' || !looksEncrypted(k)) return value; // legacy plaintext → pass through
+  try {
+    return { ...value, apiKey: decryptToken(k.slice(ENC_PREFIX.length)) };
+  } catch (err) {
+    // Wrong/rotated ENCRYPTION_KEY: never crash the read path, just surface no key.
+    log.error('settings secret decrypt failed', { key, error: err.message });
+    return { ...value, apiKey: '' };
+  }
+}
 
 
 /**
@@ -20,11 +50,14 @@ export class SettingsRepository {
   get(key) {
     const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
     if (!row) return null;
-    try { return JSON.parse(row.value); } catch { return row.value; }
+    let parsed;
+    try { parsed = JSON.parse(row.value); } catch { parsed = row.value; }
+    return decryptSecrets(key, parsed);
   }
 
   set(key, value) {
-    const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+    const toStore = encryptSecrets(key, value);
+    const serialized = typeof toStore === 'string' ? toStore : JSON.stringify(toStore);
     this.db.prepare('INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)').run(key, serialized);
   }
 
@@ -36,7 +69,9 @@ export class SettingsRepository {
     const rows = this.db.prepare('SELECT key, value FROM settings').all();
     const result = {};
     for (const row of rows) {
-      try { result[row.key] = JSON.parse(row.value); } catch { result[row.key] = row.value; }
+      let parsed;
+      try { parsed = JSON.parse(row.value); } catch { parsed = row.value; }
+      result[row.key] = decryptSecrets(row.key, parsed);
     }
     return result;
   }

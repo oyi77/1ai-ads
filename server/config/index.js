@@ -50,7 +50,8 @@ const config = {
   get llm() {
     return {
       url: process.env.OMNIROUTE_URL || 'http://localhost:20128/v1/chat/completions',
-      model: process.env.OMNIROUTE_MODEL || 'auto/pro-fast',
+      // Comma-separated = failover chain (see llm-client normalizeModels).
+      model: process.env.OMNIROUTE_MODEL || 'clv/gemini-2.5-flash,clv/auto',
       apiKey: process.env.OMNIROUTE_API_KEY || '',
       // 'openai' (default) or 'anthropic' — selects the wire protocol
       // (Authorization: Bearer vs x-api-key + /v1/messages). Set per deployment

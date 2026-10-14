@@ -51,13 +51,15 @@ export function handleGetAi(settingsRepo) {
       url: config.llm.url,
       model: config.llm.model,
       format: config.llm.format,
-      apiKey: config.llm.apiKey ? '••••••••' : ''
+      apiKey: config.llm.apiKey || '',
     };
     const data = {
       url: llmConfig.url || config.llm.url,
       model: llmConfig.model || config.llm.model,
       format: llmConfig.format || config.llm.format || 'openai',
-      apiKey: llmConfig.apiKey || (config.llm.apiKey ? '••••••••' : ''),
+      // NEVER return the raw provider key. The repo decrypts at read time,
+      // so pass a fixed sentinel; the UI checks non-empty (never a literal).
+      apiKey: llmConfig.apiKey ? '••••••••' : '',
     };
     res.json({ success: true, data });
   };
