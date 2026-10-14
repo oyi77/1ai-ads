@@ -52,6 +52,8 @@ export const CREATIVE_STUDIO_SYSTEM_PROMPT = `Kamu adalah AI Creative Director u
 
 Tugas: Generate COMPLETE ad package untuk produk yang diberikan.
 
+CRITICAL: Output MUST be valid JSON only. No markdown, no prose, no code fences, no \`\`\`. Start with { and end with }.
+
 OUTPUT FORMAT (JSON):
 {
   "copies": [

@@ -95,7 +95,7 @@ describe('Payments API Integration', () => {
       expect(res.body.error).toContain('planId is required');
     });
 
-    it('returns 500 when user already has the requested plan', async () => {
+    it('returns 409 when user already has the requested plan', async () => {
       // Update user to already have pro plan (need to match lowercase comparison)
       db.prepare('UPDATE users SET plan = ? WHERE id = ?').run('pro', userId);
 
@@ -103,8 +103,8 @@ describe('Payments API Integration', () => {
         planId: 'plan_pro'
       });
 
-      // Currently returns 500 because service throws plain Error without status code
-      expect(res.status).toBe(500);
+      // Returns 409 Conflict — user already has this plan.
+      expect(res.status).toBe(409);
       expect(res.body.success).toBe(false);
       expect(res.body.error).toContain('already on the Pro plan');
     });
