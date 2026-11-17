@@ -64,7 +64,8 @@ describe('FacebookConnectionService', () => {
       const result = await service.connectFacebook('auth-code', 'https://redirect.com');
 
       expect(result.accessToken).toBe('long-token');
-      expect(result.expires).toBe(5184000);
+      // exchangeCodeForToken returns expiresIn (seconds); FacebookConnectionService.connectFacebook returns it as-is
+      expect(result.expiresIn).toBe(5184000);
       expect(global.fetch).toHaveBeenCalledTimes(2);
     });
 

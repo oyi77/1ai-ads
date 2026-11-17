@@ -1,3 +1,13 @@
+## [1.6.4] - 2026-11-18
+
+### Fixed
+- **DEF-17 (Meta OAuth dedup)**: `facebook-connection.js.connectFacebook`
+  reimplemented the OAuth code exchange with POST form-encoded body, while
+  `meta-connection.js.exchangeCodeForToken` did the same via GET query params.
+  Two divergent OAuth paths meant bug fixes had to be applied twice. The class
+  now delegates to `exchangeCodeForToken` — the canonical implementation — and
+  the test contract updated to match its `expiresIn` return shape.
+
 ## [1.6.3] - 2026-11-18
 
 ### Fixed

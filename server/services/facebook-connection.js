@@ -1,15 +1,15 @@
 /**
  * Facebook Connection Service — OAuth + Account Linking
  *
- * Extracted from AutonomousAgent (SRP).
- * Handles only: OAuth token exchange, account discovery, platform linking.
+ * Thin class wrapper over meta-connection.js's free functions so callers
+ * can inject it as a service. The OAuth/token logic itself lives in
+ * meta-connection.js — DEF-17 (audit 2026-11-18): connectFacebook previously
+ * reimplemented exchangeCodeForToken with POST form-encoded body instead of
+ * GET query params, producing two divergent OAuth paths.
  */
 
-import config from '../config/index.js';
 import { MetaAdsAPI } from './meta/index.js';
-import { verifyMetaTokenApp } from './meta-connection.js';
-
-const API_VERSION = config.metaApiVersion;
+import { exchangeCodeForToken, verifyMetaTokenApp } from './meta-connection.js';
 
 export class FacebookConnectionService {
   constructor(platformAccountsRepo) {
@@ -18,38 +18,10 @@ export class FacebookConnectionService {
 
   /**
    * Exchange auth code for long-lived access token.
+   * Delegates to meta-connection.exchangeCodeForToken — single source of truth.
    */
   async connectFacebook(authCode, redirectUri) {
-    const tokenUrl = `https://graph.facebook.com/${API_VERSION}/oauth/access_token`;
-    const response = await fetch(tokenUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: config.fbAppId,
-        redirect_uri: redirectUri,
-        client_secret: config.fbAppSecret,
-        code: authCode,
-      }),
-    });
-    const data = await response.json();
-    if (data.error) throw new Error(data.error.message);
-
-    const longLived = await fetch(tokenUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'fb_exchange_token',
-        client_id: config.fbAppId,
-        client_secret: config.fbAppSecret,
-        access_token: data.access_token,
-      }),
-    });
-    const longData = await longLived.json();
-
-    return {
-      accessToken: longData.access_token || data.access_token,
-      expires: longData.expires_in || 0,
-    };
+    return exchangeCodeForToken(authCode, redirectUri);
   }
 
   /**
