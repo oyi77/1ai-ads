@@ -110,7 +110,10 @@ export function createServices({ db, repos, params }) {
   const socialBridge = new SocialBridge(socialBridgeUrl, socialBridgeApiKey);
   const draftService = new DraftService(repos.draftsRepo, null);
 
-  const aiAgent = new AiAgent(repos.settingsRepo, repos.adsRepo, repos.campaignsRepo, llmClient, repos.suggestionsRepo, repos.landingRepo, repos.draftsRepo, draftService);
+  // DEF-04 (audit 2026-11-17): constructor takes 7 params; the 7th is
+  // draftService. Passing draftsRepo here (old: 8 args) put a repository into
+  // draftService, breaking draft-based autonomy flows.
+  const aiAgent = new AiAgent(repos.settingsRepo, repos.adsRepo, repos.campaignsRepo, llmClient, repos.suggestionsRepo, repos.landingRepo, draftService);
 
   const shopeeAdapter = new ShopeeAdapter();
   const attributionService = new AttributionService(repos.attributionRepo, shopeeAdapter, repos.campaignsRepo, repos.adsRepo);
@@ -155,7 +158,9 @@ export function createServices({ db, repos, params }) {
   const unifiedReporter = new UnifiedReporter(platformApis, repos.campaignsRepo, db, { platformAccountsRepo: repos.platformAccountsRepo, settingsRepo: repos.settingsRepo });
   const bulkOperations = new BulkOperations(metaApi, repos.campaignsRepo, repos.adsRepo);
   const imageGenerator = new ImageGenerator(llmClient);
-  const audienceIntelligence = new AudienceIntelligence(metaApi, db);
+  // DEF-05 (audit 2026-11-17): constructor expects (metaApi, llmClient);
+  // passing db made suggestInterests() always return empty (llmClient was undefined).
+  const audienceIntelligence = new AudienceIntelligence(metaApi, llmClient);
   const creativeScorer = new CreativeScorer(db, llmClient, repos.settingsRepo);
   const whiteLabelService = new WhiteLabelService(db, llmClient);
   const capiMonitor = new CapiMonitor(metaApi, db);

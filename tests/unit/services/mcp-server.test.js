@@ -1,10 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+let registeredHandlers;
+
 // Mock the MCP SDK server module
 vi.mock('@modelcontextprotocol/sdk/server/index.js', () => ({
   Server: class {
-    constructor() {}
-    setRequestHandler = vi.fn();
+    constructor() {
+      registeredHandlers = [];
+    }
+    setRequestHandler = vi.fn((schema, handler) => {
+      registeredHandlers.push({ schema, handler });
+    });
   },
 }));
 
@@ -121,6 +127,72 @@ describe('MCP Server (create1aiAdsMCPServer)', () => {
       expect(() => {
         create1aiAdsMCPServer(null, null, null);
       }).not.toThrow();
+    });
+  });
+
+  // DEF-02 (audit 2026-11-17): MCP tool handlers previously called
+  // campaignsRepo.findAll({}) / landingRepo.findAll({}) / adsRepo.findAll({})
+  // without a userId filter — every session could read every tenant's data.
+  describe('multi-tenant scoping (DEF-02)', () => {
+    const buildServer = () => {
+      registeredHandlers = [];
+      create1aiAdsMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo, {}, {
+        userId: 'user-1', role: 'admin',
+      });
+      return registeredHandlers[1].handler; // CallToolRequestSchema handler
+    };
+
+    it('1ai-ads_list_campaigns is scoped to the session identity', async () => {
+      mockCampaignsRepo.findAll = vi.fn(() => ({ data: [{ id: 'c1', name: 'Mine' }] }));
+      const callTool = buildServer();
+
+      const response = await callTool({ params: { name: '1ai-ads_list_campaigns', arguments: {} } });
+      expect(mockCampaignsRepo.findAll).toHaveBeenCalledWith({ userId: 'user-1' });
+      expect(response.content[0].text).toContain('Mine');
+    });
+
+    it('1ai-ads_list_campaigns throws when no identity and no user_id arg', async () => {
+      registeredHandlers = [];
+      create1aiAdsMCPServer(mockCampaignsRepo, mockLandingRepo, mockAdsRepo, {}, {});
+      const callTool = registeredHandlers[1].handler;
+
+      const response = await callTool({ params: { name: '1ai-ads_list_campaigns', arguments: {} } });
+      expect(response.isError).toBe(true);
+      expect(response.content[0].text).toContain('user_id required');
+    });
+
+    it('1ai-ads_list_landing_pages is scoped to the session identity', async () => {
+      mockLandingRepo.findAll = vi.fn(() => ({ data: [{ id: 'lp1' }] }));
+      const callTool = buildServer();
+
+      await callTool({ params: { name: '1ai-ads_list_landing_pages', arguments: {} } });
+      expect(mockLandingRepo.findAll).toHaveBeenCalledWith({ userId: 'user-1' });
+    });
+
+    it('1ai-ads_list_creatives is scoped to the session identity', async () => {
+      mockAdsRepo.findAll = vi.fn(() => ({ data: [{ id: 'ad1' }] }));
+      const callTool = buildServer();
+
+      await callTool({ params: { name: '1ai-ads_list_creatives', arguments: {} } });
+      expect(mockAdsRepo.findAll).toHaveBeenCalledWith({ userId: 'user-1' });
+    });
+
+    it('1ai-ads_get_analytics rejects another tenant\'s campaign', async () => {
+      mockCampaignsRepo.getById = vi.fn(() => ({ id: 'c2', user_id: 'someone-else' }));
+      const callTool = buildServer();
+
+      const response = await callTool({ params: { name: '1ai-ads_get_analytics', arguments: { campaign_id: 'c2' } } });
+      expect(response.isError).toBe(true);
+      expect(response.content[0].text).toContain('Campaign not found');
+    });
+
+    it('1ai-ads_get_analytics allows the owner', async () => {
+      mockCampaignsRepo.getById = vi.fn(() => ({ id: 'c1', user_id: 'user-1', name: 'Mine' }));
+      const callTool = buildServer();
+
+      const response = await callTool({ params: { name: '1ai-ads_get_analytics', arguments: { campaign_id: 'c1' } } });
+      expect(response.isError).toBeFalsy();
+      expect(response.content[0].text).toContain('Mine');
     });
   });
 });

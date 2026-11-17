@@ -135,4 +135,34 @@ describe('CampaignsRepository', () => {
   it('upsert rejects a payload with no campaign id', () => {
     expect(() => repo.upsert({ platform: 'meta', userId: 'userA' })).toThrow(/campaign_id/);
   });
+
+  // DEF-09 (audit 2026-11-17): previous implementation interpolated any caller-supplied
+  // key into `UPDATE campaigns SET <key> = ?`. A malicious payload with a crafted key
+  // could inject SQL. The allowlist now throws on unknown columns.
+  it('update throws on a non-allowlisted column', () => {
+    const idA = repo.upsert(makeCampaign({ user_id: 'userA', campaign_id: 'a1', name: 'Orig' }));
+    expect(() => repo.update(idA, { "name = 'x', status = (SELECT 1); --": 'boom' }, 'userA')).toThrow(/not updatable/);
+    expect(repo.findById(idA).name).toBe('Orig');
+  });
+
+  it('update accepts every allowlisted column', () => {
+    const idA = repo.upsert(makeCampaign({ user_id: 'userA', campaign_id: 'a1', name: 'Orig' }));
+    const ok = repo.update(idA, {
+      name: 'New', status: 'active', platform: 'meta', campaign_id: 'a1',
+      account_id: 'act_1', budget: 100, spend: 5, revenue: 50,
+      impressions: 10, clicks: 3, conversions: 1, roas: 10,
+    }, 'userA');
+    expect(ok).toBe(true);
+    const row = repo.findById(idA);
+    expect(row.name).toBe('New');
+    expect(row.status).toBe('active');
+    expect(row.budget).toBe(100);
+    expect(row.roas).toBe(10);
+  });
+
+  it('update drops no-op payloads without touching the row', () => {
+    const idA = repo.upsert(makeCampaign({ user_id: 'userA', campaign_id: 'a1', name: 'Orig' }));
+    expect(repo.update(idA, {}, 'userA')).toBe(false);
+    expect(repo.update(idA, { name: undefined }, 'userA')).toBe(false);
+  });
 });

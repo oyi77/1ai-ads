@@ -286,26 +286,44 @@ export function create1aiAdsMCPServer(campaignsRepo, landingRepo, adsRepo, servi
 
   const TOOL_HANDLERS = {
     '1ai-ads_list_campaigns': async (args) => {
-      const result = campaignsRepo.findAll({});
+      // Multi-tenant scoping (DEF-02, audit 2026-11-17): the per-session MCP
+      // server receives identity.userId from routes/mcp.js. Stdio (mcp.js) runs
+      // as trusted-admin with userId=null — see mcp.js commentary. Admins may
+      // still pass ?userId via args to inspect another tenant.
+      const targetUserId = identity.userId ?? args?.user_id;
+      if (!targetUserId && identity.role !== 'admin') {
+        throw new Error("user_id required (MCP session has no bound identity)");
+      }
+      // Local stdio is explicitly trusted-admin (mcp.js); authenticated SSE
+      // sessions always carry userId and stay tenant-scoped.
+      const result = campaignsRepo.findAll(targetUserId ? { userId: targetUserId } : {});
       const campaigns = result.data || result || [];
       const filtered = args?.platform ? campaigns.filter(c => c.platform === args.platform) : campaigns;
       return { content: [{ type: "text", text: JSON.stringify(filtered, null, 2) }] };
     },
 
     '1ai-ads_get_analytics': async (args) => {
-      const campaign = campaignsRepo.getById(args.campaign_id);
+      // DEF-02 scope: only return the campaign if it belongs to the caller.
+      const campaign = campaignsRepo.getById(args.campaign_id, identity.userId || undefined);
       if (!campaign) throw new Error("Campaign not found");
+      if (identity.userId && campaign.user_id && campaign.user_id !== identity.userId) {
+        throw new Error("Campaign not found");
+      }
       return { content: [{ type: "text", text: JSON.stringify(campaign, null, 2) }] };
     },
 
     '1ai-ads_list_landing_pages': async (_args) => {
-      const result = landingRepo.findAll({});
+      const targetUserId = identity.userId;
+      if (!targetUserId) throw new Error("user_id required (MCP session has no bound identity)");
+      const result = landingRepo.findAll({ userId: targetUserId });
       const pages = result.data || result || [];
       return { content: [{ type: "text", text: JSON.stringify(pages, null, 2) }] };
     },
 
     '1ai-ads_list_creatives': async (_args) => {
-      const result = adsRepo.findAll({});
+      const targetUserId = identity.userId;
+      if (!targetUserId) throw new Error("user_id required (MCP session has no bound identity)");
+      const result = adsRepo.findAll({ userId: targetUserId });
       const ads = result.data || result || [];
       return { content: [{ type: "text", text: JSON.stringify(ads, null, 2) }] };
     },

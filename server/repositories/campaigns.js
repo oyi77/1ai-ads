@@ -168,8 +168,11 @@ export class CampaignsRepository {
     };
   }
 
-  getById(id) {
-    return this.findById(id);
+  // DEF-03 (audit 2026-11-17): scoping is opt-in by the caller, but findById
+  // already accepted userId — getById/findByCampaignId dropped it, so cross-tenant
+  // lookups were possible wherever they were called without an explicit check.
+  getById(id, userId) {
+    return this.findById(id, userId);
   }
 
   /**
@@ -201,14 +204,25 @@ export class CampaignsRepository {
     }));
   }
 
+  // Allowlisted columns for the dynamic UPDATE — anything else is silently
+  // dropped. Closes DEF-09 (audit 2026-11-17): the previous version interpolated
+  // caller-supplied keys straight into SQL. Mirrors campaigns table columns.
+  static UPDATABLE_COLUMNS = new Set([
+    'name', 'status', 'platform', 'campaign_id', 'account_id', 'budget',
+    'spend', 'revenue', 'impressions', 'clicks', 'conversions', 'roas',
+    'last_synced', 'user_id',
+  ]);
+
   update(id, data, userId) {
     const fields = [];
     const values = [];
     for (const [key, val] of Object.entries(data)) {
-      if (val !== undefined) {
-        fields.push(`${key} = ?`);
-        values.push(typeof val === 'object' ? JSON.stringify(val) : val);
+      if (val === undefined) continue;
+      if (!CampaignsRepository.UPDATABLE_COLUMNS.has(key)) {
+        throw new Error(`CampaignsRepository.update: column "${key}" is not updatable`);
       }
+      fields.push(`${key} = ?`);
+      values.push(typeof val === 'object' ? JSON.stringify(val) : val);
     }
     if (fields.length === 0) return false;
     let sql = `UPDATE campaigns SET ${fields.join(', ')} WHERE id = ?`;
@@ -221,8 +235,14 @@ export class CampaignsRepository {
     return result.changes > 0;
   }
 
-  findByCampaignId(metaCampaignId) {
-    return this.db.prepare("SELECT * FROM campaigns WHERE campaign_id = ?").get(metaCampaignId) || null;
+  findByCampaignId(metaCampaignId, userId) {
+    let sql = 'SELECT * FROM campaigns WHERE campaign_id = ?';
+    const params = [metaCampaignId];
+    if (userId) {
+      sql += ' AND user_id = ?';
+      params.push(userId);
+    }
+    return this.db.prepare(sql).get(...params) || null;
   }
 
   create(data) {

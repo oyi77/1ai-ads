@@ -45,7 +45,7 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
     if (!campaign) {
       // A raw Meta campaign id (e.g. a bookmarked link) is addressable too — but
       // only when the row belongs to the caller.
-      const byPlatformId = campaignsRepo?.findByCampaignId?.(id) || null;
+      const byPlatformId = campaignsRepo?.findByCampaignId?.(id, userId) || null;
       if (byPlatformId && (!userId || !byPlatformId.user_id || byPlatformId.user_id === userId)) {
         campaign = byPlatformId;
       }

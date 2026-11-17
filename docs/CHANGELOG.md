@@ -1,3 +1,16 @@
+## [1.6.1] - 2026-11-17
+
+### Fixed
+- **CRITICAL (DEF-01)**: `autonomous-agent.js` `_checkUserCampaigns` was a stub — it counted enabled rules and checked tokens, then logged "Autonomous actions executed" without ever calling `ruleEvaluator.checkCampaigns()`. Now delegates to the real evaluation + action execution flow. Added 5 unit tests (`tests/unit/services/autonomous-agent.test.js`) pinning the contract.
+- **CRITICAL (DEF-02)**: `mcp-server.js` tool handlers called `campaignsRepo.findAll({})`, `landingRepo.findAll({})`, `adsRepo.findAll({})` with no userId → cross-tenant data leak. Now scoped to the per-session identity from `routes/mcp.js` (or `args.user_id` for stdio trusted-admin); admin identity with no userId falls back to unscoped only for the stdio process. Added 6 unit tests (`tests/unit/services/mcp-server.test.js`).
+- **HIGH (DEF-03)**: `campaignsRepo.getById` and `findByCampaignId` dropped the `userId` parameter that `findById` already accepted. Both now accept an optional `userId` and filter `AND user_id = ?` when supplied. Routes and MCP callers updated. Added 3 regression tests (`tests/unit/repositories/campaigns.test.js`).
+- **HIGH (DEF-04)**: `ai-agent.js` constructor takes 7 params, but `createServices` passed 8 — `draftService` was a `draftsRepo` and draft-based autonomy flows broke. Fixed arity.
+- **HIGH (DEF-05)**: `audience-intelligence` was constructed with `db` instead of `llmClient` as its 2nd arg, so `suggestInterests()` always fell back to empty. Fixed.
+- **MEDIUM (DEF-09)**: `campaignsRepo.update()` interpolated caller-supplied keys straight into SQL. Added an allowlist of updatable columns; unknown keys now throw. Added 3 regression tests.
+
+### Changed
+- `CHANGELOG.md` documents the Phase 1 hardening pass. Test suite: 202 files / 2301 tests passing.
+
 ## [1.6.0] - 2026-09-12
 
 ### Fixed

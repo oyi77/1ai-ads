@@ -84,15 +84,25 @@ export class AutonomousAgent {
     const rulesCount = await this.ruleEvaluator.rulesRepo.countEnabled(user.id);
     if (rulesCount === 0) return;
 
+    // Only proceed if the user has a usable token on at least one platform —
+    // avoids spinning up rule evaluation for accounts with no live connection.
     const platforms = ['meta', 'google', 'tiktok'];
+    let hasUsablePlatform = false;
     for (const platform of platforms) {
       const accounts = await this.platformAccountsRepo.findAllActiveByUserAndPlatform(user.id, platform);
-      const hasValidToken = accounts.some(a => a?.access_token);
-const matched = accounts.length;
-      if (!hasValidToken) continue;
-      if (matched > 0) {
-        log.info('Autonomous actions executed', { userId: user.id, platform, actions: matched });
+      if (accounts.some(a => a?.access_token)) {
+        hasUsablePlatform = true;
+        break;
       }
+    }
+    if (!hasUsablePlatform) return;
+
+    // Delegate the real work — evaluate rules and execute actions.
+    // Previously this stub logged "actions executed" without ever calling
+    // checkCampaigns() (DEF-01, audit 2026-11-17).
+    const matched = await this.ruleEvaluator.checkCampaigns(user.id);
+    if (matched > 0) {
+      log.info('Autonomous actions executed', { userId: user.id, matched });
     }
   }
 
