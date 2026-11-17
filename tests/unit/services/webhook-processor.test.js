@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { WebhookProcessor } from '../../../server/services/webhook-processor.js';
+import { WebhookEventsRepository } from '../../../server/repositories/webhook-events.js';
+import { createDatabase } from '../../../db/index.js';
 
 describe('WebhookProcessor', () => {
   let processor;
@@ -94,5 +96,34 @@ describe('WebhookProcessor', () => {
       expect(processor._interval).toBeNull();
       vi.useRealTimers();
     });
+  });
+});
+
+describe('WebhookProcessor DLQ (DEF-08)', () => {
+  let repo, processor;
+
+  beforeEach(() => {
+    const db = createDatabase(':memory:');
+    repo = new WebhookEventsRepository(db);
+    processor = new WebhookProcessor(repo);
+    processor.maxRetries = 2;
+  });
+
+  it('processes events and marks them processed', async () => {
+    const event = { source: 'meta', eventType: 'unknown', payload: {} };
+    const created = repo.create(event);
+    expect(await processor.processBatch(1)).toBe(1);
+    expect(repo.findById(created.id).processed).toBe(1);
+  });
+
+  it('repository supports retry and dead-letter state', () => {
+    const event = repo.create({ source: 'meta', eventType: 'unknown', payload: {} });
+    expect(repo.incrementRetry(event.id)).toBe(1);
+    expect(repo.incrementRetry(event.id)).toBe(2);
+    repo.markDeadLetter(event.id, 'failure');
+    const row = repo.findById(event.id);
+    expect(row.processed).toBe(2);
+    expect(row.retry_counter).toBe(2);
+    expect(row.failed_at).not.toBeNull();
   });
 });

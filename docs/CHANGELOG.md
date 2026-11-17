@@ -1,3 +1,38 @@
+## [1.6.2] - 2026-11-17
+
+### Fixed
+- **HIGH (DEF-06)**: `unified-reporter.js` hard-coded `0 AS revenue` in every
+  dashboard/time-series query — real revenue was never persisted on
+  `performance_history`. Migration `053` adds a `revenue REAL DEFAULT 0`
+  column and backfills from `campaigns.revenue` (lifetime value, not per-day
+  delta); the reporter now sums `COALESCE(revenue, 0)`. 2 unit tests pin the
+  query and the not-yet-migrated fallback path.
+- **HIGH (DEF-07)**: `attribution-service._buildAdClicks` fabricated
+  `clicked_at = ad.created_at` (the ad's birth timestamp, not a click event),
+  making every product_time match meaningless. Migration `054` creates an
+  `ad_clicks` table; `AttributionRepository.recordClick / findClicks` replace
+  the fabricated path. Backfill is impossible (the clicks are gone) — matching
+  is forward-only from the migration date onward. 3 unit tests.
+- **MEDIUM (DEF-08)**: `webhook-processor` marked failed events `processed=1`
+  and discarded them — silent data loss on transient Meta failures. Migration
+  `055` adds `event_id` (dedup key), `retry_counter`, `failed_at`. Failed
+  events retry up to `maxRetries` (default 3) and then move to `processed=2`
+  (dead-letter) instead of being discarded. `WebhookEventsRepository` gained
+  `findById`, `incrementRetry`, `markDeadLetter`. 2 unit tests.
+- **MEDIUM (DEF-10)**: `platform-accounts.encryptCredentials` fell back to
+  plaintext when `ENCRYPTION_KEY` was unset, silently storing every platform
+  token in the clear with no signal. Fallback remains (pre-existing plaintext
+  rows still decrypt) but now logs a loud warning. Production already
+  fails at boot via `config.validateConfig()`; the warning only fires in
+  dev/test. Behavior unchanged when `ENCRYPTION_KEY` is set.
+
+### Not fixed in this release
+- **DEF-11** (JWT `is_active` check): left as documented tradeoff — the
+  `auth.js:28-34` comment explains the stale-WAL-rejects-valid-tokens risk.
+  Mitigation remains JWT_SECRET rotation on ban.
+- **DEF-12** (LLM output schema validation): tracked, not fixed yet.
+- **DEF-13** (CAPI match_rate/dedup_rate): tracked, not fixed yet.
+
 ## [1.6.1] - 2026-11-17
 
 ### Fixed

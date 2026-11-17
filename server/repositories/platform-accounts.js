@@ -9,14 +9,22 @@ const log = createLogger('platform-accounts');
 
 /**
  * Encrypt a credential value for storage.
- * If ENCRYPTION_KEY is not set, stores as plain JSON (backward compatible).
+ *
+ * DEF-10 (audit 2026-11-17): previously fell back to plain JSON when
+ * ENCRYPTION_KEY was unset, silently storing every Meta/Google/TikTok token
+ * in plaintext with no signal to the operator. The fallback remains for
+ * dev/test databases that predate the migration, but now logs a loud
+ * warning. Production is already protected: server/config/index.js
+ * validateConfig() throws at boot when ENCRYPTION_KEY is missing, so the
+ * warning below can only fire in non-production environments.
  */
 function encryptCredentials(credentials) {
   const json = typeof credentials === 'string' ? credentials : JSON.stringify(credentials);
-  if (process.env.ENCRYPTION_KEY) {
-    return encryptToken(json);
+  if (!process.env.ENCRYPTION_KEY) {
+    log.warn('Storing platform credentials in plaintext — ENCRYPTION_KEY is not set. Configure it before production traffic.');
+    return json;
   }
-  return json;
+  return encryptToken(json);
 }
 
 /**

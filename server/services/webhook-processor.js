@@ -3,10 +3,11 @@ import { createLogger } from '../lib/logger.js';
 const log = createLogger('webhook-processor');
 
 export class WebhookProcessor {
-  constructor(webhookEventsRepo, campaignsRepo) {
+  constructor(webhookEventsRepo, campaignsRepo, options = {}) {
     this.webhookEventsRepo = webhookEventsRepo;
     this.campaignsRepo = campaignsRepo;
     this._interval = null;
+    this.maxRetries = options.maxRetries ?? 3;
   }
 
   start(intervalMs = 60 * 1000) {
@@ -30,20 +31,32 @@ export class WebhookProcessor {
     if (events.length === 0) return 0;
 
     let processed = 0;
+    let deadLettered = 0;
     for (const event of events) {
       try {
         await this.processEvent(event);
         this.webhookEventsRepo.markProcessed(event.id);
         processed++;
       } catch (err) {
-        log.error('Webhook event processing failed', { eventId: event.id, error: err.message });
+        const retryCount = this.webhookEventsRepo.incrementRetry(event.id);
+        if (retryCount >= this.maxRetries) {
+          // Max retries exceeded — move to dead-letter, never discard silently.
+          this.webhookEventsRepo.markDeadLetter(event.id, err.message);
+          deadLettered++;
+          log.error('Webhook event moved to dead-letter', {
+            eventId: event.id, retries: retryCount, error: err.message,
+          });
+        } else {
+          // Stay unprocessed; next batch tick retries. No backoff timer yet —
+          // the 60s batch interval is the retry cadence.
+          log.info('Webhook event retry scheduled', { eventId: event.id, retries: retryCount });
+        }
       }
     }
 
-    if (processed > 0) {
-      log.info('Webhook batch processed', { count: processed, total: events.length });
-    }
-    return processed;
+    if (processed > 0) log.info('Webhook batch processed', { count: processed, total: events.length });
+    if (deadLettered > 0) log.warn('Webhook batch dead-lettered', { count: deadLettered, total: events.length });
+    return processed + deadLettered;
   }
 
   static EVENT_HANDLERS = {
