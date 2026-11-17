@@ -13,7 +13,8 @@ jobs:
         with: { node-version: '22' }
       - run: npm ci
       - run: npx gitleaks detect --no-git 2>/dev/null || echo "gitleaks not available"
-      - run: npm audit --audit-level=high 2>/dev/null || echo "npm audit warnings"
+      - run: npm audit --audit-level=high
+      - run: npm run lint
       - run: npm test
       - run: cd client && npm ci && npm run build
   docker:
