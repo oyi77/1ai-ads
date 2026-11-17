@@ -79,11 +79,19 @@ export class AttributionService {
     return { processed: orders.length, matched: matches.length, stored };
   }
 
+  /**
+   * Build ad clicks from the ad_clicks table (migration 054).
+   * Previously fabricated clicked_at from ads.created_at (the ad's birth
+   * timestamp, not a click), making every product_time match meaningless.
+   * When no clicks exist yet (pre-migration), returns [] — matches nothing.
+   */
   _buildAdClicks(params) {
-    if (!this.adsRepo || !params.campaign_id) return [];
+    if (!this.attributionRepo?.findClicks) return [];
     try {
-      const ads = this.adsRepo.findByCampaignId ? this.adsRepo.findByCampaignId(params.campaign_id) : [];
-      return ads.map(ad => ({ ad_id: ad.id, campaign_id: params.campaign_id, product_id: ad.product, clicked_at: ad.created_at }));
+      return this.attributionRepo.findClicks({
+        campaign_id: params.campaign_id,
+        product_id: params.product_id,
+      });
     } catch (err) {
       log.warn('Failed to fetch ad clicks', { error: err.message });
       return [];

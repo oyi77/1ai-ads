@@ -272,3 +272,23 @@ describe('UnifiedReporter', () => {
     });
   });
 });
+
+describe('UnifiedReporter revenue persistence (DEF-06)', () => {
+  it('sums persisted revenue from performance_history', () => {
+    const rows = [
+      { platform: 'meta', spend: 100, revenue: 300, impressions: 5000, clicks: 200, conversions: 10 },
+      { platform: 'google', spend: 50, revenue: 100, impressions: 3000, clicks: 50, conversions: 2 },
+    ];
+    const db = { prepare: vi.fn(() => ({ all: vi.fn(() => rows) })) };
+    const reporter = new UnifiedReporter({}, {}, db);
+
+    expect(reporter._getDBMetrics(7, 'user-1')).toEqual(rows);
+    expect(db.prepare).toHaveBeenCalledWith(expect.stringContaining('SUM(COALESCE(revenue, 0)) AS revenue'));
+  });
+
+  it('returns empty when the revenue migration has not run', () => {
+    const db = { prepare: vi.fn(() => { throw new Error('no such column: revenue'); }) };
+    const reporter = new UnifiedReporter({}, {}, db);
+    expect(reporter._getDBMetrics(7, 'user-1')).toEqual([]);
+  });
+});

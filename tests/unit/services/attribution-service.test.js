@@ -97,7 +97,6 @@ describe('ShopeeAdapter - circuit breaker', () => {
     }
     expect(adapter.getCircuitState()).toBe('open');
 
-    // Simulate timeout by advancing fake timers
     vi.advanceTimersByTime(61_000);
     expect(adapter.getCircuitState()).toBe('half-open');
 
@@ -108,26 +107,50 @@ describe('ShopeeAdapter - circuit breaker', () => {
   it('returns cached data when circuit is open', async () => {
     adapter._cache = [{ order_id: 'cached' }];
     adapter._cacheTs = Date.now();
-
-    // Mock fetch to fail fast (circuit breaker needs real failures)
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('connection refused'));
 
     for (let i = 0; i < 5; i++) {
       await adapter.fetchOrders({ force: true });
     }
     expect(adapter.getCircuitState()).toBe('open');
-
-    const result = await adapter.fetchOrders({ force: true });
-    expect(result).toEqual([{ order_id: 'cached' }]);
-
+    expect(await adapter.fetchOrders({ force: true })).toEqual([{ order_id: 'cached' }]);
     vi.restoreAllMocks();
   });
 
   it('uses cache within TTL', async () => {
     adapter._cache = [{ order_id: 'cached' }];
     adapter._cacheTs = Date.now();
+    expect(await adapter.fetchOrders()).toEqual([{ order_id: 'cached' }]);
+  });
+});
 
-    const result = await adapter.fetchOrders();
-    expect(result).toEqual([{ order_id: 'cached' }]);
+// DEF-07 (audit 2026-11-17): _buildAdClicks used ads.created_at (ad birth)
+// as a click timestamp. It now reads the ad_clicks table (migration 054) and
+// returns [] when no real clicks exist — never fabricates timestamps.
+describe('AttributionService._buildAdClicks (DEF-07)', () => {
+  let repo, service;
+
+  beforeEach(() => {
+    repo = new AttributionRepository(createDatabase(':memory:'));
+    service = new AttributionService(repo, new ShopeeAdapter());
+  });
+
+  it('returns [] with no recorded clicks (no fabricated created_at)', () => {
+    expect(service._buildAdClicks({ campaign_id: 'camp-1' })).toEqual([]);
+  });
+
+  it('reads genuine clicks from ad_clicks, scoped by campaign and product', () => {
+    const t = new Date().toISOString();
+    repo.recordClick({ ad_id: 'ad-1', campaign_id: 'camp-1', product_id: 'P1', clicked_at: t });
+    repo.recordClick({ ad_id: 'ad-2', campaign_id: 'camp-2', product_id: 'P1', clicked_at: t });
+
+    const clicks = service._buildAdClicks({ campaign_id: 'camp-1', product_id: 'P1' });
+    expect(clicks).toHaveLength(1);
+    expect(clicks[0].ad_id).toBe('ad-1');
+    expect(clicks[0].clicked_at).toBe(t);
+  });
+
+  it('rejects clicks without ad_id or clicked_at', () => {
+    expect(() => repo.recordClick({ campaign_id: 'camp-1' })).toThrow(/ad_id and clicked_at/);
   });
 });

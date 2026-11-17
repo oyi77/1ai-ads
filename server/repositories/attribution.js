@@ -8,6 +8,53 @@ export class AttributionRepository {
     this.db = db;
   }
 
+  // ── Ad clicks (migration 054) ─────────────────────────────
+
+  /**
+   * Record a click event. Accepts the subset of columns the caller has —
+   * unknown/undefined fields are skipped, never stored as NULL noise.
+   */
+  recordClick({
+    ad_id, campaign_id, product_id, user_id,
+    clicked_at, ip_hash, user_agent, referer,
+    utm_source, utm_medium, utm_campaign,
+  }) {
+    if (!ad_id || !clicked_at) {
+      throw new Error('recordClick requires ad_id and clicked_at');
+    }
+    const id = uuidv4();
+    this.db.prepare(`
+      INSERT INTO ad_clicks (id, ad_id, campaign_id, product_id, user_id, clicked_at,
+                             ip_hash, user_agent, referer, utm_source, utm_medium, utm_campaign)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id, ad_id, campaign_id ?? null, product_id ?? null, user_id ?? null, clicked_at,
+      ip_hash ?? null, user_agent ?? null, referer ?? null,
+      utm_source ?? null, utm_medium ?? null, utm_campaign ?? null,
+    );
+    return id;
+  }
+
+  /**
+   * Clicks for the product_time matcher — one row per click, scoped by
+   * product_id (when present) and the standard 24-hour lookback.
+   */
+  findClicks({ campaign_id, product_id, sinceMs = 24 * 60 * 60 * 1000 } = {}) {
+    const since = new Date(Date.now() - sinceMs).toISOString();
+    const where = ['clicked_at >= ?'];
+    const params = [since];
+    if (campaign_id) { where.push('campaign_id = ?'); params.push(campaign_id); }
+    if (product_id) { where.push('product_id = ?'); params.push(product_id); }
+    return this.db.prepare(
+      `SELECT id, ad_id, campaign_id, product_id, clicked_at
+         FROM ad_clicks
+        WHERE ${where.join(' AND ')}
+        ORDER BY clicked_at DESC`
+    ).all(...params);
+  }
+
+  // ── Attributions (pre-existing) ───────────────────────────
+
   create({ ad_id, campaign_id, shopee_order_id, shopee_revenue, ad_spend, match_method }) {
     const id = uuidv4();
     try {

@@ -444,15 +444,16 @@ export class UnifiedReporter {
   _getDBMetrics(days, userId = undefined) {
     try {
       // performance_history columns: snapshot_date, impressions, clicks, spend,
-      // conversions, user_id (047). revenue is not persisted — aggregate what
-      // exists, report revenue as 0.
+      // conversions, user_id (047), revenue (053). revenue is 0 on legacy rows
+      // that predate migration 053; the dashboard shows real revenue going
+      // forward from whenever snapshots start recording it.
       const params = [`-${days} days`];
       let scope = '';
       if (userId !== undefined) { scope = 'AND user_id IS ?'; params.push(userId); }
       return this.db.prepare(`
         SELECT platform,
                SUM(spend) AS spend,
-               0 AS revenue,
+               SUM(COALESCE(revenue, 0)) AS revenue,
                SUM(impressions) AS impressions,
                SUM(clicks) AS clicks,
                SUM(conversions) AS conversions
