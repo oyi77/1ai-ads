@@ -238,3 +238,94 @@ describe('AiAgent', () => {
     }, 'u1');
   });
 });
+
+describe('AiAgent schema validation (DEF-12)', () => {
+  let mocks, agent;
+  beforeEach(() => {
+    mocks = makeMocks();
+    agent = new AiAgent(
+      mocks.settingsRepo,
+      mocks.adsRepo,
+      mocks.campaignsRepo,
+      mocks.llmClient,
+      mocks.suggestionsRepo,
+      mocks.landingPagesRepo
+    );
+  });
+
+  it('drops suggestions with unknown type', async () => {
+    mocks.llmClient.call.mockResolvedValue(JSON.stringify([{
+      type: 'nuclear_launch',
+      target_id: 'ad1',
+      target_type: 'ad',
+      changes: [{ field: 'headline', value: 'x' }],
+      rationale: '',
+    }]));
+    const ids = await agent.analyzeAndSuggest('u1');
+    expect(ids).toEqual([]);
+    expect(mocks.suggestionsRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('drops suggestions with invalid target_type', async () => {
+    mocks.llmClient.call.mockResolvedValue(JSON.stringify([{
+      type: 'ad_copy',
+      target_id: 'ad1',
+      target_type: 'secret_admin',
+      changes: [{ field: 'headline', value: 'x' }],
+      rationale: '',
+    }]));
+    const ids = await agent.analyzeAndSuggest('u1');
+    expect(ids).toEqual([]);
+  });
+
+  it('drops suggestions using fields not allowed for the type', async () => {
+    mocks.llmClient.call.mockResolvedValue(JSON.stringify([{
+      type: 'pause_ad',  // pause_ad allows no fields
+      target_id: 'ad1',
+      target_type: 'ad',
+      changes: [{ field: 'headline', value: 'injected' }],
+      rationale: '',
+    }]));
+    const ids = await agent.analyzeAndSuggest('u1');
+    expect(ids).toEqual([]);
+    expect(mocks.adsRepo.update).not.toHaveBeenCalled();
+  });
+
+  it('keeps valid ad_copy suggestions with allowed fields', async () => {
+    mocks.llmClient.call.mockResolvedValue(JSON.stringify([{
+      type: 'ad_copy',
+      target_id: 'ad1',
+      target_type: 'ad',
+      changes: [{ field: 'headline', value: 'New' }, { field: 'body', value: 'Body' }],
+      rationale: 'ok',
+    }]));
+    const ids = await agent.analyzeAndSuggest('u1');
+    expect(ids).toHaveLength(1);
+    expect(mocks.adsRepo.update).toHaveBeenCalledWith('ad1', { headline: 'New', body: 'Body' }, 'u1');
+  });
+
+  it('keeps landing_page suggestions with allowed fields', async () => {
+    mocks.llmClient.call.mockResolvedValue(JSON.stringify([{
+      type: 'landing_page',
+      target_id: 'lp1',
+      target_type: 'landing_page',
+      changes: [{ field: 'cta_primary', value: 'Buy Now' }],
+      rationale: '',
+    }]));
+    const ids = await agent.analyzeAndSuggest('u1');
+    expect(ids).toHaveLength(1);
+    expect(mocks.landingPagesRepo.update).toHaveBeenCalledWith('lp1', { cta_primary: 'Buy Now' });
+  });
+
+  it('returns [] when LLM returns a non-array', async () => {
+    mocks.llmClient.call.mockResolvedValue(JSON.stringify({ foo: 'bar' }));
+    const ids = await agent.analyzeAndSuggest('u1');
+    expect(ids).toEqual([]);
+  });
+
+  it('returns [] when LLM output is not JSON at all', async () => {
+    mocks.llmClient.call.mockResolvedValue('DROP TABLE ai_suggestions;--');
+    const ids = await agent.analyzeAndSuggest('u1');
+    expect(ids).toEqual([]);
+  });
+});

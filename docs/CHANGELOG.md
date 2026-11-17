@@ -1,3 +1,20 @@
+## [1.6.3] - 2026-11-18
+
+### Fixed
+- **HIGH (DEF-12)**: LLM suggestion output parsed with JSON.parse went straight
+  to `_applyChanges` with no field allowlist or type check. A prompt-injected
+  response could persist arbitrary `field: value` pairs to `ads`, `landing_pages`,
+  or trigger unintended side-effects. New `server/lib/ai-suggestion-schema.js`
+  validates each suggestion before it reaches the DB/apply path: whitelisted
+  types (ad_copy, landing_page, bid, pause_ad, creative), whitelisted target
+  types, and per-type field allowlists (pause_ad allows no fields — any field
+  supplied is rejected, closing the injection vector). 7 regression tests.
+- **MEDIUM (DEF-13)**: `capi-monitor.js` read only `data.length` from the
+  dataset events endpoint — `match_rate` and `deduplication_rate` stayed
+  permanently null, so the monitor couldn't report the two metrics it was
+  built to track. Now aggregates weighted `match_rate` and `dedup_rate` from
+  each event's `event_stats`, falling back to null when absent. 2 unit tests.
+
 ## [1.6.2] - 2026-11-17
 
 ### Fixed

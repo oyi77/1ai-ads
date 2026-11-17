@@ -49,8 +49,8 @@ export class CapiMonitor {
     log.info('checkHealth', { accountId });
 
     let status = 'unknown';
-    const matchRate = null;
-    const deduplicationRate = null;
+    let matchRate = null;
+    let deduplicationRate = null;
     let eventCount = 0;
     let datasetChecked = false;
     const errors = [];
@@ -64,11 +64,25 @@ export class CapiMonitor {
     if (datasetId) {
       datasetChecked = true;
       try {
+        // event_stats carries match_rate, dedup_rate, event_count per event
+        // type. DEF-13 (audit 2026-11-17): previously only `data.length` was
+        // read — match_rate/deduplication_rate stayed permanently null, so the
+        // monitor couldn't report the two metrics it was built to track.
         const diagnostics = await api.apiGet(`/${datasetId}/events`, {
           fields: 'event_stats,event_value',
           access_token: api._getToken?.() || '',
         });
-        if (diagnostics?.data) eventCount = diagnostics.data.length || 0;
+        const dataRows = diagnostics?.data || [];
+        eventCount = dataRows.reduce((sum, row) => sum + (Number(row?.event_count ?? row?.count) || 0), 0) || dataRows.length;
+
+        // Aggregate weighted match_rate + dedup_rate across all event types.
+        const matchStats = dataRows.map(r => r?.event_stats).filter(Boolean);
+        if (matchStats.length > 0) {
+          const matchRates = matchStats.map(s => Number(s.match_rate)).filter(Number.isFinite);
+          const dedupRates = matchStats.map(s => Number(s.dedup_rate)).filter(Number.isFinite);
+          if (matchRates.length > 0) matchRate = matchRates.reduce((a, b) => a + b, 0) / matchRates.length;
+          if (dedupRates.length > 0) deduplicationRate = dedupRates.reduce((a, b) => a + b, 0) / dedupRates.length;
+        }
       } catch (err) {
         log.debug('checkHealth: dataset events endpoint unavailable', { error: err.message });
       }

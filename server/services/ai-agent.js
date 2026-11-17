@@ -1,4 +1,5 @@
 import { createLogger } from '../lib/logger.js';
+import { validateSuggestions } from '../lib/ai-suggestion-schema.js';
 
 const log = createLogger('ai-agent');
 
@@ -71,7 +72,12 @@ export class AiAgent {
     try {
       const response = await this.llmClient.call(SYSTEM_PROMPT, `Analyze these ads and campaigns and suggest improvements:\n${context}`);
       const parsed = JSON.parse(response);
-      return Array.isArray(parsed) ? parsed : [];
+      if (!Array.isArray(parsed)) return [];
+      // DEF-12: schema-validate LLM output before it reaches the DB/apply path.
+      // Prompt-injected or malformed suggestions are dropped, not silently
+      // applied. The schema is the single source of truth for which fields are
+      // writable per suggestion type.
+      return validateSuggestions(parsed);
     } catch (err) {
       log.warn('AI analysis failed', { error: err.message });
       return [];

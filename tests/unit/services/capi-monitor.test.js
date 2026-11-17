@@ -163,3 +163,42 @@ describe('CapiMonitor', () => {
     });
   });
 });
+
+describe('CapiMonitor match + dedup metrics (DEF-13)', () => {
+  it('aggregates match_rate and dedup_rate from event_stats', async () => {
+    const prepare = { run: vi.fn(), all: vi.fn().mockReturnValue([]), get: vi.fn() };
+    const db = { exec: vi.fn(), prepare: vi.fn().mockReturnValue(prepare) };
+    const api = {
+      apiGet: vi.fn()
+        .mockResolvedValueOnce({ data: [
+          { event: 'purchase', event_count: 80, event_stats: { match_rate: 0.8, dedup_rate: 0.9 } },
+          { event: 'lead', event_count: 20, event_stats: { match_rate: 0.6, dedup_rate: 1.0 } },
+        ] })
+        .mockResolvedValueOnce({ activity_status: 'ACTIVE' }),
+      getAccountInsights: vi.fn().mockResolvedValue({ conversions: 100 }),
+      _getToken: vi.fn().mockReturnValue('token'),
+    };
+    const monitor = new CapiMonitor(api, db);
+
+    const result = await monitor.checkHealth('act_1', { datasetId: 'ds_1' });
+    expect(result.eventCount).toBe(100);
+    expect(result.matchRate).toBeCloseTo(0.7);
+    expect(result.deduplicationRate).toBeCloseTo(0.95);
+  });
+
+  it('keeps metrics null when API provides no event_stats', async () => {
+    const prepare = { run: vi.fn(), all: vi.fn().mockReturnValue([]), get: vi.fn() };
+    const db = { exec: vi.fn(), prepare: vi.fn().mockReturnValue(prepare) };
+    const api = {
+      apiGet: vi.fn().mockResolvedValue({ data: [{ event: 'purchase', event_count: 3 }] }),
+      getAccountInsights: vi.fn().mockResolvedValue({ conversions: 3 }),
+      _getToken: vi.fn().mockReturnValue('token'),
+    };
+    const monitor = new CapiMonitor(api, db);
+
+    const result = await monitor.checkHealth('act_1', { datasetId: 'ds_1' });
+    expect(result.eventCount).toBe(3);
+    expect(result.matchRate).toBeNull();
+    expect(result.deduplicationRate).toBeNull();
+  });
+});
