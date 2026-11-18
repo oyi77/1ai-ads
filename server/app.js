@@ -382,6 +382,7 @@ export function createApp(params) {
     dataCleanup: services.dataCleanup,
     fatigueDetector: services.fatigueDetector,
     capiMonitor: services.capiMonitor,
+    reconciliationService: services.reconciliationService,
     alertingService: services.alertingService,
     usersRepo: repos.usersRepo,
     platformAccountsRepo: repos.platformAccountsRepo,
@@ -394,7 +395,7 @@ export function createApp(params) {
 
 export function startServices(app) {
   const log = createLogger('app');
-  const { autonomousAgent, autoOptimizer, aiAgent, webhookProcessor, dataCleanup, fatigueDetector, capiMonitor, alertingService, usersRepo, platformAccountsRepo, settingsRepo, bot } = app.locals._services;
+  const { autonomousAgent, autoOptimizer, aiAgent, webhookProcessor, dataCleanup, fatigueDetector, capiMonitor, reconciliationService, alertingService, usersRepo, platformAccountsRepo, settingsRepo, bot } = app.locals._services;
 
   // Initialize alerting service with bot for notifications
   if (alertingService && bot) {
@@ -437,6 +438,10 @@ export function startServices(app) {
       })
       .filter(Boolean);
   });
+  // Campaign state reconciliation — dry-run by default (RECONCILE_APPLY=1 to
+  // apply drift back). 6h sweep; every drift recorded in
+  // campaign_reconciliation_log (migration 058).
+  reconciliationService.start();
 
   log.info('Background services started');
 }

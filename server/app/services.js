@@ -44,6 +44,7 @@ import { AudienceIntelligence } from '../services/audience-intelligence.js';
 import { CreativeScorer } from '../services/creative-scorer.js';
 import { WhiteLabelService } from '../services/white-label.js';
 import { CapiMonitor } from '../services/capi-monitor.js';
+import { ReconciliationService } from '../services/reconciliation-cron.js';
 import { WhatsAppIntelligenceService } from '../services/whatsapp-intelligence.js';
 import { WhatsAppAdsAPI } from '../services/whatsapp/index.js';
 import { BoostApprovalService } from '../services/boost-approval.js';
@@ -168,6 +169,12 @@ export function createServices({ db, repos, params }) {
   const creativeScorer = new CreativeScorer(db, llmClient, repos.settingsRepo);
   const whiteLabelService = new WhiteLabelService(db, llmClient);
   const capiMonitor = new CapiMonitor(metaApi, db);
+  const reconciliationService = new ReconciliationService({
+    db,
+    campaignsRepo: repos.campaignsRepo,
+    platformAccountsRepo: repos.platformAccountsRepo,
+    settingsRepo: repos.settingsRepo,
+  });
   const waIntelligence = new WhatsAppIntelligenceService({
     waConversationsRepo: repos.waConversationsRepo,
     metaApi,
@@ -198,7 +205,7 @@ export function createServices({ db, repos, params }) {
     contentScheduler, adResearchService, orchestrator, realtimeService,
     contentBridge, socialBridge, aiAgent, shopeeAdapter, attributionService,
     googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI,
-    capiMonitor, waIntelligence, autonomousAgent, autoOptimizer,
+    capiMonitor, reconciliationService, waIntelligence, autonomousAgent, autoOptimizer,
     webhookProcessor, dataCleanup, adIntelligenceService, competitorSpyService,
     draftService, facebookSystemUserService, campaignMonitorService,
     abTestService, fatigueDetector, unifiedReporter, bulkOperations,

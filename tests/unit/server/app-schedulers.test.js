@@ -12,6 +12,7 @@ function makeApp() {
         dataCleanup: { start: vi.fn() },
         fatigueDetector: { start: vi.fn() },
         capiMonitor: { start: vi.fn() },
+        reconciliationService: { start: vi.fn() },
         alertingService: {},
         usersRepo: { findAll: vi.fn(() => []) },
         platformAccountsRepo: { getAccounts: vi.fn(() => []) },
@@ -39,6 +40,7 @@ describe('startServices kill-switch', () => {
     expect(s.dataCleanup.start).toHaveBeenCalled();
     expect(s.fatigueDetector.start).toHaveBeenCalled();
     expect(s.capiMonitor.start).toHaveBeenCalled();
+    expect(s.reconciliationService.start).toHaveBeenCalled();
   });
 
   it('skips every scheduler when SCHEDULERS_DISABLED=1', () => {
