@@ -1,6 +1,8 @@
 import { requireAuth } from '../middleware/auth.js';
 import { requireAddon } from '../middleware/rbac.js';
 import { Router } from 'express';
+import { createIdempotencyMiddleware } from '../middleware/idempotency.js';
+import { IdempotencyKeysRepository } from '../repositories/idempotency-keys.js';
 import { createCampaignsRouter } from './campaigns.js';
 import { createAdsRouter } from './ads.js';
 import { createLandingRouter } from './landing.js';
@@ -14,7 +16,14 @@ import { createInvoicesRouter } from './invoices.js';
 
 export function createCampaignsGroupRouter({ repos, services }) {
   const router = Router();
-  router.use('/campaigns', requireAuth, createCampaignsRouter(services.orchestrator, services.metaApi, services.creativeStudio, repos.campaignsRepo, repos.adsRepo, repos.adsetsRepo, repos.draftsRepo, repos.platformAccountsRepo));
+
+  // Phase 3 idempotency — every /campaigns/* mutation keyed by
+  // Idempotency-Key header. Non-mutating methods pass through untouched.
+  const idempotency = createIdempotencyMiddleware({
+    idempotencyKeysRepo: new IdempotencyKeysRepository(repos.db),
+  });
+
+  router.use('/campaigns', requireAuth, idempotency, createCampaignsRouter(services.orchestrator, services.metaApi, services.creativeStudio, repos.campaignsRepo, repos.adsRepo, repos.adsetsRepo, repos.draftsRepo, repos.platformAccountsRepo));
   router.use('/ads', requireAuth, createAdsRouter(repos.adsRepo, services.creativeStudio));
   router.use('/landing', requireAuth, requireAddon('lp'), createLandingRouter(repos.landingRepo, services.llmClient));
   router.use('/drafts', requireAuth, createDraftRouter(services.draftService));
