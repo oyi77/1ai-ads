@@ -6,7 +6,7 @@ const log = createLogger('policy-engine');
 // In-memory budget cache for trust tier (Phase 3: acceptable initially)
 const budgetCache = new Map();
 
-function hydrateBudget(userId) {
+function hydrateBudget(_userId) {
   // Budget will be refreshed from DB on next evaluate when reset_at passes
   // or when a mutation succeeds. For Phase 3 we accept in-memory only.
   return { remaining: 20, resetAt: null };
@@ -47,7 +47,6 @@ export class PolicyEngine {
    * @returns {Object} { allow: true } | { blocked: true, reason } | { requireApproval: true, reason }
    */
   evaluate({ actor, action, context }) {
-    const requestId = context?.requestId || 'unknown';
     const source = context?.source || 'unknown';
 
     // 1. Kill switch — SCHEDULERS_DISABLED=1 blocks all autonomous sources
