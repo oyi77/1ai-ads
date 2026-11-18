@@ -5,9 +5,26 @@ import { createLogger } from '../lib/logger.js';
 import { evaluateCondition, isUnknownMetric, MAX_CONDITION_DEPTH } from '../lib/rule-condition.js';
 import { resolveOwnerPlatformToken } from '../lib/resolve-owner-platform.js';
 import { METRICS } from '../lib/rule-metrics.js';
+import { isAccountAllowed, allowLive } from '../lib/account-allowlist.js';
 import config from '../config/index.js';
 
 const log = createLogger('rule-evaluator');
+
+// Lazy metrics import — avoids any cycle with repositories/services and keeps
+// rule-evaluator importable in tests that don't want the metrics module.
+// Loaded once at module-import time inside an async IIFE so _safeInc can be sync.
+let _metrics = null;
+const _metricsReady = import('../lib/metrics.js').then(m => (_metrics = m)).catch(() => { /* tests may skip */ });
+
+function _safeInc(name, labels, value = 1) {
+  try {
+    if (_metrics) _metrics.safeInc(_metrics[name], labels, value);
+  } catch { /* observability must not break business */ }
+}
+
+// Actions that mutate a live campaign's reach (set status ACTIVE / scale budget >0).
+// Without AUTONOMOUS_ALLOW_LIVE=1 these are blocked at the handler level.
+const LIVE_MUTATION_ACTIONS = new Set(['resume', 'scale_budget', 'duplicate_campaign']);
 
 export class RuleEvaluator {
   // Bound is shared with the bot scheduler's rule-guard cron so both engines
@@ -110,12 +127,35 @@ export class RuleEvaluator {
   }
 
   async _executeAction(action, campaign) {
+    await _metricsReady;
+    const platform = campaign?.platform || 'unknown';
+    const actionType = action?.type || 'unknown';
+
+    if (!isAccountAllowed(campaign.platform, campaign.account_id ?? campaign.accountId, campaign.user_id)) {
+      log.warn('Action blocked: account not allowlisted', { type: action.type, platform: campaign.platform, accountId: campaign.account_id ?? campaign.accountId });
+      _safeInc('autonomousActionsTotal', { result: 'blocked_allowlist' });
+      return { blocked: 'account not allowlisted' };
+    }
+    if (!allowLive() && LIVE_MUTATION_ACTIONS.has(action.type)) {
+      log.warn('Action blocked: AUTONOMOUS_ALLOW_LIVE not set', { type: action.type, campaignId: campaign.id });
+      _safeInc('autonomousActionsTotal', { result: 'blocked_live_flag' });
+      return { blocked: 'AUTONOMOUS_ALLOW_LIVE not set' };
+    }
     const handler = this.constructor.ACTION_HANDLERS[action.type];
     if (!handler) {
       log.warn('Unknown action type', { type: action.type });
+      _safeInc('autonomousActionsTotal', { result: 'error' });
       return;
     }
-    await handler.call(this, action.params || {}, campaign);
+    try {
+      await handler.call(this, action.params || {}, campaign);
+      _safeInc('autonomousActionsTotal', { result: 'executed' });
+      _safeInc('ruleFiresTotal', { action_type: actionType, platform });
+    } catch (err) {
+      log.error('Action handler failed', { type: action.type, campaignId: campaign?.id, error: err.message });
+      _safeInc('autonomousActionsTotal', { result: 'error' });
+      throw err;
+    }
   }
 
   // Alias used by DraftService executor wiring (services.js setExecutor).

@@ -1,4 +1,8 @@
 import { v4 as uuid } from 'uuid';
+// Top-level await — metrics.js depends only on prom-client, no repo/service
+// imports, so there is no cycle. Keeps `update` sync and lets the delta path
+// call metrics helpers without a `.then()` shim.
+const metrics = await import('../lib/metrics.js');
 
 export class CampaignsRepository {
   constructor(db) {
@@ -213,6 +217,8 @@ export class CampaignsRepository {
     'last_synced', 'user_id',
   ]);
 
+  // Returns the pre-change row when the caller wants to compute a delta
+  // (currently only `_recordSpendRevenueDelta` does — DEF-14).
   update(id, data, userId) {
     const fields = [];
     const values = [];
@@ -225,6 +231,11 @@ export class CampaignsRepository {
       values.push(typeof val === 'object' ? JSON.stringify(val) : val);
     }
     if (fields.length === 0) return false;
+
+    // Capture the pre-change row so we can report only the *change* in
+    // spend/revenue — a no-op update must not fire the counter.
+    const before = this.db.prepare('SELECT * FROM campaigns WHERE id = ?').get(id);
+
     let sql = `UPDATE campaigns SET ${fields.join(', ')} WHERE id = ?`;
     values.push(id);
     if (userId) {
@@ -232,7 +243,31 @@ export class CampaignsRepository {
       values.push(userId);
     }
     const result = this.db.prepare(sql).run(...values);
-    return result.changes > 0;
+    if (result.changes === 0) return false;
+
+    this._recordSpendRevenueDelta(before, data, userId);
+    return true;
+  }
+
+  _recordSpendRevenueDelta(before, data, userId) {
+    if (!before) return;
+    const platform = before.platform || 'unknown';
+    const userIdHash = metrics.hashUserId(before.user_id);
+    const met = metrics;
+
+    const nextSpend = typeof data.spend === 'number' ? data.spend : undefined;
+    const nextRevenue = typeof data.revenue === 'number' ? data.revenue : undefined;
+    const prevSpend = typeof before.spend === 'number' ? before.spend : 0;
+    const prevRevenue = typeof before.revenue === 'number' ? before.revenue : 0;
+
+    if (nextSpend !== undefined) {
+      const delta = nextSpend - prevSpend;
+      if (delta > 0) met.safeInc(met.campaignSpendTotal, { platform, user_id_hash: userIdHash }, delta);
+    }
+    if (nextRevenue !== undefined) {
+      const delta = nextRevenue - prevRevenue;
+      if (delta > 0) met.safeInc(met.revenueTotal, { platform, user_id_hash: userIdHash }, delta);
+    }
   }
 
   findByCampaignId(metaCampaignId, userId) {

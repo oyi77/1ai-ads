@@ -249,6 +249,36 @@ export class PlatformAccountsRepository {
     })();
   }
 
+  /**
+   * Multi-tenant guard: does `userId` own the platform account `accountId`?
+   * Matches either the row primary key (platform_accounts.id) or the raw
+   * platform-native ad-account id stored in credentials.fb_account_id —
+   * callers reach here with both shapes (routes pass platform_accounts.id,
+   * write paths pass the bare act_XXXX id).
+   * Pattern ported from getmcpads-com/meta-ads-mcp-server.
+   *
+   * @param {string} accountId
+   * @param {string} userId
+   * @returns {boolean}
+   */
+  ownsAccount(accountId, userId) {
+    if (accountId === null || accountId === undefined || userId === null || userId === undefined) return false;
+    const byId = this.db.prepare(
+      'SELECT 1 FROM platform_accounts WHERE id = ? AND user_id = ? LIMIT 1'
+    ).get(String(accountId), String(userId));
+    if (byId) return true;
+    const raw = String(accountId).replace(/^act_/, '');
+    if (!raw || raw === String(accountId)) return false;
+    const rows = this.db.prepare(
+      'SELECT credentials FROM platform_accounts WHERE user_id = ? AND platform = ?'
+    ).all(String(userId), 'meta');
+    for (const r of rows) {
+      const creds = decryptCredentials(r.credentials) || {};
+      if (String(creds.fb_account_id || '').replace(/^act_/, '') === raw) return true;
+    }
+    return false;
+  }
+
   // ── Per-user methods ─────────────────────────────────────────
 
   getByPlatform(userId, platform) {

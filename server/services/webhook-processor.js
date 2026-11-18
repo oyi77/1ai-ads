@@ -2,6 +2,17 @@ import { createLogger } from '../lib/logger.js';
 
 const log = createLogger('webhook-processor');
 
+// Lazy metrics load — avoids cycle with repositories/services and keeps the
+// processor importable in tests without prom-client.
+let _metrics = null;
+const _metricsReady = import('../lib/metrics.js').then(m => (_metrics = m)).catch(() => { /* tests may skip */ });
+
+function _setDlqDepth(n) {
+  try {
+    if (_metrics) _metrics.webhookDlqDepth.set(n);
+  } catch { /* observability must not break business */ }
+}
+
 export class WebhookProcessor {
   constructor(webhookEventsRepo, campaignsRepo, options = {}) {
     this.webhookEventsRepo = webhookEventsRepo;
@@ -27,6 +38,7 @@ export class WebhookProcessor {
   }
 
   async processBatch(limit = 50) {
+    await _metricsReady;
     const events = this.webhookEventsRepo.findUnprocessed(limit);
     if (events.length === 0) return 0;
 
@@ -56,6 +68,12 @@ export class WebhookProcessor {
 
     if (processed > 0) log.info('Webhook batch processed', { count: processed, total: events.length });
     if (deadLettered > 0) log.warn('Webhook batch dead-lettered', { count: deadLettered, total: events.length });
+    try {
+      const row = this.webhookEventsRepo.db
+        .prepare('SELECT COUNT(*) AS count FROM webhook_events WHERE processed = 2')
+        .get();
+      _setDlqDepth(row?.count ?? 0);
+    } catch { /* metrics only; repository test doubles may omit db */ }
     return processed + deadLettered;
   }
 

@@ -305,9 +305,9 @@ export function createApp(params) {
   });
 
   // ── Prometheus Metrics (admin-only — request counters are recon surface) ─
-  app.get('/metrics', requireAuth, requireAdmin, (_req, res) => {
+  app.get('/metrics', requireAuth, requireAdmin, async (_req, res) => {
     res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
-    res.send(getMetricsText());
+    res.send(await getMetricsText());
   });
 
   // Liveness + a cheap AI-plane readiness hint. `aiPlane` is derived from the

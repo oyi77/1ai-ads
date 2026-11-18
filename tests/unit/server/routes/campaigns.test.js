@@ -512,7 +512,7 @@ describe('Campaigns Router', () => {
       try {
         const res = await request(app).get('/api/campaigns/accounts');
         expect(res.status).toBe(200);
-        expect(metaApiMod.MetaAdsAPI.withToken).toHaveBeenCalledWith('USER_TOKEN');
+        expect(metaApiMod.MetaAdsAPI.withToken).toHaveBeenCalledWith('USER_TOKEN', expect.anything());
         expect(userTokenApi.getAdAccounts).toHaveBeenCalled();
         expect(metaApi.getAdAccounts).not.toHaveBeenCalled();
       } finally {

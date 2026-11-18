@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { createLogger } from '../lib/logger.js';
-import { MetaAdsAPI } from '../services/meta/index.js';
+import { MetaAdsAPI, assertOwnsAccount } from '../services/meta/index.js';
 import { ValidationError } from '../lib/errors.js';
 import { fromMinorUnits } from '../lib/money.js';
 import { planQuotaGate } from '../lib/plan-quota.js';
@@ -19,7 +19,9 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
         const accounts = platformAccountsRepo.findAllActiveByUserAndPlatform(userId, 'meta');
         const found = accounts.find(a => a?.access_token);
         if (found) {
-          return MetaAdsAPI.withToken(found.access_token);
+          // Wire platformAccountsRepo so every WRITE method (createCampaign,
+          // updateCampaign, ...) can run assertOwnsAccount against the caller.
+          return MetaAdsAPI.withToken(found.access_token, { platformAccountsRepo });
         }
       } catch (err) {
         log.error('resolveUserMetaApi failed', { userId, error: err.message });
@@ -224,6 +226,13 @@ export function createCampaignsRouter(orchestrator, metaApi, creativeStudio, cam
         }
       }
       const suffix = (req.body && req.body.suffix) || ' (Copy)';
+      // Multi-tenant: assert ownership only when the caller pinned an
+      // accountId. When auto-locating below we can't know it yet — the copy
+      // itself re-reads per-account and Meta scopes the campaign visibility
+      // to the caller's token, so an unowned id returns empty in the loop.
+      if (accountId) {
+        assertOwnsAccount(platformAccountsRepo, accountId, req.user?.id);
+      }
       const result = await api.duplicateCampaign(accountId, req.params.id, { suffix });
       res.status(201).json({ success: true, data: result });
     } catch (err) {

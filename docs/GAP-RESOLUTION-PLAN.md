@@ -87,3 +87,37 @@ Disiplin per fase: implement → test green → E2E live verify → commit + pus
 - **Meta App Review** — submit + unblock multi-account scale (`META_APP_REVIEW.md`).
 - **GTM / brand** — case study SEA, comparison page vs Ryze/Madgicx, AppSumo/ProductHunt (`T7`).
 - **Resend domain** — verifikasi berkahkarya.org (email alert prod).
+
+---
+
+## Status refresh — 2026-11-18 (post Phase-1 hardening)
+
+Audit 2026-11-17/18 closed 13 defects across 5 commits (c17c99d, 7c34f6c, 506ebeb, 78f0740, 7cf3028). Test baseline: 202 files / 2317 passing. Lint clean.
+
+| Phase | Status change |
+|---|---|
+| Fase 8 (CSRF) | ✅ **SHIPPED** (earlier than this doc's "T1 pending") — `middleware/csrf.js` mounted before routes; Origin-based double-check on cookie-auth mutating requests. Bearer-auth requests exempt. |
+| Fase 9 (Trust tier) | ❌ NOT SHIPPED — no `autonomy_tier` column, no trust gate in `autonomous-agent.js`. Phase 3 candidate. |
+| Fase 10 (MCP breadth) | ❌ PARTIAL — Meta/Google/TikTok/LinkedIn write tools exist; 18 other adapters are read-only or stub. Phase 3 candidate. |
+| Fase 11 (Retail Media) | ❌ NOT SHIPPED — Walmart/Instacart absent, Amazon adapter audit pending. |
+| Fase 12 (Bid + cross-network) | ❌ NOT SHIPPED — no `adjustBid` or `shiftSpend` in `auto-optimizer.js`. |
+| Fase 13 (AI video) | ❌ NOT SHIPPED — `meta-video-service.js` upload-only. |
+| Fase 14 (CI/CD) | ❌ NOT SHIPPED — no GitHub Actions workflows found in the audit. |
+
+### Phase 3 architecture consolidation — proposed scope
+Draft at `docs/architecture-consolidation-2026-11.md` (in progress):
+
+1. **Unified AI orchestration** — `AutonomousAgent` becomes the single entry point; `rule-evaluator`, `auto-optimizer`, `ai-agent` all report to a shared orchestrator instead of independent setIntervals.
+2. **Agent capability registry** — declarative manifest of which actions each autonomy tier can execute, consumed by the orchestrator (replaces ad-hoc `if (allowedFields.has(...))` checks).
+3. **Unified advertising execution gateway** — one `executeAction(action, ctx)` entry point that fans out to the right platform adapter with account allowlist + budget guard + audit trail.
+4. **Platform-independent campaign action schema** — `{ platform, accountId, action, params }` normalized across all 22 adapters (Meta/Google parity first, others follow).
+5. **Policy & budget enforcement** — central `PolicyEngine.evaluate(action, ctx)` invoked before any mutating call; returns `{ allow, deny, requireApproval }`.
+6. **Durable execution queue & retries** — promote webhook-processor's DLQ pattern to a general-purpose `jobs` table with exponential backoff, DLQ, and manual replay.
+7. **Idempotency & concurrency control** — client-supplied `Idempotency-Key` header for mutating routes, stored in a new `idempotency_keys` table.
+8. **Complete action audit trails** — extend `audit_log` to include action params hash, before/after state, and policy decision reason.
+9. **Campaign-state reconciliation** — periodic re-sync of `campaigns.status` against the platform source of truth.
+10. **Agent memory & learning** — extend `learning.js` to persist per-user agent performance (win rate, false-positive rate) and feed back into policy thresholds.
+11. **MCP interop** — apply account allowlist + PolicyEngine gates to MCP tool calls (not just autonomous-agent flows).
+12. **Browser automation fallback** — integrate `browser-use` for platforms without API parity, draft-only, allowlist-gated.
+13. **Multi-tenant security** — extend DEF-02/DEF-03 fix pattern to every `findAll`/`getById` across the codebase (targeted grep, not a rewrite).
+14. **Observability & failure recovery** — DEF-14 Prometheus business metrics (in progress via subagent), Grafana dashboards, alert on DLQ depth > threshold.

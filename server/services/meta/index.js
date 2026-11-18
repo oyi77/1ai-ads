@@ -1,11 +1,80 @@
 import { safeFetch } from '../../lib/platform-client.js';
 import config from '../../config/index.js';
 import { BasePlatformApiClient } from '../../lib/base-platform-api.js';
-import { ConfigurationError } from '../../lib/errors.js';
+import { ConfigurationError, ValidationError } from '../../lib/errors.js';
+import { createLogger } from '../../lib/logger.js';
 import { FacebookAdsApi } from 'facebook-nodejs-business-sdk';
-import { toMinorUnits, fromMinorUnits } from '../../lib/money.js';
+import { fromMinorUnits } from '../../lib/money.js';
 
 const BASE = `https://graph.facebook.com/${config.metaApiVersion}`;
+const log = createLogger('meta');
+
+/**
+ * ISO 4217 zero-decimal currencies (minor-unit exponent 0).
+ * Pattern ported from getmcpads-com/meta-ads-mcp-server.
+ *
+ * Plus IDR/HUF/TWD: Meta's Marketing API also treats these as zero-decimal
+ * even though ISO gives them 2 minor digits. Dropping them here would
+ * reintroduce the Rp 50k → Rp 5jt (100x) budget bug documented in
+ * server/lib/money.js — IDR is this repo's live default currency.
+ */
+const ZERO_DECIMAL_CURRENCIES = new Set([
+  'JPY', 'KRW', 'VND', 'CLP', 'ISK', 'UGX', 'XOF', 'XAF',
+  'BIF', 'DJF', 'GNF', 'KMF', 'MGA', 'PYG', 'RWF', 'VUV', 'WST', 'XPF',
+  'IDR', 'HUF', 'TWD',
+]);
+
+/**
+ * Convert a major-unit amount (Rp 50.000 / $50.00) to the integer minor
+ * unit Meta's Marketing API expects in `daily_budget` / `bid_amount`.
+ * Throws ValidationError for sub-minor amounts — Meta silently floors a
+ * 0.5 JPY budget to 0 and returns OAuthException #100 on the next read.
+ * Pattern ported from getmcpads-com/meta-ads-mcp-server.
+ *
+ * @param {number|string} amount - Major-unit amount
+ * @param {string} currency - ISO 4217 code
+ * @returns {number} Integer minor units
+ */
+export function toMinorUnits(amount, currency = 'IDR') {
+  const cur = String(currency || '').toUpperCase();
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new ValidationError(`Invalid budget amount "${amount}" for currency ${cur}`);
+  }
+  const minor = ZERO_DECIMAL_CURRENCIES.has(cur) ? n : n * 100;
+  if (minor < 1) {
+    throw new ValidationError(
+      `Budget ${amount} ${cur} converts to ${minor} minor units (< 1); Meta rejects it`
+    );
+  }
+  const rounded = Math.round(minor);
+  if (rounded < 1) {
+    throw new ValidationError(
+      `Budget ${amount} ${cur} converts to ${rounded} minor units (< 1); Meta rejects it`
+    );
+  }
+  return rounded;
+}
+
+/**
+ * Assert the caller owns the platform_account they are about to bill
+ * against. Multi-tenant guard — without it any authenticated user could
+ * create campaigns on a peer's ad account by guessing its id.
+ * Pattern ported from getmcpads-com/meta-ads-mcp-server.
+ *
+ * @param {object|null} platformAccountsRepo
+ * @param {string} accountId - platform_accounts.id (or platform id)
+ * @param {string|null|undefined} userId
+ * @throws {ValidationError} when userId provided and account not owned
+ */
+export function assertOwnsAccount(platformAccountsRepo, accountId, userId) {
+  if (userId === null || userId === undefined) return; // trusted-admin / system context
+  if (!platformAccountsRepo || typeof platformAccountsRepo.ownsAccount !== 'function') {
+    throw new ValidationError('account not owned by caller');
+  }
+  if (platformAccountsRepo.ownsAccount(accountId, userId)) return;
+  throw new ValidationError('account not owned by caller');
+}
 
 /**
  * Normalize a Meta ad-account id to the `act_<id>` form the Graph API
@@ -21,22 +90,26 @@ function withAct(accountId) {
 export class MetaAdsAPI extends BasePlatformApiClient {
   /**
    * @param {object|string} settingsRepoOrToken - SettingsRepo instance or explicit token string
+   * @param {object} [deps] - optional wiring ({ platformAccountsRepo }) for ownership assertions
    */
-  constructor(settingsRepoOrToken) {
+  constructor(settingsRepoOrToken, deps = {}) {
     // Support both: new MetaAdsAPI(settingsRepo) AND new MetaAdsAPI('token-string')
     const settingsRepo = typeof settingsRepoOrToken === 'string' ? null : settingsRepoOrToken;
     super('meta', settingsRepo, { baseUrl: BASE });
     if (typeof settingsRepoOrToken === 'string') {
       this._explicitToken = settingsRepoOrToken;
     }
+    this._platformAccountsRepo = deps.platformAccountsRepo || null;
   }
 
   /**
    * Factory method for creating a MetaAdsAPI with an explicit token.
    * Prefer this over the dual constructor for clarity.
+   * @param {string} token
+   * @param {object} [deps] - optional wiring ({ platformAccountsRepo })
    */
-  static withToken(token) {
-    return new MetaAdsAPI(token);
+  static withToken(token, deps = {}) {
+    return new MetaAdsAPI(token, deps);
   }
 
   // Meta uses access_token as query param, not Bearer header
@@ -110,6 +183,33 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       url.searchParams.set('access_token', token);
       const res = await safeFetch('meta', url.toString(), { method: 'DELETE' });
       return await res.json();
+    }
+  }
+
+  /**
+   * Read-back verification after a successful write. Meta's write endpoints
+   * occasionally return a 200 with a placeholder id (async copy/creation)
+   * while the object lands under a different id — callers downstream then
+   * poll a ghost. Re-read via GET and compare; mismatch is logged but NOT
+   * thrown (callers already dispatched on the returned shape).
+   * Pattern ported from getmcpads-com/meta-ads-mcp-server.
+   *
+   * @param {string} id - id returned by the write call
+   * @param {string} label - operation name for the log line
+   * @param {object} result - the write call's original return value
+   * @returns {object} result with `readback_ok` flag added
+   */
+  async _verifyWrite(id, label, result) {
+    try {
+      const read = await this._get(`/${id}`, { fields: 'id,name,status' });
+      if (!read || String(read.id) !== String(id)) {
+        log.error(`${label} readback mismatch`, { expected: id, returned: read?.id ?? null });
+        return { ...result, readback_ok: false };
+      }
+      return { ...result, readback_ok: true };
+    } catch (err) {
+      log.warn(`${label} readback GET failed (id ${id})`, { error: String(err?.message || err).slice(0, 160) });
+      return { ...result, readback_ok: false };
     }
   }
 
@@ -332,8 +432,11 @@ export class MetaAdsAPI extends BasePlatformApiClient {
   }
 
   // --- Campaign WRITE Operations ---
-  async createCampaign(accountId, { name, objective, status = 'PAUSED', dailyBudget, specialAdCategories = ['NONE'], isAdsetBudgetSharing, currency = 'IDR' } = {}) {
+  async createCampaign(accountId, { name, objective, status = 'PAUSED', dailyBudget, specialAdCategories = ['NONE'], isAdsetBudgetSharing, currency = 'IDR' } = {}, userId) {
     this.log.info('Creating Meta campaign', { accountId, name, objective });
+    // Account ownership assertion — userId from req.user.id; silently skips
+    // for system-scoped calls (userId null).
+    assertOwnsAccount(this._platformAccountsRepo, withAct(accountId), userId);
     const body = {
       name,
       objective,
@@ -345,7 +448,7 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     else if (!isAdsetBudgetSharing && dailyBudget) body.daily_budget = toMinorUnits(dailyBudget, currency);
     const data = await this._post(`/${withAct(accountId)}/campaigns`, body);
     this.log.info('Campaign created successfully', { campaignId: data.id });
-    return { id: data.id };
+    return await this._verifyWrite(data.id, 'createCampaign', { id: data.id });
   }
   async createAdSet(accountId, campaignId, { name, dailyBudget, targeting, billingEvent = 'IMPRESSIONS', optimizationGoal = 'LINK_CLICKS', startTime, isCbo, promotedObject = null, currency = 'IDR' } = {}) {
     const body = {
@@ -355,14 +458,14 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       optimization_goal: optimizationGoal,
       bid_strategy: dailyBudget && !isCbo ? 'LOWEST_COST_WITHOUT_CAP' : 'LOWEST_COST_WITH_BID_CAP',
       targeting: { ...(targeting || { geo_locations: { countries: ['ID'] }, age_min: 18 }), targeting_automation: { advantage_audience: 0 } },
-      status: 'PAUSED',
+      status: 'PAUSED', // explicit PAUSED default — ported from getmcpads-com/meta-ads-mcp-server
     };
     if (dailyBudget && !isCbo) body.daily_budget = toMinorUnits(dailyBudget, currency);
     else body.bid_amount = 500;
     if (promotedObject) body.promoted_object = promotedObject;
     if (startTime) body.start_time = startTime;
     const data = await this._post(`/${withAct(accountId)}/adsets`, body);
-    return { id: data.id };
+    return await this._verifyWrite(data.id, 'createAdSet', { id: data.id });
   }
 
   async createAdCreative(accountId, { name, pageId, message, headline, description, linkUrl, imageHash, videoId, ctaType = 'LEARN_MORE' } = {}) {
@@ -392,7 +495,9 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       name: name || `Creative_${Date.now()}`,
       object_story_spec: objectStorySpec,
     });
-    return { id: data.id };
+    // Meta does NOT accept a `status` field on /adcreatives — creatives are
+    // inert until wrapped by an /ads object that carries its own status.
+    return await this._verifyWrite(data.id, 'createAdCreative', { id: data.id });
   }
 
 
@@ -401,9 +506,9 @@ export class MetaAdsAPI extends BasePlatformApiClient {
       name: name || `Ad_${Date.now()}`,
       adset_id: adsetId,
       creative: { creative_id: creativeId },
-      status,
+      status, // explicit PAUSED default — ported from getmcpads-com/meta-ads-mcp-server
     });
-    return { id: data.id };
+    return await this._verifyWrite(data.id, 'createAd', { id: data.id });
   }
 
   async uploadAdImage(accountId, imageUrl) {
@@ -415,13 +520,17 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     return { hash: images[firstKey].hash, url: images[firstKey].url };
   }
 
-  async updateCampaign(campaignId, updates = {}, currency = 'IDR') {
+  async updateCampaign(campaignId, updates = {}, currency = 'IDR', userId = null, accountId = null) {
+    // Ownership assertion (Pattern ported from getmcpads-com/meta-ads-mcp-server):
+    // only when the caller supplies BOTH userId and accountId — campaignId
+    // alone doesn't map to a platform_account row without an extra lookup.
+    assertOwnsAccount(this._platformAccountsRepo, accountId, userId);
     const body = {};
     if (updates.name) body.name = updates.name;
     if (updates.status) body.status = updates.status;
     if (updates.dailyBudget !== undefined) body.daily_budget = toMinorUnits(updates.dailyBudget, currency);
-    const _data = await this._post(`/${campaignId}`, body);
-    return { success: true, id: campaignId };
+    await this._post(`/${campaignId}`, body);
+    return await this._verifyWrite(campaignId, 'updateCampaign', { success: true, id: campaignId });
   }
 
   async updateAd(adId, updates = {}) {
@@ -458,7 +567,11 @@ export class MetaAdsAPI extends BasePlatformApiClient {
     }
     const newId = data.copied_campaign_id;
     this.log.info('Campaign duplicated', { campaignId, newId, shallow });
-    return { originalId: campaignId, newCampaignId: newId, shallow };
+    return await this._verifyWrite(newId, 'duplicateCampaign', {
+      originalId: campaignId,
+      newCampaignId: newId,
+      shallow,
+    });
   }
 
   async updateAdSet(adsetId, updates = {}, currency = 'IDR') {

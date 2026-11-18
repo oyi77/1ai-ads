@@ -52,7 +52,7 @@ export function metricsMiddleware(req, res, next) {
   next();
 }
 
-/** Prometheus text format output. */
+/** Prometheus text format output. Sync — cardinality-guard tests call without await. */
 export function getMetricsText() {
   const lines = [];
 
@@ -83,5 +83,75 @@ export function getMetricsText() {
   lines.push('# TYPE active_connections gauge');
   lines.push(`active_connections ${counters.active_connections}`);
 
+  // Business metrics use prom-client v15's async Registry.metrics() API.
+  // They are appended by the async /metrics route; keep this legacy helper
+  // synchronous for existing cardinality tests and library callers.
   return lines.join('\n') + '\n';
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// DEF-14 Business Metrics (prom-client)
+// Domain-level counters/gauges exposed alongside the HTTP/DB metrics above.
+// All .inc()/.set() call sites must wrap in try/catch — a metrics failure
+// must never propagate into the business logic it instruments.
+// ────────────────────────────────────────────────────────────────────────────
+
+import crypto from 'crypto';
+import pc from 'prom-client';
+
+const businessRegistry = new pc.Registry();
+const { Counter, Gauge } = pc;
+
+/** sha256-truncated (first 8 hex chars) — never emit a raw user_id. */
+export function hashUserId(userId) {
+  if (userId === undefined || userId === null) return 'unknown';
+  return crypto.createHash('sha256').update(String(userId)).digest('hex').slice(0, 8);
+}
+
+export const campaignSpendTotal = new Counter({
+  name: 'adforge_campaign_spend_total',
+  help: 'Total campaign spend recorded, in account currency.',
+  labelNames: ['platform', 'user_id_hash'],
+  registers: [businessRegistry],
+});
+
+export const revenueTotal = new Counter({
+  name: 'adforge_revenue_total',
+  help: 'Total campaign revenue recorded, in account currency.',
+  labelNames: ['platform', 'user_id_hash'],
+  registers: [businessRegistry],
+});
+
+export const ruleFiresTotal = new Counter({
+  name: 'adforge_rule_fires_total',
+  help: 'Total rule actions fired, by action_type and platform.',
+  labelNames: ['action_type', 'platform'],
+  registers: [businessRegistry],
+});
+
+export const webhookDlqDepth = new Gauge({
+  name: 'adforge_webhook_dlq_depth',
+  help: 'Webhook events sitting in dead-letter (processed=2) after the latest batch.',
+  registers: [businessRegistry],
+});
+
+export const autonomousActionsTotal = new Counter({
+  name: 'adforge_autonomous_actions_total',
+  help: 'Autonomous rule actions by result: executed / blocked_allowlist / blocked_live_flag / error.',
+  labelNames: ['result'],
+  registers: [businessRegistry],
+});
+
+/** Render the business metrics in Prometheus text format. */
+export async function getBusinessMetricsText() {
+  return await businessRegistry.metrics();
+}
+
+/** Safe-increment helper — never lets a metrics failure break the caller. */
+function safeInc(metric, labels, value = 1) {
+  try {
+    metric.inc(labels, value);
+  } catch { /* observability must not break business */ }
+}
+
+export { safeInc };
