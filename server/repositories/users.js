@@ -16,7 +16,14 @@ export class UsersRepository {
     return this.db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegramId) || null;
   }
   findById(id) {
-    return this.db.prepare('SELECT * FROM users WHERE id = ?').get(id) || null;
+    const row = this.db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+    if (!row) return null;
+    return {
+      ...row,
+      autonomy_tier: row.autonomy_tier ?? null,
+      autonomy_budget_remaining: row.autonomy_budget_remaining ?? null,
+      autonomy_budget_reset_at: row.autonomy_budget_reset_at ?? null,
+    };
   }
   getTelegramIdByUserId(userId) {
     return this.db.prepare('SELECT telegram_id FROM users WHERE id = ?').get(userId)?.telegram_id ?? null;

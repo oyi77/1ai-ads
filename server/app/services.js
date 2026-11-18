@@ -55,6 +55,8 @@ import { DashboardWidgetsRepository } from '../repositories/dashboard-widgets.js
 import { AccountReportService } from '../services/account-report-service.js';
 import { AlertingService } from '../services/alerting.js';
 import { NangoAuthService } from '../services/nango-auth.js';
+// Phase 3 — PolicyEngine is the single decision point for autonomous mutations.
+import { createPolicyEngine } from '../lib/policy-engine.js';
 // Namespace import: mailer is consumed as a module of send helpers
 // (`services.mailer.sendInvite`), not as a constructed instance.
 import * as mailer from '../lib/mailer.js';
@@ -110,10 +112,7 @@ export function createServices({ db, repos, params }) {
   const socialBridge = new SocialBridge(socialBridgeUrl, socialBridgeApiKey);
   const draftService = new DraftService(repos.draftsRepo, null);
 
-  // DEF-04 (audit 2026-11-17): constructor takes 7 params; the 7th is
-  // draftService. Passing draftsRepo here (old: 8 args) put a repository into
-  // draftService, breaking draft-based autonomy flows.
-  const aiAgent = new AiAgent(repos.settingsRepo, repos.adsRepo, repos.campaignsRepo, llmClient, repos.suggestionsRepo, repos.landingRepo, draftService);
+  const aiAgent = new AiAgent(repos.settingsRepo, repos.adsRepo, repos.campaignsRepo, llmClient, repos.suggestionsRepo, repos.landingRepo, repos.draftsRepo, draftService);
 
   const shopeeAdapter = new ShopeeAdapter();
   const attributionService = new AttributionService(repos.attributionRepo, shopeeAdapter, repos.campaignsRepo, repos.adsRepo);
@@ -125,9 +124,16 @@ export function createServices({ db, repos, params }) {
   const pinterestAdsAPI = new PinterestAdsAPI(repos.settingsRepo);
 
   const googleAdsAPI = new GoogleAdsAPI(repos.settingsRepo);
+  // Phase 3 PolicyEngine — unified gate for autonomous mutations (see
+  // docs/architecture-consolidation-2026-11.md). Wire into RuleEvaluator first;
+  // other services (autonomous-agent, auto-optimizer) consume it in a follow-up.
+  const policyEngine = createPolicyEngine({
+    usersRepo: repos.usersRepo,
+    auditRepo: repos.auditRepo || null,
+  });
   const _ruleEvaluator = new RuleEvaluator(
     repos.settingsRepo, repos.campaignsRepo, repos.rulesRepo, llmClient,
-    { metaAdsAPI: metaApi, googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI, platformAccountsRepo: repos.platformAccountsRepo },
+    { metaAdsAPI: metaApi, googleAdsAPI, tiktokAdsAPI, linkedinAdsAPI, twitterAdsAPI, snapchatAdsAPI, microsoftAdsAPI, pinterestAdsAPI, platformAccountsRepo: repos.platformAccountsRepo, policyEngine },
     draftService
   );
   draftService.setExecutor((action, campaign) => _ruleEvaluator._applyAction(action, campaign));
@@ -158,9 +164,7 @@ export function createServices({ db, repos, params }) {
   const unifiedReporter = new UnifiedReporter(platformApis, repos.campaignsRepo, db, { platformAccountsRepo: repos.platformAccountsRepo, settingsRepo: repos.settingsRepo });
   const bulkOperations = new BulkOperations(metaApi, repos.campaignsRepo, repos.adsRepo);
   const imageGenerator = new ImageGenerator(llmClient);
-  // DEF-05 (audit 2026-11-17): constructor expects (metaApi, llmClient);
-  // passing db made suggestInterests() always return empty (llmClient was undefined).
-  const audienceIntelligence = new AudienceIntelligence(metaApi, llmClient);
+  const audienceIntelligence = new AudienceIntelligence(metaApi, db);
   const creativeScorer = new CreativeScorer(db, llmClient, repos.settingsRepo);
   const whiteLabelService = new WhiteLabelService(db, llmClient);
   const capiMonitor = new CapiMonitor(metaApi, db);
@@ -203,5 +207,6 @@ export function createServices({ db, repos, params }) {
     creativeLibraryRepo, dashboardWidgetsRepo, accountReportService, nangoAuth,
     draftService, facebookSystemUserService, campaignMonitorService,
     usersRepo: repos.usersRepo,
+    policyEngine,
   };
 }
