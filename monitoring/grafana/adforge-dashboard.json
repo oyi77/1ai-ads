@@ -1,0 +1,107 @@
+{
+  "title": "AdForge Operations",
+  "uid": "adforge-ops",
+  "tags": ["adforge", "1ai-ads"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "1m",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": {
+    "list": [{
+      "name": "datasource",
+      "type": "datasource",
+      "query": "prometheus",
+      "current": {}
+    }]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Traffic",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "HTTP requests by path",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "targets": [{
+        "refId": "A",
+        "expr": "sum by (path, status) (rate(adforge_http_requests_total[5m]))",
+        "legendFormat": "{{path}} {{status}}"
+      }]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Webhook DLQ depth",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "adforge_webhook_dlq_depth" }]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Active connections",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 1 },
+      "targets": [{ "refId": "A", "expr": "adforge_active_connections" }]
+    },
+    {
+      "id": 5,
+      "type": "row",
+      "title": "Business",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Campaign spend by platform",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+      "targets": [{
+        "refId": "A",
+        "expr": "sum by (platform) (adforge_campaign_spend_total)",
+        "legendFormat": "{{platform}}"
+      }]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Revenue by platform",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "targets": [{
+        "refId": "A",
+        "expr": "sum by (platform) (adforge_revenue_total)",
+        "legendFormat": "{{platform}}"
+      }]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Autonomous decisions",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+      "targets": [{
+        "refId": "A",
+        "expr": "sum by (result) (rate(adforge_autonomous_actions_total[5m]))",
+        "legendFormat": "{{result}}"
+      }]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Rule fires",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
+      "targets": [{
+        "refId": "A",
+        "expr": "sum by (action_type, platform) (rate(adforge_rule_fires_total[5m]))",
+        "legendFormat": "{{action_type}} {{platform}}"
+      }]
+    }
+  ]
+}
