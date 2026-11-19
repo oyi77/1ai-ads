@@ -12,7 +12,7 @@
  * tests can set/reset env vars without config-cache interference.
  */
 
-export function isAccountAllowed(platform, accountId, userId) {
+export function isAccountAllowed(platform, accountId, _userId) {
   const raw = process.env.AD_ACCOUNTS_ALLOWED;
   if (!raw || !raw.trim()) return true;
   const plat = String(platform ?? '').toLowerCase();

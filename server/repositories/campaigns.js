@@ -249,7 +249,7 @@ export class CampaignsRepository {
     return true;
   }
 
-  _recordSpendRevenueDelta(before, data, userId) {
+  _recordSpendRevenueDelta(before, data, _userId) {
     if (!before) return;
     const platform = before.platform || 'unknown';
     const userIdHash = metrics.hashUserId(before.user_id);

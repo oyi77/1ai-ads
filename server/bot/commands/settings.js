@@ -34,6 +34,7 @@ export function handleSettings(deps) {
             ...platformRows.map(r => [r.button]),
             [{ text: '🔄 Sync Campaigns', callback_data: 'settings:sync' }],
             [{ text: '📊 View Accounts', callback_data: 'settings:accounts' }],
+            [{ text: '⚙️ Autonomy', callback_data: 'settings:autonomy' }],
             [{ text: '📋 Menu', callback_data: 'quick:menu' }],
           ],
         },

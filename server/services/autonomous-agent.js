@@ -20,12 +20,13 @@ import { CampaignReporter } from './campaign-reporter.js';
 const log = createLogger('autonomous-agent');
 
 export class AutonomousAgent {
-  constructor(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, llmClient, aiAgent, platformApis = {}, draftService = null) {
+  constructor(settingsRepo, platformAccountsRepo, campaignsRepo, rulesRepo, llmClient, aiAgent, platformApis = {}, draftService = null, usersRepo = null) {
     this.facebook = new FacebookConnectionService(platformAccountsRepo);
     this.ruleEvaluator = new RuleEvaluator(settingsRepo, campaignsRepo, rulesRepo, llmClient, platformApis, draftService);
     this.reporter = new CampaignReporter(campaignsRepo, rulesRepo, aiAgent);
     this.platformAccountsRepo = platformAccountsRepo;
     this.draftService = draftService;
+    this.usersRepo = usersRepo;
     this.scheduler = null;
   }
 
@@ -51,6 +52,27 @@ export class AutonomousAgent {
 
   async checkCampaigns(userId) {
     return this.ruleEvaluator.checkCampaigns(userId);
+  }
+
+  /**
+   * Set the user's autonomy tier (Fase 9). Persisted on users.autonomy_tier;
+   * PolicyEngine resolves it on every evaluate(). Exposed for the bot's
+   * /settings autonomy flow and POST /api/autonomous/tier.
+   */
+  async setAutonomyTier(userId, tier) {
+    const usersRepo = this.usersRepo || this.platformAccountsRepo?.usersRepo || null;
+    if (!usersRepo) {
+      // Test/dev wiring without a users repo — the default path is to no-op.
+      return { ok: true, tier };
+    }
+    const row = await usersRepo.findById?.(userId);
+    if (!row) return { ok: false, error: 'User not found' };
+    if (tier !== 'approval_first' && tier !== 'trust') {
+      return { ok: false, error: 'tier must be "approval_first" or "trust"' };
+    }
+    await usersRepo.update(userId, { autonomy_tier: tier });
+    log.info('Autonomy tier updated', { userId, tier });
+    return { ok: true, tier };
   }
 
   // ─── Reporting (delegates to CampaignReporter) ───

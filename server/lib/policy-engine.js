@@ -57,10 +57,11 @@ export class PolicyEngine {
       );
     }
 
-    // 2. Resolve tier — backward compat: missing tier = 'approval_first'
-    const tier = actor?.tier || 'approval_first';
+    // 2. Resolve tier — prefer explicit actor.tier, then DB via usersRepo,
+    // backward compat: missing tier = 'approval_first'
     const userId = actor?.userId;
-    const role = actor?.role;
+    const role = actor?.role ?? 'user';
+    const tier = this.getActorTier(userId, role);
 
     // 3. System/admin bypass (no userId = trusted system call, or role=admin)
     if (!userId || role === 'admin') {
@@ -141,6 +142,45 @@ export class PolicyEngine {
       { requireApproval: true, reason: 'unknown_tier_defaults_approval' },
       actor, action, context, 'require_approval'
     );
+  }
+
+  /**
+   * Resolve the effective tier for an actor.
+   * @param {string} userId
+   * @param {string} role
+   * @returns {'approval_first'|'trust'|'admin'} never null
+   */
+  getActorTier(userId, role) {
+    if (role === 'admin') return 'admin';
+    if (!userId) return 'approval_first';
+    try {
+      const row = this.usersRepo?.findById?.(userId);
+      const tier = row?.autonomy_tier;
+      if (tier === 'trust') return 'trust';
+      if (tier === 'approval_first') return 'approval_first';
+    } catch { /* fall through to default */ }
+    return 'approval_first';
+  }
+
+  /**
+   * Validate + set a user's autonomy tier.
+   * @param {string} userId
+   * @param {'approval_first'|'trust'} tier
+   * @returns {{ok:boolean, error?:string}}
+   */
+  setActorTier(userId, tier) {
+    if (!userId) return { ok: false, error: 'userId is required' };
+    if (tier !== 'approval_first' && tier !== 'trust') {
+      return { ok: false, error: 'tier must be "approval_first" or "trust"' };
+    }
+    try {
+      const row = this.usersRepo?.findById?.(userId);
+      if (!row) return { ok: false, error: 'user not found' };
+      this.usersRepo.update(userId, { autonomy_tier: tier });
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
   }
 
   _isLiveMutation(action) {

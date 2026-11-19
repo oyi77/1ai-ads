@@ -126,6 +126,25 @@ export function createAutonomousRouter(settingsRepo, platformAccountsRepo, campa
     }
   });
 
+  // POST /api/autonomous/tier — owner-controlled autonomy tier.
+  // Fase 9 (GAP-RESOLUTION-PLAN.md): approval_first (default) vs trust.
+  router.post('/tier', async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) return res.status(400).json({ success: false, error: 'User ID required' });
+      const { tier } = req.body;
+      if (!tier || !['approval_first', 'trust'].includes(tier)) {
+        return res.status(400).json({ success: false, error: 'tier must be "approval_first" or "trust"' });
+      }
+      const result = await autonomousAgent.setAutonomyTier(userId, tier);
+      if (!result?.ok) return res.status(400).json({ success: false, error: result?.error || 'Failed to set tier' });
+      res.json({ success: true, tier });
+    } catch (err) {
+      log.error('Set autonomy tier error', { error: err.message });
+      res.status(500).json({ success: false, error: 'Internal Server Error' });
+    }
+  });
+
   // POST /api/autonomous/toggle-autonomy - global flag: admin only.
   router.post('/toggle-autonomy', requireAdmin, async (req, res) => {
     try {

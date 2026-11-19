@@ -45,7 +45,7 @@ export class UsersRepository {
 
     const fields = [];
     const params = [];
-    const updatable = ['username', 'email', 'password_hash', 'role', 'plan', 'confirmed', 'is_active', 'last_login', 'telegram_id', 'plan_expires_at'];
+    const updatable = ['username', 'email', 'password_hash', 'role', 'plan', 'confirmed', 'is_active', 'last_login', 'telegram_id', 'plan_expires_at', 'autonomy_tier'];
 
     for (const field of updatable) {
       if (data[field] !== undefined) {
