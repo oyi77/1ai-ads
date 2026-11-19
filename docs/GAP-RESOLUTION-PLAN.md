@@ -97,8 +97,8 @@ Audit 2026-11-17/18 closed 13 defects across 5 commits (c17c99d, 7c34f6c, 506ebe
 | Phase | Status change |
 |---|---|
 | Fase 8 (CSRF) | ✅ **SHIPPED** (earlier than this doc's "T1 pending") — `middleware/csrf.js` mounted before routes; Origin-based double-check on cookie-auth mutating requests. Bearer-auth requests exempt. |
-| Fase 9 (Trust tier) | ❌ NOT SHIPPED — no `autonomy_tier` column, no trust gate in `autonomous-agent.js`. Phase 3 candidate. |
-| Fase 10 (MCP breadth) | ❌ PARTIAL — Meta/Google/TikTok/LinkedIn write tools exist; 18 other adapters are read-only or stub. Phase 3 candidate. |
+| Fase 9 (Trust tier) | ✅ **SHIPPED** — `users.autonomy_tier` (migration 056), `PolicyEngine.getActorTier/setActorTier` reads + persists it, `POST /api/autonomous/tier`, bot `/settings → ⚙️ Autonomy`. Default `approval_first`; `trust` opts into budget-capped autonomous live mutations. |
+| Fase 10 (MCP breadth) | ✅ **GATE SHIPPED / ADAPTER COVERAGE PARTIAL** — ActionGateway normalizes pause/resume/set_budget/duplicate/create/update; PolicyEngine gate applies to every action; adapters without a method return `not_supported` (no silent execution). Full write coverage remains platform-dependent. |
 | Fase 11 (Retail Media) | ❌ NOT SHIPPED — Walmart/Instacart absent, Amazon adapter audit pending. |
 | Fase 12 (Bid + cross-network) | ❌ NOT SHIPPED — no `adjustBid` or `shiftSpend` in `auto-optimizer.js`. |
 | Fase 13 (AI video) | ❌ NOT SHIPPED — `meta-video-service.js` upload-only. |
