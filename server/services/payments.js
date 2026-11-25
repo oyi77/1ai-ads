@@ -141,7 +141,9 @@ export class PaymentService {
         project_order_id: orderId,
         idempotency_key: orderId,
         customer: { name: user.username, email: user.email || undefined },
-        metadata: { planName: paymentConfig.planName },
+        // The Rp99k one-time package is advertised as lifetime. Carry that
+        // promise into the webhook so entitlement matches the marketing.
+        metadata: { planName: paymentConfig.planName, lifetime: true },
       };
 
       const response = await fetch(this.paymentApiUrl, {
@@ -320,15 +322,20 @@ export class PaymentService {
     this.paymentsRepo.updateStatus(payment.id, 'paid');
     log.info('Payment status updated to paid', { paymentId: payment.id });
 
+    const isLifetime = metadata?.lifetime === true || metadata?.lifetime === 'true';
+
     if (metadata.planName) {
       const planName = metadata.planName.toLowerCase();
       // SECURITY: paying customers get plan features only — never operator
       // privileges. requireAdmin gates the approval/admin surface and must
       // stay reserved for real operators, not purchased plans.
       const userUpdateData = { plan: planName };
-      // Paid plans expire; the daily subscription cron handles downgrade +
-      // renewal nudge. Free has no expiry.
-      if (planName !== 'free') {
+      // Lifetime package: grant the enterprise tier with no expiry, matching
+      // what /pricing advertises. Other paid plans stay 30-day subscriptions.
+      if (isLifetime) {
+        userUpdateData.plan = 'enterprise';
+        userUpdateData.plan_expires_at = null;
+      } else if (planName !== 'free') {
         const expires = new Date(Date.now() + 30 * 24 * 3600 * 1000);
         userUpdateData.plan_expires_at = expires.toISOString();
       } else {
@@ -355,7 +362,7 @@ export class PaymentService {
           amount: payment.amount,
           currency: payment.currency || 'IDR',
           description: `AdForge ${meta2.planName || 'Pro'} — ${payment.order_id}`,
-          lineItems: [{ label: `Paket ${meta2.planName || ''} (30 hari)`, amount: payment.amount, qty: 1 }],
+          lineItems: [{ label: `Paket ${meta2.planName || ''} (${isLifetime ? 'Lifetime' : '30 hari'})`, amount: payment.amount, qty: 1 }],
           dueDate: new Date().toISOString().slice(0, 10),
         });
         const inv = this.invoicesRepo.findAll?.({ userId: payment.user_id, page: 1, limit: 1 });
