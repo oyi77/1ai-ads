@@ -12,6 +12,7 @@ import { initTelegramWebApp } from './lib/telegram';
 // Lazy-loaded pages
 const LoginPage = lazy(() => import('./pages/login').then(m => ({ default: m.LoginPage })));
 const LandingPage = lazy(() => import('./pages/landing').then(m => ({ default: m.LandingPage })));
+const PricingPage = lazy(() => import('./pages/pricing').then(m => ({ default: m.PricingPage })));
 const DashboardPage = lazy(() => import('./pages/dashboard').then(m => ({ default: m.DashboardPage })));
 const CampaignsPage = lazy(() => import('./pages/campaigns').then(m => ({ default: m.CampaignsPage })));
 const AdsPage = lazy(() => import('./pages/ads').then(m => ({ default: m.AdsPage })));
@@ -69,6 +70,7 @@ export function App() {
       <Suspense fallback={<Loading />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
